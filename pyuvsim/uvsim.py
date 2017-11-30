@@ -20,7 +20,59 @@
 # loading array details, observation settings
 # what does the MPI traffic look like?
 #    who does the formatting to input mpi parameters into uvengine
+#    ANS: each MPI process takes a list of inputs, creates a list of tasks, and
+#      hands them to the UVEngine
 # unitttests
+
+# read source catalog, generate Source objects,
+#    set Source.calc to whatever
+# 30 Nov 2017 - started source object, made _Blank_ test file
+# next steps: add basic parameter test for Source, flux calculation, ENU direction, coherence
+#    -- HW Adam add some unittest boilerplate, next time testing Source attributes exist
+# after that, Baseline object, ECEF to ENU, empty beam hook
+# GOAL: 1 source on 1 baseline. -  first important unittest
+
+class Source(object):
+    def __init__(self):
+        self.ra
+        self.dec
+        self.polarization_angle #pol angle in ra-dec
+        self.flux_calc_done = False
+        self.update_done = False
+        self.epoch
+    def update(self,task):
+        #update with the current simulation time, freq etc
+        self.freq = task.freq
+        self.time = task.time
+        self.array_location = task.array_location
+    def flux_calc():
+        self.coherence  #2x2 matrix giving electric field amplitude and polarization
+        self.
+    def xyz_calc():
+        #calculate xyz direction of source at current time and array location
+        self.s = calc_ENU_direction(self.time,self.array_location,(self.ra,self.dec,self.epoch))
+    def calc()
+        self.flux_calc()
+        self.xyz_calc()
+    #debate: will an object ever be _re_-used?
+    # answer, that is not our initial intent. Remake objects for each t,f etc
+
+
+class Baseline(object):
+    self.antenna1
+    self.antenna2
+
+
+class UVTask(object):
+    #holds all the information necessary to calculate a single src, t,f,bl
+    def __init__(self,source,time,freq,uvw):
+        self.time=time
+        self.freq=freq
+        self.source = source.update(self)
+    def check(self):
+        #make sure all input objects are syncronized
+        self.source.time = self.time
+        self.source.freq = self.freq
 
 
 class UVEngine(object):
@@ -31,6 +83,8 @@ class UVEngine(object):
         self.rank
         #construct self based on MPI input
     def calculate_beams(self):
+        #calculate beam pierce for every source and antenna
+        # implicitly recalculating for every baseline
         for task in self.tasks:
             source = task.source
             task.baseline.antenna1.beam.calc_beam_jones(source)
@@ -38,8 +92,10 @@ class UVEngine(object):
     def calculate_sky_model(self):
         #convert list of fluxes and spectral indices (or whatever)
         for task in self.tasks:
+
+            task.source.calc()#update anything about the source depending on the location, time, freq
             #calculate local xyz coords
-            task.source.local_position(array_location)
+            task.source.s(array_location)
             #calculate electric field coherence (electric field arriving at ant)
 
     def flux(self):
