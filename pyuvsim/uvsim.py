@@ -34,12 +34,12 @@
 
 class Source(object):
     def __init__(self):
-        self.ra
-        self.dec
-        self.polarization_angle #pol angle in ra-dec
+        self.ra = None
+        self.dec = None
+        self.polarization_angle = None  #pol angle in ra-dec
         self.flux_calc_done = False
         self.update_done = False
-        self.epoch
+        self.epoch = None
     def update(self,task):
         #update with the current simulation time, freq etc
         self.freq = task.freq
@@ -47,11 +47,10 @@ class Source(object):
         self.array_location = task.array_location
     def flux_calc():
         self.coherence  #2x2 matrix giving electric field amplitude and polarization
-        self.
     def xyz_calc():
         #calculate xyz direction of source at current time and array location
         self.s = calc_ENU_direction(self.time,self.array_location,(self.ra,self.dec,self.epoch))
-    def calc()
+    def calc():
         self.flux_calc()
         self.xyz_calc()
     #debate: will an object ever be _re_-used?
@@ -59,8 +58,9 @@ class Source(object):
 
 
 class Baseline(object):
-    self.antenna1
-    self.antenna2
+    def __init__(self):
+        self.antenna1 = None
+        self.antenna2 = None
 
 
 class UVTask(object):
@@ -109,37 +109,39 @@ class UVEngine(object):
             # where x and y are in the local ENU coordinate system
             #
             x = np.dot(baseline.antenna1.beam.jones * source.coherence)
-            self.fluxes.append(np.dot(x,(baseline.antenna2.beam.jones.conj().T))
+            self.fluxes.append(np.dot(x,(baseline.antenna2.beam.jones.conj().T)))
     def sim(self):
         # dimensions?
         # polarization, ravel index (freq,time,source)
         self.fringe = np.exp(-2j*np.pi * np.dot(self.baseline_uvw,self.source_pos_lmn))
-        self.vij = self.apparent_jones *
-        self.vij *= np.exp(-2j*np.pi
-        self.vij *= np.dot(self.baseline_uvw,self.source_pos_lmn))
+        self.vij = self.apparent_jones 
+        self.vij *= np.exp(-2j*np.pi)
+        self.vij *= np.dot(self.baseline_uvw,self.source_pos_lmn)
 
 
 #objects that are defined on input
-class SkyModel(object):
-#can be derived from sources, a healpix map, or an image
-#(internally represented as lists of sources/components)
-#hands per freq, time, direction inputs to a broadcaster
-    class Spectrum(object)
-    class SkySelection(object)
-
-class Compute(object)
-
-class Observation(object)
-#defines user settable parameters
-#(start time, stop time, pointing, integration time)
-class Instrument(object)
-#limits of the instrument
-#available ranges of parameters
-#(frequencies, pointing ranges, integration times)
-#coordinate transforms
-    def Location(object):
-        #location of observatory, timekeeping?
-class Geometry(object):
-    #takes source positions and observation positions and calculates xyz
-    #could also calculate baselines
-class Beam(object)
+#class SkyModel(object):
+#       """ """
+##can be derived from sources, a healpix map, or an image
+##(internally represented as lists of sources/components)
+##hands per freq, time, direction inputs to a broadcaster
+#class Spectrum(object):
+#
+#class SkySelection(object):
+#
+#class Compute(object):
+#
+#class Observation(object):
+##defines user settable parameters
+##(start time, stop time, pointing, integration time)
+#class Instrument(object):
+##limits of the instrument
+##available ranges of parameters
+##(frequencies, pointing ranges, integration times)
+##coordinate transforms
+#    def Location(object):
+#        #location of observatory, timekeeping?
+#class Geometry(object):
+#    #takes source positions and observation positions and calculates xyz
+#    #could also calculate baselines
+#class Beam(object)
