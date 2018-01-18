@@ -39,6 +39,11 @@
 #     refs: Smirnov Series 2011 papers. Nunhokee 2017
 #    Future tie-in: UVBeam to get jones matrix option. Open github issue. Request support for coordinate transformations.
 #    Zac --> Make us some diagrams of coord systems for different parts of the transformation.
+# 18 Jan 2018 
+#    Zac -- Circulate what you have. Diagram coord systems.
+#    Debate --- Do we rotate the beam or the sky? Calculate uvw in alt/az or ra/dec?
+#    HW: Write down our requirements; Open up an issue to make first test (source at zenith).
+#    
 
 class Source(object):
     def __init__(self):
@@ -73,9 +78,10 @@ class Source(object):
 
 
 class Baseline(object):
-    def __init__(self):
-        self.antenna1 = None
-        self.antenna2 = None
+    def __init__(self,antenna1,antenna2):
+        self.antenna1 = antenna1
+        self.antenna2 = antenna2
+        self.baseline_enu = antenna1.pos_enu - antenna2.pos_enu
 
 
 class UVTask(object):
@@ -107,9 +113,11 @@ class UVEngine(object):
  #inputs x,y,z,flux,baseline(u,v,w), time, freq
  #x,y,z in same coordinate system as uvws
 
-    def __init__(self,array_details):
+    def __init__(self,task_array):   # task_array  = list of tuples (source,time,freq,uvw)
         self.rank
+        self.tasks = [UVTask(t) for t in task_array]
         #construct self based on MPI input
+
     def calculate_beams(self):
         #calculate beam pierce for every source and antenna
         # implicitly recalculating for every baseline
@@ -120,8 +128,7 @@ class UVEngine(object):
     def calculate_sky_model(self):
         #convert list of fluxes and spectral indices (or whatever)
         for task in self.tasks:
-
-            task.source.calc()#update anything about the source depending on the location, time, freq
+            task.source.calc()  #update anything about the source depending on the location, time, freq
             #calculate local xyz coords
             task.source.s(array_location)
             #calculate electric field coherence (electric field arriving at ant)
@@ -145,14 +152,11 @@ class UVEngine(object):
             x = np.dot(x,(baseline.antenna2.beam.jones.conj().T))
             
             self.fluxes.append(np.dot(x,(baseline.antenna2.beam.jones.conj().T)))
-    def sim(self):
+    def make_visibility(self):
         # dimensions?
         # polarization, ravel index (freq,time,source)
         self.fringe = np.exp(-2j*np.pi * np.dot(self.baseline_uvw,self.source_pos_lmn))
-        self.vij = self.apparent_jones * 
-        self.vij *= np.exp(-2j*np.pi)
-        self.vij *= np.dot(self.baseline_uvw,self.source_pos_lmn)
-
+        self.vij = self.apparent_jones * self.fringe
 
 #objects that are defined on input
 #class SkyModel(object):
