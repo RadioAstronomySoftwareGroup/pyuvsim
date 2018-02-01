@@ -30,7 +30,7 @@
 # read source catalog, generate Source objects,
 #    set Source.calc to whatever
 # 30 Nov 2017 - started source object, made _Blank_ test file
-#    next steps: add basic parameter test for Source, flux calculation, ENU direction, coherence
+#    next steps: add basic parameter test for Source, flux calculation, ENU direction, coherency
 #       -- HW Adam add some unittest boilerplate, next time testing Source attributes exist
 #    after that, Baseline object, ECEF to ENU, empty beam hook
 #    GOAL: 1 source on 1 baseline. -  first important unittest
@@ -39,50 +39,56 @@
 #     refs: Smirnov Series 2011 papers. Nunhokee 2017
 #    Future tie-in: UVBeam to get jones matrix option. Open github issue. Request support for coordinate transformations.
 #    Zac --> Make us some diagrams of coord systems for different parts of the transformation.
-# 18 Jan 2018 
+# 18 Jan 2018
 #    Zac -- Circulate what you have. Diagram coord systems.
 #    Debate --- Do we rotate the beam or the sky? Calculate uvw in alt/az or ra/dec?
 #    HW: Write down our requirements; Open up an issue to make first test (source at zenith).
-#    
+#
 
 class Source(object):
     def __init__(self):
         self.freq = None   # Hz, float
-        self.coherence_radec = None  # Jy, ndarray, shape=(2,2) dtype=complex128
-        self.coherence_local = None  # Jy, ndarray, shape=(2,2) dtype=complex128; In local ENU coordinates.
-        self.time = None  # 
-        self.array_location = None
-        self.s = None
+        self.coherency_radec = None  # Jy, ndarray, shape=(2,2) dtype=complex128
         self.ra = None
         self.dec = None
         self.polarization_angle = None  #pol angle in ra-dec
-        self.flux_calc_done = False
-        self.update_done = False
         self.epoch = None
-    def update(self,task):
-        #update with the current simulation time, freq etc
-        self.freq = task.freq
-        self.time = task.time
-        self.array_location = task.array_location
-    def flux_calc():
-        self.coherence  #2x2 matrix giving electric field correlation in Jy.
-                        # Specified as coherence in ra/dec basis, but must be rotated into local coords.
-    def xyz_calc():
-        #calculate xyz direction of source at current time and array location
-        self.s = calc_ENU_direction(self.time,self.array_location,(self.ra,self.dec,self.epoch))
-    def calc():
-        self.flux_calc()
-        self.xyz_calc()
+    def coherency_calc(time, array_location):
+        # 2x2 matrix giving electric field correlation in Jy.
+        # Specified as coherency in ra/dec basis, but must be rotated into local enu.
+        coherency_local = # calculate coherency from coherency_radec in local enu
+
+        return coherency_local
+    def enu_calc(time, array_location):
+        #calculate enu direction of source at current time and array location
+        enu_unitvector = calc_ENU_direction(time, array_location,
+                                            (self.ra, self.dec, self.epoch))
+        return enu_unitvector
+    def calc(time, array_location):
+        coherency_local = self.coherency_calc(time, array_location)
+        enu_unitvector = self.enu_calc(time, array_location)
+
+        return enu_unitvector, coherency_local
     #debate: will an object ever be _re_-used?
     # answer, that is not our initial intent. Remake objects for each t,f etc
+
+
+    def enu_calc():
+        #calculate enu direction of source at current time and array location
+        self.enu_unitvector = calc_ENU_direction(self.time, self.array_location,
+                                                 (self.ra, self.dec, self.epoch))
+    def calc():
+        self.coherency_calc()
+        self.enu_calc()
 
 
 class Baseline(object):
     def __init__(self,antenna1,antenna2):
         self.antenna1 = antenna1
         self.antenna2 = antenna2
-        self.baseline_enu = antenna1.pos_enu - antenna2.pos_enu
-
+        self.enu = antenna1.pos_enu - antenna2.pos_enu
+        # we're using the local az/za frame so uvw is just enu
+        self.uvw = self.enu
 
 class UVTask(object):
     #holds all the information necessary to calculate a single src, t,f,bl
@@ -98,7 +104,7 @@ class UVTask(object):
 class Jones(object):
     ## Holds a single jones matrix and coordinate system, and methods for rotating.
      def __init__(self):
-        self.jones = None    # (2,2) matrix 
+        self.jones = None    # (2,2) matrix
         self.coord_sys = None  # [ radec, altaz, EN ]
 
      def rotate2altaz(self):
@@ -131,7 +137,7 @@ class UVEngine(object):
             task.source.calc()  #update anything about the source depending on the location, time, freq
             #calculate local xyz coords
             task.source.s(array_location)
-            #calculate electric field coherence (electric field arriving at ant)
+            #calculate electric field coherency (electric field arriving at ant)
 
     ## Debate --- Do we allow for baseline-defined beams, or stick with just antenna beams?
        ## This would necessitate the Mueller matrix formalism.
@@ -140,23 +146,26 @@ class UVEngine(object):
     def apply_beam(self,jonesL,jonesR,jones_coord_sys):
         # Supply jones matrices and their coordinate. Knows current coords of visibilities, applies rotations.
         #for every antenna calculate the apparent jones flux
-        ## Beam --> Takes coherence matrix alt/az to ENU
-        self.fluxes = []
+        ## Beam --> Takes coherency matrix alt/az to ENU
+        self.apparent_coherency = []
         for task in self.tasks:
             baseline = task.baseline
             source = task.source
-            #coherence is a 2x2 matrix
-            # (Ex^2 ExEy, EyEx Ey^2)
-            # where x and y are in the local alt/az coordinate system.
-            x = np.dot(baseline.antenna1.beam.jones, source.coherence)
-            x = np.dot(x,(baseline.antenna2.beam.jones.conj().T))
-            
-            self.fluxes.append(np.dot(x,(baseline.antenna2.beam.jones.conj().T)))
+            #coherency is a 2x2 matrix
+            # (Ex^2 conj(Ex)Ey, conj(Ey)Ex Ey^2)
+            # where x and y vectors along the local za/az coordinates.
+            this_apparent_coherency = np.dot(baseline.antenna1.beam.jones, source.coherency)
+            this_apparent_coherency = np.dot(this_apparent_coherency,
+                                        (baseline.antenna2.beam.jones.conj().T))
+
+            self.apparent_coherency.append(np.dot(this_apparent_coherency,
+                                                  (baseline.antenna2.beam.jones.conj().T)))
     def make_visibility(self):
         # dimensions?
         # polarization, ravel index (freq,time,source)
-        self.fringe = np.exp(-2j*np.pi * np.dot(self.baseline_uvw,self.source_pos_lmn))
-        self.vij = self.apparent_jones * self.fringe
+        self.fringe = np.exp(-2j * np.pi * np.dot(self.task.baseline.uvw,
+                                                  self.task.source.pos_lmn))
+        self.vij = self.apparent_coherency * self.fringe
 
 #objects that are defined on input
 #class SkyModel(object):
