@@ -1,12 +1,12 @@
-#execution pseudo code
+# execution pseudo code
 
-#if rank==0
+# if rank==0
     # load stuff
     # broadcast
     # gather
     # sum sources
     # save file
-#else:
+# else:
     # rankN
     # load array details
     # create object
@@ -16,13 +16,13 @@
     # format results
     # send, return to recv
 
-#TODO:
+# TODO:
 # loading array details, observation settings
 # what does the MPI traffic look like?
 #    who does the formatting to input mpi parameters into uvengine
 #    ANS: each MPI process takes a list of inputs, creates a list of tasks, and
 #      hands them to the UVEngine
-# unitttests
+# unittests
 
 # FUTURE:
 #   Baseline-dependent beams via Mueller matrix formalism
@@ -51,145 +51,186 @@ class Source(object):
         self.coherency_radec = None  # Jy, ndarray, shape=(2,2) dtype=complex128
         self.ra = None
         self.dec = None
-        self.polarization_angle = None  #pol angle in ra-dec
+        self.polarization_angle = None  # pol angle in ra-dec
         self.epoch = None
+
     def coherency_calc(time, array_location):
         # 2x2 matrix giving electric field correlation in Jy.
-        # Specified as coherency in ra/dec basis, but must be rotated into local enu.
-        coherency_local = # calculate coherency from coherency_radec in local enu
+        # Specified as coherency in ra/dec basis, but must be rotated into local az/za.
+        coherency_local = # calculate coherency from coherency_radec in local az/za
 
         return coherency_local
-    def enu_calc(time, array_location):
-        #calculate enu direction of source at current time and array location
-        enu_unitvector = calc_ENU_direction(time, array_location,
-                                            (self.ra, self.dec, self.epoch))
-        return enu_unitvector
+
+    def az_za_calc(time, array_location):
+        # calculate az_za direction of source at current time and array location
+        # 2-element tuple with (az, za)
+        az_za = calc_az_za(time, array_location, self.ra, self.dec, self.epoch)
+        return az_za
+
+    def pos_lmn(time, array_location):
+        # calculate direction cosines of source at current time and array location
+        az_za = az_za_calc(time, array_location)
+
+        pos_l = cos(az_za[0]) * sin(az_za[1])
+        pos_m = sin(az_za[0]) * sin(az_za[1])
+        pos_n = cos(az_za[1])
+        return (pos_l, pos_m, pos_n)
+
     def calc(time, array_location):
         coherency_local = self.coherency_calc(time, array_location)
-        enu_unitvector = self.enu_calc(time, array_location)
+        enu_unitvector = self.az_za_calc(time, array_location)
 
         return enu_unitvector, coherency_local
-    #debate: will an object ever be _re_-used?
-    # answer, that is not our initial intent. Remake objects for each t,f etc
 
-
-    def enu_calc():
-        #calculate enu direction of source at current time and array location
-        self.enu_unitvector = calc_ENU_direction(self.time, self.array_location,
-                                                 (self.ra, self.dec, self.epoch))
     def calc():
         self.coherency_calc()
         self.enu_calc()
+    # debate: will an object ever be _re_-used?
+    # answer, that is not our initial intent. Remake objects for each t,f etc
+    # new plan from 2/1: Source objects describe sources in celestial coords
+    # but have methods to convert those coords to the local az/za frame
+
+
+class Array(object):
+    def __init__(self, array_location):
+        self.array_location = array_location
+
+
+class Antenna(object):
+    def __init__(self, enu_position):
+        self.pos_enu
+
+# Does the beam live in the Antenna object as used below? This potentially
+# duplicates beams if they are the same across different antennas.
+# Otherwise, beams could live on the Array object which would also contain a
+# beam to antenna mapping.
+# Then there's the issue of how to pass this in the MPI context.
+#   one option is for the UVEngine to get an array object and the tasks have
+#   references to that object (i.e. antenna number which the array object can map to a beam)
+#   Otherwise the task might need to carry the whole array, which would lead to
+#   many copies of the array being passed to the UVEngine
 
 
 class Baseline(object):
-    def __init__(self,antenna1,antenna2):
+    def __init__(self, antenna1, antenna2):
         self.antenna1 = antenna1
         self.antenna2 = antenna2
         self.enu = antenna1.pos_enu - antenna2.pos_enu
         # we're using the local az/za frame so uvw is just enu
         self.uvw = self.enu
 
+
 class UVTask(object):
-    #holds all the information necessary to calculate a single src, t,f,bl
-    def __init__(self,source,time,freq,uvw):
-        self.time=time
-        self.freq=freq
+    # holds all the information necessary to calculate a single src, t, f, bl, array
+    # need the array because we need an array location for mapping to locat az/za
+    def __init__(self, source, time, freq, baseline, array):
+        self.time = time
+        self.freq = freq
         self.source = source.update(self)
+
     def check(self):
-        #make sure all input objects are syncronized
+        # make sure all input objects are syncronized
         self.source.time = self.time
         self.source.freq = self.freq
 
+
 class Jones(object):
-    ## Holds a single jones matrix and coordinate system, and methods for rotating.
-     def __init__(self):
+    # Holds a single jones matrix and coordinate system, and methods for rotating.
+    def __init__(self):
         self.jones = None    # (2,2) matrix
         self.coord_sys = None  # [ radec, altaz, EN ]
 
-     def rotate2altaz(self):
+    def rotate2altaz(self):
         if self.coord_sys == 'radec':
         if self.coord_sys == 'EN':
 
-     def rotate2radec(self):
+    def rotate2radec(self):
         if self.coord_sys == 'altaz':
         if self.coord_sys == 'EN':
 
-class UVEngine(object):
- #inputs x,y,z,flux,baseline(u,v,w), time, freq
- #x,y,z in same coordinate system as uvws
 
-    def __init__(self,task_array):   # task_array  = list of tuples (source,time,freq,uvw)
+class UVEngine(object):
+    # inputs x,y,z,flux,baseline(u,v,w), time, freq
+    # x,y,z in same coordinate system as uvws
+
+    def __init__(self, task_array):   # task_array  = list of tuples (source,time,freq,uvw)
         self.rank
         self.tasks = [UVTask(t) for t in task_array]
-        #construct self based on MPI input
+        # construct self based on MPI input
 
     def calculate_beams(self):
-        #calculate beam pierce for every source and antenna
+        # calculate beam pierce for every source and antenna
         # implicitly recalculating for every baseline
         for task in self.tasks:
             source = task.source
             task.baseline.antenna1.beam.calc_beam_jones(source)
             task.baseline.antenna2.beam.calc_beam_jones(source)
+
     def calculate_sky_model(self):
-        #convert list of fluxes and spectral indices (or whatever)
+        # convert list of fluxes and spectral indices (or whatever)
         for task in self.tasks:
-            task.source.calc()  #update anything about the source depending on the location, time, freq
-            #calculate local xyz coords
+            task.source.calc()  # update anything about the source depending on the location, time, freq
+            # calculate local xyz coords
             task.source.s(array_location)
-            #calculate electric field coherency (electric field arriving at ant)
+            # calculate electric field coherency (electric field arriving at ant)
 
-    ## Debate --- Do we allow for baseline-defined beams, or stick with just antenna beams?
-       ## This would necessitate the Mueller matrix formalism.
-       ## As long as we stay modular, it should be simple to redefine things.
+    # Debate --- Do we allow for baseline-defined beams, or stick with just antenna beams?
+    #   This would necessitate the Mueller matrix formalism.
+    #   As long as we stay modular, it should be simple to redefine things.
 
-    def apply_beam(self,jonesL,jonesR,jones_coord_sys):
+    def apply_beam(self, jonesL, jonesR, jones_coord_sys):
         # Supply jones matrices and their coordinate. Knows current coords of visibilities, applies rotations.
-        #for every antenna calculate the apparent jones flux
-        ## Beam --> Takes coherency matrix alt/az to ENU
+        # for every antenna calculate the apparent jones flux
+        # Beam --> Takes coherency matrix alt/az to ENU
         self.apparent_coherency = []
         for task in self.tasks:
             baseline = task.baseline
             source = task.source
-            #coherency is a 2x2 matrix
+            # coherency is a 2x2 matrix
             # (Ex^2 conj(Ex)Ey, conj(Ey)Ex Ey^2)
             # where x and y vectors along the local za/az coordinates.
-            this_apparent_coherency = np.dot(baseline.antenna1.beam.jones, source.coherency)
+            this_apparent_coherency = np.dot(baseline.antenna1.beam.jones,
+                                             source.coherency_calc(self.task.time,
+                                                                   self.task.array.array_location))
             this_apparent_coherency = np.dot(this_apparent_coherency,
-                                        (baseline.antenna2.beam.jones.conj().T))
+                                             (baseline.antenna2.beam.jones.conj().T))
 
-            self.apparent_coherency.append(np.dot(this_apparent_coherency,
-                                                  (baseline.antenna2.beam.jones.conj().T)))
+            self.apparent_coherency.append(this_apparent_coherency)
+
     def make_visibility(self):
         # dimensions?
         # polarization, ravel index (freq,time,source)
         self.fringe = np.exp(-2j * np.pi * np.dot(self.task.baseline.uvw,
-                                                  self.task.source.pos_lmn))
+                                                  self.task.source.pos_lmn(self.task.time,
+                                                                           self.task.array.array_location)))
         self.vij = self.apparent_coherency * self.fringe
 
-#objects that are defined on input
-#class SkyModel(object):
+# objects that are defined on input
+# class Array(object):
+#    array_location (maybe an astropy observer class)
+#    contains antennas (locations), maps beams to antennas, cross-talk?
+# class SkyModel(object):
 #       """ """
-##can be derived from sources, a healpix map, or an image
-##(internally represented as lists of sources/components)
-##hands per freq, time, direction inputs to a broadcaster
-#class Spectrum(object):
+#    can be derived from sources, a healpix map, or an image
+#      (internally represented as lists of sources/components)
+#      hands per freq, time, direction inputs to a broadcaster
+# class Spectrum(object):
 #
-#class SkySelection(object):
+# class SkySelection(object):
 #
-#class Compute(object):
+# class Compute(object):
 #
-#class Observation(object):
-##defines user settable parameters
-##(start time, stop time, pointing, integration time)
-#class Instrument(object):
-##limits of the instrument
-##available ranges of parameters
-##(frequencies, pointing ranges, integration times)
-##coordinate transforms
+# class Observation(object):
+#   defines user settable parameters
+#   (start time, stop time, pointing, integration time)
+# class Instrument(object):
+#   limits of the instrument
+#   available ranges of parameters
+#   (frequencies, pointing ranges, integration times)
+#   coordinate transforms
 #    def Location(object):
 #        #location of observatory, timekeeping?
-#class Geometry(object):
-#    #takes source positions and observation positions and calculates xyz
-#    #could also calculate baselines
-#class Beam(object)
+# class Geometry(object):
+#    # takes source positions and observation positions and calculates xyz
+#    # could also calculate baselines
+# class Beam(object)
