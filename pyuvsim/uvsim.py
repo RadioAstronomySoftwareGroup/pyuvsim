@@ -48,26 +48,30 @@
 class Source(object):
     def __init__(self):
         self.freq = None   # Hz, float
-        self.coherency_radec = None  # Jy, ndarray, shape=(2,2) dtype=complex128
+        self.stokes = None  # [I, Q, U, V] in RA Dec
         self.ra = None
         self.dec = None
-        self.polarization_angle = None  # pol angle in ra-dec
         self.epoch = None
 
-    def coherency_calc(time, array_location):
+        self.coherency_radec = np.array([[self.stokes[0] + self.stokes[1],
+                                          self.stokes[2] - 1j * self.stokes[3]],
+                                         [self.stokes[2] + 1j * self.stokes[3],
+                                          self.stokes[0] - self.stokes[1]]])
+
+    def coherency_calc(self, time, array_location):
         # 2x2 matrix giving electric field correlation in Jy.
         # Specified as coherency in ra/dec basis, but must be rotated into local az/za.
         coherency_local = # calculate coherency from coherency_radec in local az/za
 
         return coherency_local
 
-    def az_za_calc(time, array_location):
+    def az_za_calc(self, time, array_location):
         # calculate az_za direction of source at current time and array location
         # 2-element tuple with (az, za)
         az_za = calc_az_za(time, array_location, self.ra, self.dec, self.epoch)
         return az_za
 
-    def pos_lmn(time, array_location):
+    def pos_lmn(self, time, array_location):
         # calculate direction cosines of source at current time and array location
         az_za = az_za_calc(time, array_location)
 
@@ -76,15 +80,6 @@ class Source(object):
         pos_n = cos(az_za[1])
         return (pos_l, pos_m, pos_n)
 
-    def calc(time, array_location):
-        coherency_local = self.coherency_calc(time, array_location)
-        enu_unitvector = self.az_za_calc(time, array_location)
-
-        return enu_unitvector, coherency_local
-
-    def calc():
-        self.coherency_calc()
-        self.enu_calc()
     # debate: will an object ever be _re_-used?
     # answer, that is not our initial intent. Remake objects for each t,f etc
     # new plan from 2/1: Source objects describe sources in celestial coords
@@ -92,18 +87,27 @@ class Source(object):
 
 
 class Array(object):
-    def __init__(self, array_location):
+    def __init__(self, array_location, beam_list):
+        # array location in ECEF
         self.array_location = array_location
+
+        # list of UVBeam objects, length of number of unique beams
+        self.beam_list = beam_list
 
 
 class Antenna(object):
-    def __init__(self, enu_position):
+    def __init__(self, enu_position, beam_id):
+        # ENU position in meters relative to the array_location
         self.pos_enu
+        # index of beam for this antenna from array.beam_list
+        self.beam_id
 
-# Does the beam live in the Antenna object as used below? This potentially
-# duplicates beams if they are the same across different antennas.
-# Otherwise, beams could live on the Array object which would also contain a
-# beam to antenna mapping.
+    def get_beam_jones(array, source_lmn, frequency):
+        # get_direction_jones needs to be defined on UVBeam
+        # 2x2 array of Efield vectors in Az/ZA
+        # return array.beam_list[self.beam_id].get_direction_jones(source_lmn, frequency)
+        return np.array([[1, 0], [0, 1]])
+
 # Then there's the issue of how to pass this in the MPI context.
 #   one option is for the UVEngine to get an array object and the tasks have
 #   references to that object (i.e. antenna number which the array object can map to a beam)
@@ -163,8 +167,13 @@ class UVEngine(object):
         # implicitly recalculating for every baseline
         for task in self.tasks:
             source = task.source
-            task.baseline.antenna1.beam.calc_beam_jones(source)
-            task.baseline.antenna2.beam.calc_beam_jones(source)
+            source_lmn = source.pos_lmn
+            beam1_jones = antenna1.get_beam_jones(task.array, source_lmn, task.frequency)
+            if antenna1.beam_id == antenna2.beam_id:
+                return beam1_jones, beam1_jones
+            else:
+                beam2_jones = antenna2.get_beam_jones(task.array, source_lmn, task.frequency)
+                return beam1_jones, beam2_jones
 
     def calculate_sky_model(self):
         # convert list of fluxes and spectral indices (or whatever)
@@ -189,11 +198,12 @@ class UVEngine(object):
             # coherency is a 2x2 matrix
             # (Ex^2 conj(Ex)Ey, conj(Ey)Ex Ey^2)
             # where x and y vectors along the local za/az coordinates.
-            this_apparent_coherency = np.dot(baseline.antenna1.beam.jones,
+            beam1_jones, beam2_jones = calculate_beams()
+            this_apparent_coherency = np.dot(beam1_jones,
                                              source.coherency_calc(self.task.time,
                                                                    self.task.array.array_location))
             this_apparent_coherency = np.dot(this_apparent_coherency,
-                                             (baseline.antenna2.beam.jones.conj().T))
+                                             (beam2_jones.conj().T))
 
             self.apparent_coherency.append(this_apparent_coherency)
 
