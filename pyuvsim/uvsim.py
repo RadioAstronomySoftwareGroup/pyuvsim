@@ -52,12 +52,12 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
 
 class Source(object):
-    self.freq = None   # astropy quantity
-    self.stokes = None  # [I, Q, U, V] in RA Dec
-    self.ra = None  # astropy angle objects
-    self.dec = None  # astropy angle objects
-    self.epoch = None  # astropy Time object (decimal year is allowed)
-    self.coherency_radec = None  # 2x2 matrix giving electric field correlation in Jy.
+    self.freq = None
+    self.stokes = None
+    self.ra = None
+    self.dec = None
+    self.epoch = None
+    self.coherency_radec = None
 
     def __init__(self, ra, dec, epoch, freq, stokes):
         """
@@ -97,6 +97,7 @@ class Source(object):
         self.dec = dec
         self.epoch = epoch
 
+        # The coherency is a 2x2 matrix giving electric field correlation in Jy.
         self.coherency_radec = np.array([[self.stokes[0] + self.stokes[1],
                                           self.stokes[2] - 1j * self.stokes[3]],
                                          [self.stokes[2] + 1j * self.stokes[3],
@@ -142,14 +143,14 @@ class Source(object):
 
     def az_za_calc(self, time, array_location):
         """
-        calculate the Azimuth & Zenith Angle for this source at a time & location
+        calculate the azimuth & zenith angle for this source at a time & location
 
         Args:
             time: astropy Time object
             array_location: astropy EarthLocation object
 
         Returns:
-            (azimuth, zenith_angle)
+            (azimuth, zenith_angle) in radians
         """
         if not isinstance(time, Time):
             raise ValueError('time must be an astropy Time object. '
