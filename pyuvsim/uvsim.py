@@ -1,3 +1,9 @@
+import numpy as np
+import astropy.units
+from astropy.time import Time
+from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+from pyuvdata import utils
+
 # execution pseudo code
 
 # if rank==0
@@ -43,15 +49,37 @@
 #    Zac -- Circulate what you have. Diagram coord systems.
 #    Debate --- Do we rotate the beam or the sky? Calculate uvw in alt/az or ra/dec?
 #    HW: Write down our requirements; Open up an issue to make first test (source at zenith).
-#
+
 
 class Source(object):
-    def __init__(self):
-        self.freq = None   # Hz, float
-        self.stokes = None  # [I, Q, U, V] in RA Dec
-        self.ra = None
-        self.dec = None
-        self.epoch = None
+    self.freq = None   # astropy quantity
+    self.stokes = None  # [I, Q, U, V] in RA Dec
+    self.ra = None  # astropy angle objects
+    self.dec = None  # astropy angle objects
+    self.epoch = None  # astropy Time object (decimal year is allowed)
+    self.coherency_radec = None  # 2x2 matrix giving electric field correlation in Jy.
+
+    def __init__(self, ra, dec, epoch, freq, stokes):
+        """
+        Initialize from source catalog
+
+        Args:
+            ra: astropy Angle object
+                source RA at epoch
+            dec: astropy Angle object
+                source Dec at epoch
+            epoch: astropy Time object
+                epoch for RA/dec
+            stokes:
+                4 element vector giving the source [I, Q, U, V]
+            freq: astropy quantity
+                frequency of source catalog value
+        """
+        self.freq = freq
+        self.stokes = stokes
+        self.ra = ra
+        self.dec = dec
+        self.epoch = epoch
 
         self.coherency_radec = np.array([[self.stokes[0] + self.stokes[1],
                                           self.stokes[2] - 1j * self.stokes[3]],
@@ -61,14 +89,38 @@ class Source(object):
     def coherency_calc(self, time, array_location):
         # 2x2 matrix giving electric field correlation in Jy.
         # Specified as coherency in ra/dec basis, but must be rotated into local az/za.
-        coherency_local = # calculate coherency from coherency_radec in local az/za
+
+        # First need to calculate the sin & cos of the parallactic angle
+        # See Meeus's astronomical algorithms eq 14.1
+        # also see Astroplan.observer.parallactic_angle method
+        lst = time.sidereal_time('mean', longitude=array_location.lon)
+        hour_angle = (lst - self.ra).rad
+        sinX = sin(hour_angle)
+        cosX = tan(array_location.lat) * cos(self.dec) - sin(self.dec) * cos(hour_angle)
+
+        rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
+
+        coherency_local = np.einsum('ab,bc,cd->ad', rotation_matrix.T,
+                                    self.coherency_radec, rotation_matrix)
 
         return coherency_local
 
     def az_za_calc(self, time, array_location):
-        # calculate az_za direction of source at current time and array location
-        # 2-element tuple with (az, za)
-        az_za = calc_az_za(time, array_location, self.ra, self.dec, self.epoch)
+        """
+        calculate the Azimuth & Zenith Angle for this source at a time & location
+
+        Args:
+            time: astropy Time object
+            array_location: astropy EarthLocation object
+
+        Returns:
+            (azimuth, zenith_angle)
+        """
+        source_coord = SkyCoord(self.ra, self.dec, frame='icrs', equinox=self.epoch)
+
+        source_altaz = source_coord.transform_to(AltAz(obstime=time, location=array_loc))
+
+        az_za = (source_altaz.az.rad, source_altaz.zen.rad)
         return az_za
 
     def pos_lmn(self, time, array_location):
