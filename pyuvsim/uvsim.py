@@ -1,8 +1,8 @@
 import numpy as np
 import astropy.units
+from astropy.units import Quantity
 from astropy.time import Time
-from astropy.coordinates import SkyCoord, EarthLocation, AltAz
-from pyuvdata import utils
+from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
 # execution pseudo code
 
@@ -75,6 +75,22 @@ class Source(object):
             freq: astropy quantity
                 frequency of source catalog value
         """
+        if not isinstance(ra, Angle):
+            raise ValueError('ra must be an astropy Angle object. '
+                             'value was: {ra}'.format(ra=ra))
+
+        if not isinstance(dec, Angle):
+            raise ValueError('dec must be an astropy Angle object. '
+                             'value was: {dec}'.format(dec=dec))
+
+        if not isinstance(freq, Quantity):
+            raise ValueError('freq must be an astropy Quantity object. '
+                             'value was: {f}'.format(f=freq))
+
+        if not isinstance(epoch, Time):
+            raise ValueError('epoch must be an astropy Time object. '
+                             'value was: {t}'.format(t=epoch))
+
         self.freq = freq
         self.stokes = stokes
         self.ra = ra
@@ -87,8 +103,27 @@ class Source(object):
                                           self.stokes[0] - self.stokes[1]]])
 
     def coherency_calc(self, time, array_location):
-        # 2x2 matrix giving electric field correlation in Jy.
-        # Specified as coherency in ra/dec basis, but must be rotated into local az/za.
+        """
+        Calculate the local coherency in az/za basis for this source at a time & location.
+
+        The coherency is a 2x2 matrix giving electric field correlation in Jy.
+        It's specified on the object as a coherency in the ra/dec basis,
+        but must be rotated into local az/za.
+
+        Args:
+            time: astropy Time object
+            array_location: astropy EarthLocation object
+
+        Returns:
+            local coherency in az/za basis
+        """
+        if not isinstance(time, Time):
+            raise ValueError('time must be an astropy Time object. '
+                             'value was: {t}'.format(t=time))
+
+        if not isinstance(array_location, EarthLocation):
+            raise ValueError('array_location must be an astropy EarthLocation object. '
+                             'value was: {al}'.format(al=array_location))
 
         # First need to calculate the sin & cos of the parallactic angle
         # See Meeus's astronomical algorithms eq 14.1
@@ -116,6 +151,14 @@ class Source(object):
         Returns:
             (azimuth, zenith_angle)
         """
+        if not isinstance(time, Time):
+            raise ValueError('time must be an astropy Time object. '
+                             'value was: {t}'.format(t=time))
+
+        if not isinstance(array_location, EarthLocation):
+            raise ValueError('array_location must be an astropy EarthLocation object. '
+                             'value was: {al}'.format(al=array_location))
+
         source_coord = SkyCoord(self.ra, self.dec, frame='icrs', equinox=self.epoch)
 
         source_altaz = source_coord.transform_to(AltAz(obstime=time, location=array_loc))
@@ -124,8 +167,18 @@ class Source(object):
         return az_za
 
     def pos_lmn(self, time, array_location):
+        """
+        calculate the direction cosines of this source at a time & location
+
+        Args:
+            time: astropy Time object
+            array_location: astropy EarthLocation object
+
+        Returns:
+            (l, m, n) direction cosine values
+        """
         # calculate direction cosines of source at current time and array location
-        az_za = az_za_calc(time, array_location)
+        az_za = self.az_za_calc(time, array_location)
 
         pos_l = cos(az_za[0]) * sin(az_za[1])
         pos_m = sin(az_za[0]) * sin(az_za[1])
