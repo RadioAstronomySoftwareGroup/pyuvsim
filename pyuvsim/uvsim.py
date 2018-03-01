@@ -52,12 +52,12 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
 
 class Source(object):
-    self.freq = None
-    self.stokes = None
-    self.ra = None
-    self.dec = None
-    self.epoch = None
-    self.coherency_radec = None
+    freq = None
+    stokes = None
+    ra = None
+    dec = None
+    epoch = None
+    coherency_radec = None
 
     def __init__(self, ra, dec, epoch, freq, stokes):
         """
@@ -242,21 +242,6 @@ class UVTask(object):
         # make sure all input objects are syncronized
         self.source.time = self.time
         self.source.freq = self.freq
-
-
-class Jones(object):
-    # Holds a single jones matrix and coordinate system, and methods for rotating.
-    def __init__(self):
-        self.jones = None    # (2,2) matrix
-        self.coord_sys = None  # [ radec, altaz, EN ]
-
-    def rotate2altaz(self):
-        if self.coord_sys == 'radec':
-        if self.coord_sys == 'EN':
-
-    def rotate2radec(self):
-        if self.coord_sys == 'altaz':
-        if self.coord_sys == 'EN':
 
 
 class UVEngine(object):
