@@ -18,7 +18,8 @@ def test_single_source():
 
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
-    lst = time.sidereal_time('mean', longitude=array_location.lon)
+    time.location = array_location
+    lst = time.sidereal_time('mean')
 
     freq = (150e6 * units.Hz)
     source = pyuvsim.Source(lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])

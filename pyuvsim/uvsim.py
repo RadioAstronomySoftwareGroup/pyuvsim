@@ -129,7 +129,8 @@ class Source(object):
         # First need to calculate the sin & cos of the parallactic angle
         # See Meeus's astronomical algorithms eq 14.1
         # also see Astroplan.observer.parallactic_angle method
-        lst = time.sidereal_time('mean', longitude=array_location.lon)
+        time.location = array_location
+        lst = time.sidereal_time('mean')
         hour_angle = (lst - self.ra).rad
         sinX = sin(hour_angle)
         cosX = tan(array_location.lat) * cos(self.dec) - sin(self.dec) * cos(hour_angle)
