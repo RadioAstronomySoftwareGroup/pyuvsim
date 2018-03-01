@@ -204,9 +204,9 @@ class Array(object):
 class Antenna(object):
     def __init__(self, enu_position, beam_id):
         # ENU position in meters relative to the array_location
-        self.pos_enu
+        self.pos_enu = enu_position
         # index of beam for this antenna from array.beam_list
-        self.beam_id
+        self.beam_id = beam_id
 
     def get_beam_jones(array, source_lmn, frequency):
         # get_direction_jones needs to be defined on UVBeam
@@ -236,7 +236,7 @@ class UVTask(object):
     def __init__(self, source, time, freq, baseline, array):
         self.time = time
         self.freq = freq
-        self.source = source.update(self)
+        self.source = source
 
     def check(self):
         # make sure all input objects are syncronized
@@ -249,22 +249,9 @@ class UVEngine(object):
     # x,y,z in same coordinate system as uvws
 
     def __init__(self, task_array):   # task_array  = list of tuples (source,time,freq,uvw)
-        self.rank
-        self.tasks = [UVTask(t) for t in task_array]
+        # self.rank
+        self.tasks = task_array
         # construct self based on MPI input
-
-    def calculate_beams(self):
-        # calculate beam pierce for every source and antenna
-        # implicitly recalculating for every baseline
-        for task in self.tasks:
-            source = task.source
-            source_lmn = source.pos_lmn
-            beam1_jones = antenna1.get_beam_jones(task.array, source_lmn, task.frequency)
-            if antenna1.beam_id == antenna2.beam_id:
-                return beam1_jones, beam1_jones
-            else:
-                beam2_jones = antenna2.get_beam_jones(task.array, source_lmn, task.frequency)
-                return beam1_jones, beam2_jones
 
     def calculate_sky_model(self):
         # convert list of fluxes and spectral indices (or whatever)
@@ -291,8 +278,8 @@ class UVEngine(object):
             # where x and y vectors along the local za/az coordinates.
             beam1_jones, beam2_jones = calculate_beams()
             this_apparent_coherency = np.dot(beam1_jones,
-                                             source.coherency_calc(self.task.time,
-                                                                   self.task.array.array_location))
+                                             source.coherency_calc(task.time,
+                                                                   task.array.array_location))
             this_apparent_coherency = np.dot(this_apparent_coherency,
                                              (beam2_jones.conj().T))
 
