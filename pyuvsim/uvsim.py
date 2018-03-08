@@ -132,8 +132,8 @@ class Source(object):
         time.location = array_location
         lst = time.sidereal_time('mean')
         hour_angle = (lst - self.ra).rad
-        sinX = sin(hour_angle)
-        cosX = tan(array_location.lat) * cos(self.dec) - sin(self.dec) * cos(hour_angle)
+        sinX = np.sin(hour_angle)
+        cosX = np.tan(array_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(hour_angle)
 
         rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
 
@@ -163,7 +163,7 @@ class Source(object):
 
         source_coord = SkyCoord(self.ra, self.dec, frame='icrs', equinox=self.epoch)
 
-        source_altaz = source_coord.transform_to(AltAz(obstime=time, location=array_loc))
+        source_altaz = source_coord.transform_to(AltAz(obstime=time, location=array_location))
 
         az_za = (source_altaz.az.rad, source_altaz.zen.rad)
         return az_za
@@ -182,9 +182,9 @@ class Source(object):
         # calculate direction cosines of source at current time and array location
         az_za = self.az_za_calc(time, array_location)
 
-        pos_l = cos(az_za[0]) * sin(az_za[1])
-        pos_m = sin(az_za[0]) * sin(az_za[1])
-        pos_n = cos(az_za[1])
+        pos_l = np.cos(az_za[0]) * np.sin(az_za[1])
+        pos_m = np.sin(az_za[0]) * np.sin(az_za[1])
+        pos_n = np.cos(az_za[1])
         return (pos_l, pos_m, pos_n)
 
     # debate: will an object ever be _re_-used?
@@ -209,7 +209,7 @@ class Antenna(object):
         # index of beam for this antenna from array.beam_list
         self.beam_id = beam_id
 
-    def get_beam_jones(array, source_lmn, frequency):
+    def get_beam_jones(self, array, source_lmn, frequency):
         # get_direction_jones needs to be defined on UVBeam
         # 2x2 array of Efield vectors in Az/ZA
         # return array.beam_list[self.beam_id].get_direction_jones(source_lmn, frequency)
@@ -238,61 +238,56 @@ class UVTask(object):
         self.time = time
         self.freq = freq
         self.source = source
-
-    def check(self):
-        # make sure all input objects are syncronized
-        self.source.time = self.time
-        self.source.freq = self.freq
+        self.baseline = baseline
+        self.array = array
 
 
 class UVEngine(object):
     # inputs x,y,z,flux,baseline(u,v,w), time, freq
     # x,y,z in same coordinate system as uvws
 
-    def __init__(self, task_array):   # task_array  = list of tuples (source,time,freq,uvw)
+    def __init__(self, task):   # task_array  = list of tuples (source,time,freq,uvw)
         # self.rank
-        self.tasks = task_array
+        self.task = task
         # construct self based on MPI input
-
-    def calculate_sky_model(self):
-        # convert list of fluxes and spectral indices (or whatever)
-        for task in self.tasks:
-            task.source.calc()  # update anything about the source depending on the location, time, freq
-            # calculate local xyz coords
-            task.source.s(array_location)
-            # calculate electric field coherency (electric field arriving at ant)
 
     # Debate --- Do we allow for baseline-defined beams, or stick with just antenna beams?
     #   This would necessitate the Mueller matrix formalism.
     #   As long as we stay modular, it should be simple to redefine things.
 
-    def apply_beam(self, jonesL, jonesR, jones_coord_sys):
+    def apply_beam(self):
         # Supply jones matrices and their coordinate. Knows current coords of visibilities, applies rotations.
         # for every antenna calculate the apparent jones flux
         # Beam --> Takes coherency matrix alt/az to ENU
-        self.apparent_coherency = []
-        for task in self.tasks:
-            baseline = task.baseline
-            source = task.source
-            # coherency is a 2x2 matrix
-            # (Ex^2 conj(Ex)Ey, conj(Ey)Ex Ey^2)
-            # where x and y vectors along the local za/az coordinates.
-            beam1_jones, beam2_jones = calculate_beams()
-            this_apparent_coherency = np.dot(beam1_jones,
-                                             source.coherency_calc(task.time,
-                                                                   task.array.array_location))
-            this_apparent_coherency = np.dot(this_apparent_coherency,
-                                             (beam2_jones.conj().T))
+        baseline = self.task.baseline
+        source = self.task.source
+        # coherency is a 2x2 matrix
+        # (Ex^2 conj(Ex)Ey, conj(Ey)Ex Ey^2)
+        # where x and y vectors along the local za/az coordinates.
+        beam1_jones = baseline.antenna1.get_beam_jones(self.task.array, source.pos_lmn, self.task.freq)
+        beam2_jones = baseline.antenna2.get_beam_jones(self.task.array, source.pos_lmn, self.task.freq)
+        this_apparent_coherency = np.dot(beam1_jones,
+                                         source.coherency_calc(self.task.time,
+                                                               self.task.array.array_location))
+        this_apparent_coherency = np.dot(this_apparent_coherency,
+                                         (beam2_jones.conj().T))
 
-            self.apparent_coherency.append(this_apparent_coherency)
+        self.apparent_coherency = this_apparent_coherency
 
     def make_visibility(self):
         # dimensions?
         # polarization, ravel index (freq,time,source)
-        self.fringe = np.exp(-2j * np.pi * np.dot(self.task.baseline.uvw,
-                                                  self.task.source.pos_lmn(self.task.time,
-                                                                           self.task.array.array_location)))
-        self.vij = self.apparent_coherency * self.fringe
+        self.apply_beam()
+
+        fringe = np.exp(-2j * np.pi * np.dot(self.task.baseline.uvw,
+                                             self.task.source.pos_lmn(self.task.time,
+                                                                      self.task.array.array_location)))
+        vij = self.apparent_coherency * fringe
+
+        # need to reshape to be [xx, yy, xy, yx]
+        vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
+
+        return vis_vector
 
 # objects that are defined on input
 # class Array(object):
