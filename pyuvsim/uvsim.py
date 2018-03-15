@@ -1,5 +1,6 @@
 import numpy as np
-import astropy.units
+import astropy.constants as const
+import astropy.units as units
 from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
@@ -126,16 +127,19 @@ class Source(object):
             raise ValueError('array_location must be an astropy EarthLocation object. '
                              'value was: {al}'.format(al=array_location))
 
-        # First need to calculate the sin & cos of the parallactic angle
-        # See Meeus's astronomical algorithms eq 14.1
-        # also see Astroplan.observer.parallactic_angle method
-        time.location = array_location
-        lst = time.sidereal_time('mean')
-        hour_angle = (lst - self.ra).rad
-        sinX = np.sin(hour_angle)
-        cosX = np.tan(array_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(hour_angle)
+        if np.sum(np.abs(self.stokes[1:])) == 0:
+            rotation_matrix = np.array([[1, 0], [0, 1]])
+        else:
+            # First need to calculate the sin & cos of the parallactic angle
+            # See Meeus's astronomical algorithms eq 14.1
+            # also see Astroplan.observer.parallactic_angle method
+            time.location = array_location
+            lst = time.sidereal_time('mean')
+            hour_angle = (lst - self.ra).rad
+            sinX = np.sin(hour_angle)
+            cosX = np.tan(array_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(hour_angle)
 
-        rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
+            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
 
         coherency_local = np.einsum('ab,bc,cd->ad', rotation_matrix.T,
                                     self.coherency_radec, rotation_matrix)
@@ -205,7 +209,7 @@ class Array(object):
 class Antenna(object):
     def __init__(self, enu_position, beam_id):
         # ENU position in meters relative to the array_location
-        self.pos_enu = enu_position
+        self.pos_enu = enu_position * units.m
         # index of beam for this antenna from array.beam_list
         self.beam_id = beam_id
 
@@ -279,9 +283,13 @@ class UVEngine(object):
         # polarization, ravel index (freq,time,source)
         self.apply_beam()
 
-        fringe = np.exp(-2j * np.pi * np.dot(self.task.baseline.uvw,
-                                             self.task.source.pos_lmn(self.task.time,
-                                                                      self.task.array.array_location)))
+        uvw_lambda = self.task.baseline.uvw * self.task.freq.to(1 / units.s) / (const.c)
+        pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.array.array_location)
+        pos_lmn = [0, 0, 1]
+
+        fringe = np.exp(-2j * np.pi * np.dot(self.task.baseline.uvw, pos_lmn))
+        pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.array.array_location)
+
         vij = self.apparent_coherency * fringe
 
         # need to reshape to be [xx, yy, xy, yx]

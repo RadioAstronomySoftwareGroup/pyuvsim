@@ -22,14 +22,7 @@ def test_single_source():
     lst = time.sidereal_time('mean')
 
     freq = (150e6 * units.Hz)
-    source = pyuvsim.Source(lst, Angle(array_location.lat) + Angle(.1 * units.deg), time, freq, [1, 0, 0, 0])
-
-    print("calculated az_za")
-    print(source.az_za_calc(time, array_location))
-    print("calculated pos_lmn")
-    print(source.pos_lmn(time, array_location))
-    print("source local coherence")
-    print(source.coherency_calc(time, array_location))
+    source = pyuvsim.Source(lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
 
     ant_nums = range(2)
 
@@ -49,6 +42,4 @@ def test_single_source():
 
     visibility = engine.make_visibility()
 
-    print(visibility)
-
-    nt.assert_equal(np.sum(np.abs(visibility - [1, 1, 0, 0])), 0)
+    nt.assert_equal(np.sum(np.abs(visibility - np.array([1, 1, 0, 0]))), 0)
