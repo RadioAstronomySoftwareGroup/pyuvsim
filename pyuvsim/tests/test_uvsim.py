@@ -7,11 +7,13 @@ from astropy import units
 from pyuvdata import UVBeam, UVData
 import pyuvdata.utils as uvutils
 from pyuvdata.data import DATA_PATH
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
 
 
 beam_file = os.path.join(DATA_PATH, 'HERA_NicCST_150MHz.txt')
 hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
+EW_uvfits_file = os.path.join(SIM_DATA_PATH,'28mEWbl_1time_1chan.uvfits')
 
 
 def test_single_source():
@@ -47,7 +49,7 @@ def test_single_source():
 
 def test_single_source_vis_uvdata():
     hera_uv = UVData()
-    hera_uv.read_miriad(hera_miriad_file)
+    hera_uv.read_uvfits(EW_uvfits_file)
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     print('hera uv time 0')
