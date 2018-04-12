@@ -16,6 +16,25 @@ hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH,'28mEWbl_1time_1chan.uvfits')
 
 
+def test_source_zenith():
+    """Test single source position at zenith."""
+    time = Time('2018-03-01 00:00:00', scale='utc')
+
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
+    time.location = array_location
+    lst = time.sidereal_time('apparent')
+
+    freq = (150e6 * units.Hz)
+    source = pyuvsim.Source(lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
+
+    source_lmn = source.pos_lmn(time, array_location)
+    print('Source lmn')
+    print(source_lmn)
+
+    nt.assert_true(np.allclose(source_lmn, np.array([0, 0, 1])))
+
+
 def test_single_source():
     """Test single zenith source"""
     time = Time('2018-03-01 00:00:00', scale='utc')
@@ -23,7 +42,7 @@ def test_single_source():
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
     time.location = array_location
-    lst = time.sidereal_time('mean')
+    lst = time.sidereal_time('apparent')
 
     freq = (150e6 * units.Hz)
     source = pyuvsim.Source(lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
@@ -105,4 +124,4 @@ def test_single_source_vis_uvdata():
     # problem is that the fringe isn't 1. Because the w term isn't 0.
     # should the fringe be 1 at zenith with a w term?
 
-    nt.assert_equal(np.sum(np.abs(visibility - np.array([1, 1, 0, 0]))), 0)
+    nt.assert_true(np.allclose(visibility, np.array([1, 1, 0, 0])))
