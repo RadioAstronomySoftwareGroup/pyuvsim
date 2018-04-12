@@ -41,6 +41,11 @@ def test_source_zenith():
     time.location = array_location
     lst = time.sidereal_time('apparent')
 
+    print('RA, Dec at zenith')
+    print(ra.to('hourangle'), dec)
+    print('LST, array latitude')
+    print(lst, array_location.lat)
+
     source = pyuvsim.Source(lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
 
     source_lmn = source.pos_lmn(time, array_location)
