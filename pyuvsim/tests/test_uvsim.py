@@ -2,7 +2,7 @@ import os
 import numpy as np
 import nose.tools as nt
 from astropy.time import Time
-from astropy.coordinates import EarthLocation, Angle
+from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy import units
 from pyuvdata import UVBeam, UVData
 import pyuvdata.utils as uvutils
@@ -13,7 +13,7 @@ import pyuvsim
 
 beam_file = os.path.join(DATA_PATH, 'HERA_NicCST_150MHz.txt')
 hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
-EW_uvfits_file = os.path.join(SIM_DATA_PATH,'28mEWbl_1time_1chan.uvfits')
+EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 
 
 def test_source_zenith():
@@ -22,10 +22,25 @@ def test_source_zenith():
 
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
+    freq = (150e6 * units.Hz)
+
+    source_coord = SkyCoord(alt=Angle(90 * units.deg), az=Angle(0 * units.deg),
+                            obstime=time, frame='altaz', location=array_location)
+    icrs_coord = source_coord.transform_to('icrs')
+
+    ra = icrs_coord.ra
+    dec = icrs_coord.dec
+
+    zenith_source = pyuvsim.Source(ra, dec, time, freq, [1, 0, 0, 0])
+    zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
+    print('Zenith Source lmn')
+    print(zenith_source_lmn)
+
+    nt.assert_true(np.allclose(zenith_source_lmn, np.array([0, 0, 1])))
+
     time.location = array_location
     lst = time.sidereal_time('apparent')
 
-    freq = (150e6 * units.Hz)
     source = pyuvsim.Source(lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
 
     source_lmn = source.pos_lmn(time, array_location)
