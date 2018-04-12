@@ -190,6 +190,9 @@ class Source(object):
         # calculate direction cosines of source at current time and array location
         az_za = self.az_za_calc(time, array_location)
 
+        print('Source az_za')
+        print(az_za)
+
         pos_l = np.cos(az_za[0]) * np.sin(az_za[1])
         pos_m = np.sin(az_za[0]) * np.sin(az_za[1])
         pos_n = np.cos(az_za[1])
@@ -290,8 +293,11 @@ class UVEngine(object):
         uvw_lambda = self.task.baseline.uvw * self.task.freq.to(1 / units.s) / (const.c)
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.array.array_location)
 
+        print('Pos lmn')
+        print(pos_lmn)
+
         # This hard coding shouldn't be required.
-        pos_lmn = [0, 0, 1]
+        # pos_lmn = [0, 0, 1]
 
         fringe = np.exp(-2j * np.pi * np.dot(self.task.baseline.uvw, pos_lmn))
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.array.array_location)
