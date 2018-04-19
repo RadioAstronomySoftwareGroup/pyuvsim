@@ -4,7 +4,7 @@ import astropy.units as units
 from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
-
+from pyuvdata import UVData
 # execution pseudo code
 
 # if rank==0
@@ -311,6 +311,21 @@ class UVEngine(object):
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
 
         return vis_vector
+
+
+def uvfile_to_task_list(filename):
+    """Create task list from pyuvdata compatible input file.
+
+    Returns: List of task parameters to be send to UVEngines
+    List has task parameters defined in UVTask object
+    This function extracts time, freq, Antenna1, Antenna2
+    """
+    input_uv = UVData()
+    input_uv.read_uvfits(filename)
+
+    freq = input_uv.freq_array[0, 0] * units.Hz
+    # TODO: Have this function make mega-list of [time,frequency, Ant1, Ant2]
+    #  this may possibly be done with MPI-trickery later
 
 # objects that are defined on input
 # class Array(object):
