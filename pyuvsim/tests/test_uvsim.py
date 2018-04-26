@@ -95,15 +95,15 @@ def test_single_source():
     freq = (150e6 * units.Hz)
     source = create_zenith_source(time)
 
-    antenna1 = pyuvsim.Antenna(np.array([0, 0, 0]), 0)
-    antenna2 = pyuvsim.Antenna(np.array([107, 0, 0]), 0)
+    antenna1 = pyuvsim.Antenna('ant1', np.array([0, 0, 0]), 0)
+    antenna2 = pyuvsim.Antenna('ant2', np.array([107, 0, 0]), 0)
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
     # don't actually use a beam object for now because the thing you need to
     # calculate on the beam (the jones matrix at the source location) is bypassed for now
     beam_list = [0]
-    array = pyuvsim.Array(array_location, beam_list)
+    array = pyuvsim.Telescope(array_location, beam_list)
 
     task = pyuvsim.UVTask(source, time, freq, baseline, array)
 
@@ -129,8 +129,8 @@ def test_single_source_vis_uvdata():
     antpos = hera_uv.antenna_positions[0:2, :] + hera_uv.telescope_location
     antpos = uvutils.ENU_from_ECEF(antpos.T, *hera_uv.telescope_location_lat_lon_alt).T
 
-    antenna1 = pyuvsim.Antenna(np.array(antpos[0, :]), 0)
-    antenna2 = pyuvsim.Antenna(np.array(antpos[1, :]), 0)
+    antenna1 = pyuvsim.Antenna('ant1', np.array(antpos[0, :]), 0)
+    antenna2 = pyuvsim.Antenna('ant2', np.array(antpos[1, :]), 0)
 
     # setup the things that don't come from pyuvdata:
     # make a source at zenith
@@ -144,7 +144,7 @@ def test_single_source_vis_uvdata():
     beam_list = [0]
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
-    array = pyuvsim.Array(array_location, beam_list)
+    array = pyuvsim.Telescope(array_location, beam_list)
     task = pyuvsim.UVTask(source, time, freq, baseline, array)
     engine = pyuvsim.UVEngine(task)
 

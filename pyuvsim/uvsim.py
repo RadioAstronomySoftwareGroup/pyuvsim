@@ -104,7 +104,7 @@ class Source(object):
                                          [self.stokes[2] + 1j * self.stokes[3],
                                           self.stokes[0] - self.stokes[1]]])
 
-    def coherency_calc(self, time, array_location):
+    def coherency_calc(self, time, telescope_location):
         """
         Calculate the local coherency in az/za basis for this source at a time & location.
 
@@ -114,7 +114,7 @@ class Source(object):
 
         Args:
             time: astropy Time object
-            array_location: astropy EarthLocation object
+            telescope_location: astropy EarthLocation object
 
         Returns:
             local coherency in az/za basis
@@ -123,9 +123,9 @@ class Source(object):
             raise ValueError('time must be an astropy Time object. '
                              'value was: {t}'.format(t=time))
 
-        if not isinstance(array_location, EarthLocation):
-            raise ValueError('array_location must be an astropy EarthLocation object. '
-                             'value was: {al}'.format(al=array_location))
+        if not isinstance(telescope_location, EarthLocation):
+            raise ValueError('telescope_location must be an astropy EarthLocation object. '
+                             'value was: {al}'.format(al=telescope_location))
 
         if np.sum(np.abs(self.stokes[1:])) == 0:
             rotation_matrix = np.array([[1, 0], [0, 1]])
@@ -133,11 +133,11 @@ class Source(object):
             # First need to calculate the sin & cos of the parallactic angle
             # See Meeus's astronomical algorithms eq 14.1
             # also see Astroplan.observer.parallactic_angle method
-            time.location = array_location
+            time.location = telescope_location
             lst = time.sidereal_time('mean')
             hour_angle = (lst - self.ra).rad
             sinX = np.sin(hour_angle)
-            cosX = np.tan(array_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(hour_angle)
+            cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(hour_angle)
 
             rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
 
@@ -150,13 +150,13 @@ class Source(object):
 
         return coherency_local
 
-    def az_za_calc(self, time, array_location):
+    def az_za_calc(self, time, telescope_location):
         """
         calculate the azimuth & zenith angle for this source at a time & location
 
         Args:
             time: astropy Time object
-            array_location: astropy EarthLocation object
+            telescope_location: astropy EarthLocation object
 
         Returns:
             (azimuth, zenith_angle) in radians
@@ -165,30 +165,30 @@ class Source(object):
             raise ValueError('time must be an astropy Time object. '
                              'value was: {t}'.format(t=time))
 
-        if not isinstance(array_location, EarthLocation):
-            raise ValueError('array_location must be an astropy EarthLocation object. '
-                             'value was: {al}'.format(al=array_location))
+        if not isinstance(telescope_location, EarthLocation):
+            raise ValueError('telescope_location must be an astropy EarthLocation object. '
+                             'value was: {al}'.format(al=telescope_location))
 
         source_coord = SkyCoord(self.ra, self.dec, frame='icrs', equinox=self.epoch)
 
-        source_altaz = source_coord.transform_to(AltAz(obstime=time, location=array_location))
+        source_altaz = source_coord.transform_to(AltAz(obstime=time, location=telescope_location))
 
         az_za = (source_altaz.az.rad, source_altaz.zen.rad)
         return az_za
 
-    def pos_lmn(self, time, array_location):
+    def pos_lmn(self, time, telescope_location):
         """
         calculate the direction cosines of this source at a time & location
 
         Args:
             time: astropy Time object
-            array_location: astropy EarthLocation object
+            telescope_location: astropy EarthLocation object
 
         Returns:
             (l, m, n) direction cosine values
         """
         # calculate direction cosines of source at current time and array location
-        az_za = self.az_za_calc(time, array_location)
+        az_za = self.az_za_calc(time, telescope_location)
 
         print('Source az_za')
         print(az_za)
@@ -204,18 +204,19 @@ class Source(object):
     # but have methods to convert those coords to the local az/za frame
 
 
-class Array(object):
-    def __init__(self, array_location, beam_list):
-        # array location in ECEF
-        self.array_location = array_location
+class Telescope(object):
+    def __init__(self, telescope_location, beam_list):
+        # telescope location (EarthLocation object)
+        self.telescope_location = telescope_location
 
         # list of UVBeam objects, length of number of unique beams
         self.beam_list = beam_list
 
 
 class Antenna(object):
-    def __init__(self, enu_position, beam_id):
-        # ENU position in meters relative to the array_location
+    def __init__(self, name, enu_position, beam_id):
+        self.name = name
+        # ENU position in meters relative to the telescope_location
         self.pos_enu = enu_position * units.m
         # index of beam for this antenna from array.beam_list
         self.beam_id = beam_id
@@ -245,12 +246,12 @@ class Baseline(object):
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
     # need the array because we need an array location for mapping to locat az/za
-    def __init__(self, source, time, freq, baseline, array):
+    def __init__(self, source, time, freq, baseline, telescope):
         self.time = time
         self.freq = freq
         self.source = source
         self.baseline = baseline
-        self.array = array
+        self.telescope = telescope
 
 
 class UVEngine(object):
@@ -275,11 +276,11 @@ class UVEngine(object):
         # coherency is a 2x2 matrix
         # (Ex^2 conj(Ex)Ey, conj(Ey)Ex Ey^2)
         # where x and y vectors along the local za/az coordinates.
-        beam1_jones = baseline.antenna1.get_beam_jones(self.task.array, source.pos_lmn, self.task.freq)
-        beam2_jones = baseline.antenna2.get_beam_jones(self.task.array, source.pos_lmn, self.task.freq)
+        beam1_jones = baseline.antenna1.get_beam_jones(self.task.telescope, source.pos_lmn, self.task.freq)
+        beam2_jones = baseline.antenna2.get_beam_jones(self.task.telescope, source.pos_lmn, self.task.freq)
         this_apparent_coherency = np.dot(beam1_jones,
                                          source.coherency_calc(self.task.time,
-                                                               self.task.array.array_location))
+                                                               self.task.telescope.telescope_location))
         this_apparent_coherency = np.dot(this_apparent_coherency,
                                          (beam2_jones.conj().T))
 
@@ -291,7 +292,7 @@ class UVEngine(object):
         self.apply_beam()
 
         uvw_lambda = self.task.baseline.uvw * self.task.freq.to(1 / units.s) / (const.c)
-        pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.array.array_location)
+        pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
 
         print('Pos lmn')
         print(pos_lmn)
@@ -300,7 +301,7 @@ class UVEngine(object):
         # pos_lmn = [0, 0, 1]
 
         fringe = np.exp(-2j * np.pi * np.dot(self.task.baseline.uvw, pos_lmn))
-        pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.array.array_location)
+        pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
 
         print('fringe')
         print(fringe)
@@ -313,7 +314,7 @@ class UVEngine(object):
         return vis_vector
 
 
-def uvfile_to_task_list(filename):
+def uvfile_to_task_list(filename, sources, beam_dict=None):
     """Create task list from pyuvdata compatible input file.
 
     Returns: List of task parameters to be send to UVEngines
@@ -323,13 +324,54 @@ def uvfile_to_task_list(filename):
     input_uv = UVData()
     input_uv.read_uvfits(filename)
 
-    freq = input_uv.freq_array[0, 0] * units.Hz
+    freq = input_uv.freq_array[0, :] * units.Hz
     # TODO: Have this function make mega-list of [time,frequency, Ant1, Ant2]
     #  this may possibly be done with MPI-trickery later
 
+    telescope = Telescope(EarthLocation(input_uv.telescope_location))
+
+    times = Time(input_uv.time_array, format='jd', location=telescope.telescope_location)
+
+    antpos_ECEF = input_uv.antenna_positions + input_uv.telescope_location
+    antpos_ENU = uvutils.ENU_from_ECEF(antpos_ECEF.T,
+                                       *input_uv.telescope_location_lat_lon_alt).T
+
+    antenna_names = input_uv.antenna_names
+    antennas = []
+    for num, antname in enumerate(antenna_names):
+        if beam_dict is None:
+            beam_id = 0
+        else:
+            beam_id = beam_dict[antname]
+        antennas.append(Antenna(antname, antpos_ENU[num], beam_id))
+
+    antennas1 = []
+    for antnum in input_uv.ant_1_array:
+        index = np.where(input_uv.antenna_numbers == antnum)[0]
+        antennas1.append(antennas[index])
+
+    antennas2 = []
+    for antnum in input_uv.ant_2_array:
+        index = np.where(input_uv.antenna_numbers == antnum)[0]
+        antennas2.append(antennas[index])
+
+    baselines = []
+    for index in range(len(antennas1)):
+        baselines.append(Baseline(antennas1[index], antennas2[index]))
+
+    # TODO: define uvtask_list
+
+    return uvtask_list
+
+# what a node does (pseudo code)
+# def node:
+#     if task_id > 0:
+#         params_in = scatter()
+
+
 # objects that are defined on input
-# class Array(object):
-#    array_location (maybe an astropy observer class)
+# class Telescope(object):
+#    telescope_location (maybe an astropy observer class)
 #    contains antennas (locations), maps beams to antennas, cross-talk?
 # class SkyModel(object):
 #       """ """
