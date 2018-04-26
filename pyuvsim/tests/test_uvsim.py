@@ -60,6 +60,7 @@ def test_source_zenith():
 
     nt.assert_true(np.allclose(zenith_source_lmn, np.array([0, 0, 1])))
 
+
 # This test is known to fail. We will skip execution for now.
 @nt.nottest
 def test_source_lst_zenith():
@@ -118,28 +119,16 @@ def test_single_source_vis_uvdata():
     hera_uv.read_uvfits(EW_uvfits_file)
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    print('hera uv time 0')
-    print(hera_uv.time_array[0])
     array_location = EarthLocation.from_geocentric(hera_uv.telescope_location[0],
                                                    hera_uv.telescope_location[1],
                                                    hera_uv.telescope_location[2],
                                                    unit='m')
-    print('hera telescope_location')
-    print(hera_uv.telescope_location_lat_lon_alt_degrees)
-    print('array_location')
-    print(array_location.lat, array_location.lon, array_location.height)
     freq = hera_uv.freq_array[0, 0] * units.Hz
-    print('freq')
-    print(freq)
 
     # get antennas positions into ENU
     antpos = hera_uv.antenna_positions[0:2, :] + hera_uv.telescope_location
     antpos = uvutils.ENU_from_ECEF(antpos.T, *hera_uv.telescope_location_lat_lon_alt).T
 
-    print('antpos shape')
-    print(antpos.shape)
-    print('antpos')
-    print(antpos)
     antenna1 = pyuvsim.Antenna(np.array(antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna(np.array(antpos[1, :]), 0)
 
@@ -147,15 +136,8 @@ def test_single_source_vis_uvdata():
     # make a source at zenith
     time.location = array_location
     lst = time.sidereal_time('mean')
-    print('lst')
-    print(lst)
     # source = pyuvsim.Source(lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
     source = create_zenith_source(time)
-
-    print('ra, dec')
-    print(source.ra, source.dec)
-    print('epoch')
-    print(source.epoch)
 
     # don't actually use a beam object for now because the thing you need to
     # calculate on the beam (the jones matrix at the source location) is bypassed for now
@@ -167,9 +149,5 @@ def test_single_source_vis_uvdata():
     engine = pyuvsim.UVEngine(task)
 
     visibility = engine.make_visibility()
-    print(visibility)
-
-    # problem is that the fringe isn't 1. Because the w term isn't 0.
-    # should the fringe be 1 at zenith with a w term?
 
     nt.assert_true(np.allclose(visibility, np.array([1, 1, 0, 0])))
