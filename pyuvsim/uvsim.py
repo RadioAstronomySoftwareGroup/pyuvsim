@@ -323,7 +323,7 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
     This function extracts time, freq, Antenna1, Antenna2
     """
 
-    if not isinstance(sources,np.ndarray):
+    if not isinstance(sources, np.ndarray):
         raise TypeError("sources must be a numpy array")
 
     input_uv = UVData()
@@ -333,9 +333,9 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
     # TODO: Have this function make mega-list of [time,frequency, Ant1, Ant2]
     #  this may possibly be done with MPI-trickery later
 
-    ## beam_list should be a list of beam objects, once we have those.
+    # beam_list should be a list of beam objects, once we have those.
     beam_list = [0]
-    telescope = Telescope(EarthLocation.from_geocentric(*input_uv.telescope_location,unit='m'),beam_list)
+    telescope = Telescope(EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'), beam_list)
 
     times = Time(input_uv.time_array, format='jd', location=telescope.telescope_location)
 
@@ -367,19 +367,19 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
         baselines.append(Baseline(antennas1[index], antennas2[index]))
     baselines = np.array(baselines)
 
-
     blts_index = np.arange(input_uv.Nblts)
     frequency_index = np.arange(input_uv.Nfreqs)
     source_index = np.arange(len(sources))
-    blts_ind, freq_ind, source_ind  = np.meshgrid(blts_index,frequency_index,source_index )
+    blts_ind, freq_ind, source_ind = np.meshgrid(blts_index, frequency_index, source_index)
 
     uvtask_list = []
 
-    uvtask_params = zip(baselines[blts_ind].ravel(),freq[freq_ind].ravel(),times[blts_ind].ravel(), sources[source_ind].ravel())
+    uvtask_params = zip(baselines[blts_ind].ravel(), freq[freq_ind].ravel(),
+                        times[blts_ind].ravel(), sources[source_ind].ravel())
     for (bl, freq, t, source) in uvtask_params:
-        task = UVTask(source,t, freq, bl, telescope)
+        task = UVTask(source, t, freq, bl, telescope)
         uvtask_list.append(task)
-    
+
     return uvtask_list
 
 # what a node does (pseudo code)
