@@ -5,6 +5,7 @@ from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from pyuvdata import UVData
+import pyuvdata.utils as uvutils
 # execution pseudo code
 
 # if rank==0
@@ -321,6 +322,10 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
     List has task parameters defined in UVTask object
     This function extracts time, freq, Antenna1, Antenna2
     """
+
+    if not isinstance(sources,np.ndarray):
+        raise TypeError("sources must be a numpy array")
+
     input_uv = UVData()
     input_uv.read_uvfits(filename)
 
@@ -328,7 +333,9 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
     # TODO: Have this function make mega-list of [time,frequency, Ant1, Ant2]
     #  this may possibly be done with MPI-trickery later
 
-    telescope = Telescope(EarthLocation(input_uv.telescope_location))
+    ## beam_list should be a list of beam objects, once we have those.
+    beam_list = [0]
+    telescope = Telescope(EarthLocation.from_geocentric(*input_uv.telescope_location,unit='m'),beam_list)
 
     times = Time(input_uv.time_array, format='jd', location=telescope.telescope_location)
 
@@ -347,20 +354,32 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
 
     antennas1 = []
     for antnum in input_uv.ant_1_array:
-        index = np.where(input_uv.antenna_numbers == antnum)[0]
+        index = np.where(input_uv.antenna_numbers == antnum)[0][0]
         antennas1.append(antennas[index])
 
     antennas2 = []
     for antnum in input_uv.ant_2_array:
-        index = np.where(input_uv.antenna_numbers == antnum)[0]
+        index = np.where(input_uv.antenna_numbers == antnum)[0][0]
         antennas2.append(antennas[index])
 
     baselines = []
     for index in range(len(antennas1)):
         baselines.append(Baseline(antennas1[index], antennas2[index]))
+    baselines = np.array(baselines)
 
-    # TODO: define uvtask_list
 
+    blts_index = np.arange(input_uv.Nblts)
+    frequency_index = np.arange(input_uv.Nfreqs)
+    source_index = np.arange(len(sources))
+    blts_ind, freq_ind, source_ind  = np.meshgrid(blts_index,frequency_index,source_index )
+
+    uvtask_list = []
+
+    uvtask_params = zip(baselines[blts_ind].ravel(),freq[freq_ind].ravel(),times[blts_ind].ravel(), sources[source_ind].ravel())
+    for (bl, freq, t, source) in uvtask_params:
+        task = UVTask(source,t, freq, bl, telescope)
+        uvtask_list.append(task)
+    
     return uvtask_list
 
 # what a node does (pseudo code)

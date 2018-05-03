@@ -151,3 +151,24 @@ def test_single_source_vis_uvdata():
     visibility = engine.make_visibility()
 
     nt.assert_true(np.allclose(visibility, np.array([1, 1, 0, 0])))
+
+def test_file_to_tasks():
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_file)
+
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    sources = np.array([create_zenith_source(time)])
+
+    uvtask_list = pyuvsim.uvfile_to_task_list(EW_uvfits_file,sources)
+
+    for idx,task in enumerate(uvtask_list):
+        print 'Task {}'.format(idx)
+        print task.baseline.antenna1.name
+        print task.baseline.antenna2.name
+        print task.time
+        print task.freq
+        print '\n'
+    
+def test_loopback_file_to_sim():
+
+
