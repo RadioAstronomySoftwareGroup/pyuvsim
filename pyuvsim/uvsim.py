@@ -382,6 +382,8 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
 
     return uvtask_list
 
+# TODO: make a gather function that puts the visibilities into a UVData object
+
 # what a node does (pseudo code)
 # def node:
 #     if task_id > 0:

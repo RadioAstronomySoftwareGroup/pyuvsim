@@ -162,13 +162,60 @@ def test_file_to_tasks():
 
     uvtask_list = pyuvsim.uvfile_to_task_list(EW_uvfits_file, sources)
 
+    tel_loc = EarthLocation.from_geocentric(*hera_uv.telescope_location, unit='m')
+    # beam list should be a list of UVBeam objects once we start using them
+    beam_list = [0]
+    telescope = pyuvsim.Telescope(tel_loc, beam_list)
+
+    ant_pos = hera_uv.antenna_positions + hera_uv.telescope_location
+    ant_pos_enu = uvutils.ENU_from_ECEF(ant_pos.T,
+                                        *hera_uv.telescope_location_lat_lon_alt).T
+
+    expected_task_list = []
+    antenna_names = hera_uv.antenna_names
+    antennas = []
+    for num, antname in enumerate(antenna_names):
+        beam_id = 0
+        antennas.append(pyuvsim.Antenna(antname, ant_pos_enu[num], beam_id))
+
+    antennas1 = []
+    for antnum in hera_uv.ant_1_array:
+        index = np.where(hera_uv.antenna_numbers == antnum)[0][0]
+        antennas1.append(antennas[index])
+
+    antennas2 = []
+    for antnum in hera_uv.ant_2_array:
+        index = np.where(hera_uv.antenna_numbers == antnum)[0][0]
+        antennas2.append(antennas[index])
+
+    for idx, antenna1 in enumerate(antennas1):
+        antenna2 = antennas2[idx]
+        baseline = pyuvsim.Baseline(antenna1, antenna2)
+        task = pyuvsim.UVTask(sources[0], time, hera_uv.freq_array[0] * units.Hz, baseline, telescope)
+        expected_task_list.append(task)
+
     for idx, task in enumerate(uvtask_list):
-        print 'Task {}'.format(idx)
-        print task.baseline.antenna1.name
-        print task.baseline.antenna2.name
-        print task.time
-        print task.freq
-        print '\n'
+        exp_task = expected_task_list[idx]
+        nt.assert_equal(task.baseline.antenna1.name, exp_task.baseline.antenna1.name)
+        nt.assert_true(np.allclose(task.baseline.antenna1.pos_enu.to(units.m).value,
+                                   exp_task.baseline.antenna1.pos_enu.to(units.m).value))
+        nt.assert_equal(task.baseline.antenna1.beam_id, exp_task.baseline.antenna1.beam_id)
+        nt.assert_equal(task.baseline.antenna2.name, exp_task.baseline.antenna2.name)
+        nt.assert_true(np.allclose(task.baseline.antenna2.pos_enu.to(units.m).value,
+                                   exp_task.baseline.antenna2.pos_enu.to(units.m).value))
+        nt.assert_equal(task.baseline.antenna2.beam_id, exp_task.baseline.antenna2.beam_id)
+
+        nt.assert_equal(task.time, exp_task.time)
+        nt.assert_equal(task.freq, exp_task.freq)
+
+        nt.assert_equal(task.source.ra, exp_task.source.ra)
+        nt.assert_equal(task.source.dec, exp_task.source.dec)
+        nt.assert_equal(task.source.epoch, exp_task.source.epoch)
+        nt.assert_equal(task.source.stokes, exp_task.source.stokes)
+
+        nt.assert_equal(task.telescope.telescope_location, exp_task.telescope.telescope_location)
+        # this may break when we make beam_list contain UVBeam objects
+        nt.assert_equal(task.telescope.beam_list, exp_task.telescope.beam_list)
 
 
-def test_loopback_file_to_sim():
+# def test_loopback_file_to_sim():
