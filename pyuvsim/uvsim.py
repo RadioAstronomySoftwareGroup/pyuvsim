@@ -61,7 +61,6 @@ class Source(object):
     epoch = None
     coherency_radec = None
 
-
     def __init__(self, ra, dec, epoch, freq, stokes):
         """
         Initialize from source catalog
@@ -107,8 +106,11 @@ class Source(object):
                                           self.stokes[0] - self.stokes[1]]])
 
     def __eq__(self, other):
-        return (self.ra == other.ra) and (self.dec==other.dec) and (self.epoch == other.epoch)\
-                and (self.stokes == other.stokes) and (self.freq == other.freq)
+        return ((self.ra == other.ra) and
+                (self.dec == other.dec) and
+                (self.epoch == other.epoch) and
+                (self.stokes == other.stokes) and
+                (self.freq == other.freq))
 
     def coherency_calc(self, time, telescope_location):
         """
@@ -217,7 +219,8 @@ class Telescope(object):
 
         # list of UVBeam objects, length of number of unique beams
         self.beam_list = beam_list
-    def __eq__(self,other):
+
+    def __eq__(self, other):
         return (self.telescope_location == other.telescope_location) and (self.beam_list == other.beam_list)
 
 
@@ -236,7 +239,9 @@ class Antenna(object):
         return np.array([[1, 0], [0, 1]])
 
     def __eq__(self, other):
-        return (self.name==other.name) and np.all(self.pos_enu==other.pos_enu) and (self.beam_id == other.beam_id)
+        return ((self.name == other.name) and
+                np.all(self.pos_enu == other.pos_enu) and
+                (self.beam_id == other.beam_id))
 
 # Then there's the issue of how to pass this in the MPI context.
 #   one option is for the UVEngine to get an array object and the tasks have
@@ -253,11 +258,11 @@ class Baseline(object):
         # we're using the local az/za frame so uvw is just enu
         self.uvw = self.enu
 
-    def __eq__(self,other):
-        return (self.antenna1 == other.antenna1)\
-                        and (self.antenna2 == other.antenna2)\
-                        and np.all(self.enu == other.enu)\
-                        and np.all(self.uvw == other.uvw)
+    def __eq__(self, other):
+        return ((self.antenna1 == other.antenna1) and
+                (self.antenna2 == other.antenna2) and
+                np.all(self.enu == other.enu) and
+                np.all(self.uvw == other.uvw))
 
 
 class UVTask(object):
@@ -271,11 +276,11 @@ class UVTask(object):
         self.telescope = telescope
 
     def __eq__(self, other):
-        return (self.time == other.time)\
-            and (self.freq == other.freq)\
-            and (self.source == other.source)\
-            and (self.baseline == other.baseline)\
-            and (self.telescope == other.telescope)
+        return ((self.time == other.time) and
+                (self.freq == other.freq) and
+                (self.source == other.source) and
+                (self.baseline == other.baseline) and
+                (self.telescope == other.telescope))
 
 
 class UVEngine(object):
