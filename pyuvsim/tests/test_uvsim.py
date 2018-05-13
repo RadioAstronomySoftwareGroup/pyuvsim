@@ -196,26 +196,7 @@ def test_file_to_tasks():
 
     for idx, task in enumerate(uvtask_list):
         exp_task = expected_task_list[idx]
-        nt.assert_equal(task.baseline.antenna1.name, exp_task.baseline.antenna1.name)
-        nt.assert_true(np.allclose(task.baseline.antenna1.pos_enu.to(units.m).value,
-                                   exp_task.baseline.antenna1.pos_enu.to(units.m).value))
-        nt.assert_equal(task.baseline.antenna1.beam_id, exp_task.baseline.antenna1.beam_id)
-        nt.assert_equal(task.baseline.antenna2.name, exp_task.baseline.antenna2.name)
-        nt.assert_true(np.allclose(task.baseline.antenna2.pos_enu.to(units.m).value,
-                                   exp_task.baseline.antenna2.pos_enu.to(units.m).value))
-        nt.assert_equal(task.baseline.antenna2.beam_id, exp_task.baseline.antenna2.beam_id)
-
-        nt.assert_equal(task.time, exp_task.time)
-        nt.assert_equal(task.freq, exp_task.freq)
-
-        nt.assert_equal(task.source.ra, exp_task.source.ra)
-        nt.assert_equal(task.source.dec, exp_task.source.dec)
-        nt.assert_equal(task.source.epoch, exp_task.source.epoch)
-        nt.assert_equal(task.source.stokes, exp_task.source.stokes)
-
-        nt.assert_equal(task.telescope.telescope_location, exp_task.telescope.telescope_location)
-        # this may break when we make beam_list contain UVBeam objects
-        nt.assert_equal(task.telescope.beam_list, exp_task.telescope.beam_list)
+        nt.assert_equal(task, exp_task)
 
 
 # def test_loopback_file_to_sim():
