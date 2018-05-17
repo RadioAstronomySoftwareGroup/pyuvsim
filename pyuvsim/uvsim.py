@@ -225,8 +225,9 @@ class Telescope(object):
 
 
 class Antenna(object):
-    def __init__(self, name, enu_position, beam_id):
+    def __init__(self, name, number, enu_position, beam_id):
         self.name = name
+        self.number = number
         # ENU position in meters relative to the telescope_location
         self.pos_enu = enu_position * units.m
         # index of beam for this antenna from array.beam_list
@@ -274,6 +275,7 @@ class UVTask(object):
         self.source = source
         self.baseline = baseline
         self.telescope = telescope
+        self.visibility_vector = None
 
     def __eq__(self, other):
         return ((self.time == other.time) and
@@ -342,6 +344,9 @@ class UVEngine(object):
 
         return vis_vector
 
+    def update_task(self):
+        self.task.visibility_vector = self.make_visibility()
+
 
 def uvfile_to_task_list(filename, sources, beam_dict=None):
     """Create task list from pyuvdata compatible input file.
@@ -409,6 +414,49 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
         uvtask_list.append(task)
 
     return uvtask_list
+
+
+def initialize_uvdata(uvtask_list):
+    # writing 4 pol polarization files now
+
+    task_freqs = []
+    task_bls = []
+    task_times = []
+    for task in uvtask_list:
+        task_freqs.append(task.freq)
+        task_bls.append(task.baseline)
+        task_times.append(task.time)
+
+    # we decided not to go this route, instead initialize from task_array
+    # assert(times.ndim == 1)
+    # assert(frequencies.ndim == 1)
+    # assert(antennas.ndim == 1)
+    #
+    # uv_obj = UVData()
+    # uv_obj.Nfreqs = frequencies.shape[0]
+    # uv_obj.Ntimes = times.shape[0]
+    # uv_obj.Nants_data = antennas.shape[0]
+    #
+    # uv_obj.Nspws = 1
+    # uv_obj.Npols = 4
+    #
+    # uv_obj.Nants_telescope = uv_obj.Nants_data
+    # uv_obj.Nbls = uv_obj.Nants_data * (uv_obj.Nants_data + 1) / 2
+    # uv_obj.Nblts = uv_obj.Nbls * uv_obj.Ntimes
+    #
+    # uv_obj.antenna_names = []
+    # uv_obj.antenna_numbers = []
+    # for ant in antennas:
+    #     uv_obj.antenna_names.append(ant.name)
+    #     uv_obj.antenna_numbers.append(ant.number)
+    #
+    # uv_obj.ant_1_array, uv_obj.ant_2_array = np.meshgrid(uv_obj.antenna_numbers, uv_obj.antenna_numbers)
+    # uv_obj.ant_1_array = uv_obj.ant_1_array.ravel()
+    # uv_obj.ant_2_array = uv_obj.ant_2_array.ravel()
+    #
+    # baseline_arr = uv_obj.antnums_to_baseline(uv_obj.ant_1_array, uv_obj.ant_2_array)
+    #
+    # uv_obj.freq_array = frequencies.to('Hz').value
 
 # TODO: make a gather function that puts the visibilities into a UVData object
 
