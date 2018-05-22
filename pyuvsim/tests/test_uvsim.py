@@ -15,6 +15,20 @@ beam_file = os.path.join(DATA_PATH, 'HERA_NicCST_150MHz.txt')
 hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 
+def init_uvtask_list_from_file(uvfits_file):
+    """
+        For multiple tests, generate a task list from a test uvfits file.
+    """
+    hera_uv = UVData()
+    hera_uv.read_uvfits(uvfits_file)
+
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    sources = np.array([create_zenith_source(time)])
+
+    uvtask_list = pyuvsim.uvfile_to_task_list(EW_uvfits_file, sources)
+    return uvtask_list
+
+
 
 def create_zenith_source(time):
     """Create pyuvsim Source object at zenith.
@@ -95,8 +109,8 @@ def test_single_source():
     freq = (150e6 * units.Hz)
     source = create_zenith_source(time)
 
-    antenna1 = pyuvsim.Antenna('ant1', np.array([0, 0, 0]), 0)
-    antenna2 = pyuvsim.Antenna('ant2', np.array([107, 0, 0]), 0)
+    antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
+    antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
@@ -129,8 +143,8 @@ def test_single_source_vis_uvdata():
     antpos = hera_uv.antenna_positions[0:2, :] + hera_uv.telescope_location
     antpos = uvutils.ENU_from_ECEF(antpos.T, *hera_uv.telescope_location_lat_lon_alt).T
 
-    antenna1 = pyuvsim.Antenna('ant1', np.array(antpos[0, :]), 0)
-    antenna2 = pyuvsim.Antenna('ant2', np.array(antpos[1, :]), 0)
+    antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
+    antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
 
     # setup the things that don't come from pyuvdata:
     # make a source at zenith
@@ -154,13 +168,14 @@ def test_single_source_vis_uvdata():
 
 
 def test_file_to_tasks():
+
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources = np.array([create_zenith_source(time)])
 
-    uvtask_list = pyuvsim.uvfile_to_task_list(EW_uvfits_file, sources)
+    uvtask_list = init_uvtask_list_from_file(EW_uvfits_file)
 
     tel_loc = EarthLocation.from_geocentric(*hera_uv.telescope_location, unit='m')
     # beam list should be a list of UVBeam objects once we start using them
@@ -176,7 +191,7 @@ def test_file_to_tasks():
     antennas = []
     for num, antname in enumerate(antenna_names):
         beam_id = 0
-        antennas.append(pyuvsim.Antenna(antname, ant_pos_enu[num], beam_id))
+        antennas.append(pyuvsim.Antenna(antname, num, ant_pos_enu[num], beam_id))
 
     antennas1 = []
     for antnum in hera_uv.ant_1_array:
@@ -197,6 +212,35 @@ def test_file_to_tasks():
     for idx, task in enumerate(uvtask_list):
         exp_task = expected_task_list[idx]
         nt.assert_equal(task, exp_task)
+
+
+def test_uvdata_init():
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_file)
+
+    hera_uv.unphase_to_drift()
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    sources = np.array([create_zenith_source(time)])
+
+    uvtask_list = init_uvtask_list_from_file(EW_uvfits_file)
+
+    uvdata_out = pyuvsim.initialize_uvdata(uvtask_list)
+
+    hera_uv.data_array = np.zeros_like(hera_uv.data_array,dtype=np.complex)
+    hera_uv.flag_array = np.zeros_like(hera_uv.data_array,dtype=bool)
+    hera_uv.nsample_array = np.ones_like(hera_uv.data_array)
+    hera_uv.history = 'UVSim'
+    hera_uv.instrument = hera_uv.telescope_name
+    hera_uv.integration_time = 1.
+
+    ## FIX once pyuvdata gets rid of pyephem
+    uvdata_out.zenith_ra = hera_uv.zenith_ra
+
+    ## TODO Fix the test file's antenna_positions.
+    nt.assert_equals(hera_uv._antenna_positions,uvdata_out._antenna_positions)
+    nt.assert_true(uvdata_out.__eq__(hera_uv,check_extra=False))
+
+
 
 
 # def test_loopback_file_to_sim():

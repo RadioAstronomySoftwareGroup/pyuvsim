@@ -213,15 +213,16 @@ class Source(object):
 
 
 class Telescope(object):
-    def __init__(self, telescope_location, beam_list):
+    def __init__(self, telescope_name, telescope_location, beam_list):
         # telescope location (EarthLocation object)
         self.telescope_location = telescope_location
+        self.telescope_name = telescope_name
 
         # list of UVBeam objects, length of number of unique beams
         self.beam_list = beam_list
 
     def __eq__(self, other):
-        return (self.telescope_location == other.telescope_location) and (self.beam_list == other.beam_list)
+        return (self.telescope_location == other.telescope_location) and (self.beam_list == other.beam_list) and (self.telescope_name == other.telescope_name)
 
 
 class Antenna(object):
@@ -368,14 +369,13 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
 
     # beam_list should be a list of beam objects, once we have those.
     beam_list = [0]
-    telescope = Telescope(EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'), beam_list)
+    telescope = Telescope(input_uv.telescope_name,EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'), beam_list)
 
     times = Time(input_uv.time_array, format='jd', location=telescope.telescope_location)
 
     antpos_ECEF = input_uv.antenna_positions + input_uv.telescope_location
     antpos_ENU = uvutils.ENU_from_ECEF(antpos_ECEF.T,
                                        *input_uv.telescope_location_lat_lon_alt).T
-
     antenna_names = input_uv.antenna_names
     antennas = []
     for num, antname in enumerate(antenna_names):
@@ -383,7 +383,7 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
             beam_id = 0
         else:
             beam_id = beam_dict[antname]
-        antennas.append(Antenna(antname, antpos_ENU[num], beam_id))
+        antennas.append(Antenna(antname, num, antpos_ENU[num], beam_id))
 
     antennas1 = []
     for antnum in input_uv.ant_1_array:
@@ -419,44 +419,104 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
 def initialize_uvdata(uvtask_list):
     # writing 4 pol polarization files now
 
+    # Assume all tasks have the same telescope.
+    #   Enforce this generally!
+
+    # Do after MPI_Reduce, summing over sources.
+
     task_freqs = []
     task_bls = []
     task_times = []
-    for task in uvtask_list:
-        task_freqs.append(task.freq)
-        task_bls.append(task.baseline)
-        task_times.append(task.time)
+    task_antnames = []
+    task_antnums = []
+    task_antpos = []
+    task_uvw = []
+    ant_1_array = []
+    ant_2_array = []
+    telescope_name = uvtask_list[0].telescope.telescope_name
+    telescope_location = uvtask_list[0].telescope.telescope_location.geocentric
 
-    # we decided not to go this route, instead initialize from task_array
-    # assert(times.ndim == 1)
-    # assert(frequencies.ndim == 1)
-    # assert(antennas.ndim == 1)
-    #
-    # uv_obj = UVData()
-    # uv_obj.Nfreqs = frequencies.shape[0]
-    # uv_obj.Ntimes = times.shape[0]
-    # uv_obj.Nants_data = antennas.shape[0]
-    #
-    # uv_obj.Nspws = 1
-    # uv_obj.Npols = 4
-    #
-    # uv_obj.Nants_telescope = uv_obj.Nants_data
-    # uv_obj.Nbls = uv_obj.Nants_data * (uv_obj.Nants_data + 1) / 2
-    # uv_obj.Nblts = uv_obj.Nbls * uv_obj.Ntimes
-    #
-    # uv_obj.antenna_names = []
-    # uv_obj.antenna_numbers = []
-    # for ant in antennas:
-    #     uv_obj.antenna_names.append(ant.name)
-    #     uv_obj.antenna_numbers.append(ant.number)
-    #
-    # uv_obj.ant_1_array, uv_obj.ant_2_array = np.meshgrid(uv_obj.antenna_numbers, uv_obj.antenna_numbers)
-    # uv_obj.ant_1_array = uv_obj.ant_1_array.ravel()
-    # uv_obj.ant_2_array = uv_obj.ant_2_array.ravel()
-    #
-    # baseline_arr = uv_obj.antnums_to_baseline(uv_obj.ant_1_array, uv_obj.ant_2_array)
-    #
-    # uv_obj.freq_array = frequencies.to('Hz').value
+    source_0 = uvtask_list[0].source
+    freq_0 = uvtask_list[0].freq.to("Hz").value
+    for task in uvtask_list:
+        if not task.source == source_0: continue
+        task_freqs.append(task.freq.to("Hz").value)
+
+        if task.freq.to("Hz").value == freq_0:
+            task_bls.append(task.baseline)
+            task_times.append(task.time.jd)
+            task_antnames.append(task.baseline.antenna1.name)
+            task_antnames.append(task.baseline.antenna2.name)
+            ant_1_array.append(task.baseline.antenna1.number)
+            ant_2_array.append(task.baseline.antenna2.number)
+            task_antnums.append(task.baseline.antenna1.number)
+            task_antnums.append(task.baseline.antenna2.number)
+            task_antpos.append(task.baseline.antenna1.pos_enu)
+            task_antpos.append(task.baseline.antenna2.pos_enu)
+            task_uvw.append(task.baseline.uvw)
+    
+    antnames, ant_indices = np.unique(task_antnames, return_index=True)
+    task_antnums = np.array(task_antnums)
+    task_antpos = np.array(task_antpos)
+    antnums = task_antnums[ant_indices]
+    antpos = task_antpos[ant_indices]
+
+    freqs = np.unique(task_freqs)
+
+    uv_obj = UVData()
+    uv_obj.telescope_name = telescope_name
+    uv_obj.telescope_location = np.array([tl.to('m').value for tl in telescope_location])
+    uv_obj.instrument = telescope_name
+    uv_obj.Nfreqs = freqs.size
+    uv_obj.Ntimes = np.unique(task_times).size
+    uv_obj.Nants_data = antnames.size
+    uv_obj.Nants_telescope = uv_obj.Nants_data
+    uv_obj.Nblts = len(ant_1_array)
+
+    uv_obj.antenna_names = antnames.tolist()
+    uv_obj.antenna_numbers = antnums
+    antpos_ecef = uvutils.ECEF_from_ENU(antpos.T,*uv_obj.telescope_location_lat_lon_alt).T - uv_obj.telescope_location
+    uv_obj.antenna_positions = antpos_ecef
+    uv_obj.ant_1_array = np.array(ant_1_array)
+    uv_obj.ant_2_array = np.array(ant_2_array)
+    uv_obj.time_array = np.array(task_times)
+    uv_obj.uvw_array = np.array(task_uvw)
+    uv_obj.baseline_array = uv_obj.antnums_to_baseline(ant_1_array,ant_2_array)
+    uv_obj.Nbls = np.unique(uv_obj.baseline_array).size
+    if uv_obj.Nfreqs == 1:
+        uv_obj.channel_width = 1.  #Hz
+    else:
+        uv_obj.channel_width = np.diff(freqs)[0]
+
+    if uv_obj.Ntimes == 1:
+        uv_obj.integration_time = 1.  #Second
+    else:
+        uv_obj.integration_time = np.diff(np.unique(task_times))[0]
+    uv_obj.set_lsts_from_time_array()
+    uv_obj.zenith_ra = uv_obj.lst_array
+    uv_obj.zenith_dec = np.repeat(uv_obj.telescope_location_lat_lon_alt[0],uv_obj.Nblts)  #Latitude
+    uv_obj.object_name = 'zenith'
+    uv_obj.set_drift()
+    uv_obj.vis_units = 'Jy'
+    uv_obj.polarization_array = np.array([-5,-6,-7,-8])
+    uv_obj.spw_array = np.array([0])
+    uv_obj.freq_array = np.array([freqs])
+
+    uv_obj.Nspws = uv_obj.spw_array.size
+    uv_obj.Npols = uv_obj.polarization_array.size
+
+    uv_obj.data_array = np.zeros((uv_obj.Nblts,uv_obj.Nspws,uv_obj.Nfreqs,uv_obj.Npols),dtype=np.complex)
+    uv_obj.flag_array = np.zeros((uv_obj.Nblts,uv_obj.Nspws,uv_obj.Nfreqs,uv_obj.Npols),dtype=bool)
+    uv_obj.nsample_array = np.ones_like(uv_obj.data_array,dtype=float)
+    uv_obj.history = 'UVSim'
+
+    uv_obj.check()
+
+    return uv_obj
+    
+
+    
+
 
 # TODO: make a gather function that puts the visibilities into a UVData object
 
