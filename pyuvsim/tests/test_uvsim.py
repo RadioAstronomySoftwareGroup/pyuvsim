@@ -15,22 +15,8 @@ beam_file = os.path.join(DATA_PATH, 'HERA_NicCST_150MHz.txt')
 hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 
-def init_uvtask_list_from_file(uvfits_file):
-    """
-        For multiple tests, generate a task list from a test uvfits file.
-    """
-    hera_uv = UVData()
-    hera_uv.read_uvfits(uvfits_file)
 
-    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources = np.array([create_zenith_source(time)])
-
-    uvtask_list = pyuvsim.uvfile_to_task_list(EW_uvfits_file, sources)
-    return uvtask_list
-
-
-
-def create_zenith_source(time):
+def create_zenith_source(time, name):
     """Create pyuvsim Source object at zenith.
 
     Input: Astropy Time object
@@ -47,8 +33,7 @@ def create_zenith_source(time):
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-
-    return pyuvsim.Source(ra, dec, time, freq, [1, 0, 0, 0])
+    return pyuvsim.Source(name, ra, dec, time, freq, [1, 0, 0, 0])
 
 
 def test_source_zenith():
@@ -67,7 +52,7 @@ def test_source_zenith():
     # dec = icrs_coord.dec
     #
     # zenith_source = pyuvsim.Source(ra, dec, time, freq, [1, 0, 0, 0])
-    zenith_source = create_zenith_source(time)
+    zenith_source = create_zenith_source(time,'zensrc')
     zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
     print('Zenith Source lmn')
     print(zenith_source_lmn)
@@ -88,7 +73,7 @@ def test_source_lst_zenith():
     time.location = array_location
     lst = time.sidereal_time('apparent')
 
-    source = pyuvsim.Source(lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
+    source = pyuvsim.Source('testsrc',lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
 
     source_lmn = source.pos_lmn(time, array_location)
     print('Source lmn')
@@ -107,7 +92,7 @@ def test_single_source():
     lst = time.sidereal_time('apparent')
 
     freq = (150e6 * units.Hz)
-    source = create_zenith_source(time)
+    source = create_zenith_source(time,'zensrc')
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
@@ -117,7 +102,7 @@ def test_single_source():
     # don't actually use a beam object for now because the thing you need to
     # calculate on the beam (the jones matrix at the source location) is bypassed for now
     beam_list = [0]
-    array = pyuvsim.Telescope(array_location, beam_list)
+    array = pyuvsim.Telescope('telescope_name',array_location, beam_list)
 
     task = pyuvsim.UVTask(source, time, freq, baseline, array)
 
@@ -151,14 +136,14 @@ def test_single_source_vis_uvdata():
     time.location = array_location
     lst = time.sidereal_time('mean')
     # source = pyuvsim.Source(lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
-    source = create_zenith_source(time)
+    source = create_zenith_source(time,'zensrc')
 
     # don't actually use a beam object for now because the thing you need to
     # calculate on the beam (the jones matrix at the source location) is bypassed for now
     beam_list = [0]
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
-    array = pyuvsim.Telescope(array_location, beam_list)
+    array = pyuvsim.Telescope('telescope_name',array_location, beam_list)
     task = pyuvsim.UVTask(source, time, freq, baseline, array)
     engine = pyuvsim.UVEngine(task)
 
@@ -173,14 +158,14 @@ def test_file_to_tasks():
     hera_uv.read_uvfits(EW_uvfits_file)
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources = np.array([create_zenith_source(time)])
+    sources = np.array([create_zenith_source(time,'zensrc')])
 
-    uvtask_list = init_uvtask_list_from_file(EW_uvfits_file)
+    uvtask_list = pyuvsim.uvfile_to_task_list(EW_uvfits_file,sources)
 
     tel_loc = EarthLocation.from_geocentric(*hera_uv.telescope_location, unit='m')
     # beam list should be a list of UVBeam objects once we start using them
     beam_list = [0]
-    telescope = pyuvsim.Telescope(tel_loc, beam_list)
+    telescope = pyuvsim.Telescope(hera_uv.telescope_name,tel_loc, beam_list)
 
     ant_pos = hera_uv.antenna_positions + hera_uv.telescope_location
     ant_pos_enu = uvutils.ENU_from_ECEF(ant_pos.T,
@@ -206,7 +191,8 @@ def test_file_to_tasks():
     for idx, antenna1 in enumerate(antennas1):
         antenna2 = antennas2[idx]
         baseline = pyuvsim.Baseline(antenna1, antenna2)
-        task = pyuvsim.UVTask(sources[0], time, hera_uv.freq_array[0] * units.Hz, baseline, telescope)
+        task = pyuvsim.UVTask(sources[0], time, hera_uv.freq_array[0,0] * units.Hz, baseline, telescope)
+        task.uvdata_index = (idx,0,0)
         expected_task_list.append(task)
 
     for idx, task in enumerate(uvtask_list):
@@ -220,9 +206,9 @@ def test_uvdata_init():
 
     hera_uv.unphase_to_drift()
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources = np.array([create_zenith_source(time)])
+    sources = np.array([create_zenith_source(time,'zensrc')])
 
-    uvtask_list = init_uvtask_list_from_file(EW_uvfits_file)
+    uvtask_list = pyuvsim.uvfile_to_task_list(EW_uvfits_file,sources)
 
     uvdata_out = pyuvsim.initialize_uvdata(uvtask_list)
 
@@ -240,7 +226,27 @@ def test_uvdata_init():
     nt.assert_equals(hera_uv._antenna_positions,uvdata_out._antenna_positions)
     nt.assert_true(uvdata_out.__eq__(hera_uv,check_extra=False))
 
+def test_gather():
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_file)
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    sources = np.array([
+            create_zenith_source(time,'src1'),
+            create_zenith_source(time,'src2'),
+            create_zenith_source(time,'src3')
+            ])
+    uvtask_list = pyuvsim.uvfile_to_task_list(EW_uvfits_file,sources)
 
+    for task in uvtask_list:
+        engine = pyuvsim.UVEngine(task)
+        task.visibility_vector = engine.make_visibility()
 
+    uv_out = pyuvsim.serial_gather(uvtask_list)
 
-# def test_loopback_file_to_sim():
+    nt.assert_equal(uv_out.data_array.shape, hera_uv.data_array.shape)
+
+def test_sources_equal():
+    time = Time('2018-03-01 00:00:00', scale='utc')
+    src1 = create_zenith_source(time,'src')
+    src2 = create_zenith_source(time,'src')
+    nt.assert_equal(src1,src2)

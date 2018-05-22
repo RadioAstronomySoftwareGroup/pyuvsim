@@ -54,6 +54,7 @@ import pyuvdata.utils as uvutils
 
 
 class Source(object):
+    name = None
     freq = None
     stokes = None
     ra = None
@@ -61,11 +62,12 @@ class Source(object):
     epoch = None
     coherency_radec = None
 
-    def __init__(self, ra, dec, epoch, freq, stokes):
+    def __init__(self, name, ra, dec, epoch, freq, stokes):
         """
         Initialize from source catalog
 
         Args:
+            name: Unique identifier for the source.
             ra: astropy Angle object
                 source RA at epoch
             dec: astropy Angle object
@@ -93,6 +95,7 @@ class Source(object):
             raise ValueError('epoch must be an astropy Time object. '
                              'value was: {t}'.format(t=epoch))
 
+        self.name = name
         self.freq = freq
         self.stokes = stokes
         self.ra = ra
@@ -110,6 +113,7 @@ class Source(object):
                 (self.dec == other.dec) and
                 (self.epoch == other.epoch) and
                 (self.stokes == other.stokes) and
+                (self.name == other.name) and
                 (self.freq == other.freq))
 
     def coherency_calc(self, time, telescope_location):
@@ -149,12 +153,12 @@ class Source(object):
 
             rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
 
-        print('rotation_matrix')
-        print(rotation_matrix)
+        #print('rotation_matrix')
+        #print(rotation_matrix)
         coherency_local = np.einsum('ab,bc,cd->ad', rotation_matrix.T,
                                     self.coherency_radec, rotation_matrix)
-        print('coherency_local')
-        print(coherency_local)
+        #print('coherency_local')
+        #print(coherency_local)
 
         return coherency_local
 
@@ -198,8 +202,8 @@ class Source(object):
         # calculate direction cosines of source at current time and array location
         az_za = self.az_za_calc(time, telescope_location)
 
-        print('Source az_za')
-        print(az_za)
+        #print('Source az_za')
+        #print(az_za)
 
         pos_l = np.cos(az_za[0]) * np.sin(az_za[1])
         pos_m = np.sin(az_za[0]) * np.sin(az_za[1])
@@ -277,12 +281,15 @@ class UVTask(object):
         self.baseline = baseline
         self.telescope = telescope
         self.visibility_vector = None
+        self.uvdata_index = None        # Where to add the visibility in the uvdata object.
 
     def __eq__(self, other):
         return ((self.time == other.time) and
                 (self.freq == other.freq) and
                 (self.source == other.source) and
                 (self.baseline == other.baseline) and
+                (self.visibility_vector == other.visibility_vector) and
+                (self.uvdata_index == other.uvdata_index) and
                 (self.telescope == other.telescope))
 
 
@@ -326,8 +333,8 @@ class UVEngine(object):
         uvw_lambda = self.task.baseline.uvw * self.task.freq.to(1 / units.s) / (const.c)
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
 
-        print('Pos lmn')
-        print(pos_lmn)
+        #print('Pos lmn')
+        #print(pos_lmn)
 
         # This hard coding shouldn't be required.
         # pos_lmn = [0, 0, 1]
@@ -335,8 +342,8 @@ class UVEngine(object):
         fringe = np.exp(-2j * np.pi * np.dot(self.task.baseline.uvw, pos_lmn))
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
 
-        print('fringe')
-        print(fringe)
+        #print('fringe')
+        #print(fringe)
 
         vij = self.apparent_coherency * fringe
 
@@ -408,9 +415,11 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
     uvtask_list = []
 
     uvtask_params = zip(baselines[blts_ind].ravel(), freq[freq_ind].ravel(),
-                        times[blts_ind].ravel(), sources[source_ind].ravel())
-    for (bl, freq, t, source) in uvtask_params:
+                        times[blts_ind].ravel(), sources[source_ind].ravel(),
+                        blts_ind.ravel(), freq_ind.ravel())
+    for (bl, freq, t, source, blti, fi) in uvtask_params:
         task = UVTask(source, t, freq, bl, telescope)
+        task.uvdata_index = (blti,0,fi)  # 0 = spectral window index
         uvtask_list.append(task)
 
     return uvtask_list
@@ -514,9 +523,16 @@ def initialize_uvdata(uvtask_list):
 
     return uv_obj
     
+def serial_gather(uvtask_list):
+    """
+        Initialize uvdata object, loop over uvtask list, acquire visibilities, and add to uvdata object.
+    """
+    uv_out = initialize_uvdata(uvtask_list)
+    for task in uvtask_list:
+        blt_ind,spw_ind,freq_ind = task.uvdata_index
+        uv_out.data_array[blt_ind,spw_ind,freq_ind,:] += task.visibility_vector
 
-    
-
+    return uv_out
 
 # TODO: make a gather function that puts the visibilities into a UVData object
 
