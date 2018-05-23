@@ -19,17 +19,19 @@ install:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
-  - conda config --remove channels defaults && conda config --add channels conda-forge
   - conda update -q conda
   # Useful for debugging any issues with conda
   - conda info -a
 
-  # create environment and install dependencies
-  - conda install numpy scipy astropy nose pip h5py
-  - conda install -c conda-forge healpy aipy coveralls
-  - conda list
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy nose pip coverage
+  - source activate test-environment
+  - conda install astropy
+  - conda install h5py
+  - conda install -c conda-forge aipy
+  - pip install coveralls
   - pip install git+https://github.com/HERA-Team/pyuvdata.git
   - python setup.py install
+
 
 script:
   - nosetests pyuvsim --with-coverage --cover-package=pyuvsim
