@@ -103,10 +103,11 @@ class Source(object):
         self.epoch = epoch
 
         # The coherency is a 2x2 matrix giving electric field correlation in Jy.
-        self.coherency_radec = np.array([[self.stokes[0] + self.stokes[1],
-                                          self.stokes[2] - 1j * self.stokes[3]],
-                                         [self.stokes[2] + 1j * self.stokes[3],
-                                          self.stokes[0] - self.stokes[1]]])
+        # Multiply by .5 to ensure that Trace sums to I not 2*I
+        self.coherency_radec = .5*np.array([[self.stokes[0] + self.stokes[1],
+                                             self.stokes[2] - 1j * self.stokes[3]],
+                                           [self.stokes[2] + 1j * self.stokes[3],
+                                            self.stokes[0] - self.stokes[1]]])
 
     def __eq__(self, other):
         return ((self.ra == other.ra) and
@@ -260,7 +261,7 @@ class Baseline(object):
     def __init__(self, antenna1, antenna2):
         self.antenna1 = antenna1
         self.antenna2 = antenna2
-        self.enu = antenna1.pos_enu - antenna2.pos_enu
+        self.enu = antenna2.pos_enu - antenna1.pos_enu
         # we're using the local az/za frame so uvw is just enu
         self.uvw = self.enu
 
@@ -350,7 +351,7 @@ class UVEngine(object):
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
 
-        return vis_vector
+        return np.array(vis_vector)
 
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
@@ -463,7 +464,7 @@ def initialize_uvdata(uvtask_list):
             task_antpos.append(task.baseline.antenna1.pos_enu)
             task_antpos.append(task.baseline.antenna2.pos_enu)
             task_uvw.append(task.baseline.uvw)
-    
+
     antnames, ant_indices = np.unique(task_antnames, return_index=True)
     task_antnums = np.array(task_antnums)
     task_antpos = np.array(task_antpos)
@@ -522,10 +523,11 @@ def initialize_uvdata(uvtask_list):
     uv_obj.check()
 
     return uv_obj
-    
+
 def serial_gather(uvtask_list):
     """
-        Initialize uvdata object, loop over uvtask list, acquire visibilities, and add to uvdata object.
+        Initialize uvdata object, loop over uvtask list, acquire visibilities,
+        and add to uvdata object.
     """
     uv_out = initialize_uvdata(uvtask_list)
     for task in uvtask_list:
@@ -534,6 +536,100 @@ def serial_gather(uvtask_list):
 
     return uv_out
 
+def create_mock_catalog(Nsrcs, time):
+    """Create mock catalog with test sources."""
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
+    freq = (150e6 * units.Hz)
+
+    source_coord = SkyCoord(alt=Angle(90 * units.deg), az=Angle(0 * units.deg),
+                            obstime=time, frame='altaz', location=array_location)
+    icrs_coord = source_coord.transform_to('icrs')
+
+    ra = icrs_coord.ra
+    dec = icrs_coord.dec
+
+    catalog = []
+    # Divide totaly Stokes I intensity among all sources
+    # Test file has Stokes I = 1 Jy
+    for src_num in xrange(Nsrcs):
+        catalog.append(Source('src'+str(src_num), ra, dec, time,
+                                      freq, [1./Nsrcs, 0, 0, 0]))
+    catalog = np.array(catalog)
+    return catalog
+
+def run_serial_uvsim(input_uvfits, catalog=None, Nsrcs=3):
+    """Run uvsim."""
+    input_uv = UVData()
+    input_uv.read_uvfits(input_uvfits)
+
+    time = Time(input_uv.time_array[0], scale='utc', format='jd')
+    if catalog is None:
+        catalog = create_mock_catalog(Nsrcs, time)
+
+    uvtask_list = uvfile_to_task_list(input_uvfits, catalog)
+
+    for task in uvtask_list:
+        engine = UVEngine(task)
+        task.visibility_vector = engine.make_visibility()
+
+    uvdata_out = serial_gather(uvtask_list)
+
+    return uvdata_out
+
+def run_uvsim(input_uvfits, catalog=None, Nsrcs=3):
+    """Run uvsim."""
+    from mpi4py import MPI
+
+    # Initialize MPI, get the communicator, number of Processing Units (PUs)
+    # and the rank of this PU
+    comm = MPI.COMM_WORLD
+    Npus = comm.Get_size()
+    rank = comm.Get_rank()
+
+    # The Head node will initialize our simulation
+    # Read input file and make uvtask list
+    uvtask_list = []
+    if rank==0:
+        input_uv = UVData()
+        input_uv.read_uvfits(input_uvfits)
+
+        time = Time(input_uv.time_array[0], scale='utc', format='jd')
+        if catalog is None:
+            catalog = create_mock_catalog(Nsrcs, time)
+
+        uvtask_list = uvfile_to_task_list(input_uvfits, catalog)
+        # To split into PUs make a list of lists length NPUs
+        uvtask_list = np.array_split(uvtask_list, Npus)
+        uvtask_list = [ list(tl) for tl in uvtask_list]
+
+    # Scatter the task list among all available PUs
+    local_task_list = comm.scatter(uvtask_list, root=0)
+
+    summed_task_dict = {}
+    for task in local_task_list:
+        engine = UVEngine(task)
+        if task.uvdata_index not in summed_task_dict.keys():
+            summed_task_dict[task.uvdata_index] = task
+        if summed_task_dict[task.uvdata_index].visibility_vector is None:
+            summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
+        else:
+            summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
+
+    # All the sources in this summed list are foobar-ed
+    # Source are summed over but only have 1 name
+    # Some source may be correct
+    summed_local_task_list = summed_task_dict.values()
+    # gather all the finished local tasks into a list of list of len NPUs
+    # gather is a blocking communication, have to wait for all PUs
+    full_tasklist = comm.gather(summed_local_task_list, root=0)
+
+    # Concatenate the list of lists into a flat list of tasks
+    if rank == 0:
+        uvtask_list = sum(full_tasklist,[])
+        uvdata_out = serial_gather(uvtask_list)
+
+        return uvdata_out
 # TODO: make a gather function that puts the visibilities into a UVData object
 
 # what a node does (pseudo code)
