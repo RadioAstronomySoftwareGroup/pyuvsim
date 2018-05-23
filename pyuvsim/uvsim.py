@@ -196,17 +196,18 @@ class Antenna(object):
 
         source_az = np.array([source_az_za[0]])
         source_za = np.array([source_az_za[1]])
+        freq = np.array([frequency.to('Hz').value])
 
         if array.beam_list[self.beam_id].data_normalization != 'peak':
             array.beam_list[self.beam_id].peak_normalize()
         array.beam_list[self.beam_id].interpolation_function = 'az_za_simple'
 
         interp_data, interp_basis_vector, nearest_pix_dist = \
-            array.beam_list[self.beam_id].interp_az_za(source_az, source_za)
+            array.beam_list[self.beam_id].interp(az_array=source_az,
+                                                 za_array=source_za,
+                                                 freq_array=freq)
 
-        # interp_data has shape: (Naxes_vec, Nspws, Nfeeds, Nfreqs, 1)
-        # need to interpolate along the frequency axis
-        # just use the 0th freq value for now
+        # interp_data has shape: (Naxes_vec, Nspws, Nfeeds, 1 (freq), 1 (source position))
         jones_matrix = np.zeros((2, 2), dtype=np.complex)
         # first axis is feed, second axis is theta, phi (opposite order of beam!)
         jones_matrix[0, 0] = interp_data[1, 0, 0, 0, 0]
@@ -314,7 +315,6 @@ class UVEngine(object):
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
 
         vij = self.apparent_coherency * fringe
-
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
 
