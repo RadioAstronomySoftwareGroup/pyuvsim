@@ -1,0 +1,38 @@
+sudo: required
+dist: trusty
+language: python
+python:
+  # We don't actually use the Travis Python, but this keeps it organized.
+  - "2.7"
+install:
+  # ensure that we have the full tag information available for version.py
+  - git fetch --unshallow --tags
+  - sudo apt-get update
+  # We do this conditionally because it saves us some downloading if the
+  # version is the same.
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      wget https://repo.continuum.io/miniconda/Miniconda2-4.3.21-Linux-x86_64.sh -O miniconda.sh;
+    else
+      wget https://repo.continuum.io/miniconda/Miniconda3-4.3.21-Linux-x86_64.sh -O miniconda.sh;
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda install -y 'libgfortran =3.0.0'
+  - conda config --remove channels defaults && conda config --add channels conda-forge
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+
+  # create environment and install dependencies
+  - conda install numpy scipy astropy nose pip h5py
+  - conda install -c conda-forge healpy aipy python-casacore pycodestyle coveralls
+  - conda list
+script:
+  - nosetests pyuvdata --with-coverage --cover-package=pyuvdata
+  - python -m doctest docs/tutorial.rst
+  - pycodestyle --ignore=E501,W503
+
+after_success:
+    - coveralls
