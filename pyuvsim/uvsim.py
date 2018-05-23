@@ -6,7 +6,13 @@ from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from pyuvdata import UVData
 import pyuvdata.utils as uvutils
-
+import os
+from itertools import izip
+try:
+    import progressbar
+    progbar = True
+except(ImportError):
+    progbar = False
 
 class Source(object):
     name = None
@@ -303,19 +309,18 @@ class UVEngine(object):
         self.task.visibility_vector = self.make_visibility()
 
 
-def uvfile_to_task_list(filename, sources, beam_dict=None):
+def uvdata_to_task_list(input_uv, sources, beam_dict=None):
     """Create task list from pyuvdata compatible input file.
 
     Returns: List of task parameters to be send to UVEngines
     List has task parameters defined in UVTask object
     This function extracts time, freq, Antenna1, Antenna2
     """
+    if not isinstance(input_uv, UVData):
+        raise TypeError("input_uv must be UVData object")
 
     if not isinstance(sources, np.ndarray):
         raise TypeError("sources must be a numpy array")
-
-    input_uv = UVData()
-    input_uv.read_uvfits(filename)
 
     freq = input_uv.freq_array[0, :] * units.Hz
 
@@ -336,36 +341,48 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
             beam_id = beam_dict[antname]
         antennas.append(Antenna(antname, num, antpos_ENU[num], beam_id))
 
-    antennas1 = []
-    for antnum in input_uv.ant_1_array:
-        index = np.where(input_uv.antenna_numbers == antnum)[0][0]
-        antennas1.append(antennas[index])
-
-    antennas2 = []
-    for antnum in input_uv.ant_2_array:
-        index = np.where(input_uv.antenna_numbers == antnum)[0][0]
-        antennas2.append(antennas[index])
-
     baselines = []
-    for index in range(len(antennas1)):
-        baselines.append(Baseline(antennas1[index], antennas2[index]))
+    print('Generating Baselines')
+    for count, antnum1 in enumerate(input_uv.ant_1_array):
+        antnum2 = input_uv.ant_2_array[count]
+        index1 = np.where(input_uv.antenna_numbers == antnum1)[0][0]
+        index2 = np.where(input_uv.antenna_numbers == antnum2)[0][0]
+        baselines.append(Baseline(antennas[index1], antennas[index2]))
+
     baselines = np.array(baselines)
 
     blts_index = np.arange(input_uv.Nblts)
     frequency_index = np.arange(input_uv.Nfreqs)
     source_index = np.arange(len(sources))
+    print('Making Meshgrid')
     blts_ind, freq_ind, source_ind = np.meshgrid(blts_index, frequency_index, source_index)
+    print('Raveling')
+    blts_ind = blts_ind.ravel()
+    freq_ind = freq_ind.ravel()
+    source_ind = source_ind.ravel()
 
     uvtask_list = []
+    print('Making Tasks')
+    print('Number of tasks:', len(blts_ind))
 
-    uvtask_params = zip(baselines[blts_ind].ravel(), freq[freq_ind].ravel(),
-                        times[blts_ind].ravel(), sources[source_ind].ravel(),
-                        blts_ind.ravel(), freq_ind.ravel())
-    for (bl, freq, t, source, blti, fi) in uvtask_params:
+    if progbar:
+        pbar = progressbar.ProgressBar(maxval=len(blts_ind)).start()
+        count = 0
+    for (bl, freq, t, source, blti, fi) in izip(baselines[blts_ind],
+                                                freq[freq_ind], times[blts_ind],
+                                                sources[source_ind], blts_ind,
+                                                freq_ind):
+
         task = UVTask(source, t, freq, bl, telescope)
         task.uvdata_index = (blti,0,fi)  # 0 = spectral window index
         uvtask_list.append(task)
 
+        if progbar:
+            count += 1
+            pbar.update(count)
+
+    if progbar:
+        pbar.finish()
     return uvtask_list
 
 
@@ -501,16 +518,17 @@ def create_mock_catalog(Nsrcs, time):
     catalog = np.array(catalog)
     return catalog
 
-def run_serial_uvsim(input_uvfits, catalog=None, Nsrcs=3):
+def run_serial_uvsim(input_uv, catalog=None, Nsrcs=3):
     """Run uvsim."""
-    input_uv = UVData()
-    input_uv.read_uvfits(input_uvfits)
+
+    if not isinstance(input_uv, UVData):
+        raise TypeError("input_uv must be UVData object")
 
     time = Time(input_uv.time_array[0], scale='utc', format='jd')
     if catalog is None:
         catalog = create_mock_catalog(Nsrcs, time)
 
-    uvtask_list = uvfile_to_task_list(input_uvfits, catalog)
+    uvtask_list = uvdata_to_task_list(input_uv, catalog)
 
     for task in uvtask_list:
         engine = UVEngine(task)
@@ -520,12 +538,14 @@ def run_serial_uvsim(input_uvfits, catalog=None, Nsrcs=3):
 
     return uvdata_out
 
-def run_uvsim(input_uvfits, catalog=None, Nsrcs=3):
+def run_uvsim(input_uv, catalog=None, Nsrcs=3):
     """Run uvsim."""
-    from mpi4py import MPI
+    if not isinstance(input_uv, UVData):
+        raise TypeError("input_uv must be UVData object")
 
     # Initialize MPI, get the communicator, number of Processing Units (PUs)
     # and the rank of this PU
+    from mpi4py import MPI
     comm = MPI.COMM_WORLD
     Npus = comm.Get_size()
     rank = comm.Get_rank()
@@ -534,30 +554,54 @@ def run_uvsim(input_uvfits, catalog=None, Nsrcs=3):
     # Read input file and make uvtask list
     uvtask_list = []
     if rank==0:
-        input_uv = UVData()
-        input_uv.read_uvfits(input_uvfits)
+        print('Nblts:', input_uv.Nblts)
+        print('Nfreqs:', input_uv.Nfreqs)
 
         time = Time(input_uv.time_array[0], scale='utc', format='jd')
         if catalog is None:
+            print("Nsrcs:", Nsrcs)
             catalog = create_mock_catalog(Nsrcs, time)
 
-        uvtask_list = uvfile_to_task_list(input_uvfits, catalog)
+        print("Creating Task List")
+        uvtask_list = uvdata_to_task_list(input_uv, catalog)
         # To split into PUs make a list of lists length NPUs
+        print("Splitting Task List")
         uvtask_list = np.array_split(uvtask_list, Npus)
         uvtask_list = [ list(tl) for tl in uvtask_list]
 
+        print("Sending Tasks To Processing Units")
     # Scatter the task list among all available PUs
     local_task_list = comm.scatter(uvtask_list, root=0)
 
     summed_task_dict = {}
-    for task in local_task_list:
-        engine = UVEngine(task)
-        if task.uvdata_index not in summed_task_dict.keys():
-            summed_task_dict[task.uvdata_index] = task
-        if summed_task_dict[task.uvdata_index].visibility_vector is None:
-            summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
-        else:
-            summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
+
+    if rank == 0:
+        if progbar:
+            pbar = progressbar.ProgressBar(maxval=len(local_task_list)).start()
+
+        for count, task in enumerate(local_task_list):
+            engine = UVEngine(task)
+            if task.uvdata_index not in summed_task_dict.keys():
+                summed_task_dict[task.uvdata_index] = task
+            if summed_task_dict[task.uvdata_index].visibility_vector is None:
+                summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
+            else:
+                summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
+
+            if progbar:
+                pbar.update(count)
+
+        if progbar:
+            pbar.finish()
+    else:
+        for task in local_task_list:
+            engine = UVEngine(task)
+            if task.uvdata_index not in summed_task_dict.keys():
+                summed_task_dict[task.uvdata_index] = task
+            if summed_task_dict[task.uvdata_index].visibility_vector is None:
+                summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
+            else:
+                summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
 
     # All the sources in this summed list are foobar-ed
     # Source are summed over but only have 1 name
