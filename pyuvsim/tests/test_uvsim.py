@@ -315,3 +315,7 @@ def test_sources_equal():
     src1 = create_zenith_source(time, 'src')
     src2 = create_zenith_source(time, 'src')
     nt.assert_equal(src1, src2)
+
+def test_mock_catalog():
+    time = Time('2018-03-01 00:00:00', scale='utc')
+    cat = pyuvsim.create_mock_catalog(time, arrangement='asym1')

@@ -39,7 +39,7 @@ for filename in args.file_in:
                        model_version='1.0')
 
     beam_list = [beam]
-    uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, Nsrcs=args.Nsrcs)
+    uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list,mock_arrangement='asym1', Nsrcs=args.Nsrcs)
     if rank == 0:
         outfile = os.path.join(args.outdir, 'sim_' + os.path.basename(filename))
         uvdata_out.write_uvfits(outfile, force_phase=True, spoof_nonessential=True)

@@ -536,25 +536,44 @@ def serial_gather(uvtask_list):
     return uv_out
 
 
-def create_mock_catalog(Nsrcs, time):
-    """Create mock catalog with test sources at zenith."""
+def create_mock_catalog(time,arrangement='zenith',**kwargs):
+    """
+        Create mock catalog with test sources at zenith.
+        arrangment = Choose test point source pattern (default = 1 source at zenith)
+
+    """
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
     freq = (150e6 * units.Hz)
 
-    source_coord = SkyCoord(alt=Angle(90 * units.deg), az=Angle(0 * units.deg),
+    if arrangement == 'asym1':
+        Nsrcs = 4
+        alts = [88.,0.,86., 85.]
+        azs = [270., 0., 90., 135.]
+        fluxes = [5.,4.,1.0,2.0]
+
+    if arrangement == 'zenith':
+        Nsrcs = 1
+        if Nsrcs in kwargs: Nsrcs = kwargs['Nsrcs']
+        alts = np.ones(Nsrcs)*90.
+        azs = np.zeros(Nsrcs,dtype=float)
+        fluxes=np.ones(Nsrcs)*1/Nsrcs
+        # Divide totaly Stokes I intensity among all sources
+        # Test file has Stokes I = 1 Jy
+
+    catalog = []
+
+    source_coord = SkyCoord(alt=Angle(alts,unit=units.deg), az=Angle(azs,unit=units.deg),
                             obstime=time, frame='altaz', location=array_location)
     icrs_coord = source_coord.transform_to('icrs')
-
+    
     ra = icrs_coord.ra
     dec = icrs_coord.dec
 
-    catalog = []
-    # Divide totaly Stokes I intensity among all sources
-    # Test file has Stokes I = 1 Jy
-    for src_num in xrange(Nsrcs):
-        catalog.append(Source('src' + str(src_num), ra, dec, time,
-                              freq, [1. / Nsrcs, 0, 0, 0]))
+    for si in range(Nsrcs):
+        catalog.append(Source('src' + str(si), ra[si], dec[si], time,
+                                  freq, [fluxes[si],0,0,0]))
+    
     catalog = np.array(catalog)
     return catalog
 
@@ -579,7 +598,7 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
     return uvdata_out
 
-def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
+def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement=None):
     """Run uvsim."""
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
@@ -601,7 +620,11 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
         time = Time(input_uv.time_array[0], scale='utc', format='jd')
         if catalog is None:
             print("Nsrcs:", Nsrcs)
-            catalog = create_mock_catalog(Nsrcs, time)
+            if mock_arrangement is not None: arrange = mock_arrangement
+            if Nsrcs is not None:
+                catalog = create_mock_catalog(time, mock_arrangement, Nsrcs=Nsrcs)
+            else:
+                catalog = create_mock_catalog(time, mock_arrangement)
 
         uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
         # To split into PUs make a list of lists length NPUs
