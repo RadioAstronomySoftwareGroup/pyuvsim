@@ -160,12 +160,12 @@ def test_file_to_tasks():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources = np.array([create_zenith_source(time,'zensrc')])
 
-    uvtask_list = pyuvsim.uvfile_to_task_list(EW_uvfits_file,sources)
+    uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources)
 
     tel_loc = EarthLocation.from_geocentric(*hera_uv.telescope_location, unit='m')
     # beam list should be a list of UVBeam objects once we start using them
     beam_list = [0]
-    telescope = pyuvsim.Telescope(hera_uv.telescope_name,tel_loc, beam_list)
+    telescope = pyuvsim.Telescope(hera_uv.telescope_name, tel_loc, beam_list)
 
     ant_pos = hera_uv.antenna_positions + hera_uv.telescope_location
     ant_pos_enu = uvutils.ENU_from_ECEF(ant_pos.T,
@@ -208,7 +208,7 @@ def test_uvdata_init():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources = np.array([create_zenith_source(time,'zensrc')])
 
-    uvtask_list = pyuvsim.uvfile_to_task_list(EW_uvfits_file,sources)
+    uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources)
 
     uvdata_out = pyuvsim.initialize_uvdata(uvtask_list)
 
@@ -235,7 +235,7 @@ def test_gather():
             # create_zenith_source(time,'src2'),
             # create_zenith_source(time,'src3')
             ])
-    uvtask_list = pyuvsim.uvfile_to_task_list(EW_uvfits_file,sources)
+    uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources)
 
     for task in uvtask_list:
         engine = pyuvsim.UVEngine(task)
