@@ -6,51 +6,6 @@ from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from pyuvdata import UVData
 import pyuvdata.utils as uvutils
-# execution pseudo code
-
-# if rank==0
-    # load stuff
-    # broadcast
-    # gather
-    # sum sources
-    # save file
-# else:
-    # rankN
-    # load array details
-    # create object
-    # recv
-    # put details into object
-    # object.calculate()
-    # format results
-    # send, return to recv
-
-# TODO:
-# loading array details, observation settings
-# what does the MPI traffic look like?
-#    who does the formatting to input mpi parameters into uvengine
-#    ANS: each MPI process takes a list of inputs, creates a list of tasks, and
-#      hands them to the UVEngine
-# unittests
-
-# FUTURE:
-#   Baseline-dependent beams via Mueller matrix formalism
-
-# read source catalog, generate Source objects,
-#    set Source.calc to whatever
-# 30 Nov 2017 - started source object, made _Blank_ test file
-#    next steps: add basic parameter test for Source, flux calculation, ENU direction, coherency
-#       -- HW Adam add some unittest boilerplate, next time testing Source attributes exist
-#    after that, Baseline object, ECEF to ENU, empty beam hook
-#    GOAL: 1 source on 1 baseline. -  first important unittest
-# 7 Dec 2017 - Debated Jones vs Mueller and coordinate systems. Began defining Jones class and apply_beam method.
-#    next steps: add in jones coordinate transformations and make unit tests for it.
-#     refs: Smirnov Series 2011 papers. Nunhokee 2017
-#    Future tie-in: UVBeam to get jones matrix option. Open github issue. Request support for coordinate transformations.
-#    Zac --> Make us some diagrams of coord systems for different parts of the transformation.
-# 18 Jan 2018
-#    Zac -- Circulate what you have. Diagram coord systems.
-#    Debate --- Do we rotate the beam or the sky? Calculate uvw in alt/az or ra/dec?
-#    HW: Write down our requirements; Open up an issue to make first test (source at zenith).
 
 
 class Source(object):
@@ -154,12 +109,8 @@ class Source(object):
 
             rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
 
-        #print('rotation_matrix')
-        #print(rotation_matrix)
         coherency_local = np.einsum('ab,bc,cd->ad', rotation_matrix.T,
                                     self.coherency_radec, rotation_matrix)
-        #print('coherency_local')
-        #print(coherency_local)
 
         return coherency_local
 
@@ -210,11 +161,6 @@ class Source(object):
         pos_m = np.sin(az_za[0]) * np.sin(az_za[1])
         pos_n = np.cos(az_za[1])
         return (pos_l, pos_m, pos_n)
-
-    # debate: will an object ever be _re_-used?
-    # answer, that is not our initial intent. Remake objects for each t,f etc
-    # new plan from 2/1: Source objects describe sources in celestial coords
-    # but have methods to convert those coords to the local az/za frame
 
 
 class Telescope(object):
@@ -372,10 +318,7 @@ def uvfile_to_task_list(filename, sources, beam_dict=None):
     input_uv.read_uvfits(filename)
 
     freq = input_uv.freq_array[0, :] * units.Hz
-    # TODO: Have this function make mega-list of [time,frequency, Ant1, Ant2]
-    #  this may possibly be done with MPI-trickery later
 
-    # beam_list should be a list of beam objects, once we have those.
     beam_list = [0]
     telescope = Telescope(input_uv.telescope_name,EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'), beam_list)
 
@@ -630,40 +573,3 @@ def run_uvsim(input_uvfits, catalog=None, Nsrcs=3):
         uvdata_out = serial_gather(uvtask_list)
 
         return uvdata_out
-# TODO: make a gather function that puts the visibilities into a UVData object
-
-# what a node does (pseudo code)
-# def node:
-#     if task_id > 0:
-#         params_in = scatter()
-
-
-# objects that are defined on input
-# class Telescope(object):
-#    telescope_location (maybe an astropy observer class)
-#    contains antennas (locations), maps beams to antennas, cross-talk?
-# class SkyModel(object):
-#       """ """
-#    can be derived from sources, a healpix map, or an image
-#      (internally represented as lists of sources/components)
-#      hands per freq, time, direction inputs to a broadcaster
-# class Spectrum(object):
-#
-# class SkySelection(object):
-#
-# class Compute(object):
-#
-# class Observation(object):
-#   defines user settable parameters
-#   (start time, stop time, pointing, integration time)
-# class Instrument(object):
-#   limits of the instrument
-#   available ranges of parameters
-#   (frequencies, pointing ranges, integration times)
-#   coordinate transforms
-#    def Location(object):
-#        #location of observatory, timekeeping?
-# class Geometry(object):
-#    # takes source positions and observation positions and calculates xyz
-#    # could also calculate baselines
-# class Beam(object)
