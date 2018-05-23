@@ -110,7 +110,7 @@ def test_single_source():
 
     visibility = engine.make_visibility()
 
-    nt.assert_true(np.allclose(visibility, np.array([1, 1, 0, 0])))
+    nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0])))
 
 
 def test_single_source_vis_uvdata():
@@ -149,7 +149,7 @@ def test_single_source_vis_uvdata():
 
     visibility = engine.make_visibility()
 
-    nt.assert_true(np.allclose(visibility, np.array([1, 1, 0, 0])))
+    nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0])))
 
 
 def test_file_to_tasks():
@@ -231,9 +231,9 @@ def test_gather():
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources = np.array([
-            create_zenith_source(time,'src1'),
-            create_zenith_source(time,'src2'),
-            create_zenith_source(time,'src3')
+            create_zenith_source(time,'src1')
+            # create_zenith_source(time,'src2'),
+            # create_zenith_source(time,'src3')
             ])
     uvtask_list = pyuvsim.uvfile_to_task_list(EW_uvfits_file,sources)
 
@@ -243,7 +243,14 @@ def test_gather():
 
     uv_out = pyuvsim.serial_gather(uvtask_list)
 
-    nt.assert_equal(uv_out.data_array.shape, hera_uv.data_array.shape)
+    nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array))
+
+def test_run_serial_uvsim():
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_file)
+    uv_out = pyuvsim.run_serial_uvsim(EW_uvfits_file, catalog=None, Nsrcs=1)
+
+    nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array))
 
 def test_sources_equal():
     time = Time('2018-03-01 00:00:00', scale='utc')
