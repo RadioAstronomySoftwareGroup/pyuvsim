@@ -5,6 +5,7 @@ import pyuvsim
 import argparse
 import os
 from mpi4py import MPI
+from pyuvdata import UVData
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -22,6 +23,9 @@ parser.add_argument('--Nsrcs', type=int, default=3)
 args = parser.parse_args()
 
 for filename in args.file_in:
+    print("Reading:", os.path.basename(filename))
+    input_uv = UVData()
+    input_uv.read_uvfits(filename)
     uvdata_out = pyuvsim.uvsim.run_uvsim(filename, Nsrcs=args.Nsrcs)
     if rank == 0:
         outfile = os.path.join(args.outdir, 'sim_' + os.path.basename(filename))
