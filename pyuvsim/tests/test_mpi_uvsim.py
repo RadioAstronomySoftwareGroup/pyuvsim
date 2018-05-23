@@ -24,6 +24,16 @@ EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 def test_run_uvsim():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
-    uv_out = pyuvsim.run_uvsim(hera_uv, catalog=None, Nsrcs=3)
-    if rank ==0:
+
+    beam = UVBeam()
+    beam.read_cst_beam(beam_file, beam_type='efield', frequency=150e6,
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+
+    uv_out = pyuvsim.run_uvsim(hera_uv, beam_list, catalog=None, Nsrcs=3)
+    if rank == 0:
         nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array))

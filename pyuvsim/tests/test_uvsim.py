@@ -52,7 +52,7 @@ def test_source_zenith():
     # dec = icrs_coord.dec
     #
     # zenith_source = pyuvsim.Source(ra, dec, time, freq, [1, 0, 0, 0])
-    zenith_source = create_zenith_source(time,'zensrc')
+    zenith_source = create_zenith_source(time, 'zensrc')
     zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
     print('Zenith Source lmn')
     print(zenith_source_lmn)
@@ -73,7 +73,7 @@ def test_source_lst_zenith():
     time.location = array_location
     lst = time.sidereal_time('apparent')
 
-    source = pyuvsim.Source('testsrc',lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
+    source = pyuvsim.Source('testsrc', lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
 
     source_lmn = source.pos_lmn(time, array_location)
     print('Source lmn')
@@ -92,17 +92,22 @@ def test_single_source():
     lst = time.sidereal_time('apparent')
 
     freq = (150e6 * units.Hz)
-    source = create_zenith_source(time,'zensrc')
+    source = create_zenith_source(time, 'zensrc')
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
-    # don't actually use a beam object for now because the thing you need to
-    # calculate on the beam (the jones matrix at the source location) is bypassed for now
-    beam_list = [0]
-    array = pyuvsim.Telescope('telescope_name',array_location, beam_list)
+    beam = UVBeam()
+    beam.read_cst_beam(beam_file, beam_type='efield', frequency=150e6,
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
 
     task = pyuvsim.UVTask(source, time, freq, baseline, array)
 
@@ -136,14 +141,19 @@ def test_single_source_vis_uvdata():
     time.location = array_location
     lst = time.sidereal_time('mean')
     # source = pyuvsim.Source(lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
-    source = create_zenith_source(time,'zensrc')
+    source = create_zenith_source(time, 'zensrc')
 
-    # don't actually use a beam object for now because the thing you need to
-    # calculate on the beam (the jones matrix at the source location) is bypassed for now
-    beam_list = [0]
+    beam = UVBeam()
+    beam.read_cst_beam(beam_file, beam_type='efield', frequency=150e6,
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
-    array = pyuvsim.Telescope('telescope_name',array_location, beam_list)
+    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
     task = pyuvsim.UVTask(source, time, freq, baseline, array)
     engine = pyuvsim.UVEngine(task)
 
@@ -158,13 +168,28 @@ def test_file_to_tasks():
     hera_uv.read_uvfits(EW_uvfits_file)
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources = np.array([create_zenith_source(time,'zensrc')])
+    sources = np.array([create_zenith_source(time, 'zensrc')])
 
-    uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources)
+    beam = UVBeam()
+    beam.read_cst_beam(beam_file, beam_type='efield', frequency=150e6,
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+
+    uvtask_list = pyuvsim.uvfile_to_task_list(hera_uv, sources, beam_list)
 
     tel_loc = EarthLocation.from_geocentric(*hera_uv.telescope_location, unit='m')
-    # beam list should be a list of UVBeam objects once we start using them
-    beam_list = [0]
+    beam = UVBeam()
+    beam.read_cst_beam(beam_file, beam_type='efield', frequency=150e6,
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
     telescope = pyuvsim.Telescope(hera_uv.telescope_name, tel_loc, beam_list)
 
     ant_pos = hera_uv.antenna_positions + hera_uv.telescope_location
@@ -191,8 +216,8 @@ def test_file_to_tasks():
     for idx, antenna1 in enumerate(antennas1):
         antenna2 = antennas2[idx]
         baseline = pyuvsim.Baseline(antenna1, antenna2)
-        task = pyuvsim.UVTask(sources[0], time, hera_uv.freq_array[0,0] * units.Hz, baseline, telescope)
-        task.uvdata_index = (idx,0,0)
+        task = pyuvsim.UVTask(sources[0], time, hera_uv.freq_array[0, 0] * units.Hz, baseline, telescope)
+        task.uvdata_index = (idx, 0, 0)
         expected_task_list.append(task)
 
     for idx, task in enumerate(uvtask_list):
@@ -206,36 +231,55 @@ def test_uvdata_init():
 
     hera_uv.unphase_to_drift()
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources = np.array([create_zenith_source(time,'zensrc')])
+    sources = np.array([create_zenith_source(time, 'zensrc')])
 
-    uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources)
+    beam = UVBeam()
+    beam.read_cst_beam(beam_file, beam_type='efield', frequency=150e6,
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+
+    uvtask_list = pyuvsim.uvfile_to_task_list(hera_uv, sources, beam_list)
 
     uvdata_out = pyuvsim.initialize_uvdata(uvtask_list)
 
-    hera_uv.data_array = np.zeros_like(hera_uv.data_array,dtype=np.complex)
-    hera_uv.flag_array = np.zeros_like(hera_uv.data_array,dtype=bool)
+    hera_uv.data_array = np.zeros_like(hera_uv.data_array, dtype=np.complex)
+    hera_uv.flag_array = np.zeros_like(hera_uv.data_array, dtype=bool)
     hera_uv.nsample_array = np.ones_like(hera_uv.data_array)
     hera_uv.history = 'UVSim'
     hera_uv.instrument = hera_uv.telescope_name
     hera_uv.integration_time = 1.
 
-    ## FIX once pyuvdata gets rid of pyephem
+    # FIX once pyuvdata gets rid of pyephem
     uvdata_out.zenith_ra = hera_uv.zenith_ra
 
-    ## TODO Fix the test file's antenna_positions.
-    nt.assert_equals(hera_uv._antenna_positions,uvdata_out._antenna_positions)
-    nt.assert_true(uvdata_out.__eq__(hera_uv,check_extra=False))
+    # TODO Fix the test file's antenna_positions.
+    nt.assert_equals(hera_uv._antenna_positions, uvdata_out._antenna_positions)
+    nt.assert_true(uvdata_out.__eq__(hera_uv, check_extra=False))
+
 
 def test_gather():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources = np.array([
-            create_zenith_source(time,'src1')
-            # create_zenith_source(time,'src2'),
-            # create_zenith_source(time,'src3')
-            ])
-    uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources)
+    sources = np.array([create_zenith_source(time, 'src1')
+                        # create_zenith_source(time, 'src2'),
+                        # create_zenith_source(time, 'src3')
+                        ])
+
+    beam = UVBeam()
+    beam.read_cst_beam(beam_file, beam_type='efield', frequency=150e6,
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+
+    uvtask_list = pyuvsim.uvfile_to_task_list(hera_uv, sources, beam_list)
 
     for task in uvtask_list:
         engine = pyuvsim.UVEngine(task)
@@ -245,15 +289,26 @@ def test_gather():
 
     nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array))
 
+
 def test_run_serial_uvsim():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
-    uv_out = pyuvsim.run_serial_uvsim(hera_uv, catalog=None, Nsrcs=1)
+
+    beam = UVBeam()
+    beam.read_cst_beam(beam_file, beam_type='efield', frequency=150e6,
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+    beam_list = [beam]
+
+    uv_out = pyuvsim.run_serial_uvsim(hera_uv, beam_list, catalog=None, Nsrcs=1)
 
     nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array))
 
+
 def test_sources_equal():
     time = Time('2018-03-01 00:00:00', scale='utc')
-    src1 = create_zenith_source(time,'src')
-    src2 = create_zenith_source(time,'src')
-    nt.assert_equal(src1,src2)
+    src1 = create_zenith_source(time, 'src')
+    src2 = create_zenith_source(time, 'src')
+    nt.assert_equal(src1, src2)
