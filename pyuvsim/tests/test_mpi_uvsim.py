@@ -24,6 +24,6 @@ EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 def test_run_uvsim():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
-    uv_out = pyuvsim.run_uvsim(EW_uvfits_file, catalog=None, Nsrcs=3)
+    uv_out = pyuvsim.run_uvsim(hera_uv, catalog=None, Nsrcs=3)
     if rank ==0:
         nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array))
