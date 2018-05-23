@@ -480,7 +480,7 @@ def serial_gather(uvtask_list):
     return uv_out
 
 def create_mock_catalog(Nsrcs, time):
-    """Create mock catalog with test sources."""
+    """Create mock catalog with test sources at zenith."""
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
     freq = (150e6 * units.Hz)
