@@ -116,12 +116,8 @@ class Source(object):
 
             rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
 
-        print('rotation_matrix')
-        print(rotation_matrix)
         coherency_local = np.einsum('ab,bc,cd->ad', rotation_matrix.T,
                                     self.coherency_radec, rotation_matrix)
-        print('coherency_local')
-        print(coherency_local)
 
         return coherency_local
 
@@ -205,8 +201,6 @@ class Antenna(object):
             array.beam_list[self.beam_id].peak_normalize()
         array.beam_list[self.beam_id].interpolation_function = 'az_za_simple'
 
-        ind1 = np.where(array.beam_list[self.beam_id].axis1_array == 0)
-        ind2 = np.where(array.beam_list[self.beam_id].axis2_array == 0)
         interp_data, interp_basis_vector, nearest_pix_dist = \
             array.beam_list[self.beam_id].interp_az_za(source_az, source_za)
 
@@ -214,10 +208,11 @@ class Antenna(object):
         # need to interpolate along the frequency axis
         # just use the 0th freq value for now
         jones_matrix = np.zeros((2, 2), dtype=np.complex)
+        # first axis is feed, second axis is theta, phi (opposite order of beam!)
         jones_matrix[0, 0] = interp_data[1, 0, 0, 0, 0]
         jones_matrix[1, 1] = interp_data[0, 0, 1, 0, 0]
-        jones_matrix[0, 0] = interp_data[1, 0, 0, 0, 0]
-        jones_matrix[1, 1] = interp_data[0, 0, 1, 0, 0]
+        jones_matrix[0, 1] = interp_data[0, 0, 0, 0, 0]
+        jones_matrix[1, 0] = interp_data[1, 0, 1, 0, 0]
 
         return jones_matrix
 
@@ -306,14 +301,6 @@ class UVEngine(object):
         this_apparent_coherency = np.dot(this_apparent_coherency,
                                          (beam2_jones.conj().T))
 
-        print('source coherency:')
-        print(source.coherency_calc(self.task.time, self.task.telescope.telescope_location))
-        print('beam1 jones:')
-        print(beam1_jones)
-        print('beam2 jones:')
-        print(beam2_jones)
-        print('apparent_coherency:')
-        print(this_apparent_coherency)
         self.apparent_coherency = this_apparent_coherency
 
     def make_visibility(self):
@@ -323,22 +310,13 @@ class UVEngine(object):
 
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
 
-        print('Pos lmn')
-        print(pos_lmn)
-
         fringe = np.exp(-2j * np.pi * np.dot(self.task.baseline.uvw, pos_lmn))
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
-
-        print('fringe')
-        print(fringe)
 
         vij = self.apparent_coherency * fringe
 
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
-
-        print('vis_vector')
-        print(vis_vector)
 
         return np.array(vis_vector)
 
