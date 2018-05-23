@@ -8,12 +8,17 @@ from pyuvdata import UVData
 import pyuvdata.utils as uvutils
 import os
 from itertools import izip
+from mpi4py import MPI
+
 try:
     import progressbar
     progbar = True
 except(ImportError):
     progbar = False
 
+comm = MPI.COMM_WORLD
+Npus = comm.Get_size()
+rank = comm.Get_rank()
 
 class Source(object):
     name = None
@@ -246,6 +251,7 @@ class Baseline(object):
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
     # need the array because we need an array location for mapping to locat az/za
+
     def __init__(self, source, time, freq, baseline, telescope):
         self.time = time
         self.freq = freq
@@ -272,6 +278,9 @@ class UVEngine(object):
     def __init__(self, task):   # task_array  = list of tuples (source,time,freq,uvw)
         # self.rank
         self.task = task
+        # Initialize task.time to a Time object.
+        self.task.time = Time(self.task.time,format='jd')
+        self.task.freq = self.task.freq * units.Hz
         # construct self based on MPI input
 
     # Debate --- Do we allow for baseline-defined beams, or stick with just antenna beams?
@@ -323,8 +332,7 @@ class UVEngine(object):
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
 
-
-def uvfile_to_task_list(input_uv, sources, beam_list, beam_dict=None):
+def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     """Create task list from pyuvdata compatible input file.
 
     Returns: List of task parameters to be send to UVEngines
@@ -337,7 +345,7 @@ def uvfile_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     if not isinstance(sources, np.ndarray):
         raise TypeError("sources must be a numpy array")
 
-    freq = input_uv.freq_array[0, :] * units.Hz
+    freq = input_uv.freq_array[0, :]# * units.Hz
 
     telescope = Telescope(input_uv.telescope_name,
                           EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
@@ -346,7 +354,8 @@ def uvfile_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     if len(beam_list) > 1 and beam_dict is not None:
         raise ValueError('beam_dict must be supplied if beam_list has more than one element.')
 
-    times = Time(input_uv.time_array, format='jd', location=telescope.telescope_location)
+#    times = Time(input_uv.time_array, format='jd', location=telescope.telescope_location)
+    times = input_uv.time_array
 
     antpos_ECEF = input_uv.antenna_positions + input_uv.telescope_location
     antpos_ENU = uvutils.ENU_from_ECEF(antpos_ECEF.T,
@@ -387,12 +396,21 @@ def uvfile_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     if progbar:
         pbar = progressbar.ProgressBar(maxval=len(blts_ind)).start()
         count = 0
-    for (bl, freq, t, source, blti, fi) in izip(baselines[blts_ind],
+
+    for i in xrange(len(blts_ind)):
+        bl = baselines[blts_ind[i]]
+        freqi = freq[freq_ind[i]]
+        t = times[blts_ind[i]]
+        source = sources[source_ind[i]]
+        blti = blts_ind[i]
+        fi = freq_ind[i]
+
+    for (bl, freqi, t, source, blti, fi) in izip(baselines[blts_ind],
                                                 freq[freq_ind], times[blts_ind],
                                                 sources[source_ind], blts_ind,
                                                 freq_ind):
 
-        task = UVTask(source, t, freq, bl, telescope)
+        task = UVTask(source, t, freqi, bl, telescope)
         task.uvdata_index = (blti, 0, fi)  # 0 = spectral window index
         uvtask_list.append(task)
 
@@ -551,7 +569,7 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
     if catalog is None:
         catalog = create_mock_catalog(Nsrcs, time)
 
-    uvtask_list = uvfile_to_task_list(input_uv, catalog, beam_list)
+    uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
 
     for task in uvtask_list:
         engine = UVEngine(task)
@@ -561,7 +579,6 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
     return uvdata_out
 
-
 def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
     """Run uvsim."""
     if not isinstance(input_uv, UVData):
@@ -569,10 +586,10 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
     # Initialize MPI, get the communicator, number of Processing Units (PUs)
     # and the rank of this PU
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
-    Npus = comm.Get_size()
-    rank = comm.Get_rank()
+#    from mpi4py import MPI
+#    comm = MPI.COMM_WORLD
+#    Npus = comm.Get_size()
+#    rank = comm.Get_rank()
 
     # The Head node will initialize our simulation
     # Read input file and make uvtask list
@@ -586,7 +603,7 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
             print("Nsrcs:", Nsrcs)
             catalog = create_mock_catalog(Nsrcs, time)
 
-        uvtask_list = uvfile_to_task_list(input_uv, catalog, beam_list)
+        uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
         # To split into PUs make a list of lists length NPUs
         print("Splitting Task List")
         uvtask_list = np.array_split(uvtask_list, Npus)
