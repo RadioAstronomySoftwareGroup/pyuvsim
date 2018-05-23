@@ -539,12 +539,25 @@ def serial_gather(uvtask_list):
 def create_mock_catalog(time,arrangement='zenith',**kwargs):
     """
         Create mock catalog with test sources at zenith.
+
         arrangment = Choose test point source pattern (default = 1 source at zenith)
+        Nsrcs = Number of sources to put at zenith (ignored for other source arrangements)
+        Accepted arrangements:
+            'triangle' = Three point sources forming a triangle around the zenith
+            'asym1'    = An asymmetric cross
+            'zenith'   = Some number of sources placed at the zenith.
 
     """
+ 
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
     freq = (150e6 * units.Hz)
+ 
+    if arrangement == 'triangle':
+        Nsrcs = 3
+        alts = [88.,88,88.]
+        azs = [0., 120, 240.]
+        fluxes = [1.0,1.0,1.0]
 
     if arrangement == 'asym1':
         Nsrcs = 4
