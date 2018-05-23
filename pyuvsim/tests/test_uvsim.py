@@ -248,7 +248,7 @@ def test_gather():
 def test_run_serial_uvsim():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
-    uv_out = pyuvsim.run_serial_uvsim(EW_uvfits_file, catalog=None, Nsrcs=1)
+    uv_out = pyuvsim.run_serial_uvsim(hera_uv, catalog=None, Nsrcs=1)
 
     nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array))
 
