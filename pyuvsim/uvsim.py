@@ -148,7 +148,7 @@ class Source(object):
             raise ValueError('telescope_location must be an astropy EarthLocation object. '
                              'value was: {al}'.format(al=telescope_location))
 
-        source_coord = SkyCoord(self.ra, self.dec, frame='icrs', equinox=self.epoch)
+        source_coord = SkyCoord(self.ra, self.dec, frame='icrs')
 
         source_altaz = source_coord.transform_to(AltAz(obstime=time, location=telescope_location))
 
@@ -571,7 +571,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
         if 'zen_ang' in kwargs:
             zen_ang = kwargs['zen_ang']   # In degrees
         else:
-            zen_ang = 0.03
+            zen_ang = 3.0
         alts = [90. - zen_ang, 90. - zen_ang, 90. - zen_ang]
         azs = [0., 120, 240.]
         fluxes = [1.0, 1.0, 1.0]
@@ -601,8 +601,10 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
     ra = icrs_coord.ra
     dec = icrs_coord.dec
     for si in range(Nsrcs):
-        catalog.append(Source('src' + str(si), ra[si], dec[si], time,
+        catalog.append(Source('src' + str(si), ra[si], dec[si], time,    ### epoch = julian date?
                               freq, [fluxes[si], 0, 0, 0]))
+    if rank == 0:
+        np.savez('mock_catalog',ra=ra.rad,dec=dec.rad)
 
     catalog = np.array(catalog)
     return catalog
