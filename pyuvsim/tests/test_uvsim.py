@@ -22,13 +22,34 @@ def create_zenith_source(time, name):
 
     Input: Astropy Time object
         sample: Time('2018-03-01 00:00:00', scale='utc')
-    Retruns: Pyuvsim Source object
+    Returns: Pyuvsim Source object
     """
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
     freq = (150e6 * units.Hz)
 
     source_coord = SkyCoord(alt=Angle(90 * units.deg), az=Angle(0 * units.deg),
+                            obstime=time, frame='altaz', location=array_location)
+    icrs_coord = source_coord.transform_to('icrs')
+
+    ra = icrs_coord.ra
+    dec = icrs_coord.dec
+    return pyuvsim.Source(name, ra, dec, time, freq, [1, 0, 0, 0])
+
+
+def create_offzenith_source(time, name, az, alt):
+    """Create pyuvsim Source object off zenith at az/alt.
+
+    Inputs: Astropy Time object
+        sample: Time('2018-03-01 00:00:00', scale='utc')
+            az/alt as Angles
+    Returns: Pyuvsim Source object
+    """
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
+    freq = (150e6 * units.Hz)
+
+    source_coord = SkyCoord(alt=alt, az=az,
                             obstime=time, frame='altaz', location=array_location)
     icrs_coord = source_coord.transform_to('icrs')
 
@@ -83,7 +104,7 @@ def test_source_lst_zenith():
     nt.assert_true(np.allclose(source_lmn, np.array([0, 0, 1])))
 
 
-def test_single_source():
+def test_single_zenith_source():
     """Test single zenith source."""
     time = Time('2018-03-01 00:00:00', scale='utc')
 
@@ -118,8 +139,8 @@ def test_single_source():
 
     nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3))
 
-
-def test_single_source_vis_uvdata():
+def test_single_zenith_source_uvdata():
+    """Test single zenith source using test uvdata file."""
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
 
@@ -162,6 +183,145 @@ def test_single_source_vis_uvdata():
 
     nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3))
 
+def test_single_offzenith_source_uvfits():
+    """Test single off-zenith source using test uvdata file."""
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_file, ant_str='cross')
+
+    src_az = Angle('90.0d')
+    src_alt = Angle('85.0d')
+    src_za = Angle('90.0d') - src_alt
+
+    src_l = np.sin(src_az.rad)*np.sin(src_za.rad)
+    src_m = np.cos(src_az.rad)*np.sin(src_za.rad)
+    src_n = np.cos(src_za.rad)
+
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    array_location = EarthLocation.from_geocentric(hera_uv.telescope_location[0],
+                                                   hera_uv.telescope_location[1],
+                                                   hera_uv.telescope_location[2],
+                                                   unit='m')
+    freq = hera_uv.freq_array[0, 0] * units.Hz
+
+    # get antennas positions into ENU
+    antpos = hera_uv.antenna_positions[0:2, :] + hera_uv.telescope_location
+    antpos = uvutils.ENU_from_ECEF(antpos.T, *hera_uv.telescope_location_lat_lon_alt).T
+
+    antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
+    antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
+
+    # setup the things that don't come from pyuvdata:
+    # make a source off zenith
+    time.location = array_location
+    lst = time.sidereal_time('mean')
+    source = create_offzenith_source(time, 'offzensrc', az=src_az, alt=src_alt)
+
+    beam = UVBeam()
+    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+
+    baseline = pyuvsim.Baseline(antenna1, antenna2)
+    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+    task = pyuvsim.UVTask(source, time, freq, baseline, array)
+    engine = pyuvsim.UVEngine(task)
+
+    visibility = engine.make_visibility()
+
+    #analytically calculate visibility
+
+    beam.peak_normalize()
+    beam.interpolation_function = 'az_za_simple'
+    interpolated_beam, interp_basis_vector, nearest_pix_distance = beam.interp(az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]), freq_array=np.array([freq.to('Hz').value]))
+    jones = np.zeros((2,2),dtype=np.complex64)
+    jones[0,0] = interpolated_beam[1,0,0,0,0]
+    jones[1,1] = interpolated_beam[0,0,1,0,0]
+    jones[1,0] = interpolated_beam[1,0,1,0,0]
+    jones[0,1] = interpolated_beam[0,0,0,0,0]
+
+    vis_analytic = 0.5 * np.dot(jones,np.conj(jones).T) * np.exp(-2j*np.pi*(hera_uv.uvw_array[0,0]*src_l + hera_uv.uvw_array[0,1]*src_m + hera_uv.uvw_array[0,2]*src_n)) 
+    vis_analytic = np.array([vis_analytic[0,0], vis_analytic[1,1], vis_analytic[1,0], vis_analytic[0,1]])
+
+    print('Analytic visibility', vis_analytic)
+    print('Calculated visibility', visibility)
+
+    nt.assert_true(np.allclose(visibility, vis_analytic, atol=5e-3))
+
+# This test is supposed to see if miriad works for conjugation, but right now there are too
+# many unknowns with the HERA test file to understand why it doesn't pass.
+@nt.nottest
+def test_single_offzenith_source_miriad():
+    """Test single off-zenith source using test uvdata file."""
+    miriad_uv = UVData()
+    miriad_uv.read_miriad(os.path.join(DATA_PATH, 'hera_testfile'), ant_str='9_10')
+    miriad_uv.select(times=miriad_uv.time_array[0])
+
+    src_az = Angle('90.0d')
+    src_alt = Angle('85.0d')
+    src_za = Angle('90.0d') - src_alt
+
+    src_l = np.sin(src_az.rad)*np.sin(src_za.rad)
+    src_m = np.cos(src_az.rad)*np.sin(src_za.rad)
+    src_n = np.cos(src_za.rad)
+
+    time = Time(miriad_uv.time_array[0], scale='utc', format='jd')
+    array_location = EarthLocation.from_geocentric(miriad_uv.telescope_location[0],
+                                                   miriad_uv.telescope_location[1],
+                                                   miriad_uv.telescope_location[2],
+                                                   unit='m')
+    freq = miriad_uv.freq_array[0, 0] * units.Hz
+
+    # get antennas positions into ENU
+    antpos = miriad_uv.antenna_positions[0:2, :] + miriad_uv.telescope_location
+    antpos = uvutils.ENU_from_ECEF(antpos.T, *miriad_uv.telescope_location_lat_lon_alt).T
+
+    antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
+    antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
+
+    # setup the things that don't come from pyuvdata:
+    # make a source off zenith
+    time.location = array_location
+    lst = time.sidereal_time('mean')
+    source = create_offzenith_source(time, 'offzensrc', az=src_az, alt=src_alt)
+
+    beam = UVBeam()
+    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+
+    baseline = pyuvsim.Baseline(antenna1, antenna2)
+    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+    task = pyuvsim.UVTask(source, time, freq, baseline, array)
+    engine = pyuvsim.UVEngine(task)
+
+    visibility = engine.make_visibility()
+
+    #analytically calculate visibility
+
+    beam.peak_normalize()
+    beam.interpolation_function = 'az_za_simple'
+    interpolated_beam, interp_basis_vector, nearest_pix_distance = beam.interp(az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]), freq_array=np.array([freq.to('Hz').value]))
+    jones = np.zeros((2,2),dtype=np.complex64)
+    jones[0,0] = interpolated_beam[1,0,0,0,0]
+    jones[1,1] = interpolated_beam[0,0,1,0,0]
+    jones[1,0] = interpolated_beam[1,0,1,0,0]
+    jones[0,1] = interpolated_beam[0,0,0,0,0]
+
+    vis_analytic = 0.5 * np.dot(jones,np.conj(jones).T) * np.exp(-2j*np.pi*(miriad_uv.uvw_array[0,0]*src_l + miriad_uv.uvw_array[0,1]*src_m + miriad_uv.uvw_array[0,2]*src_n)) 
+    vis_analytic = np.array([vis_analytic[0,0], vis_analytic[1,1], vis_analytic[1,0], vis_analytic[0,1]])
+
+    print('Analytic visibility', vis_analytic)
+    print('Calculated visibility', visibility)
+
+    nt.assert_true(np.allclose(visibility, vis_analytic, atol=5e-3))
 
 def test_file_to_tasks():
 

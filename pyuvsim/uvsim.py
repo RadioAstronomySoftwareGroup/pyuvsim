@@ -268,7 +268,7 @@ class UVTask(object):
                 and (self.baseline == other.baseline)
                 and (self.visibility_vector == other.visibility_vector)
                 and (self.uvdata_index == other.uvdata_index)
-                (self.telescope == other.telescope))
+                and (self.telescope == other.telescope))
 
 
 class UVEngine(object):
