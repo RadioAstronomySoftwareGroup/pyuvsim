@@ -280,8 +280,10 @@ class UVEngine(object):
         # self.rank
         self.task = task
         # Initialize task.time to a Time object.
-        self.task.time = Time(self.task.time,format='jd')
-        self.task.freq = self.task.freq * units.Hz
+        if isinstance(self.task.time,float):
+            self.task.time = Time(self.task.time,format='jd')
+        if isinstance(self.task.freq, float):
+            self.task.freq = self.task.freq * units.Hz
         # construct self based on MPI input
 
     # Debate --- Do we allow for baseline-defined beams, or stick with just antenna beams?
