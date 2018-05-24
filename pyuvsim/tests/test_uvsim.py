@@ -319,4 +319,4 @@ def test_sources_equal():
 
 def test_mock_catalog():
     time = Time('2018-03-01 00:00:00', scale='utc')
-    cat = pyuvsim.create_mock_catalog(time, arrangement='asym1')
+    cat = pyuvsim.create_mock_catalog(time, arrangement='cross')

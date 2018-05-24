@@ -587,7 +587,7 @@ def create_mock_catalog(time,arrangement='zenith',**kwargs):
         alts = np.ones(Nsrcs)*90.
         azs = np.zeros(Nsrcs,dtype=float)
         fluxes=np.ones(Nsrcs)*1/Nsrcs
-        # Divide totaly Stokes I intensity among all sources
+        # Divide total Stokes I intensity among all sources
         # Test file has Stokes I = 1 Jy
 
     catalog = []
@@ -615,7 +615,7 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
     time = Time(input_uv.time_array[0], scale='utc', format='jd')
     if catalog is None:
-        catalog = create_mock_catalog(Nsrcs, time)
+        catalog = create_mock_catalog(time, arrangement='zenith')
 
     uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
 
@@ -627,7 +627,7 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
     return uvdata_out
 
-def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement=None):
+def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='zenith'):
     """Run uvsim."""
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
