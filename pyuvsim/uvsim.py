@@ -11,6 +11,7 @@ import utils
 from itertools import izip
 from mpi4py import MPI
 from astropy.io.votable import parse_single_table
+import __builtin__
 
 try:
     import progressbar
@@ -32,6 +33,17 @@ except(KeyError):
 comm = MPI.COMM_WORLD
 Npus = comm.Get_size()
 rank = comm.Get_rank()
+
+
+def blank(func): return func
+
+
+try:
+    __builtin__.profile
+    if not rank == 0:
+        __builtin__.profile = blank
+except AttributeError:
+    __builtin__.profile = blank
 
 
 # The frame radio astronomers call the apparent or current epoch is the
@@ -74,6 +86,7 @@ class Source(object):
     coherency_radec = None
     az_za = None
 
+    @profile
     def __init__(self, name, ra, dec, freq, stokes):
         """
         Initialize from source catalog
@@ -123,6 +136,7 @@ class Source(object):
                 and (self.name == other.name)
                 and (self.freq == other.freq))
 
+    @profile
     def coherency_calc(self, time, telescope_location):
         """
         Calculate the local coherency in az/za basis for this source at a time & location.
@@ -169,6 +183,7 @@ class Source(object):
 
         return coherency_local
 
+    @profile
     def az_za_calc(self, time, telescope_location):
         """
         calculate the azimuth & zenith angle for this source at a time & location
@@ -194,6 +209,7 @@ class Source(object):
         self.az_za = az_za
         return az_za
 
+    @profile
     def pos_lmn(self, time, telescope_location):
         """
         calculate the direction cosines of this source at a time & location
@@ -215,6 +231,7 @@ class Source(object):
 
 
 class Telescope(object):
+    @profile
     def __init__(self, telescope_name, telescope_location, beam_list):
         # telescope location (EarthLocation object)
         self.telescope_location = telescope_location
@@ -267,6 +284,7 @@ class AnalyticBeam(object):
 
 
 class Antenna(object):
+    @profile
     def __init__(self, name, number, enu_position, beam_id):
         self.name = name
         self.number = number
@@ -275,6 +293,7 @@ class Antenna(object):
         # index of beam for this antenna from array.beam_list
         self.beam_id = beam_id
 
+    @profile
     def get_beam_jones(self, array, source_az_za, frequency):
         # get_direction_jones needs to be defined on UVBeam
         # 2x2 array of Efield vectors in Az/ZA
@@ -310,6 +329,7 @@ class Antenna(object):
 
 
 class Baseline(object):
+    @profile
     def __init__(self, antenna1, antenna2):
         self.antenna1 = antenna1
         self.antenna2 = antenna2
@@ -328,6 +348,7 @@ class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
     # need the array because we need an array location for mapping to locat az/za
 
+    @profile
     def __init__(self, source, time, freq, baseline, telescope):
         self.time = time
         self.freq = freq
@@ -364,6 +385,7 @@ class UVEngine(object):
     # inputs x,y,z,flux,baseline(u,v,w), time, freq
     # x,y,z in same coordinate system as uvws
 
+    @profile
     def __init__(self, task):   # task_array  = list of tuples (source,time,freq,uvw)
         # self.rank
         self.task = task
@@ -377,7 +399,7 @@ class UVEngine(object):
     # Debate --- Do we allow for baseline-defined beams, or stick with just antenna beams?
     #   This would necessitate the Mueller matrix formalism.
     #   As long as we stay modular, it should be simple to redefine things.
-
+    @profile
     def apply_beam(self):
         # Supply jones matrices and their coordinate. Knows current coords of visibilities, applies rotations.
         # for every antenna calculate the apparent jones flux
@@ -403,6 +425,7 @@ class UVEngine(object):
 
         self.apparent_coherency = this_apparent_coherency
 
+    @profile
     def make_visibility(self):
         # dimensions?
         # polarization, ravel index (freq,time,source)
@@ -423,10 +446,12 @@ class UVEngine(object):
         bl = str(self.task.baseline.antenna1.number) + "_" + str(self.task.baseline.antenna2.number)
         return np.array(vis_vector)
 
+    @profile
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
 
 
+@profile
 def read_gleam_catalog(gleam_votable):
     """
     Creates a list of pyuvsim source objects from the GLEAM votable catalog.
@@ -448,6 +473,7 @@ def read_gleam_catalog(gleam_votable):
     return sourcelist
 
 
+@profile
 def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     """Create task list from pyuvdata compatible input file.
 
@@ -534,6 +560,7 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     return uvtask_list
 
 
+@profile
 def initialize_uvdata(uvtask_list):
     # writing 4 pol polarization files now
 
@@ -632,6 +659,7 @@ def initialize_uvdata(uvtask_list):
     return uv_obj
 
 
+@profile
 def serial_gather(uvtask_list, uv_out):
     """
         Initialize uvdata object, loop over uvtask list, acquire visibilities,
@@ -644,6 +672,7 @@ def serial_gather(uvtask_list, uv_out):
     return uv_out
 
 
+@profile
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None, zen_ang=None, save=False):
     """
         Create mock catalog with test sources at zenith.
@@ -717,20 +746,20 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     if arrangement == 'hera_text':
 
         azs = np.array([-254.055, -248.199, -236.310, -225.000, -206.565,
-               -153.435, -123.690, -111.801, -105.945, -261.870,
-               -258.690, -251.565, -135.000, -116.565, -101.310,
-               -98.130, 90.000, 90.000, 90.000, 90.000, 90.000,
-               -90.000, -90.000, -90.000, -90.000, -90.000,
-               -90.000, 81.870, 78.690, 71.565, -45.000, -71.565,
-               -78.690, -81.870, 74.055, 68.199, 56.310, 45.000,
-               26.565, -26.565, -45.000, -56.310, -71.565])
+                        -153.435, -123.690, -111.801, -105.945, -261.870,
+                        -258.690, -251.565, -135.000, -116.565, -101.310,
+                        -98.130, 90.000, 90.000, 90.000, 90.000, 90.000,
+                        -90.000, -90.000, -90.000, -90.000, -90.000,
+                        -90.000, 81.870, 78.690, 71.565, -45.000, -71.565,
+                        -78.690, -81.870, 74.055, 68.199, 56.310, 45.000,
+                        26.565, -26.565, -45.000, -56.310, -71.565])
 
-        zas = np.arra([7.280, 5.385, 3.606, 2.828, 2.236, 2.236, 3.606,
-               5.385, 7.280, 7.071, 5.099, 3.162, 1.414, 2.236,
-               5.099, 7.071, 7.000, 6.000, 5.000, 3.000, 2.000,
-               1.000, 2.000, 3.000, 5.000, 6.000, 7.000, 7.071,
-               5.099, 3.162, 1.414, 3.162, 5.099, 7.071, 7.280,
-               5.385, 3.606, 2.828, 2.236, 2.236, 2.828, 3.606, 6.325])
+        zas = np.array([7.280, 5.385, 3.606, 2.828, 2.236, 2.236, 3.606,
+                        5.385, 7.280, 7.071, 5.099, 3.162, 1.414, 2.236,
+                        5.099, 7.071, 7.000, 6.000, 5.000, 3.000, 2.000,
+                        1.000, 2.000, 3.000, 5.000, 6.000, 7.000, 7.071,
+                        5.099, 3.162, 1.414, 3.162, 5.099, 7.071, 7.280,
+                        5.385, 3.606, 2.828, 2.236, 2.236, 2.828, 3.606, 6.325])
 
         alts = 90. - zas
         Nsrcs = zas.size
@@ -747,7 +776,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     for si in range(Nsrcs):
         catalog.append(Source('src' + str(si), ra[si], dec[si], freq, [fluxes[si], 0, 0, 0]))
     if rank == 0 and save:
-            np.savez('mock_catalog', ra=ra.rad, dec=dec.rad)
+        np.savez('mock_catalog', ra=ra.rad, dec=dec.rad)
 
     catalog = np.array(catalog)
     return catalog
@@ -775,6 +804,7 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
     return uvdata_out
 
 
+@profile
 def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='zenith'):
     """Run uvsim."""
     if not isinstance(input_uv, UVData):
