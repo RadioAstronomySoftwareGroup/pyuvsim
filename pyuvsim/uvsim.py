@@ -541,21 +541,25 @@ def create_mock_catalog(time,arrangement='zenith',**kwargs):
         Create mock catalog with test sources at zenith.
 
         arrangment = Choose test point source pattern (default = 1 source at zenith)
-        Nsrcs = Number of sources to put at zenith (ignored for other source arrangements)
+        Accepted keywords:
+            Nsrcs = Number of sources to put at zenith (ignored for other source arrangements)
+            array_location = EarthLocation object.
         Accepted arrangements:
             'triangle' = Three point sources forming a triangle around the zenith
             'asym1'    = An asymmetric cross
             'zenith'   = Some number of sources placed at the zenith.
 
     """
- 
-    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+
+    if 'array_location' in kwargs: array_location = kwargs['array_location']
+    else:  array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
     freq = (150e6 * units.Hz)
  
     if arrangement == 'triangle':
         Nsrcs = 3
-        alts = [88.,88,88.]
+        zen_ang = 0.03
+        alts = [90.-zen_ang, 90. - zen_ang, 90. - zen_ang]
         azs = [0., 120, 240.]
         fluxes = [1.0,1.0,1.0]
 
@@ -634,10 +638,11 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement=No
         if catalog is None:
             print("Nsrcs:", Nsrcs)
             if mock_arrangement is not None: arrange = mock_arrangement
+            array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
             if Nsrcs is not None:
-                catalog = create_mock_catalog(time, mock_arrangement, Nsrcs=Nsrcs)
+                catalog = create_mock_catalog(time, mock_arrangement, array_location=array_loc, Nsrcs=Nsrcs)
             else:
-                catalog = create_mock_catalog(time, mock_arrangement)
+                catalog = create_mock_catalog(time, mock_arrangement, array_location=array_loc)
 
         uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
         # To split into PUs make a list of lists length NPUs
@@ -648,7 +653,7 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement=No
         print("Sending Tasks To Processing Units")
     # Scatter the task list among all available PUs
     local_task_list = comm.scatter(uvtask_list, root=0)
-
+    if rank==0: print("Tasks Received. Begin Calculations.")
     summed_task_dict = {}
 
     if rank == 0:
@@ -678,6 +683,8 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement=No
                 summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
             else:
                 summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
+
+    if rank==0: print("Calculations Complete.")
 
     # All the sources in this summed list are foobar-ed
     # Source are summed over but only have 1 name
