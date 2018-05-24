@@ -1,27 +1,14 @@
 #!/usr/bin/env python
 
+# from pyuvsim import uvsim
 import pyuvsim
 import argparse
 import os, numpy as np
-import yaml
 from mpi4py import MPI
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import warnings
-
-def fill_defaults(p):
-    """
-        If value is unset in the parameters dictionary p, set it to a default value.
-        
-    """
-    assert( isinstance(p,dict) )
-    req_params_uvfile = [ '' ]    #Required params for simulating off a uvfile
-    req_params_uvfile = [ '' ]    #Given a frequency array
-    for k in p.keys():
-        
-
-
 
 beam_file = os.path.join(DATA_PATH, 'HERA_NicCST_150MHz.txt')
 
@@ -35,8 +22,6 @@ if not rank == 0:
 parser = argparse.ArgumentParser(description=("A command-line script "
                                               "to execute a pyuvsim simulation."))
 
-parser.add_argument('-p','--paramsfile',dest='paramsfile'
-
 parser.add_argument('file_in', metavar='<FILE>', type=str, nargs='+')
 parser.add_argument('--outdir', type=str, default='./')
 parser.add_argument('--Nsrcs', type=int, default=None)
@@ -44,12 +29,7 @@ parser.add_argument('--mock_arrangement', type=str,default='zenith')
 # parser.add_argument('--overwrite', action='store_true')
 
 
-args = vars(parser.parse_args())
-
-with open(args['paramsfile'], 'r') as pfile:
-    params = yaml.safe_load(pfile)
-
-params = fill_defaults(params)
+args = parser.parse_args()
 
 for filename in args.file_in:
     if rank == 0:
