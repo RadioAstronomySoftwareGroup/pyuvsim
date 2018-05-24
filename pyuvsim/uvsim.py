@@ -245,8 +245,7 @@ class Baseline(object):
         return ((self.antenna1 == other.antenna1)
                 and (self.antenna2 == other.antenna2)
                 and np.all(self.enu == other.enu)
-                and np.all(self.uvw == other.uvw))
-
+                and np.all(self.uvw == other.uvw))    
 
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
@@ -320,8 +319,11 @@ class UVEngine(object):
         self.apply_beam()
 
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
-
-        fringe = np.exp(-2j * np.pi * np.dot(self.task.baseline.uvw, pos_lmn))
+  
+        # need to convert uvws from meters to wavelengths
+        assert(isinstance(self.task.freq,Quantity))
+        uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
+        fringe = np.exp(-2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
 
         vij = self.apparent_coherency * fringe
         # need to reshape to be [xx, yy, xy, yx]

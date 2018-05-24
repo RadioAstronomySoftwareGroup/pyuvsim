@@ -9,6 +9,7 @@ import pyuvdata.utils as uvutils
 from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
+import astropy.constants as const
 
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
@@ -243,7 +244,9 @@ def test_single_offzenith_source_uvfits():
     jones[1,0] = interpolated_beam[1,0,1,0,0]
     jones[0,1] = interpolated_beam[0,0,0,0,0]
 
-    vis_analytic = 0.5 * np.dot(jones,np.conj(jones).T) * np.exp(-2j*np.pi*(hera_uv.uvw_array[0,0]*src_l + hera_uv.uvw_array[0,1]*src_m + hera_uv.uvw_array[0,2]*src_n)) 
+    uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
+
+    vis_analytic = 0.5 * np.dot(jones,np.conj(jones).T) * np.exp(-2j*np.pi*(uvw_wavelength_array[0,0]*src_l + uvw_wavelength_array[0,1]*src_m + uvw_wavelength_array[0,2]*src_n)) 
     vis_analytic = np.array([vis_analytic[0,0], vis_analytic[1,1], vis_analytic[1,0], vis_analytic[0,1]])
 
     print('Analytic visibility', vis_analytic)
@@ -315,7 +318,9 @@ def test_single_offzenith_source_miriad():
     jones[1,0] = interpolated_beam[1,0,1,0,0]
     jones[0,1] = interpolated_beam[0,0,0,0,0]
 
-    vis_analytic = 0.5 * np.dot(jones,np.conj(jones).T) * np.exp(-2j*np.pi*(miriad_uv.uvw_array[0,0]*src_l + miriad_uv.uvw_array[0,1]*src_m + miriad_uv.uvw_array[0,2]*src_n)) 
+    uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
+
+    vis_analytic = 0.5 * np.dot(jones,np.conj(jones).T) * np.exp(-2j*np.pi*(uvw_wavelength_array[0,0]*src_l + uvw_wavelength_array[0,1]*src_m + uvw_wavelength_array[0,2]*src_n)) 
     vis_analytic = np.array([vis_analytic[0,0], vis_analytic[1,1], vis_analytic[1,0], vis_analytic[0,1]])
 
     print('Analytic visibility', vis_analytic)
