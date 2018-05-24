@@ -16,9 +16,12 @@ try:
 except(ImportError):
     progbar = False
 
+# Initialize MPI, get the communicator, number of Processing Units (PUs)
+# and the rank of this PU
 comm = MPI.COMM_WORLD
 Npus = comm.Get_size()
 rank = comm.Get_rank()
+
 
 class Source(object):
     name = None
@@ -77,12 +80,12 @@ class Source(object):
                                                self.stokes[0] - self.stokes[1]]])
 
     def __eq__(self, other):
-        return ((self.ra == other.ra) and
-                (self.dec == other.dec) and
-                (self.epoch == other.epoch) and
-                (self.stokes == other.stokes) and
-                (self.name == other.name) and
-                (self.freq == other.freq))
+        return ((self.ra == other.ra)
+                and (self.dec == other.dec)
+                and (self.epoch == other.epoch)
+                and (self.stokes == other.stokes)
+                and (self.name == other.name)
+                and (self.freq == other.freq))
 
     def coherency_calc(self, time, telescope_location):
         """
@@ -182,7 +185,9 @@ class Telescope(object):
         self.beam_list = beam_list
 
     def __eq__(self, other):
-        return (self.telescope_location == other.telescope_location) and (self.beam_list == other.beam_list) and (self.telescope_name == other.telescope_name)
+        return ((self.telescope_location == other.telescope_location)
+                and (self.beam_list == other.beam_list)
+                and (self.telescope_name == other.telescope_name))
 
 
 class Antenna(object):
@@ -223,15 +228,9 @@ class Antenna(object):
         return jones_matrix
 
     def __eq__(self, other):
-        return ((self.name == other.name) and
-                np.all(self.pos_enu == other.pos_enu) and
-                (self.beam_id == other.beam_id))
-
-# Then there's the issue of how to pass this in the MPI context.
-#   one option is for the UVEngine to get an array object and the tasks have
-#   references to that object (i.e. antenna number which the array object can map to a beam)
-#   Otherwise the task might need to carry the whole array, which would lead to
-#   many copies of the array being passed to the UVEngine
+        return ((self.name == other.name)
+                and np.all(self.pos_enu == other.pos_enu)
+                and (self.beam_id == other.beam_id))
 
 
 class Baseline(object):
@@ -243,10 +242,10 @@ class Baseline(object):
         self.uvw = self.enu
 
     def __eq__(self, other):
-        return ((self.antenna1 == other.antenna1) and
-                (self.antenna2 == other.antenna2) and
-                np.all(self.enu == other.enu) and
-                np.all(self.uvw == other.uvw))
+        return ((self.antenna1 == other.antenna1)
+                and (self.antenna2 == other.antenna2)
+                and np.all(self.enu == other.enu)
+                and np.all(self.uvw == other.uvw))
 
 
 class UVTask(object):
@@ -263,12 +262,12 @@ class UVTask(object):
         self.uvdata_index = None        # Where to add the visibility in the uvdata object.
 
     def __eq__(self, other):
-        return ((self.time == other.time) and
-                (self.freq == other.freq) and
-                (self.source == other.source) and
-                (self.baseline == other.baseline) and
-                (self.visibility_vector == other.visibility_vector) and
-                (self.uvdata_index == other.uvdata_index) and
+        return ((self.time == other.time)
+                and (self.freq == other.freq)
+                and (self.source == other.source)
+                and (self.baseline == other.baseline)
+                and (self.visibility_vector == other.visibility_vector)
+                and (self.uvdata_index == other.uvdata_index)
                 (self.telescope == other.telescope))
 
 
@@ -280,8 +279,8 @@ class UVEngine(object):
         # self.rank
         self.task = task
         # Initialize task.time to a Time object.
-        if isinstance(self.task.time,float):
-            self.task.time = Time(self.task.time,format='jd')
+        if isinstance(self.task.time, float):
+            self.task.time = Time(self.task.time, format='jd')
         if isinstance(self.task.freq, float):
             self.task.freq = self.task.freq * units.Hz
         # construct self based on MPI input
@@ -324,7 +323,6 @@ class UVEngine(object):
 
         fringe = np.exp(-2j * np.pi * np.dot(self.task.baseline.uvw, pos_lmn))
 
-
         vij = self.apparent_coherency * fringe
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
@@ -333,6 +331,7 @@ class UVEngine(object):
 
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
+
 
 def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     """Create task list from pyuvdata compatible input file.
@@ -347,7 +346,7 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     if not isinstance(sources, np.ndarray):
         raise TypeError("sources must be a numpy array")
 
-    freq = input_uv.freq_array[0, :]# * units.Hz
+    freq = input_uv.freq_array[0, :]  # units.Hz
 
     telescope = Telescope(input_uv.telescope_name,
                           EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
@@ -356,7 +355,6 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     if len(beam_list) > 1 and beam_dict is not None:
         raise ValueError('beam_dict must be supplied if beam_list has more than one element.')
 
-#    times = Time(input_uv.time_array, format='jd', location=telescope.telescope_location)
     times = input_uv.time_array
 
     antpos_ECEF = input_uv.antenna_positions + input_uv.telescope_location
@@ -408,9 +406,9 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
         fi = freq_ind[i]
 
     for (bl, freqi, t, source, blti, fi) in izip(baselines[blts_ind],
-                                                freq[freq_ind], times[blts_ind],
-                                                sources[source_ind], blts_ind,
-                                                freq_ind):
+                                                 freq[freq_ind], times[blts_ind],
+                                                 sources[source_ind], blts_ind,
+                                                 freq_ind):
 
         task = UVTask(source, t, freqi, bl, telescope)
         task.uvdata_index = (blti, 0, fi)  # 0 = spectral window index
@@ -538,7 +536,7 @@ def serial_gather(uvtask_list):
     return uv_out
 
 
-def create_mock_catalog(time,arrangement='zenith',**kwargs):
+def create_mock_catalog(time, arrangement='zenith', **kwargs):
     """
         Create mock catalog with test sources at zenith.
 
@@ -556,14 +554,18 @@ def create_mock_catalog(time,arrangement='zenith',**kwargs):
 
     """
 
-    if 'array_location' in kwargs: array_location = kwargs['array_location']
-    else:  array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
-                                   height=1073.)
+    if 'array_location' in kwargs:
+        array_location = kwargs['array_location']
+    else:
+        array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                       height=1073.)
     freq = (150e6 * units.Hz)
 
     if arrangement == 'off-zenith':
-        if 'zen_ang' in kwargs: zen_ang = kwargs['zen_ang']   # In degrees
-        else: zen_ang = 5.0
+        if 'zen_ang' in kwargs:
+            zen_ang = kwargs['zen_ang']   # In degrees
+        else:
+            zen_ang = 5.0
         Nsrcs = 1
         alts = [90. - zen_ang]
         azs = [90.]   # 0 = North pole, 90. = East pole
@@ -571,30 +573,33 @@ def create_mock_catalog(time,arrangement='zenith',**kwargs):
 
     if arrangement == 'triangle':
         Nsrcs = 3
-        if 'zen_ang' in kwargs: zen_ang = kwargs['zen_ang']   # In degrees
-        else: zen_ang = 0.03
-        alts = [90.-zen_ang, 90. - zen_ang, 90. - zen_ang]
+        if 'zen_ang' in kwargs:
+            zen_ang = kwargs['zen_ang']   # In degrees
+        else:
+            zen_ang = 0.03
+        alts = [90. - zen_ang, 90. - zen_ang, 90. - zen_ang]
         azs = [0., 120, 240.]
-        fluxes = [1.0,1.0,1.0]
+        fluxes = [1.0, 1.0, 1.0]
 
     if arrangement == 'cross':
         Nsrcs = 4
-        alts = [88.,0.,86., 85.]
+        alts = [88., 0., 86., 85.]
         azs = [270., 0., 90., 135.]
-        fluxes = [5.,4.,1.0,2.0]
+        fluxes = [5., 4., 1.0, 2.0]
 
     if arrangement == 'zenith':
         Nsrcs = 1
-        if Nsrcs in kwargs: Nsrcs = kwargs['Nsrcs']
-        alts = np.ones(Nsrcs)*90.
-        azs = np.zeros(Nsrcs,dtype=float)
-        fluxes=np.ones(Nsrcs)*1/Nsrcs
+        if Nsrcs in kwargs:
+            Nsrcs = kwargs['Nsrcs']
+        alts = np.ones(Nsrcs) * 90.
+        azs = np.zeros(Nsrcs, dtype=float)
+        fluxes = np.ones(Nsrcs) * 1 / Nsrcs
         # Divide total Stokes I intensity among all sources
         # Test file has Stokes I = 1 Jy
 
     catalog = []
 
-    source_coord = SkyCoord(alt=Angle(alts,unit=units.deg), az=Angle(azs,unit=units.deg),
+    source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
                             obstime=time, frame='altaz', location=array_location)
     icrs_coord = source_coord.transform_to('icrs')
 
@@ -603,7 +608,7 @@ def create_mock_catalog(time,arrangement='zenith',**kwargs):
 
     for si in range(Nsrcs):
         catalog.append(Source('src' + str(si), ra[si], dec[si], time,
-                                  freq, [fluxes[si],0,0,0]))
+                              freq, [fluxes[si], 0, 0, 0]))
 
     catalog = np.array(catalog)
     return catalog
@@ -629,17 +634,11 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
     return uvdata_out
 
+
 def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='zenith'):
     """Run uvsim."""
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
-
-    # Initialize MPI, get the communicator, number of Processing Units (PUs)
-    # and the rank of this PU
-#    from mpi4py import MPI
-#    comm = MPI.COMM_WORLD
-#    Npus = comm.Get_size()
-#    rank = comm.Get_rank()
 
     # The Head node will initialize our simulation
     # Read input file and make uvtask list
@@ -651,7 +650,8 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
         time = Time(input_uv.time_array[0], scale='utc', format='jd')
         if catalog is None:
             print("Nsrcs:", Nsrcs)
-            if mock_arrangement is not None: arrange = mock_arrangement
+            if mock_arrangement is not None:
+                arrange = mock_arrangement
             array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
             if Nsrcs is not None:
                 catalog = create_mock_catalog(time, mock_arrangement, array_location=array_loc, Nsrcs=Nsrcs)
@@ -667,7 +667,8 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
         print("Sending Tasks To Processing Units")
     # Scatter the task list among all available PUs
     local_task_list = comm.scatter(uvtask_list, root=0)
-    if rank==0: print("Tasks Received. Begin Calculations.")
+    if rank == 0:
+        print("Tasks Received. Begin Calculations.")
     summed_task_dict = {}
 
     if rank == 0:
@@ -698,7 +699,8 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
             else:
                 summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
 
-    if rank==0: print("Calculations Complete.")
+    if rank == 0:
+        print("Calculations Complete.")
 
     # All the sources in this summed list are foobar-ed
     # Source are summed over but only have 1 name
