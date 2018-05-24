@@ -408,9 +408,9 @@ def test_uvdata_init():
     beam_list = [beam]
 
     uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list)
-    for task in uvtask_list:
-        task.time = Time(task.time, format='jd')
-        task.freq = task.freq * units.Hz
+    #for task in uvtask_list:
+    #    task.time = Time(task.time, format='jd')
+    #    task.freq = task.freq * units.Hz
         
     uvdata_out = pyuvsim.initialize_uvdata(uvtask_list)
 
@@ -447,12 +447,13 @@ def test_gather():
     beam_list = [beam]
 
     uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list)
+    uv_out = pyuvsim.initialize_uvdata(uvtask_list)
 
     for task in uvtask_list:
         engine = pyuvsim.UVEngine(task)
         task.visibility_vector = engine.make_visibility()
 
-    uv_out = pyuvsim.serial_gather(uvtask_list)
+    uv_out = pyuvsim.serial_gather(uvtask_list, uv_out)
 
     nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))
 
