@@ -422,8 +422,6 @@ def initialize_uvdata(uvtask_list):
     # Assume all tasks have the same telescope.
     #   Enforce this generally!
 
-    # Do after MPI_Reduce, summing over sources.
-
     task_freqs = []
     task_bls = []
     task_times = []
@@ -619,12 +617,14 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
         catalog = create_mock_catalog(time, arrangement='zenith')
 
     uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
+    uvdata_out = initialize_uvdata(uvtask_list)
+
 
     for task in uvtask_list:
         engine = UVEngine(task)
         task.visibility_vector = engine.make_visibility()
 
-    uvdata_out = serial_gather(uvtask_list)
+    uvdata_out = serial_gather(uvtask_list, uvdata_out)
 
     return uvdata_out
 
