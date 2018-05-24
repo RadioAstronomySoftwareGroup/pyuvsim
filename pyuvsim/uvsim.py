@@ -34,7 +34,6 @@ comm = MPI.COMM_WORLD
 Npus = comm.Get_size()
 rank = comm.Get_rank()
 
-
 def blank(func): return func
 
 
@@ -450,7 +449,6 @@ class UVEngine(object):
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
 
-
 @profile
 def read_gleam_catalog(gleam_votable):
     """
@@ -720,7 +718,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
     if arrangement == 'cross':
         Nsrcs = 4
-        alts = [88., 90., 86., 82.]
+        alts = [88., 0., 86., 85.]
         azs = [270., 0., 90., 135.]
         fluxes = [5., 4., 1.0, 2.0]
 
@@ -836,7 +834,6 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
         print("Sending Tasks To Processing Units")
     # Scatter the task list among all available PUs
     local_task_list = comm.scatter(uvtask_list, root=0)
-
     if rank == 0:
         print("Tasks Received. Begin Calculations.")
     summed_task_dict = {}
