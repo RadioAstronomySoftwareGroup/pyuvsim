@@ -22,7 +22,7 @@ parser = argparse.ArgumentParser(description=("A command-line script "
 parser.add_argument('file_in', metavar='<FILE>', type=str, nargs='+')
 parser.add_argument('--outdir', type=str, default='./')
 parser.add_argument('--Nsrcs', type=int, default=3)
-parser.add_argument('--mock_arrangement', type=str,default='triangle')
+parser.add_argument('--mock_arrangement', type=str,default='zenith')
 # parser.add_argument('--overwrite', action='store_true')
 
 
@@ -31,8 +31,6 @@ args = parser.parse_args()
 for filename in args.file_in:
     print("Reading:", os.path.basename(filename))
     input_uv = UVData()
-#    input_uv.read_uvfits(filename,read_data=False)
-#    time_use = np.unique(input_uv.time_array)[2]
     input_uv.read_uvfits(filename)
     beam = UVBeam()
     beam.read_cst_beam(beam_file, beam_type='efield', frequency=150e6,
