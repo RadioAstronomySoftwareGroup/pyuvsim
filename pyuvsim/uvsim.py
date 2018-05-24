@@ -166,8 +166,8 @@ class Source(object):
         # calculate direction cosines of source at current time and array location
         az_za = self.az_za_calc(time, telescope_location)
 
-        pos_l = np.cos(az_za[0]) * np.sin(az_za[1])
-        pos_m = np.sin(az_za[0]) * np.sin(az_za[1])
+        pos_l = np.sin(az_za[0]) * np.sin(az_za[1])
+        pos_m = np.cos(az_za[0]) * np.sin(az_za[1])
         pos_n = np.cos(az_za[1])
         return (pos_l, pos_m, pos_n)
 
