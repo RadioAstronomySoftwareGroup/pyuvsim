@@ -56,8 +56,7 @@ def create_offzenith_source(time, name, az, alt):
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    return pyuvsim.Source(name, ra, dec, time, freq, [1, 0, 0, 0])
-
+    return pyuvsim.Source(name, ra, dec, time, freq, [1.0, 0, 0, 0])
 
 def test_source_zenith():
     """Test single source position at zenith."""
@@ -425,7 +424,6 @@ def test_uvdata_init():
     # FIX once pyuvdata gets rid of pyephem
     uvdata_out.zenith_ra = hera_uv.zenith_ra
 
-    # TODO Fix the test file's antenna_positions.
     nt.assert_equals(hera_uv._antenna_positions, uvdata_out._antenna_positions)
     nt.assert_true(uvdata_out.__eq__(hera_uv, check_extra=False))
 
@@ -483,5 +481,22 @@ def test_sources_equal():
     nt.assert_equal(src1, src2)
 
 def test_mock_catalog():
-    time = Time('2018-03-01 00:00:00', scale='utc')
-    cat = pyuvsim.create_mock_catalog(time, arrangement='cross')
+
+    src_az = Angle('90.0d')
+    src_alt = Angle('85.0d')
+    src_za = Angle('90.0d') - src_alt
+
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_file, ant_str='cross')
+
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+
+    test_source = create_offzenith_source(time, 'src0', az=src_az, alt=src_alt)
+    cat = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang = src_za.deg)
+    cat_source = cat[0]
+    for k in cat_source.__dict__:
+        print 'Cat: ', k, cat_source.__dict__[k]
+        print 'Test: ', k, test_source.__dict__[k]
+        print '\n'
+
+    nt.assert_equal(cat_source, test_source)
