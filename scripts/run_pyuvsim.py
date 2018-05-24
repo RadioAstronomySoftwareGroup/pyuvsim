@@ -31,9 +31,9 @@ args = parser.parse_args()
 for filename in args.file_in:
     print("Reading:", os.path.basename(filename))
     input_uv = UVData()
-    input_uv.read_uvfits(filename,read_data=False)
-    time_use = np.unique(input_uv.time_array)[2]
-    input_uv.read_uvfits(filename,times=time_use,freq_chans=range(10))
+#    input_uv.read_uvfits(filename,read_data=False)
+#    time_use = np.unique(input_uv.time_array)[2]
+    input_uv.read_uvfits(filename)
     beam = UVBeam()
     beam.read_cst_beam(beam_file, beam_type='efield', frequency=150e6,
                        telescope_name='HERA',
@@ -45,5 +45,5 @@ for filename in args.file_in:
     uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list,mock_arrangement=args.mock_arrangement, Nsrcs=args.Nsrcs)
     if rank == 0:
         outfile = os.path.join(args.outdir, 'sim_' + os.path.basename(filename))
-        if not os.path.exists(args.outdir): os.mkdirs(args.outdir)
+        if not os.path.exists(args.outdir): os.makedirs(args.outdir)
         uvdata_out.write_uvfits(outfile, force_phase=True, spoof_nonessential=True)

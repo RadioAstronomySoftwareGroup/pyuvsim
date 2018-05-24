@@ -544,10 +544,13 @@ def create_mock_catalog(time,arrangement='zenith',**kwargs):
         Accepted keywords:
             Nsrcs = Number of sources to put at zenith (ignored for other source arrangements)
             array_location = EarthLocation object.
+            zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
         Accepted arrangements:
             'triangle' = Three point sources forming a triangle around the zenith
-            'asym1'    = An asymmetric cross
+            'cross'    = An asymmetric cross
+            'horizon'  = A single source on the horizon   ## TODO
             'zenith'   = Some number of sources placed at the zenith.
+            'off-zenith' = A single source off zenith
 
     """
 
@@ -556,14 +559,23 @@ def create_mock_catalog(time,arrangement='zenith',**kwargs):
                                    height=1073.)
     freq = (150e6 * units.Hz)
  
+    if arrangement == 'off-zenith':
+        if 'zen_ang' in kwargs: zen_ang = kwargs['zen_ang']   # In degrees
+        else: zen_ang = 5.0
+        Nsrcs = 1
+        alts = [90. - zen_ang]
+        azs = [90.]   # 0 = North pole, 90. = East pole
+        fluxes = [1.0]
+
     if arrangement == 'triangle':
         Nsrcs = 3
-        zen_ang = 0.03
+        if 'zen_ang' in kwargs: zen_ang = kwargs['zen_ang']   # In degrees
+        else: zen_ang = 0.03
         alts = [90.-zen_ang, 90. - zen_ang, 90. - zen_ang]
         azs = [0., 120, 240.]
         fluxes = [1.0,1.0,1.0]
 
-    if arrangement == 'asym1':
+    if arrangement == 'cross':
         Nsrcs = 4
         alts = [88.,0.,86., 85.]
         azs = [270., 0., 90., 135.]
