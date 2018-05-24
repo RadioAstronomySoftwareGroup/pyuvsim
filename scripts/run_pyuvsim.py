@@ -3,9 +3,14 @@
 # from pyuvsim import uvsim
 import pyuvsim
 import argparse
-import os
+import os, numpy as np
 from mpi4py import MPI
-from pyuvdata import UVData
+from pyuvdata import UVBeam, UVData
+from pyuvdata.data import DATA_PATH
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+
+
+beam_file = os.path.join(DATA_PATH, 'HERA_NicCST_150MHz.txt')
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -17,6 +22,7 @@ parser = argparse.ArgumentParser(description=("A command-line script "
 parser.add_argument('file_in', metavar='<FILE>', type=str, nargs='+')
 parser.add_argument('--outdir', type=str, default='./')
 parser.add_argument('--Nsrcs', type=int, default=3)
+parser.add_argument('--mock_arrangement', type=str,default='triangle')
 # parser.add_argument('--overwrite', action='store_true')
 
 
@@ -25,8 +31,19 @@ args = parser.parse_args()
 for filename in args.file_in:
     print("Reading:", os.path.basename(filename))
     input_uv = UVData()
-    input_uv.read_uvfits(filename)
-    uvdata_out = pyuvsim.uvsim.run_uvsim(filename, Nsrcs=args.Nsrcs)
+    input_uv.read_uvfits(filename,read_data=False)
+    time_use = np.unique(input_uv.time_array)[2]
+    input_uv.read_uvfits(filename,times=time_use,freq_chans=range(10))
+    beam = UVBeam()
+    beam.read_cst_beam(beam_file, beam_type='efield', frequency=150e6,
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+    uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list,mock_arrangement=args.mock_arrangement, Nsrcs=args.Nsrcs)
     if rank == 0:
         outfile = os.path.join(args.outdir, 'sim_' + os.path.basename(filename))
+        if not os.path.exists(args.outdir): os.mkdirs(args.outdir)
         uvdata_out.write_uvfits(outfile, force_phase=True, spoof_nonessential=True)

@@ -8,12 +8,17 @@ from pyuvdata import UVData
 import pyuvdata.utils as uvutils
 import os
 from itertools import izip
+from mpi4py import MPI
+
 try:
     import progressbar
     progbar = True
 except(ImportError):
     progbar = False
 
+comm = MPI.COMM_WORLD
+Npus = comm.Get_size()
+rank = comm.Get_rank()
 
 class Source(object):
     name = None
@@ -247,6 +252,7 @@ class Baseline(object):
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
     # need the array because we need an array location for mapping to locat az/za
+
     def __init__(self, source, time, freq, baseline, telescope):
         self.time = time
         self.freq = freq
@@ -273,6 +279,9 @@ class UVEngine(object):
     def __init__(self, task):   # task_array  = list of tuples (source,time,freq,uvw)
         # self.rank
         self.task = task
+        # Initialize task.time to a Time object.
+        self.task.time = Time(self.task.time,format='jd')
+        self.task.freq = self.task.freq * units.Hz
         # construct self based on MPI input
 
     # Debate --- Do we allow for baseline-defined beams, or stick with just antenna beams?
@@ -323,8 +332,7 @@ class UVEngine(object):
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
 
-
-def uvfile_to_task_list(input_uv, sources, beam_list, beam_dict=None):
+def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     """Create task list from pyuvdata compatible input file.
 
     Returns: List of task parameters to be send to UVEngines
@@ -337,7 +345,7 @@ def uvfile_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     if not isinstance(sources, np.ndarray):
         raise TypeError("sources must be a numpy array")
 
-    freq = input_uv.freq_array[0, :] * units.Hz
+    freq = input_uv.freq_array[0, :]# * units.Hz
 
     telescope = Telescope(input_uv.telescope_name,
                           EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
@@ -346,7 +354,8 @@ def uvfile_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     if len(beam_list) > 1 and beam_dict is not None:
         raise ValueError('beam_dict must be supplied if beam_list has more than one element.')
 
-    times = Time(input_uv.time_array, format='jd', location=telescope.telescope_location)
+#    times = Time(input_uv.time_array, format='jd', location=telescope.telescope_location)
+    times = input_uv.time_array
 
     antpos_ECEF = input_uv.antenna_positions + input_uv.telescope_location
     antpos_ENU = uvutils.ENU_from_ECEF(antpos_ECEF.T,
@@ -387,12 +396,21 @@ def uvfile_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     if progbar:
         pbar = progressbar.ProgressBar(maxval=len(blts_ind)).start()
         count = 0
-    for (bl, freq, t, source, blti, fi) in izip(baselines[blts_ind],
+
+    for i in xrange(len(blts_ind)):
+        bl = baselines[blts_ind[i]]
+        freqi = freq[freq_ind[i]]
+        t = times[blts_ind[i]]
+        source = sources[source_ind[i]]
+        blti = blts_ind[i]
+        fi = freq_ind[i]
+
+    for (bl, freqi, t, source, blti, fi) in izip(baselines[blts_ind],
                                                 freq[freq_ind], times[blts_ind],
                                                 sources[source_ind], blts_ind,
                                                 freq_ind):
 
-        task = UVTask(source, t, freq, bl, telescope)
+        task = UVTask(source, t, freqi, bl, telescope)
         task.uvdata_index = (blti, 0, fi)  # 0 = spectral window index
         uvtask_list.append(task)
 
@@ -518,25 +536,61 @@ def serial_gather(uvtask_list):
     return uv_out
 
 
-def create_mock_catalog(Nsrcs, time):
-    """Create mock catalog with test sources at zenith."""
-    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+def create_mock_catalog(time,arrangement='zenith',**kwargs):
+    """
+        Create mock catalog with test sources at zenith.
+
+        arrangment = Choose test point source pattern (default = 1 source at zenith)
+        Accepted keywords:
+            Nsrcs = Number of sources to put at zenith (ignored for other source arrangements)
+            array_location = EarthLocation object.
+        Accepted arrangements:
+            'triangle' = Three point sources forming a triangle around the zenith
+            'asym1'    = An asymmetric cross
+            'zenith'   = Some number of sources placed at the zenith.
+
+    """
+
+    if 'array_location' in kwargs: array_location = kwargs['array_location']
+    else:  array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
     freq = (150e6 * units.Hz)
+ 
+    if arrangement == 'triangle':
+        Nsrcs = 3
+        zen_ang = 0.03
+        alts = [90.-zen_ang, 90. - zen_ang, 90. - zen_ang]
+        azs = [0., 120, 240.]
+        fluxes = [1.0,1.0,1.0]
 
-    source_coord = SkyCoord(alt=Angle(90 * units.deg), az=Angle(0 * units.deg),
+    if arrangement == 'asym1':
+        Nsrcs = 4
+        alts = [88.,0.,86., 85.]
+        azs = [270., 0., 90., 135.]
+        fluxes = [5.,4.,1.0,2.0]
+
+    if arrangement == 'zenith':
+        Nsrcs = 1
+        if Nsrcs in kwargs: Nsrcs = kwargs['Nsrcs']
+        alts = np.ones(Nsrcs)*90.
+        azs = np.zeros(Nsrcs,dtype=float)
+        fluxes=np.ones(Nsrcs)*1/Nsrcs
+        # Divide totaly Stokes I intensity among all sources
+        # Test file has Stokes I = 1 Jy
+
+    catalog = []
+
+    source_coord = SkyCoord(alt=Angle(alts,unit=units.deg), az=Angle(azs,unit=units.deg),
                             obstime=time, frame='altaz', location=array_location)
     icrs_coord = source_coord.transform_to('icrs')
-
+    
     ra = icrs_coord.ra
     dec = icrs_coord.dec
 
-    catalog = []
-    # Divide totaly Stokes I intensity among all sources
-    # Test file has Stokes I = 1 Jy
-    for src_num in xrange(Nsrcs):
-        catalog.append(Source('src' + str(src_num), ra, dec, time,
-                              freq, [1. / Nsrcs, 0, 0, 0]))
+    for si in range(Nsrcs):
+        catalog.append(Source('src' + str(si), ra[si], dec[si], time,
+                                  freq, [fluxes[si],0,0,0]))
+    
     catalog = np.array(catalog)
     return catalog
 
@@ -551,7 +605,7 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
     if catalog is None:
         catalog = create_mock_catalog(Nsrcs, time)
 
-    uvtask_list = uvfile_to_task_list(input_uv, catalog, beam_list)
+    uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
 
     for task in uvtask_list:
         engine = UVEngine(task)
@@ -561,18 +615,17 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
     return uvdata_out
 
-
-def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
+def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement=None):
     """Run uvsim."""
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
 
     # Initialize MPI, get the communicator, number of Processing Units (PUs)
     # and the rank of this PU
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
-    Npus = comm.Get_size()
-    rank = comm.Get_rank()
+#    from mpi4py import MPI
+#    comm = MPI.COMM_WORLD
+#    Npus = comm.Get_size()
+#    rank = comm.Get_rank()
 
     # The Head node will initialize our simulation
     # Read input file and make uvtask list
@@ -584,9 +637,14 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
         time = Time(input_uv.time_array[0], scale='utc', format='jd')
         if catalog is None:
             print("Nsrcs:", Nsrcs)
-            catalog = create_mock_catalog(Nsrcs, time)
+            if mock_arrangement is not None: arrange = mock_arrangement
+            array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
+            if Nsrcs is not None:
+                catalog = create_mock_catalog(time, mock_arrangement, array_location=array_loc, Nsrcs=Nsrcs)
+            else:
+                catalog = create_mock_catalog(time, mock_arrangement, array_location=array_loc)
 
-        uvtask_list = uvfile_to_task_list(input_uv, catalog, beam_list)
+        uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
         # To split into PUs make a list of lists length NPUs
         print("Splitting Task List")
         uvtask_list = np.array_split(uvtask_list, Npus)
@@ -595,7 +653,7 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
         print("Sending Tasks To Processing Units")
     # Scatter the task list among all available PUs
     local_task_list = comm.scatter(uvtask_list, root=0)
-
+    if rank==0: print("Tasks Received. Begin Calculations.")
     summed_task_dict = {}
 
     if rank == 0:
@@ -625,6 +683,8 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
                 summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
             else:
                 summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
+
+    if rank==0: print("Calculations Complete.")
 
     # All the sources in this summed list are foobar-ed
     # Source are summed over but only have 1 name

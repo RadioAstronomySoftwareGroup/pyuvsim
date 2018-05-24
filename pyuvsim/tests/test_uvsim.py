@@ -180,7 +180,7 @@ def test_file_to_tasks():
 
     beam_list = [beam]
 
-    uvtask_list = pyuvsim.uvfile_to_task_list(hera_uv, sources, beam_list)
+    uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list)
 
     tel_loc = EarthLocation.from_geocentric(*hera_uv.telescope_location, unit='m')
     beam = UVBeam()
@@ -217,7 +217,7 @@ def test_file_to_tasks():
     for idx, antenna1 in enumerate(antennas1):
         antenna2 = antennas2[idx]
         baseline = pyuvsim.Baseline(antenna1, antenna2)
-        task = pyuvsim.UVTask(sources[0], time, hera_uv.freq_array[0, 0] * units.Hz, baseline, telescope)
+        task = pyuvsim.UVTask(sources[0], time.jd, hera_uv.freq_array[0, 0], baseline, telescope)
         task.uvdata_index = (idx, 0, 0)
         expected_task_list.append(task)
 
@@ -243,8 +243,11 @@ def test_uvdata_init():
 
     beam_list = [beam]
 
-    uvtask_list = pyuvsim.uvfile_to_task_list(hera_uv, sources, beam_list)
-
+    uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list)
+    for task in uvtask_list:
+        task.time = Time(task.time, format='jd')
+        task.freq = task.freq * units.Hz
+        
     uvdata_out = pyuvsim.initialize_uvdata(uvtask_list)
 
     hera_uv.data_array = np.zeros_like(hera_uv.data_array, dtype=np.complex)
@@ -280,7 +283,7 @@ def test_gather():
 
     beam_list = [beam]
 
-    uvtask_list = pyuvsim.uvfile_to_task_list(hera_uv, sources, beam_list)
+    uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list)
 
     for task in uvtask_list:
         engine = pyuvsim.UVEngine(task)
@@ -313,3 +316,7 @@ def test_sources_equal():
     src1 = create_zenith_source(time, 'src')
     src2 = create_zenith_source(time, 'src')
     nt.assert_equal(src1, src2)
+
+def test_mock_catalog():
+    time = Time('2018-03-01 00:00:00', scale='utc')
+    cat = pyuvsim.create_mock_catalog(time, arrangement='asym1')
