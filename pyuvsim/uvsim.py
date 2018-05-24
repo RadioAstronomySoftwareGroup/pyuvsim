@@ -326,7 +326,6 @@ class UVEngine(object):
         vij = self.apparent_coherency * fringe
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
-
         return np.array(vis_vector)
 
     def update_task(self):
@@ -561,6 +560,9 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
                                        height=1073.)
     freq = (150e6 * units.Hz)
 
+    if not arrangement in ['off-zenith','zenith','cross','triangle']:
+        raise KeyError("Invalid mock catalog arrangement"+str(arrangement))
+
     if arrangement == 'off-zenith':
         if 'zen_ang' in kwargs:
             zen_ang = kwargs['zen_ang']   # In degrees
@@ -605,7 +607,6 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-
     for si in range(Nsrcs):
         catalog.append(Source('src' + str(si), ra[si], dec[si], time,
                               freq, [fluxes[si], 0, 0, 0]))
@@ -654,9 +655,9 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
                 arrange = mock_arrangement
             array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
             if Nsrcs is not None:
-                catalog = create_mock_catalog(time, mock_arrangement, array_location=array_loc, Nsrcs=Nsrcs)
+                catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc, Nsrcs=Nsrcs)
             else:
-                catalog = create_mock_catalog(time, mock_arrangement, array_location=array_loc)
+                catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc)
 
         uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
         # To split into PUs make a list of lists length NPUs
@@ -667,6 +668,7 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
         print("Sending Tasks To Processing Units")
     # Scatter the task list among all available PUs
     local_task_list = comm.scatter(uvtask_list, root=0)
+    
     if rank == 0:
         print("Tasks Received. Begin Calculations.")
     summed_task_dict = {}
