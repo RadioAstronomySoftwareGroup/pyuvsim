@@ -323,7 +323,7 @@ class UVEngine(object):
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
 
         fringe = np.exp(-2j * np.pi * np.dot(self.task.baseline.uvw, pos_lmn))
-        pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
+
 
         vij = self.apparent_coherency * fringe
         # need to reshape to be [xx, yy, xy, yx]
@@ -560,7 +560,7 @@ def create_mock_catalog(time,arrangement='zenith',**kwargs):
     else:  array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
     freq = (150e6 * units.Hz)
- 
+
     if arrangement == 'off-zenith':
         if 'zen_ang' in kwargs: zen_ang = kwargs['zen_ang']   # In degrees
         else: zen_ang = 5.0
@@ -597,14 +597,14 @@ def create_mock_catalog(time,arrangement='zenith',**kwargs):
     source_coord = SkyCoord(alt=Angle(alts,unit=units.deg), az=Angle(azs,unit=units.deg),
                             obstime=time, frame='altaz', location=array_location)
     icrs_coord = source_coord.transform_to('icrs')
-    
+
     ra = icrs_coord.ra
     dec = icrs_coord.dec
 
     for si in range(Nsrcs):
         catalog.append(Source('src' + str(si), ra[si], dec[si], time,
                                   freq, [fluxes[si],0,0,0]))
-    
+
     catalog = np.array(catalog)
     return catalog
 
