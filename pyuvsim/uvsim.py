@@ -398,21 +398,13 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
         pbar = progressbar.ProgressBar(maxval=len(blts_ind)).start()
         count = 0
 
-    for i in xrange(len(blts_ind)):
-        bl = baselines[blts_ind[i]]
-        freqi = freq[freq_ind[i]]
-        t = times[blts_ind[i]]
-        source = sources[source_ind[i]]
-        blti = blts_ind[i]
-        fi = freq_ind[i]
-
     for (bl, freqi, t, source, blti, fi) in izip(baselines[blts_ind],
                                                  freq[freq_ind], times[blts_ind],
                                                  sources[source_ind], blts_ind,
                                                  freq_ind):
 
         task = UVTask(source, t, freqi, bl, telescope)
-        task.uvdata_index = (blti, 0, fi)  # 0 = spectral window index
+        task.uvdata_index = (blti, 0, fi)    # 0 = spectral window index
         uvtask_list.append(task)
 
         if progbar:
@@ -445,15 +437,15 @@ def initialize_uvdata(uvtask_list):
     telescope_location = uvtask_list[0].telescope.telescope_location.geocentric
 
     source_0 = uvtask_list[0].source
-    freq_0 = uvtask_list[0].freq.to("Hz").value
+    freq_0 = uvtask_list[0].freq
     for task in uvtask_list:
         if not task.source == source_0:
             continue
-        task_freqs.append(task.freq.to("Hz").value)
+        task_freqs.append(task.freq)
 
-        if task.freq.to("Hz").value == freq_0:
+        if task.freq == freq_0:
             task_bls.append(task.baseline)
-            task_times.append(task.time.jd)
+            task_times.append(task.time)
             task_antnames.append(task.baseline.antenna1.name)
             task_antnames.append(task.baseline.antenna2.name)
             ant_1_array.append(task.baseline.antenna1.number)
@@ -524,12 +516,11 @@ def initialize_uvdata(uvtask_list):
     return uv_obj
 
 
-def serial_gather(uvtask_list):
+def serial_gather(uvtask_list, uv_out):
     """
         Initialize uvdata object, loop over uvtask list, acquire visibilities,
         and add to uvdata object.
     """
-    uv_out = initialize_uvdata(uvtask_list)
     for task in uvtask_list:
         blt_ind, spw_ind, freq_ind = task.uvdata_index
         uv_out.data_array[blt_ind, spw_ind, freq_ind, :] += task.visibility_vector
@@ -662,6 +653,7 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
                 catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc)
 
         uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
+        uv_container = initialize_uvdata(uvtask_list)
         # To split into PUs make a list of lists length NPUs
         print("Splitting Task List")
         uvtask_list = np.array_split(uvtask_list, Npus)
@@ -717,6 +709,6 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
     # Concatenate the list of lists into a flat list of tasks
     if rank == 0:
         uvtask_list = sum(full_tasklist, [])
-        uvdata_out = serial_gather(uvtask_list)
+        uvdata_out = serial_gather(uvtask_list, uv_container)
 
         return uvdata_out
