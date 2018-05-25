@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description=("A command-line script "
 
 parser.add_argument('file_in', metavar='<FILE>', type=str, nargs='+')
 parser.add_argument('--outdir', type=str, default='./')
-parser.add_argument('--Nsrcs', type=int, default=3)
+parser.add_argument('--Nsrcs', type=int, default=None)
 parser.add_argument('--mock_arrangement', type=str,default='zenith')
 # parser.add_argument('--overwrite', action='store_true')
 

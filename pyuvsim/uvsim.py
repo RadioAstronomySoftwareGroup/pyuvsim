@@ -576,7 +576,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
 
     if arrangement == 'cross':
         Nsrcs = 4
-        alts = [88., 0., 86., 85.]
+        alts = [88., 90., 86., 82.]
         azs = [270., 0., 90., 135.]
         fluxes = [5., 4., 1.0, 2.0]
 
@@ -645,11 +645,11 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
 
         time = Time(input_uv.time_array[0], scale='utc', format='jd')
         if catalog is None:
-            print("Nsrcs:", Nsrcs)
             if mock_arrangement is not None:
                 arrange = mock_arrangement
             array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
             if Nsrcs is not None:
+                print("Nsrcs:", Nsrcs)
                 catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc, Nsrcs=Nsrcs)
             else:
                 catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc)
