@@ -236,7 +236,7 @@ def test_single_offzenith_source_uvfits():
 
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
-    interpolated_beam, interp_basis_vector, nearest_pix_distance = beam.interp(az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]), freq_array=np.array([freq.to('Hz').value]))
+    interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]), freq_array=np.array([freq.to('Hz').value]))
     jones = np.zeros((2,2),dtype=np.complex64)
     jones[0,0] = interpolated_beam[1,0,0,0,0]
     jones[1,1] = interpolated_beam[0,0,1,0,0]
@@ -310,7 +310,7 @@ def test_single_offzenith_source_miriad():
 
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
-    interpolated_beam, interp_basis_vector, nearest_pix_distance = beam.interp(az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]), freq_array=np.array([freq.to('Hz').value]))
+    interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]), freq_array=np.array([freq.to('Hz').value]))
     jones = np.zeros((2,2),dtype=np.complex64)
     jones[0,0] = interpolated_beam[1,0,0,0,0]
     jones[1,1] = interpolated_beam[0,0,1,0,0]

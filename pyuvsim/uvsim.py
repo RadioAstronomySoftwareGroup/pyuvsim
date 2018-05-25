@@ -212,7 +212,7 @@ class Antenna(object):
             array.beam_list[self.beam_id].peak_normalize()
         array.beam_list[self.beam_id].interpolation_function = 'az_za_simple'
 
-        interp_data, interp_basis_vector, nearest_pix_dist = \
+        interp_data, interp_basis_vector = \
             array.beam_list[self.beam_id].interp(az_array=source_az,
                                                  za_array=source_za,
                                                  freq_array=freq)
