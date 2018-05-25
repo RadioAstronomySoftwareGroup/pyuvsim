@@ -1,7 +1,7 @@
 ### Take a uvfits file, and save sim parameters as a yaml file.
 
 from pyuvdata import UVData
-import sys, os, yaml
+import sys, os, yaml, argparse
 from pyuvdata.data import DATA_PATH
 
 def instr_to_beam(inst):
@@ -16,8 +16,19 @@ def instr_to_beam(inst):
         print("Warning: No beam model for "+str(inst)+", defaulting to HERA.")
         return instr_to_beam("hera")
 
-uv_fname = sys.argv[1]
-yaml_fname = '.'.join(uv_fname.split('.')[:-1]) + '.yaml'   #Replace extension
+
+parser = argparse.ArgumentParser(description=("Generate basic simulation parameters from uvfits."))
+
+parser.add_argument('file_in', metavar='<FILE>', type=str, nargs='+')
+parser.add_argument('-p','--paraml_fname', type=str, default='')
+
+args = parser.parse_args()
+
+uv_fname = args.file_in[0]
+
+yaml_fname= args.paraml_fname
+if yaml_fname == '':
+    yaml_fname = '.'.join(os.path.basenem(uv_fname).split('.')[:-1]) + '.yaml'   #Replace extension
 
 input_uv = UVData()
 input_uv.read_uvfits(uv_fname, read_data=False)
@@ -37,10 +48,12 @@ param_dict = dict(
     end_freq = freq_array[-1],
     channel_width = input_uv.channel_width,
     Nfreqs = input_uv.Nfreqs,
-    
-    instrument = input_uv.instrument,
-    beam_model = instr_to_beam(input_uv.instrument)
 
+    ## Params will still require a catalog and telescope parameters 
+    catalog = '',
+    teleyaml= '',
+    array_layout= ''
+    
 )
 
 with open(yaml_fname, 'w') as yfile:
