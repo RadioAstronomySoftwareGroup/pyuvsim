@@ -49,6 +49,7 @@ if rank == 0:
     
         beam_list = (np.array(beam_list)[beam_ids]).tolist()
         outfile_name = os.path.join(params['outdir'], params['outfile_prefix'] + "_" + os.path.basename(filename))
+        outfile_name = outfile_name + ".uvfits"
     
     else:
         ### Not running off a uvfits.
@@ -68,6 +69,8 @@ if rank == 0:
             outfile_name = os.path.join(params['outdir'], outfile_prefix +os.path.basename(args['paramsfile'])[:-5] + outfile_suffix)  #Strip .yaml extention
         else:
             outfile_name = params['outfile_name']
+
+        outfile_name = outfile_name + ".uvfits"
 
         if not 'clobber' in params:
             outfile_name = simsetup.check_file_exists_and_increment(outfile_name)
