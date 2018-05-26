@@ -38,22 +38,35 @@ time_array = input_uv.time_array.tolist()
 
 param_dict = dict(
 
-    start_time = time_array[0],
-    end_time = time_array[-1],
-    Ntimes = input_uv.Ntimes,
-
-    integration_time = input_uv.integration_time,
+    time = dict(
+        start_time = time_array[0],
+        end_time = time_array[-1],
+        Ntimes = input_uv.Ntimes,
+        integration_time = input_uv.integration_time,
+    ),
     
-    start_freq = freq_array[0],
-    end_freq = freq_array[-1],
-    channel_width = input_uv.channel_width,
-    Nfreqs = input_uv.Nfreqs,
+    freq = dict(
+        start_freq = freq_array[0],
+        end_freq = freq_array[-1],
+        channel_width = input_uv.channel_width,
+        Nfreqs = input_uv.Nfreqs,
+    ),
 
-    ## Params will still require a catalog and telescope parameters 
-    catalog = '',
-    teleyaml= '',
-    array_layout= ''
-    
+    ## Params will still require a catalog and telescope parameters:
+    sources = dict(
+        catalog = ''
+        ),
+
+    telescope = dict(
+        teleyaml= '',
+        array_layout= ''
+    )
+
+    filing = dict(
+        outdir = '.',
+        outfile_name = '',
+        outfile_prefix = ''
+    )
 )
 
 with open(yaml_fname, 'w') as yfile:
