@@ -224,7 +224,7 @@ class Telescope(object):
         self.beam_list = beam_list
 
     def __eq__(self, other):
-        return ((self.telescope_location == other.telescope_location)
+        return ((np.allclose(self.telescope_location.to('m').value, other.telescope_location.to("m").value, atol=1e-3))
                 and (self.beam_list == other.beam_list)
                 and (self.telescope_name == other.telescope_name))
 
