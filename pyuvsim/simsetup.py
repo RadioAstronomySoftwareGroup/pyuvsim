@@ -33,7 +33,14 @@ def parse_layout_csv(layout_csv):
 
 def initialize_uvdata_from_params(param_dict):
     """
-        Construct a uvdata object from the parameters in param_dict.
+        Construct a uvdata object from parameters in a valid yaml file.
+        
+        Arguments:
+            param : dict
+                If dict, this is treated as the yaml file that has been read
+        Returns:
+            uv_obj, beam_list, beam_ids
+
         TODO:
             Verify the parameter file before reading.
             Supply defaults when possible.
@@ -44,6 +51,14 @@ def initialize_uvdata_from_params(param_dict):
 
     teleyaml = tele_params['teleyaml']
     layout_csv = tele_params['array_layout']
+
+    if not os.path.exists(teleyaml):
+       path = os.path.dirname(param_dict['config_path'])
+       teleyaml = os.path.join(path, teleyaml)
+
+    if not os.path.exists(layout_csv):
+       path = os.path.dirname(param_dict['config_path'])
+       layout_csv = os.path.join(path, layout_csv)
     
     ant_layout = parse_layout_csv(layout_csv)
 
@@ -61,7 +76,7 @@ def initialize_uvdata_from_params(param_dict):
     antnames = ant_layout['name']
     beam_ids = ant_layout['beamid']
     beam_list = []
-    for beamID in beam_ids:
+    for beamID in np.unique(beam_ids):
         path = telparam['beam_paths'][beamID]
         uvb = UVBeam()
         uvb.read_beamfits(path)
@@ -78,16 +93,44 @@ def initialize_uvdata_from_params(param_dict):
 
     ## Parse frequency structure
     freq_params = param_dict['freq']
-    if 'Nfreqs' in freq_params:
-        freq_arr = np.linspace(freq_params['start_freq'],freq_params['end_freq'],freq_params['Nfreqs'])
+
+    freq_keywords = ['freq_array', 'start_freq', 'end_freq', 'Nfreqs', 'channel_width', 'bandwidth', 'center_freq']
+    fa, sf, ef, nf, cw, bw, cf = [ fk in freq_params for fk in freq_keywords]
+    kws_used = ", ".join(freq_params.keys())
+
+    if fa:
+        freq_arr = freq_params['freq_array']
+        freq_params['Nfreqs'] = freq_arr.size
+        try:
+            freq_params['channel_width'] = np.diff(freq_arr)[0] if freq_params['Nfreqs'] > 1 else freq_params['channel_width']
+        except KeyError:
+            raise ValueError("Channel width must be specified if freq_arr has length 1")
     else:
-        freq_arr = np.arange(freq_params['start_freq'],freq_params['end_freq'],freq_params['channel_width'])
+        if not nf:
+            if not cw: raise ValueError("Either channel_width or Nfreqs must be included in parameters:" + kws_used)
+            if sf and ef:
+                freq_params['bandwidth'] = freq['start_freq'] - freq['end_freq']
+                bw=True
+            if bw: freq_params['Nfreqs'] = freq['bandwidth'] / freq['channel_width']
+            else: raise ValueError("Either bandwidth or band edges must be specified: " + kws_used)
+    
+        if not cw:
+            if not bw: raise ValueError("Either bandwidth or channel width must be specified: "+ kws_used)
+            freq_params['channel_width'] = freq_params['bandwidth']/float(freq_params['Nfreqs'])
+    
+        if not bw: freq_params['bandwidth'] = freq_params['channel_width'] * freq_params['Nfreqs']
+    
+        if not sf:
+            if ef and bw: freq_params['start_freq'] = freq_params['end_freq'] - freq_params['bandwidth']
+            if cf and bw: freq_params['start_freq'] = freq_params['center_freq'] - freq_params['bandwidth']/2.
+        if not ef:
+            if sf and bw: freq_params['end_freq'] = freq_params['start_freq'] + freq_params['bandwidth']
+            if sf and bw: freq_params['end_freq'] = freq_params['center_freq'] + freq_params['bandwidth']/2.
 
-    Nspws = 1
+        freq_arr = np.linspace(freq_params['start_freq'], freq_params['end_freq'], freq_params['Nfreqs'])
+
+    Nspws = 1 if not 'Nspws' in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr,Nspws).reshape(Nspws,freq_params['Nfreqs'])
-
-    if freq_params['Nfreqs'] > 1:
-        assert np.diff(freq_arr)[0] == freq_params['channel_width']
 
     param_dict['channel_width'] = freq_params['channel_width']
     param_dict['freq_array'] = freq_arr
@@ -97,21 +140,47 @@ def initialize_uvdata_from_params(param_dict):
 
     ## Parse time structure
     time_params = param_dict['time']
-    if 'Ntimes' in time_params:
-        time_arr = np.linspace(time_params['start_time'],time_params['end_time'],time_params['Ntimes'])
-    else:
-        time_arr = np.arange(time_params['start_time'],time_params['end_time'],time_params['integration_time'])
 
-    if time_params['Ntimes'] > 1:
-        assert np.diff(time_arr)[0] == time_params['integration_time']
+    time_keywords = ['start_time', 'end_time', 'Ntimes', 'integration_time', 'duration_hours', 'duration_days']
+    st, et, nt, it, dh, dd = [ tk in time_params for tk in time_keywords]
+    kws_used = ", ".join(time_params.keys())
 
-    param_dict['channel_width'] = time_params['integration_time']
+    if dh and not dd:
+        daysperhour = 1/24.
+        time_params['duration'] = time_params['duration_hours'] * daysperhour
+        dd = True
+    elif dd:
+        time_params['duration'] = time_params['duration_days']
+
+    if not nt:
+        if not it: raise ValueError("Either integration_time or Ntimes must be included in parameters:" + kws_used)
+        if st and et:
+            time_params['duration'] = time['start_time'] - time['end_time']
+            dd=True
+        if dd: time_params['Ntimes'] = time['duration'] / time['integration_time']
+        else: raise ValueError("Either duration or time bounds must be specified: " + kws_used)
+    
+    if not it:
+        if not dd: raise ValueError("Either duration or channel_width must be specified: "+ kws_used)
+        time_params['integration_time'] = time_params['duration']/float(time_params['Ntimes'])
+    
+    if not dd: time_params['duration'] = time_params['integration_time'] * time_params['Ntimes']
+    
+    if not st:
+        if et and dd: time_params['start_time'] = time_params['end_time'] - time_params['duration']
+    if not et:
+        if st and dd: time_params['end_time'] = time_params['start_time'] + time_params['duration']
+
+    time_arr = np.linspace(time_params['start_time'], time_params['end_time'], time_params['Ntimes'])
 
     Nbl = (param_dict['Nants_data']+1)*param_dict['Nants_data'] / 2
 
-    param_dict['time_array'] = np.sort(np.tile(time_arr,Nbl))
+    time_arr =  np.sort(np.tile(time_arr,Nbl))
+    param_dict['integration_time'] = time_params['integration_time']
+    param_dict['time_array'] = time_arr
     param_dict['Ntimes'] = time_params['Ntimes']
     del param_dict['time']
+
 
     ## Now make a UVData object with these settings built in.
     ## The syntax below allows for other valid uvdata keywords to be passed in without explicitly setting them here.
@@ -123,7 +192,7 @@ def initialize_uvdata_from_params(param_dict):
         if hasattr(uv_obj,k):
             setattr(uv_obj,k,param_dict[k])
 
-    bls = np.array([uv_obj.antnums_to_baseline(j,i,attempt256=True)
+    bls = np.array([uv_obj.antnums_to_baseline(j,i)#,attempt256=True)
                for i in range(0,uv_obj.Nants_data) 
                for j in range(i,uv_obj.Nants_data) ])
     
