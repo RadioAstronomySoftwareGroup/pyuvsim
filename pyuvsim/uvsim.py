@@ -320,9 +320,8 @@ class Baseline(object):
     def __eq__(self, other):
         return ((self.antenna1 == other.antenna1)
                 and (self.antenna2 == other.antenna2)
-                and np.all(self.enu == other.enu)
-                and np.all(self.uvw == other.uvw))
-
+                and np.allclose(self.enu.to('m').value, other.enu.to('m').value, atol=1e-3)
+                and np.allclose(self.uvw.to('m').value, other.uvw.to('m').value, atol=1e-3))   
 
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
