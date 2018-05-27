@@ -305,7 +305,7 @@ class Antenna(object):
 
     def __eq__(self, other):
         return ((self.name == other.name)
-                and np.all(self.pos_enu == other.pos_enu)
+                and np.allclose(self.pos_enu.to('m').value, other.pos_enu.to('m').value,atol=1e-3)
                 and (self.beam_id == other.beam_id))
 
 
@@ -345,6 +345,19 @@ class UVTask(object):
                 and (self.visibility_vector == other.visibility_vector)
                 and (self.uvdata_index == other.uvdata_index)
                 and (self.telescope == other.telescope))
+
+    def __cmp__(self,other):
+        # NB __cmp__ is not allowed in Python3. 
+
+        blti0, _, fi0 = self.uvdata_index
+        blti1, _, fi1 = other.uvdata_index
+
+        if blti0 > blti1:
+            return 1
+        elif blti0 == blti1:
+            return 1 if fi0 > fi1 else -1
+        else:
+            return -1
 
 
 class UVEngine(object):
