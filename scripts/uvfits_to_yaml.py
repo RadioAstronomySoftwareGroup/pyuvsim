@@ -60,7 +60,7 @@ param_dict = dict(
     telescope = dict(
         teleyaml= '',
         array_layout= ''
-    )
+    ),
 
     filing = dict(
         outdir = '.',
