@@ -337,8 +337,8 @@ class UVTask(object):
         self.uvdata_index = None        # Where to add the visibility in the uvdata object.
 
     def __eq__(self, other):
-        return ((self.time == other.time)
-                and (self.freq == other.freq)
+        return (np.isclose(self.time,other.time,atol=1e-4)
+                and np.isclose(self.freq, other.freq,atol=1e-4)
                 and (self.source == other.source)
                 and (self.baseline == other.baseline)
                 and (self.visibility_vector == other.visibility_vector)
