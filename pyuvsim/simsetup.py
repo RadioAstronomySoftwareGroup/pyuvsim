@@ -5,12 +5,6 @@ from pyuvdata import UVBeam, UVData
 import numpy as np, yaml, os
 
 
-def check_required_params(param_dict):
-    """
-        Assert that the minimum parameters are provided for simulation.
-    """
-    assert(1==1)
-
 def check_file_exists_and_increment(filepath):
     """
         Given filepath (filename + path), check if it exists. If so, add a _1 at the end. etc.
