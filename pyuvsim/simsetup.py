@@ -99,7 +99,7 @@ def initialize_uvdata_from_params(param_dict):
     kws_used = ", ".join(freq_params.keys())
 
     if fa:
-        freq_arr = freq_params['freq_array']
+        freq_arr = np.array(freq_params['freq_array'])
         freq_params['Nfreqs'] = freq_arr.size
         try:
             freq_params['channel_width'] = np.diff(freq_arr)[0] if freq_params['Nfreqs'] > 1 else freq_params['channel_width']
@@ -111,7 +111,7 @@ def initialize_uvdata_from_params(param_dict):
             if sf and ef:
                 freq_params['bandwidth'] = freq['start_freq'] - freq['end_freq']
                 bw=True
-            if bw: freq_params['Nfreqs'] = freq['bandwidth'] / freq['channel_width']
+            if bw: freq_params['Nfreqs'] = int(np.floor(freq_params['bandwidth'] / freq_params['channel_width'])) + 1
             else: raise ValueError("Either bandwidth or band edges must be specified: " + kws_used)
     
         if not cw:
@@ -119,13 +119,12 @@ def initialize_uvdata_from_params(param_dict):
             freq_params['channel_width'] = freq_params['bandwidth']/float(freq_params['Nfreqs'])
     
         if not bw: freq_params['bandwidth'] = freq_params['channel_width'] * freq_params['Nfreqs']
-    
         if not sf:
             if ef and bw: freq_params['start_freq'] = freq_params['end_freq'] - freq_params['bandwidth']
             if cf and bw: freq_params['start_freq'] = freq_params['center_freq'] - freq_params['bandwidth']/2.
         if not ef:
             if sf and bw: freq_params['end_freq'] = freq_params['start_freq'] + freq_params['bandwidth']
-            if sf and bw: freq_params['end_freq'] = freq_params['center_freq'] + freq_params['bandwidth']/2.
+            if cf and bw: freq_params['end_freq'] = freq_params['center_freq'] + freq_params['bandwidth']/2.
 
         freq_arr = np.linspace(freq_params['start_freq'], freq_params['end_freq'], freq_params['Nfreqs'])
 
@@ -144,9 +143,11 @@ def initialize_uvdata_from_params(param_dict):
     time_keywords = ['start_time', 'end_time', 'Ntimes', 'integration_time', 'duration_hours', 'duration_days']
     st, et, nt, it, dh, dd = [ tk in time_params for tk in time_keywords]
     kws_used = ", ".join(time_params.keys())
+    daysperhour = 1/24.
+    hourspersec = 1/60.**2
+    dayspersec = daysperhour*hourspersec
 
     if dh and not dd:
-        daysperhour = 1/24.
         time_params['duration'] = time_params['duration_hours'] * daysperhour
         dd = True
     elif dd:
@@ -155,23 +156,23 @@ def initialize_uvdata_from_params(param_dict):
     if not nt:
         if not it: raise ValueError("Either integration_time or Ntimes must be included in parameters:" + kws_used)
         if st and et:
-            time_params['duration'] = time['start_time'] - time['end_time']
+            time_params['duration'] = time_params['start_time'] - time_params['end_time']
             dd=True
-        if dd: time_params['Ntimes'] = time['duration'] / time['integration_time']
+        if dd: time_params['Ntimes'] = int(np.floor(time_params['duration'] / (time_params['integration_time'] * dayspersec))) + 1
         else: raise ValueError("Either duration or time bounds must be specified: " + kws_used)
     
     if not it:
-        if not dd: raise ValueError("Either duration or channel_width must be specified: "+ kws_used)
-        time_params['integration_time'] = time_params['duration']/float(time_params['Ntimes'])
+        if not dd: raise ValueError("Either duration or integration time must be specified: "+ kws_used)
+        time_params['integration_time'] = time_params['duration'] / float(time_params['Ntimes']) 
     
     if not dd: time_params['duration'] = time_params['integration_time'] * time_params['Ntimes']
-    
     if not st:
         if et and dd: time_params['start_time'] = time_params['end_time'] - time_params['duration']
     if not et:
         if st and dd: time_params['end_time'] = time_params['start_time'] + time_params['duration']
+    if not (st or et): raise ValueError("Either a start or end time must be specified")
 
-    time_arr = np.linspace(time_params['start_time'], time_params['end_time'], time_params['Ntimes'])
+    time_arr = np.linspace(time_params['start_time'], time_params['end_time'] + time_params['integration_time']*dayspersec, time_params['Ntimes'])
 
     Nbl = (param_dict['Nants_data']+1)*param_dict['Nants_data'] / 2
 
