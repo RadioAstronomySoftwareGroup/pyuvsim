@@ -6,7 +6,6 @@ from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from pyuvdata import UVData
 import pyuvdata.utils as uvutils
-import os
 from itertools import izip
 from mpi4py import MPI
 
@@ -305,7 +304,7 @@ class Antenna(object):
 
     def __eq__(self, other):
         return ((self.name == other.name)
-                and np.allclose(self.pos_enu.to('m').value, other.pos_enu.to('m').value,atol=1e-3)
+                and np.allclose(self.pos_enu.to('m').value, other.pos_enu.to('m').value, atol=1e-3)
                 and (self.beam_id == other.beam_id))
 
 
@@ -337,15 +336,15 @@ class UVTask(object):
         self.uvdata_index = None        # Where to add the visibility in the uvdata object.
 
     def __eq__(self, other):
-        return (np.isclose(self.time,other.time,atol=1e-4)
-                and np.isclose(self.freq, other.freq,atol=1e-4)
+        return (np.isclose(self.time, other.time, atol=1e-4)
+                and np.isclose(self.freq, other.freq, atol=1e-4)
                 and (self.source == other.source)
                 and (self.baseline == other.baseline)
                 and (self.visibility_vector == other.visibility_vector)
                 and (self.uvdata_index == other.uvdata_index)
                 and (self.telescope == other.telescope))
 
-    def __cmp__(self,other):
+    def __cmp__(self, other):
         # NB __cmp__ is not allowed in Python3. 
 
         blti0, _, fi0 = self.uvdata_index
@@ -773,8 +772,6 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
 
         time = Time(input_uv.time_array[0], scale='utc', format='jd')
         if catalog is None:
-            if mock_arrangement is not None:
-                arrange = mock_arrangement
             array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
             if Nsrcs is not None:
                 print("Nsrcs:", Nsrcs)
