@@ -1,0 +1,18 @@
+filing:
+  outdir: '.'
+  outfile_prefix: 'sim_'
+freq:
+  freq_array : [1.00000000e+08,   1.00080000e+08,   1.00160000e+08, 1.00240000e+08, 
+              1.00320000e+08,   1.00400000e+08,   1.00480000e+08, 1.00560000e+08,
+              1.00640000e+08, 1.00720000e+08]
+  channel_width: 80000.0
+sources:
+  catalog: 'mock'
+  mock_arrangement: 'zenith'
+telescope:
+  array_layout: 'ew_bl_layout.csv'
+  telescope_config_path: '28mEWbl_10time_10chan.yaml'
+time:
+  start_time: 2457458.1738949567
+  duration_hours: 0.0275
+  integration_time: 11.0
