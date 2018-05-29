@@ -76,13 +76,13 @@ def test_uvfits_to_yaml():
     param_filename = 'test_config.yaml'
     second_param_filename = 'test2_config.yaml'
     test_uv_name = 'test_uv.uvfits'
-    teleyaml = 'test_teleyaml.yaml'
+    telescope_config = 'test_telescope_config.yaml'
     if not os.path.exists(opath):
         os.makedirs(opath)        #Directory will be deleted when test completed.
     
     #Read uvfits file to params.
-    path, teleyaml, layout_fname = pyuvsim.simsetup.uvfits_to_teleyaml(EW_uvfits_file, herabeam_default, teleyaml_fname=teleyaml, path=opath, return_names=True)
-    pyuvsim.simsetup.uvfits_to_yaml(EW_uvfits_file, yaml_fname = param_filename, teleyaml_path = os.path.join(path, teleyaml), layout_csv_path = os.path.join(path, layout_fname), path=opath)
+    path, telescope_config, layout_fname = pyuvsim.simsetup.uvfits_to_telescope_config(EW_uvfits_file, herabeam_default, telescope_config_name=telescope_config, path=opath, return_names=True)
+    pyuvsim.simsetup.uvfits_to_config_file(EW_uvfits_file, config_filename = param_filename, telescope_config_path = os.path.join(path, telescope_config), layout_csv_path = os.path.join(path, layout_fname), path=opath)
     
     # From parameters, generate a uvdata object.
 
@@ -115,8 +115,8 @@ def test_uvfits_to_yaml():
     uv_obj.write_uvfits(os.path.join(opath, test_uv_name), spoof_nonessential=True)
 
     # Generate parameters from new uvfits and compare with old.
-    path, teleyaml, layout_fname = pyuvsim.simsetup.uvfits_to_teleyaml(os.path.join(opath,test_uv_name), herabeam_default, teleyaml_fname=teleyaml, path=opath, return_names=True)
-    pyuvsim.simsetup.uvfits_to_yaml(EW_uvfits_file, yaml_fname = second_param_filename, teleyaml_path = os.path.join(path, teleyaml), layout_csv_path = os.path.join(path, layout_fname), path=opath)
+    path, telescope_config, layout_fname = pyuvsim.simsetup.uvfits_to_telescope_config(os.path.join(opath,test_uv_name), herabeam_default, telescope_config_name=telescope_config, path=opath, return_names=True)
+    pyuvsim.simsetup.uvfits_to_config_file(EW_uvfits_file, config_filename = second_param_filename, telescope_config_path = os.path.join(path, telescope_config), layout_csv_path = os.path.join(path, layout_fname), path=opath)
 
     del param_dict
     with open(os.path.join(path,second_param_filename), 'r') as pf:
