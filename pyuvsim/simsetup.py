@@ -7,6 +7,12 @@ import pyuvdata.utils as uvutils
 # Utilities for setting up simulations for parameter files,
 # and for generating parameter files from uvfits files
 
+def strip_extension(filepath):
+    if '.' not in filepath:
+        return filepath, ''
+    l = filepath.split('.')
+    return ".".join(l[:-1]), '.'+l[-1]
+
 
 def check_file_exists_and_increment(filepath):
     """
@@ -14,12 +20,14 @@ def check_file_exists_and_increment(filepath):
         at the end. etc.
     """
     if os.path.exists(filepath):
-        filepath += "_0"
+        filepath, ext = strip_extension(filepath)
+        filepath += "_0" + ext
     else:
         return filepath
     n = 1
     while os.path.exists(filepath):
-        filepath = filepath[:-2] + "_" + str(n)
+        filepath, ext = strip_extension(filepath)
+        filepath = filepath[:-2] + "_" + str(n) + ext
         n += 1
     return filepath
 
@@ -50,12 +58,12 @@ def initialize_uvdata_from_params(param_dict):
     # Parse telescope parameters
     tele_params = param_dict['telescope']
 
-    telescope_config_path = tele_params['telescope_config_path']
+    telescope_config_name = tele_params['telescope_config_name']
     layout_csv = tele_params['array_layout']
 
-    if not os.path.exists(telescope_config_path):
+    if not os.path.exists(telescope_config_name):
         path = os.path.dirname(param_dict['config_path'])
-        telescope_config_path = os.path.join(path, telescope_config_path)
+        telescope_config_name = os.path.join(path, telescope_config_name)
 
     if not os.path.exists(layout_csv):
         path = os.path.dirname(param_dict['config_path'])
@@ -63,7 +71,7 @@ def initialize_uvdata_from_params(param_dict):
 
     ant_layout = parse_layout_csv(layout_csv)
 
-    with open(telescope_config_path, 'r') as yf:
+    with open(telescope_config_name, 'r') as yf:
             telparam = yaml.safe_load(yf)
             tloc = telparam['telescope_location'][1:-1]  # drop parens
             tloc = map(float, tloc.split(","))
@@ -206,8 +214,7 @@ def initialize_uvdata_from_params(param_dict):
         raise ValueError("Either a start or end time must be specified" + kws_used)
 
     time_arr = np.linspace(time_params['start_time'],
-                           time_params['end_time'] +
-                           time_params['integration_time']*dayspersec,
+                           time_params['end_time'],
                            time_params['Ntimes'])
 
     Nbl = (param_dict['Nants_data']+1)*param_dict['Nants_data'] / 2
@@ -223,9 +230,7 @@ def initialize_uvdata_from_params(param_dict):
     #  without explicitly setting them here.
 
     uv_obj = UVData()
-    print param_dict
     for k in param_dict:
-        print k, param_dict[k]
         if hasattr(uv_obj, k):
             setattr(uv_obj, k, param_dict[k])
 
@@ -243,135 +248,118 @@ def initialize_uvdata_from_params(param_dict):
     return uv_obj, beam_list, beam_ids
 
 
-def uvfits_to_telescope_config(file_in, beam_filepath, layout_csv_name=None,
-                       telescope_config_name=None, keep_path=False,
-                       return_names=False, path='.'):
+def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
+                       telescope_config_name=None,
+                       return_names=False, path_out='.'):
     """
         From a uvfits file, generate telescope parameters files.
         Output config files are written to the current directory, unless keep_path is set.
         Arguments:
-            file_in (str): A uvfits filename.
+            uvdata_in (UVData): object to process
+            path_out (str): Target directory for the config file.
             beam_filepath (str): Path to a beamfits file.
         Keywords:
             layout_csv_name (str, optional): The name for the antenna positions csv file (Default <telescope_name>_layout.csv)
-            telescope_config_name: The name for the telescope config file (Default <file_in>.yaml)
-            keep_path: Put config files in the same directory as the input uvfits file.
+            telescope_config_name: The name for the telescope config file (Default teleconfig_#number.yaml)
             return_names: Return the file names for loopback tests.
         Returns:
             if return_names, returns tuple (path, telescope_config_name, layout_csv_name)
 
     """
 
-    uv_fname = os.path.basename(file_in)
-    uv_path = os.path.dirname(file_in)
-    if keep_path:
-        path = uv_path
-
     if telescope_config_name is None:
-        telescope_config_name = '.'.join(uv_fname.split('.')[:-1]) + '.yaml'
-
-    input_uv = UVData()
-    input_uv.read_uvfits(os.path.join(uv_path, uv_fname), read_data=False)
+        telescope_config_path = check_file_exists_and_increment(os.path.join(path_out,'telescope_config_'+uvdata_in.telescope_name+'.yaml'))
+        telescope_config_name = os.path.basename(telescope_config_path)
 
     if layout_csv_name is None:
-        layout_csv_name = input_uv.telescope_name + "_layout.csv"
+        layout_csv_path = check_file_exists_and_increment(os.path.join(path_out,uvdata_in.telescope_name + "_layout.csv"))
+        layout_csv_name = os.path.basename(layout_csv_path)
 
-    antpos_enu = uvutils.ENU_from_ECEF((input_uv.antenna_positions +
-                                        input_uv.telescope_location).T,
-                                       * input_uv.telescope_location_lat_lon_alt).T
+    antpos_enu = uvutils.ENU_from_ECEF((uvdata_in.antenna_positions +
+                                        uvdata_in.telescope_location).T,
+                                       * uvdata_in.telescope_location_lat_lon_alt).T
 
     e, n, u = antpos_enu.T
 
     beam_ids = np.zeros_like(e).astype(int)
-    col_width = max([len(name) for name in input_uv.antenna_names])
+    col_width = max([len(name) for name in uvdata_in.antenna_names])
     header = ("{:"+str(col_width)+"} {:8} {:8} {:10} {:10} {:10}\n").format("Name", "Number", "BeamID", "E", "N", "U")
 
-    with open(os.path.join(path, layout_csv_name), 'w') as lfile:
+    with open(os.path.join(path_out, layout_csv_name), 'w') as lfile:
         lfile.write(header+'\n')
         for i in range(beam_ids.size):
             e, n, u = antpos_enu[i]
             beam_id = beam_ids[i]
-            name = input_uv.antenna_names[i]
-            num = input_uv.antenna_numbers[i]
+            name = uvdata_in.antenna_names[i]
+            num = uvdata_in.antenna_numbers[i]
             line = ("{:"+str(col_width)+"} {:8d} {:8d} {:10.4f} {:10.4f} {:10.4f}\n").format(name, num, beam_id, e, n, u)
             lfile.write(line)
 
     # Write the rest to a yaml file.
     yaml_dict = dict(
-        telescope_name=input_uv.telescope_name,
-        telescope_location=repr(input_uv.telescope_location_lat_lon_alt_degrees),
-        Nants=input_uv.Nants_telescope,
+        telescope_name=uvdata_in.telescope_name,
+        telescope_location=repr(uvdata_in.telescope_location_lat_lon_alt_degrees),
+        Nants=uvdata_in.Nants_telescope,
         beam_paths={
                 0: beam_filepath
                     }
     )
 
-    with open(os.path.join(path, telescope_config_name), 'w+') as yfile:
+    with open(os.path.join(path_out, telescope_config_name), 'w+') as yfile:
         yaml.dump(yaml_dict, yfile, default_flow_style=False)
 
-    print('Path: {}, telescope_config: {}, layout: {}'.format(path, telescope_config_name,
+    print('Path: {}, telescope_config: {}, layout: {}'.format(path_out, telescope_config_name,
                                                       layout_csv_name))
 
     if return_names:
-        return path, telescope_config_name, layout_csv_name
+        return path_out, telescope_config_name, layout_csv_name
 
 
-def uvfits_to_config_file(file_in, config_filename=None, keep_path=False, telescope_config_path='',
-                   layout_csv_path='', catalog='mock', path='.'):
+def uvdata_to_config_file(uvdata_in, config_filename=None, telescope_config_name='',
+                   layout_csv_name='', catalog='mock', path_out='.'):
     """
     Extract simulation configuration settings from uvfits.
     Arguments:
-        file_in (str) : uvfits filename with path
+        uvdata_in (UVData) : uvdata object.
 
     Keywords:
-        yaml_fname (str, optional) : output param file name, defaults to file_in.yaml.
-        keep_path (bool, optional) : Place config file in the same directory as the uvfits. Default false.
-        telescope_config_path (str, optional) : Path to yaml file file. Defaults to blank string.
-        layout_csv_path (str, optional) : Path to layout csv file. Defaults to blank string.
+        config_filename (str, optional) : output param file name, defaults to config_#.yaml.
+        telescope_config_name (str, optional) : Name of yaml file file. Defaults to blank string.
+        layout_csv_name (str, optional) : Name of layout csv file. Defaults to blank string.
         catalog (str, optional): Path to catalog file, defaults to 'mock'.
-        path (str, optional) : Where to put config files. Overridden by keep_path.
+        path_out (str, optional) : Where to put config files.
 
-    Return:
+    Returns:
         Nothing
 
     """
 
-    uv_fname = os.path.basename(file_in)
-    uv_path = os.path.dirname(file_in)
-    if keep_path:
-        path = uv_path
-
     if config_filename is None:
-        config_filename = 'config_'+'.'.join(uv_fname.split('.')[:-1]) + '.yaml'
+        config_filename = check_file_exists_and_increment(os.path.join(path_out,'config.yaml'))
 
-    input_uv = UVData()
-    input_uv.read_uvfits(os.path.join(uv_path, uv_fname), read_data=False)
-
-    freq_array = input_uv.freq_array[0, :].tolist()
-    time_array = input_uv.time_array.tolist()
+    freq_array = uvdata_in.freq_array[0, :].tolist()
+    time_array = uvdata_in.time_array.tolist()
 
     param_dict = dict(
         time=dict(
             start_time=time_array[0],
             end_time=time_array[-1],
-            Ntimes=input_uv.Ntimes,
-            integration_time=input_uv.integration_time,
+            Ntimes=uvdata_in.Ntimes,
+            integration_time=uvdata_in.integration_time,
         ),
         freq=dict(
             start_freq=freq_array[0],
             end_freq=freq_array[-1],
-            channel_width=input_uv.channel_width,
-            Nfreqs=input_uv.Nfreqs,
+            channel_width=uvdata_in.channel_width,
+            Nfreqs=uvdata_in.Nfreqs,
         ),
-
-        # Params will still require a catalog and telescope parameters:
         sources=dict(
             catalog=catalog
             ),
 
         telescope=dict(
-            telescope_config_path=telescope_config_path,
-            array_layout=layout_csv_path
+            telescope_config_name=telescope_config_name,
+            array_layout=layout_csv_name
         ),
 
         filing=dict(
@@ -384,5 +372,5 @@ def uvfits_to_config_file(file_in, config_filename=None, keep_path=False, telesc
     if catalog == 'mock':
         param_dict['sources']['mock_arrangement'] = 'zenith'
 
-    with open(os.path.join(path, config_filename), 'w') as yfile:
+    with open(os.path.join(path_out, config_filename), 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)

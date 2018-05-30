@@ -10,7 +10,7 @@ sources:
   mock_arrangement: 'zenith'
 telescope:
   array_layout: 'ew_bl_layout.csv'
-  telescope_config_path: '28mEWbl_10time_10chan.yaml'
+  telescope_config_name: '28mEWbl_10time_10chan.yaml'
 time:
   Ntimes: 10
   duration_days: 0.001145833

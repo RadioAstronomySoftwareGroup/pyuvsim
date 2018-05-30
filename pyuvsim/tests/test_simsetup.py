@@ -36,7 +36,6 @@ def check_param_reader(config_num):
     """
 
     param_filename = param_filenames[config_num]
-    print param_filename
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
 
@@ -68,7 +67,7 @@ def check_param_reader(config_num):
 
     nt.assert_true(uvtask_list == expected_uvtask_list)
 
-def test_uvfits_to_yaml():
+def test_uvfits_to_config():
     """
         Loopback test of reading parameters from uvfits file, generating uvfits file, and reading in again.
     """
@@ -81,8 +80,10 @@ def test_uvfits_to_yaml():
         os.makedirs(opath)        #Directory will be deleted when test completed.
     
     #Read uvfits file to params.
-    path, telescope_config, layout_fname = pyuvsim.simsetup.uvfits_to_telescope_config(EW_uvfits_file, herabeam_default, telescope_config_name=telescope_config, path=opath, return_names=True)
-    pyuvsim.simsetup.uvfits_to_config_file(EW_uvfits_file, config_filename = param_filename, telescope_config_path = os.path.join(path, telescope_config), layout_csv_path = os.path.join(path, layout_fname), path=opath)
+    uv0 = UVData()
+    uv0.read_uvfits(EW_uvfits_file)
+    path, telescope_config, layout_fname = pyuvsim.simsetup.uvdata_to_telescope_config(uv0, herabeam_default, telescope_config_name=telescope_config, path_out=opath, return_names=True)
+    pyuvsim.simsetup.uvdata_to_config_file(uv0, config_filename = param_filename, telescope_config_name = os.path.join(path, telescope_config), layout_csv_name = os.path.join(path, layout_fname), path_out=opath)
     
     # From parameters, generate a uvdata object.
 
@@ -91,32 +92,11 @@ def test_uvfits_to_yaml():
     param_dict['config_path'] = param_filename    #Ensure path is present
 
     orig_param_dict = copy.deepcopy(param_dict)   # The parameter dictionary gets modified in the function below.
-    uv_obj, new_beam_list, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
-
-    # Write uvfits file to temp dir. Need to spoof some required parameters.
-    uv_obj.Npols = 4
-    uv_obj.Nspws = 1
-    uv_obj.data_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols),dtype=np.complex)
-    uv_obj.flag_array = np.ones_like(uv_obj.data_array).astype(bool)
-    uv_obj.nsample_array = np.ones_like(uv_obj.data_array).astype(float)
-    uv_obj.history = "Temporary file"
-    uv_obj.instrument = 'HERA'
-    uv_obj.set_lsts_from_time_array()
-    uv_obj.object_name = 'temp'
-    uv_obj.set_phased()
-    uv_obj.polarization_array = [-5,-6,-7,-8]
-    uv_obj.spw_array = [0]
-    uv_obj.uvw_array = np.ones((uv_obj.Nblts, 3))
-    uv_obj.vis_units = "Jy"
-    uv_obj.phase_center_dec = 0.0
-    uv_obj.phase_center_ra = 0.0
-    uv_obj.phase_center_epoch = 2000.0
-
-    uv_obj.write_uvfits(os.path.join(opath, test_uv_name), spoof_nonessential=True)
+    uv1, new_beam_list, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
 
     # Generate parameters from new uvfits and compare with old.
-    path, telescope_config, layout_fname = pyuvsim.simsetup.uvfits_to_telescope_config(os.path.join(opath,test_uv_name), herabeam_default, telescope_config_name=telescope_config, path=opath, return_names=True)
-    pyuvsim.simsetup.uvfits_to_config_file(EW_uvfits_file, config_filename = second_param_filename, telescope_config_path = os.path.join(path, telescope_config), layout_csv_path = os.path.join(path, layout_fname), path=opath)
+    path, telescope_config, layout_fname = pyuvsim.simsetup.uvdata_to_telescope_config(uv1, herabeam_default, telescope_config_name=telescope_config, layout_csv_name = layout_fname, path_out=opath, return_names=True)
+    pyuvsim.simsetup.uvdata_to_config_file(uv1, config_filename = second_param_filename, telescope_config_name = os.path.join(path, telescope_config), layout_csv_name = os.path.join(path, layout_fname), path_out=opath)
 
     del param_dict
     with open(os.path.join(path,second_param_filename), 'r') as pf:
@@ -129,4 +109,4 @@ def test_uvfits_to_yaml():
     shutil.rmtree(opath)
 
 if __name__ == '__main__':
-    test_uvfits_to_yaml()
+    test_uvfits_to_config()

@@ -1,5 +1,6 @@
 import argparse
 import pyuvsim.simsetup
+from pyuvdata import UVData
 
 # Take a uvfits file, and save sim parameters as a yaml file.
 
@@ -12,6 +13,9 @@ parser.add_argument('-l', '--layout_csv_path', default='')
 
 args = parser.parse_args()
 
-pyuvsim.simsetup.uvfits_to_config_file(args.file_in[0], config_filename=args.config_filename,
-                                       keep_path=False, telescope_config_path=args.telescope_config_path,
-                                       layout_csv_path=args.layout_csv_path, catalog='mock', path='.')
+uvd = UVData()
+uvd.read_uvfits(args.file_in[0])
+
+pyuvsim.simsetup.uvdata_to_config_file(uvd, config_filename=args.config_filename,
+                                       telescope_config_name=args.telescope_config_path,
+                                       layout_csv_name=args.layout_csv_path, catalog='mock', path_out='.')
