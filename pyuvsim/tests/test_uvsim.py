@@ -16,6 +16,7 @@ cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
 hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
+triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 
 
 def create_zenith_source(time, name):
@@ -252,6 +253,88 @@ def test_single_offzenith_source_uvfits():
     print('Calculated visibility', visibility)
 
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=5e-3))
+
+
+def test_offzenith_source_multibl_uvfits():
+    """Test single off-zenith source using test uvdata file.
+        Calculate visibilities for a baseline triangle.
+    """
+    hera_uv = UVData()
+    hera_uv.read_uvfits(triangle_uvfits_file, ant_str='cross')   # consists of a right triangle of baselines
+
+    src_az = Angle('90.0d')
+    src_alt = Angle('85.0d')
+    src_za = Angle('90.0d') - src_alt
+
+    src_l = np.sin(src_az.rad)*np.sin(src_za.rad)
+    src_m = np.cos(src_az.rad)*np.sin(src_za.rad)
+    src_n = np.cos(src_za.rad)
+
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    array_location = EarthLocation.from_geocentric(hera_uv.telescope_location[0],
+                                                   hera_uv.telescope_location[1],
+                                                   hera_uv.telescope_location[2],
+                                                   unit='m')
+    freq = hera_uv.freq_array[0, 0] * units.Hz
+
+    # get antennas positions into ENU
+    antpos = hera_uv.antenna_positions[0:3, :] + hera_uv.telescope_location
+    antpos = uvutils.ENU_from_ECEF(antpos.T, *hera_uv.telescope_location_lat_lon_alt).T
+
+    antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
+    antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
+    antenna3 = pyuvsim.Antenna('ant3', 3, np.array(antpos[1, :]), 0)
+
+    # setup the things that don't come from pyuvdata:
+    # make a source off zenith
+    time.location = array_location
+    lst = time.sidereal_time('mean')
+    source = create_offzenith_source(time, 'offzensrc', az=src_az, alt=src_alt)
+
+    beam = UVBeam()
+    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+
+    baselines = [pyuvsim.Baseline(antenna1, antenna2),
+                 pyuvsim.Baseline(antenna2, antenna3),
+                 pyuvsim.Baseline(antenna3, antenna1)]
+    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+    tasks = [pyuvsim.UVTask(source, time, freq, bl, array) for bl in baselines]
+
+    visibilities = []
+    for t in tasks:
+        engine = pyuvsim.UVEngine(t)
+        visibilities.append(engine.make_visibility())
+
+    #analytically calculate visibilities
+
+    beam.peak_normalize()
+    beam.interpolation_function = 'az_za_simple'
+    interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]), freq_array=np.array([freq.to('Hz').value]))
+    jones = np.zeros((2,2),dtype=np.complex64)
+    jones[0,0] = interpolated_beam[1,0,0,0,0]
+    jones[1,1] = interpolated_beam[0,0,1,0,0]
+    jones[1,0] = interpolated_beam[1,0,1,0,0]
+    jones[0,1] = interpolated_beam[0,0,0,0,0]
+
+    uvw_wavelength_array = hera_uv.uvw_array[0:hera_uv.Nbls] * units.m/const.c * freq.to('1/s')
+
+    visibilities_analytic = []
+    for u,v,w in uvw_wavelength_array.T:
+        vis = 0.5 * np.dot(jones,np.conj(jones).T) * np.exp(-2j*np.pi*(u*src_l + v*src_m + w*src_n)) 
+        visibilities_analytic.append(np.array([vis[0,0], vis[1,1], vis[1,0], vis[0,1]]))
+
+
+    print('Analytic visibility', visibilities_analytic)
+    print('Calculated visibility', visibilities)
+
+    nt.assert_true(np.allclose(visibilities, visibilities_analytic, atol=5e-3))
+
 
 # This test is supposed to see if miriad works for conjugation, but right now there are too
 # many unknowns with the HERA test file to understand why it doesn't pass.
