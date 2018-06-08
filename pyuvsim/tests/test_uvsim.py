@@ -261,6 +261,7 @@ def test_offzenith_source_multibl_uvfits():
     """
     hera_uv = UVData()
     hera_uv.read_uvfits(triangle_uvfits_file, ant_str='cross')   # consists of a right triangle of baselines
+    hera_uv.unphase_to_drift()
 
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
@@ -278,12 +279,11 @@ def test_offzenith_source_multibl_uvfits():
     freq = hera_uv.freq_array[0, 0] * units.Hz
 
     # get antennas positions into ENU
-    antpos = hera_uv.antenna_positions[0:3, :] + hera_uv.telescope_location
-    antpos = uvutils.ENU_from_ECEF(antpos.T, *hera_uv.telescope_location_lat_lon_alt).T
-
-    antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
-    antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
-    antenna3 = pyuvsim.Antenna('ant3', 3, np.array(antpos[1, :]), 0)
+    antpos = (hera_uv.antenna_positions[0:3, :] + hera_uv.telescope_location)
+    antpos = uvutils.ENU_from_ECEF(antpos.T, *hera_uv.telescope_location_lat_lon_alt)
+    antenna1 = pyuvsim.Antenna('ant1', 0, np.array(antpos[0, :]), 0)
+    antenna2 = pyuvsim.Antenna('ant2', 1, np.array(antpos[1, :]), 0)
+    antenna3 = pyuvsim.Antenna('ant3', 2, np.array(antpos[2, :]), 0)
 
     # setup the things that don't come from pyuvdata:
     # make a source off zenith
@@ -301,8 +301,8 @@ def test_offzenith_source_multibl_uvfits():
     beam_list = [beam]
 
     baselines = [pyuvsim.Baseline(antenna1, antenna2),
-                 pyuvsim.Baseline(antenna2, antenna3),
-                 pyuvsim.Baseline(antenna3, antenna1)]
+                 pyuvsim.Baseline(antenna1, antenna3),
+                 pyuvsim.Baseline(antenna2, antenna3)]
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
     tasks = [pyuvsim.UVTask(source, time, freq, bl, array) for bl in baselines]
 
@@ -325,7 +325,7 @@ def test_offzenith_source_multibl_uvfits():
     uvw_wavelength_array = hera_uv.uvw_array[0:hera_uv.Nbls] * units.m/const.c * freq.to('1/s')
 
     visibilities_analytic = []
-    for u,v,w in uvw_wavelength_array.T:
+    for u,v,w in uvw_wavelength_array:
         vis = 0.5 * np.dot(jones,np.conj(jones).T) * np.exp(-2j*np.pi*(u*src_l + v*src_m + w*src_n)) 
         visibilities_analytic.append(np.array([vis[0,0], vis[1,1], vis[1,0], vis[0,1]]))
 
@@ -497,6 +497,8 @@ def test_uvdata_init():
         
     uvdata_out = pyuvsim.initialize_uvdata(uvtask_list)
 
+    uvdata_out.uvw_array *= -1   # uvws are flipped for uvfits files
+
     hera_uv.data_array = np.zeros_like(hera_uv.data_array, dtype=np.complex)
     hera_uv.flag_array = np.zeros_like(hera_uv.data_array, dtype=bool)
     hera_uv.nsample_array = np.ones_like(hera_uv.data_array)
@@ -584,3 +586,6 @@ def test_mock_catalog():
         print '\n'
 
     nt.assert_equal(cat_source, test_source)
+
+if __name__=='__main__':
+    test_offzenith_source_multibl_uvfits()
