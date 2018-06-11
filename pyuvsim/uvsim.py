@@ -9,6 +9,7 @@ import pyuvdata.utils as uvutils
 import os
 from itertools import izip
 from mpi4py import MPI
+import copy
 
 try:
     import progressbar
@@ -71,6 +72,7 @@ class Source(object):
         self.ra = ra
         self.dec = dec
         self.epoch = epoch
+        self.pos_lmn = None
 
         # The coherency is a 2x2 matrix giving electric field correlation in Jy.
         # Multiply by .5 to ensure that Trace sums to I not 2*I
@@ -155,7 +157,7 @@ class Source(object):
         az_za = (source_altaz.az.rad, source_altaz.zen.rad)
         return az_za
 
-    def pos_lmn(self, time, telescope_location):
+    def calc_pos_lmn(self, time, telescope_location):
         """
         calculate the direction cosines of this source at a time & location
 
@@ -258,6 +260,7 @@ class UVTask(object):
         self.baseline = baseline
         self.telescope = telescope
         self.visibility_vector = None
+        self.times_index = None # A hack to calculate uvdata_index
         self.uvdata_index = None        # Where to add the visibility in the uvdata object.
 
     def __eq__(self, other):
@@ -318,12 +321,13 @@ class UVEngine(object):
         # polarization, ravel index (freq,time,source)
         self.apply_beam()
 
-        pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
+        if self.task.source.pos_lmn is None:
+            self.task.source.pos_lmn = self.task.source.calc_pos_lmn(self.task.time, self.task.telescope.telescope_location)
   
         # need to convert uvws from meters to wavelengths
         assert(isinstance(self.task.freq,Quantity))
         uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
-        fringe = np.exp(-2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
+        fringe = np.exp(-2j * np.pi * np.dot(uvw_wavelength, self.task.source.pos_lmn))
 
         vij = self.apparent_coherency * fringe
         # need to reshape to be [xx, yy, xy, yx]
@@ -332,6 +336,137 @@ class UVEngine(object):
 
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
+
+
+def gen_task_list_source_time(input_uv, sources, beam_list, beam_dict=None):
+    """
+    1st part of creating a task list: sources, times
+    Returns: List of tasks with sources and times populated
+    """
+    if not isinstance(input_uv, UVData):
+        raise TypeError("input_uv must be UVData object")
+
+    if not isinstance(sources, np.ndarray):
+        raise TypeError("sources must be a numpy array")
+
+    times = input_uv.time_array
+
+    telescope = Telescope(input_uv.telescope_name,
+                          EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
+                          beam_list)
+
+    if len(beam_list) > 1 and beam_dict is not None:
+        raise ValueError('beam_dict must be supplied if beam_list has more than one element.')
+
+    times_index = np.arange(input_uv.Ntimes)
+    source_index = np.arange(len(sources))
+    print('Making Meshgrid')
+    times_ind, source_ind = np.meshgrid(times_index, source_index)
+    print('Raveling')
+    times_ind = times_ind.ravel()
+    source_ind = source_ind.ravel()
+
+    uvtask_list = []
+    print('Making Tasks')
+    print('Number of tasks:', len(times_ind))
+
+    if progbar:
+        pbar = progressbar.ProgressBar(maxval=len(times_ind)).start()
+        count = 0
+
+    for (t, source, ti) in izip(times[times_ind], sources[source_ind], times_ind):
+        source.pos_lmn = source.calc_pos_lmn(Time(t,format='jd'), telescope.telescope_location)
+        #Since t is being cast as an astropy Time object, should it also be assigned to the task as one?
+        task = UVTask(source, t, None, None, telescope)
+        task.times_index = ti
+        uvtask_list.append(task)
+
+        if progbar:
+            count += 1
+            pbar.update(count)
+
+    if progbar:
+        pbar.finish()
+    return uvtask_list
+
+def update_task_list_bl_freq(input_uvtask_list, input_uv, beam_list, beam_dict=None):
+
+    """
+    2nd part of creating a task list: 
+    Updates existing list with baselines, frequencies, telescope
+    Returns: List of task parameters to be send to UVEngines
+    """
+    if not isinstance(input_uv, UVData):
+        raise TypeError("input_uv must be UVData object")
+
+    if not isinstance(input_uvtask_list, list):
+        raise TypeError("input_uvtask_list must be a list (of tasks)")
+
+
+    freq = input_uv.freq_array[0, :]  # units.Hz
+
+    #redefining, which is probably bad, since already defined above
+    telescope = Telescope(input_uv.telescope_name,
+                          EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
+                          beam_list)
+
+    if len(beam_list) > 1 and beam_dict is not None:
+        raise ValueError('beam_dict must be supplied if beam_list has more than one element.')
+
+    antpos_ECEF = input_uv.antenna_positions + input_uv.telescope_location
+    antpos_ENU = uvutils.ENU_from_ECEF(antpos_ECEF.T,
+                                       *input_uv.telescope_location_lat_lon_alt).T
+    antenna_names = input_uv.antenna_names
+    antennas = []
+    for num, antname in enumerate(antenna_names):
+        if beam_dict is None:
+            beam_id = 0
+        else:
+            beam_id = beam_dict[antname]
+        antennas.append(Antenna(antname, num, antpos_ENU[num], beam_id))
+
+    baselines = []
+    print('Generating Baselines')
+    for count, antnum1 in enumerate(input_uv.ant_1_array):
+        antnum2 = input_uv.ant_2_array[count]
+        index1 = np.where(input_uv.antenna_numbers == antnum1)[0][0]
+        index2 = np.where(input_uv.antenna_numbers == antnum2)[0][0]
+        baselines.append(Baseline(antennas[index1], antennas[index2]))
+
+    baselines = np.array(baselines)
+
+    bls_index = np.arange(len(baselines))
+    frequency_index = np.arange(input_uv.Nfreqs)
+    print('Making Meshgrid')
+    bls_ind, freq_ind = np.meshgrid(bls_index, frequency_index)
+    print('Raveling')
+    bls_ind = bls_ind.ravel()
+    freq_ind = freq_ind.ravel()
+
+    uvtask_list = []
+    print('Making Tasks')
+    print('Number of tasks:', len(bls_ind)*len(input_uvtask_list))
+
+    if progbar:
+        pbar = progressbar.ProgressBar(maxval=(len(bls_ind)*len(input_uvtask_list))).start()
+        count = 0
+
+    for task in input_uvtask_list:
+        for (bl, freqi, bli, fi) in izip(baselines[bls_ind], freq[freq_ind], bls_ind, freq_ind):
+            updated_task = copy.copy(task)
+            updated_task.freq = freqi
+            updated_task.baseline = bl
+            blti = bli + input_uv.Ntimes*updated_task.times_index
+            updated_task.uvdata_index = (blti, 0, fi)    # 0 = spectral window index
+            uvtask_list.append(updated_task)
+    
+            if progbar:
+                count += 1
+                pbar.update(count)
+   
+    if progbar:
+        pbar.finish()
+    return uvtask_list
 
 
 def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
@@ -630,6 +765,29 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
     return uvdata_out
 
+
+def run_twostage_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
+    """Run uvsim with the two-stage implementation."""
+
+    if not isinstance(input_uv, UVData):
+        raise TypeError("input_uv must be UVData object")
+
+    time = Time(input_uv.time_array[0], scale='utc', format='jd')
+    if catalog is None:
+        catalog = create_mock_catalog(time, arrangement='zenith')
+
+    uvtask_list = gen_task_list_source_time(input_uv, catalog, beam_list)
+    uvtask_list = update_task_list_bl_freq(uvtask_list, input_uv, beam_list)
+    uvdata_out = initialize_uvdata(uvtask_list)
+
+
+    for task in uvtask_list:
+        engine = UVEngine(task)
+        task.visibility_vector = engine.make_visibility()
+
+    uvdata_out = serial_gather(uvtask_list, uvdata_out)
+
+    return uvdata_out
 
 def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='zenith'):
     """Run uvsim."""

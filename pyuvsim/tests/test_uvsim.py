@@ -559,6 +559,21 @@ def test_run_serial_uvsim():
 
     nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))
 
+def test_run_twostage_uvsim():
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_file)
+
+    beam = UVBeam()
+    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+    beam_list = [beam]
+
+    uv_out = pyuvsim.run_twostage_uvsim(hera_uv, beam_list, catalog=None, Nsrcs=1)
+
+    nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))
 
 def test_sources_equal():
     time = Time('2018-03-01 00:00:00', scale='utc')
