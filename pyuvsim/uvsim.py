@@ -9,6 +9,7 @@ import pyuvdata.utils as uvutils
 import os
 from itertools import izip
 from mpi4py import MPI
+from spherical_coordinates_basis_transformation import spherical_basis_transformation_components
 
 try:
     import progressbar
@@ -111,21 +112,31 @@ class Source(object):
                              'value was: {al}'.format(al=telescope_location))
 
         if np.sum(np.abs(self.stokes[1:])) == 0:
-            rotation_matrix = np.array([[1, 0], [0, 1]])
+            basis_transformation_matrix = np.array([[1, 0], [0, 1]])
         else:
-            # First need to calculate the sin & cos of the parallactic angle
-            # See Meeus's astronomical algorithms eq 14.1
-            # also see Astroplan.observer.parallactic_angle method
-            time.location = telescope_location
-            lst = time.sidereal_time('mean')
-            hour_angle = (lst - self.ra).rad
-            sinX = np.sin(hour_angle)
-            cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(hour_angle)
+            x_c = np.array([1.,0,0]) # unit vectors to be transformed by astropy
+            y_c = np.array([0,1.,0])
+            z_c = np.array([0,0,1.])
+
+            axes_icrs = SkyCoord(x=x_c, y=y_c, z=z_c,
+                                obstime=time,
+                                location=telescope_location,
+                                frame='icrs',
+                                equinox=self.epoch,
+                                representation='cartesian')
+            axes_altaz = axes_icrs.transform_to('altaz')
+            axes_altaz.representation = 'cartesian'
+
+            R = np.array(axes_altaz.cartesian.xyz) # the 3D rotation matrix that defines the mapping (RA,Dec) <--> (Alt,Az)
+
+            cosX, sinX = spherical_basis_transformation_components(self.dec.rad, self.ra.rad, R)
 
             rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
+            alt_to_za = np.array([[-1.,0], [0,1]])
+            basis_transformation_matrix = np.einsum('ab,bc->ac', alt_to_za, rotation_matrix)
 
-        coherency_local = np.einsum('ab,bc,cd->ad', rotation_matrix.T,
-                                    self.coherency_radec, rotation_matrix)
+        coherency_local = np.einsum('ab,bc,cd->ad', basis_transformation_matrix.T,
+                                    self.coherency_radec, basis_transformation_matrix)
 
         return coherency_local
 
