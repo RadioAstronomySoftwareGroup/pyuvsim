@@ -10,6 +10,7 @@ import os
 import utils
 from itertools import izip
 from mpi4py import MPI
+from astropy.io.votable import parse_single_table
 
 try:
     import progressbar
@@ -424,6 +425,26 @@ class UVEngine(object):
 
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
+
+def read_gleam_catalog(gleam_votable):
+    """
+    Creates a list of pyuvsim source objects from the GLEAM votable catalog.
+    Despite the semi-standard votable format, there are enough differences that every catalog probably
+    needs its own function.
+    List of tested catalogs: GLEAM EGC catalog, version 2
+    """
+
+    table = parse_single_table(gleam_votable)
+    data = table.array
+
+    sourcelist = []
+    for entry in data:
+        source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg), 
+                        Angle(entry['DEJ2000'], unit=units.deg),
+                        Time(2000.0, format='jyear'), freq=(200e6 * units.Hz),
+                        stokes=np.array([entry['Fintwide'],0.,0.,0.]))
+        sourcelist.append(source)
+    return sourcelist
 
 
 def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
