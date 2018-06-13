@@ -76,7 +76,7 @@ def test_source_zenith():
     #
     # zenith_source = pyuvsim.Source(ra, dec, time, freq, [1, 0, 0, 0])
     zenith_source = create_zenith_source(time, 'zensrc')
-    zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
+    zenith_source_lmn = zenith_source.calc_pos_lmn(time, array_location)
     print('Zenith Source lmn')
     print(zenith_source_lmn)
 

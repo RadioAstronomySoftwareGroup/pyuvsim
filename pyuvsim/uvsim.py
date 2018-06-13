@@ -32,6 +32,7 @@ class Source(object):
     dec = None
     epoch = None
     coherency_radec = None
+    za = None
 
     def __init__(self, name, ra, dec, epoch, freq, stokes):
         """
@@ -73,6 +74,7 @@ class Source(object):
         self.dec = dec
         self.epoch = epoch
         self.pos_lmn = None
+        self.za = None
 
         # The coherency is a 2x2 matrix giving electric field correlation in Jy.
         # Multiply by .5 to ensure that Trace sums to I not 2*I
@@ -157,7 +159,7 @@ class Source(object):
         az_za = (source_altaz.az.rad, source_altaz.zen.rad)
         return az_za
 
-    def calc_pos_lmn(self, time, telescope_location):
+    def calc_pos_lmn(self, time, telescope_location, return_za=False):
         """
         calculate the direction cosines of this source at a time & location
 
@@ -174,7 +176,8 @@ class Source(object):
         pos_l = np.sin(az_za[0]) * np.sin(az_za[1])
         pos_m = np.cos(az_za[0]) * np.sin(az_za[1])
         pos_n = np.cos(az_za[1])
-        return (pos_l, pos_m, pos_n)
+        if return_za: return (pos_l, pos_m, pos_n), az_za[1]
+        else: return (pos_l, pos_m, pos_n)
 
 
 class Telescope(object):
@@ -338,9 +341,10 @@ class UVEngine(object):
         self.task.visibility_vector = self.make_visibility()
 
 
-def gen_task_list_source_time(input_uv, sources, beam_list, beam_dict=None):
+def gen_task_list_source_time(input_uv, sources, beam_list, beam_dict=None, za_cut=None):
     """
     1st part of creating a task list: sources, times
+    Also has option za_cut to ignore sources below a given zenith angle (type: Angle object)
     Returns: List of tasks with sources and times populated
     """
     if not isinstance(input_uv, UVData):
@@ -375,8 +379,11 @@ def gen_task_list_source_time(input_uv, sources, beam_list, beam_dict=None):
         count = 0
 
     for (t, source, ti) in izip(times[times_ind], sources[source_ind], times_ind):
-        source.pos_lmn = source.calc_pos_lmn(Time(t,format='jd'), telescope.telescope_location)
-        #Since t is being cast as an astropy Time object, should it also be assigned to the task as one?
+        source.pos_lmn, source.za = source.calc_pos_lmn(Time(t,format='jd'), telescope.telescope_location, return_za=True)
+        if za_cut:
+            if Angle(source.za, units=units.rad) < za_cut: continue #does this muck with progbar??
+
+        # Since t is being cast as an astropy Time object, should it also be assigned to the task as one?
         task = UVTask(source, t, None, None, telescope)
         task.times_index = ti
         uvtask_list.append(task)
