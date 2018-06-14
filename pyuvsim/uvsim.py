@@ -826,7 +826,7 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
             if progbar or progsteps:
                 pbar.update(count)
 
-        if progbar:
+        if progbar or progsteps:
             pbar.finish()
     else:
         for task in local_task_list:

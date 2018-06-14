@@ -18,5 +18,8 @@ class progsteps:
 
     def update(self, count):
         if count % self.step == 0:
-            print("".join(map(str,[(count/float(self.maxval)) * 100., "% completed. Elapsed: ", (pytime.time() - self.t0)/60., 'minutes \n'])))
+            print("{:0.2f}% completed. {:0.3f} minutes elapsed \n".format((count/self.maxval)*100., (pytime.time()-self.t0)/60. ) )
             sys.stdout.flush()
+
+    def finish(self):
+        self.update(self.maxval)
