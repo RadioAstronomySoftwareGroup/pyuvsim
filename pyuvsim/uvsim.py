@@ -498,8 +498,10 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     if progsteps or progbar:
         count = 0
         tot = len(blts_ind)
-        if progbar:  pbar = progressbar.ProgressBar(maxval=tot).start()
-        else: pbar = utils.progsteps(maxval=tot)
+        if progbar:
+            pbar = progressbar.ProgressBar(maxval=tot).start()
+        else:
+            pbar = utils.progsteps(maxval=tot)
 
     for (bl, freqi, t, source, blti, fi) in izip(baselines[blts_ind],
                                                  freq[freq_ind], times[blts_ind],
@@ -791,8 +793,7 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
             else:
                 catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc)
 
-        uvtask_list = gen_task_list_source_time(input_uv, catalog, beam_list)
-        uvtask_list = update_task_list_bl_freq(uvtask_list, input_uv, beam_list)
+        uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
         uv_container = initialize_uvdata(uvtask_list)
         # To split into PUs make a list of lists length NPUs
         print("Splitting Task List")
@@ -811,8 +812,10 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
         if progsteps or progbar:
             count = 0
             tot = len(local_task_list)
-            if progbar:  pbar = progressbar.ProgressBar(maxval=tot).start()
-            else: pbar = utils.progsteps(maxval=tot)
+            if progbar:
+                pbar = progressbar.ProgressBar(maxval=tot).start()
+            else:
+                pbar = utils.progsteps(maxval=tot)
 
         for count, task in enumerate(local_task_list):
             engine = UVEngine(task)
