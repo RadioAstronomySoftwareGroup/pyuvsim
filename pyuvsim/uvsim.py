@@ -32,6 +32,7 @@ class Source(object):
     dec = None
     epoch = None
     coherency_radec = None
+    az = None
     za = None
 
     def __init__(self, name, ra, dec, epoch, freq, stokes):
@@ -74,7 +75,9 @@ class Source(object):
         self.dec = dec
         self.epoch = epoch
         self.pos_lmn = None
+        self.altaz = None
         self.za = None
+        self.az = None
 
         # The coherency is a 2x2 matrix giving electric field correlation in Jy.
         # Multiply by .5 to ensure that Trace sums to I not 2*I
@@ -152,11 +155,14 @@ class Source(object):
             raise ValueError('telescope_location must be an astropy EarthLocation object. '
                              'value was: {al}'.format(al=telescope_location))
 
-        source_coord = SkyCoord(self.ra, self.dec, frame='icrs')
+        if self.altaz is None:
+            source_coord = SkyCoord(self.ra, self.dec, frame='icrs')
+            self.altaz = source_coord.transform_to(AltAz(obstime=time, location=telescope_location))
 
-        source_altaz = source_coord.transform_to(AltAz(obstime=time, location=telescope_location))
+        elif not self.altaz.obstime == time:
+            self.altaz = self.altaz.transform_to(AltAz(obstime=time, location=telescope_location))
 
-        az_za = (source_altaz.az.rad, source_altaz.zen.rad)
+        az_za = (self.altaz.az.rad, self.altaz.zen.rad)
         return az_za
 
     def calc_pos_lmn(self, time, telescope_location, return_za=False):
@@ -171,7 +177,10 @@ class Source(object):
             (l, m, n) direction cosine values
         """
         # calculate direction cosines of source at current time and array location
-        az_za = self.az_za_calc(time, telescope_location)
+        if self.az is None or self.za is None:
+            az_za = self.az_za_calc(time, telescope_location)
+        else:
+            az_za = (self.az, self.za)
 
         pos_l = np.sin(az_za[0]) * np.sin(az_za[1])
         pos_m = np.cos(az_za[0]) * np.sin(az_za[1])
@@ -353,48 +362,58 @@ def gen_task_list_source_time(input_uv, sources, beam_list, beam_dict=None, za_c
     if not isinstance(sources, np.ndarray):
         raise TypeError("sources must be a numpy array")
 
-    times = input_uv.time_array
+    time_arr = []
+    source_arr = []
+    if rank == 0:
+        times = input_uv.time_array
 
-    telescope = Telescope(input_uv.telescope_name,
-                          EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
-                          beam_list)
+        telescope = Telescope(input_uv.telescope_name,
+                              EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
+                              beam_list)
+    
+        if len(beam_list) > 1 and beam_dict is not None:
+            raise ValueError('beam_dict must be supplied if beam_list has more than one element.')
+    
+        times_index = np.arange(input_uv.Ntimes)
+        source_index = np.arange(len(sources))
+        print('Making Meshgrid')
+        times_ind, source_ind = np.meshgrid(times_index, source_index)
+        print('Raveling')
+        times_ind = times_ind.ravel()
+        source_ind = source_ind.ravel()
+    
+        print('Making Tasks')
+        print('Number of tasks:', len(times_ind))
 
-    if len(beam_list) > 1 and beam_dict is not None:
-        raise ValueError('beam_dict must be supplied if beam_list has more than one element.')
+        time_arr = input_uv.time_array
+        source_arr = sources
 
-    times_index = np.arange(input_uv.Ntimes)
-    source_index = np.arange(len(sources))
-    print('Making Meshgrid')
-    times_ind, source_ind = np.meshgrid(times_index, source_index)
-    print('Raveling')
-    times_ind = times_ind.ravel()
-    source_ind = source_ind.ravel()
+        source_arr = map(list, np.array_split(source_arr, Npus))
+        
+    local_time_arr = comm.bcast(time_arr, root=0)
+    local_source_arr = comm.scatter(source_arr, root=0)
 
     uvtask_list = []
-    print('Making Tasks')
-    print('Number of tasks:', len(times_ind))
+    times_index = 0 
+    for source in local_source_arr:
+        for time in local_time_arr:
+            times_index += 1
+            az_za = source.az_za_calc(Time(time, scale='utc', format='jd'), telescope.telescope_location)   # time is jd float
+            new_src = copy.copy(source)
+            if za_cut:
+                if Angle(az_za[1], units=units.rad) < za_cut:
+                    continue
+            task = UVTask(new_src, time, None, None, telescope)
+            task.times_index = times_index
+            uvtask_list.append(task)
 
-    if progbar:
-        pbar = progressbar.ProgressBar(maxval=len(times_ind)).start()
-        count = 0
+    tasklist_0 = comm.gather(uvtask_list, root=0)
+    if rank == 0:
+        tasklist_0 = sum(tasklist_0, [])   ## Concatenate list of lists
+        return tasklist_0
+    else:
+        return []
 
-    for (t, source, ti) in izip(times[times_ind], sources[source_ind], times_ind):
-        source.pos_lmn, source.za = source.calc_pos_lmn(Time(t,format='jd'), telescope.telescope_location, return_za=True)
-        if za_cut:
-            if Angle(source.za, units=units.rad) < za_cut: continue #does this muck with progbar??
-
-        # Since t is being cast as an astropy Time object, should it also be assigned to the task as one?
-        task = UVTask(source, t, None, None, telescope)
-        task.times_index = ti
-        uvtask_list.append(task)
-
-        if progbar:
-            count += 1
-            pbar.update(count)
-
-    if progbar:
-        pbar.finish()
-    return uvtask_list
 
 def update_task_list_bl_freq(input_uvtask_list, input_uv, beam_list, beam_dict=None):
 
@@ -778,23 +797,26 @@ def run_twostage_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
-
-    time = Time(input_uv.time_array[0], scale='utc', format='jd')
-    if catalog is None:
-        catalog = create_mock_catalog(time, arrangement='zenith')
+    if rank == 0:
+        time = Time(input_uv.time_array[0], scale='utc', format='jd')
+        if catalog is None:
+            catalog = create_mock_catalog(time, arrangement='zenith')
 
     uvtask_list = gen_task_list_source_time(input_uv, catalog, beam_list)
-    uvtask_list = update_task_list_bl_freq(uvtask_list, input_uv, beam_list)
-    uvdata_out = initialize_uvdata(uvtask_list)
+    if rank == 0:
+        uvtask_list = update_task_list_bl_freq(uvtask_list, input_uv, beam_list)
+        uvdata_out = initialize_uvdata(uvtask_list)
 
+        for task in uvtask_list:
+            engine = UVEngine(task)
+            task.visibility_vector = engine.make_visibility()
 
-    for task in uvtask_list:
-        engine = UVEngine(task)
-        task.visibility_vector = engine.make_visibility()
+        uvdata_out = serial_gather(uvtask_list, uvdata_out)
 
-    uvdata_out = serial_gather(uvtask_list, uvdata_out)
-
-    return uvdata_out
+    if rank == 0:
+        return uvdata_out
+    else:
+        return None
 
 def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='zenith'):
     """Run uvsim."""
@@ -818,14 +840,15 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
                 catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc, Nsrcs=Nsrcs)
             else:
                 catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc)
-
-        uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
-        uv_container = initialize_uvdata(uvtask_list)
+    uvtask_list = gen_task_list_source_time(input_uv, catalog, beam_list)
+    if rank == 0:
+        uvtask_list = update_task_list_bl_freq(uvtask_list, input_uv, beam_list)
+        uvdata_out = initialize_uvdata(uvtask_list)
         # To split into PUs make a list of lists length NPUs
         print("Splitting Task List")
         uvtask_list = np.array_split(uvtask_list, Npus)
         uvtask_list = [list(tl) for tl in uvtask_list]
-
+        
         print("Sending Tasks To Processing Units")
     # Scatter the task list among all available PUs
     local_task_list = comm.scatter(uvtask_list, root=0)
