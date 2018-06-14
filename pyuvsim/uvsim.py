@@ -810,7 +810,7 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
     if rank == 0:
         if progsteps or progbar:
             count = 0
-            tot = len(blts_ind)
+            tot = len(local_task_list)
             if progbar:  pbar = progressbar.ProgressBar(maxval=tot).start()
             else: pbar = utils.progsteps(maxval=tot)
 

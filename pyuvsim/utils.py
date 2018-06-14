@@ -7,7 +7,7 @@ class progsteps:
         For when running in batch and progress bar doesn't work well.
     """
     def __init__(self, maxval=None):
-        self.t0 = time.time()
+        self.t0 = pytime.time()
         if maxval is None:
             raise ValueError("Maximum value is needed.")
         self.maxval = float(maxval)
@@ -18,5 +18,5 @@ class progsteps:
 
     def update(self, count):
         if count % self.step == 0:
-            print("".join(map(str,[(count/float(tot)) * 100., "% completed. Elapsed: ", (pytime.time() - time0)/60., 'minutes \n'])))
+            print("".join(map(str,[(count/float(self.maxval)) * 100., "% completed. Elapsed: ", (pytime.time() - self.t0)/60., 'minutes \n'])))
             sys.stdout.flush()
