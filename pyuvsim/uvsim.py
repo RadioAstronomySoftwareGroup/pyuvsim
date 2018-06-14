@@ -6,6 +6,8 @@ from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from pyuvdata import UVData
 import pyuvdata.utils as uvutils
+import os
+import utils
 from itertools import izip
 from mpi4py import MPI
 
@@ -14,6 +16,14 @@ try:
     progbar = True
 except(ImportError):
     progbar = False
+
+progsteps = False
+try:
+    if os.environ['PYUVSIM_BATCH_JOB'] == '1':
+        progsteps = True
+        progbar = False
+except(KeyError):
+    progbar = progbar
 
 # Initialize MPI, get the communicator, number of Processing Units (PUs)
 # and the rank of this PU
@@ -485,9 +495,11 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     print('Making Tasks')
     print('Number of tasks:', len(blts_ind))
 
-    if progbar:
-        pbar = progressbar.ProgressBar(maxval=len(blts_ind)).start()
+    if progsteps or progbar:
         count = 0
+        tot = len(blts_ind)
+        if progbar:  pbar = progressbar.ProgressBar(maxval=tot).start()
+        else: pbar = utils.progsteps(maxval=tot)
 
     for (bl, freqi, t, source, blti, fi) in izip(baselines[blts_ind],
                                                  freq[freq_ind], times[blts_ind],
@@ -498,7 +510,7 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
         task.uvdata_index = (blti, 0, fi)    # 0 = spectral window index
         uvtask_list.append(task)
 
-        if progbar:
+        if progbar or progsteps:
             count += 1
             pbar.update(count)
 
@@ -779,7 +791,8 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
             else:
                 catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc)
 
-        uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
+        uvtask_list = gen_task_list_source_time(input_uv, catalog, beam_list)
+        uvtask_list = update_task_list_bl_freq(uvtask_list, input_uv, beam_list)
         uv_container = initialize_uvdata(uvtask_list)
         # To split into PUs make a list of lists length NPUs
         print("Splitting Task List")
@@ -795,8 +808,11 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
     summed_task_dict = {}
 
     if rank == 0:
-        if progbar:
-            pbar = progressbar.ProgressBar(maxval=len(local_task_list)).start()
+        if progsteps or progbar:
+            count = 0
+            tot = len(blts_ind)
+            if progbar:  pbar = progressbar.ProgressBar(maxval=tot).start()
+            else: pbar = utils.progsteps(maxval=tot)
 
         for count, task in enumerate(local_task_list):
             engine = UVEngine(task)
@@ -807,7 +823,7 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
             else:
                 summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
 
-            if progbar:
+            if progbar or progsteps:
                 pbar.update(count)
 
         if progbar:
