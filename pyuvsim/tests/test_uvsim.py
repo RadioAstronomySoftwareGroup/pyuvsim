@@ -640,6 +640,29 @@ def test_single_offzenith_source_miriad():
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=5e-3))
 
 
+def test_task_sort():
+    hera_uv = UVData()
+    hera_uv.read_uvfits(triangle_uvfits_file)
+
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    sources = np.array([create_zenith_source(time, 'zensrc')])
+
+    beam = UVBeam()
+    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+
+    uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list)
+    uvtask_list.sort()
+
+    for task in uvtask_list:
+        print task.time, task.freq, task.baseline.antenna1.number, task.baseline.antenna2.number, task.source.name
+
+
 @profile
 def test_yaml_to_tasks():
     #    params = yaml.safe_load(open(longbl_yaml_file))
