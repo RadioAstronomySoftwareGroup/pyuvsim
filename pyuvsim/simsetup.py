@@ -96,7 +96,6 @@ def initialize_uvdata_from_params(param_dict):
     antpos_enu = np.vstack((E, N, U)).T
 
     param_dict['antenna_positions'] = uvutils.ECEF_from_ENU(antpos_enu.T, *tloc).T - param_dict['telescope_location']
-    del param_dict['telescope']
 
     # Parse frequency structure
     freq_params = param_dict['freq']
@@ -161,10 +160,14 @@ def initialize_uvdata_from_params(param_dict):
     param_dict['channel_width'] = freq_params['channel_width']
     param_dict['freq_array'] = freq_arr
     param_dict['Nfreqs'] = freq_params['Nfreqs']
-    del param_dict['freq']
 
     # Parse time structure
     time_params = param_dict['time']
+
+    optional_time_params = ['time_format', 'snapshot_length_hours']
+
+    for k in optional_time_params:
+        if k in time_params: param_dict[k] = time_params[k]
 
     time_keywords = ['start_time', 'end_time', 'Ntimes', 'integration_time',
                      'duration_hours', 'duration_days']
@@ -185,7 +188,7 @@ def initialize_uvdata_from_params(param_dict):
             raise ValueError("Either integration_time or Ntimes " +
                              "must be included in parameters:" + kws_used)
         if st and et:
-            time_params['duration'] = time_params['start_time'] - time_params['end_time']
+            time_params['duration'] = time_params['end_time'] - time_params['start_time']
             dd = True
         if dd:
             time_params['Ntimes'] = int(np.floor(time_params['duration'] /
@@ -201,6 +204,8 @@ def initialize_uvdata_from_params(param_dict):
                              "must be specified: " + kws_used)
         time_params['integration_time'] = (time_params['duration'] /
                                            float(time_params['Ntimes']))
+        if 'snapshot_length_hours' in time_params:
+            print 'Warning: Setting integration time from Ntimes for snapshots. This may not be well-defined.'
 
     if not dd:
         time_params['duration'] = time_params['integration_time'] * time_params['Ntimes']
@@ -223,7 +228,6 @@ def initialize_uvdata_from_params(param_dict):
     param_dict['integration_time'] = time_params['integration_time']
     param_dict['time_array'] = time_arr
     param_dict['Ntimes'] = time_params['Ntimes']
-    del param_dict['time']
 
     # Now make a UVData object with these settings built in.
     # The syntax below allows for other valid uvdata keywords to be passed
