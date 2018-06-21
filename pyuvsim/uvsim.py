@@ -571,6 +571,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
             Nsrcs = Number of sources to put at zenith (ignored for other source arrangements)
             array_location = EarthLocation object.
             zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
+            save = Save mock catalog as npz file.
         Accepted arrangements:
             'triangle' = Three point sources forming a triangle around the zenith
             'cross'    = An asymmetric cross
@@ -638,7 +639,8 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
         catalog.append(Source('src' + str(si), ra[si], dec[si], time,    ### epoch = julian date?
                               freq, [fluxes[si], 0, 0, 0]))
     if rank == 0:
-        np.savez('mock_catalog',ra=ra.rad,dec=dec.rad)
+        if 'save' in kwargs:
+            np.savez('mock_catalog',ra=ra.rad,dec=dec.rad)
 
     catalog = np.array(catalog)
     return catalog
