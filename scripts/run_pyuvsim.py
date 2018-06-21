@@ -37,14 +37,15 @@ for filename in args.file_in:
     input_uv = UVData()
     input_uv.read_uvfits(filename,read_data=False)
     time0 = input_uv.time_array[0]
-    input_uv.read_uvfits(filename, freq_chans=0, times=time0)  # "Doesn't need to be a list" -- Matt
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
+    input_uv.read_uvfits(filename, freq_chans=0, times=time0)
+#    beam = UVBeam()
+#    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6],
+#                       telescope_name='HERA',
+#                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+#                       model_name='E-field pattern - Rigging height 4.9m',
+#                       model_version='1.0')
 
+    beam = pyuvsim.AnalyticBeam('tophat')
     beam_list = [beam]
     uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list,mock_arrangement=args.mock_arrangement, Nsrcs=args.Nsrcs)
     if rank == 0:
