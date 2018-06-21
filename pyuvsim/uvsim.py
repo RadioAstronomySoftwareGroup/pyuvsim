@@ -35,7 +35,7 @@ def tee_to_cirs_ra(tee_ra, time):
     theta_earth = Angle(era, unit='rad')
 
     assert(isinstance(time, Time))
-    assert(isinstance(egamma_ra, Angle))
+    assert(isinstance(tee_ra, Angle))
     gast = time.sidereal_time('apparent', longitude=0)
     cirs_ra = tee_ra - (gast - theta_earth)
     return cirs_ra
@@ -154,7 +154,7 @@ class Source(object):
             cirs_source_coord = source_coord.transform_to('cirs')
             tee_ra = cirs_to_tee_ra(cirs_source_coord.ra, time)
 
-            hour_angle = (lst - tee_ra.ra).rad
+            hour_angle = (lst - tee_ra).rad
             sinX = np.sin(hour_angle)
             cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(hour_angle)
 
@@ -309,7 +309,7 @@ class Baseline(object):
         return ((self.antenna1 == other.antenna1)
                 and (self.antenna2 == other.antenna2)
                 and np.all(self.enu == other.enu)
-                and np.all(self.uvw == other.uvw))    
+                and np.all(self.uvw == other.uvw))
 
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
@@ -383,7 +383,7 @@ class UVEngine(object):
         self.apply_beam()
 
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
-  
+
         # need to convert uvws from meters to wavelengths
         assert(isinstance(self.task.freq,Quantity))
         uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
@@ -730,7 +730,7 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
         print("Sending Tasks To Processing Units")
     # Scatter the task list among all available PUs
     local_task_list = comm.scatter(uvtask_list, root=0)
-    
+
     if rank == 0:
         print("Tasks Received. Begin Calculations.")
     summed_task_dict = {}

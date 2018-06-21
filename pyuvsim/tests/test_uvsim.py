@@ -60,6 +60,33 @@ def create_offzenith_source(time, name, az, alt):
     return pyuvsim.Source(name, ra, dec, time, freq, [1.0, 0, 0, 0])
 
 
+def test_source_zenith_icrs():
+    """Test single source position at zenith constructed using icrs."""
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
+    time = Time('2018-03-01 00:00:00', scale='utc', location=array_location)
+
+    freq = (150e6 * units.Hz)
+
+    lst = time.sidereal_time('apparent')
+
+    tee_ra = lst
+    cirs_ra = pyuvsim.tee_to_cirs_ra(tee_ra, time)
+
+    cirs_source_coord = SkyCoord(ra=cirs_ra, dec=array_location.lat,
+                                 obstime=time, frame='cirs', location=array_location)
+
+    icrs_coord = cirs_source_coord.transform_to('icrs')
+
+    ra = icrs_coord.ra
+    dec = icrs_coord.dec
+    zenith_source = pyuvsim.Source('icrs_zen', ra, dec, time, freq, [1, 0, 0, 0])
+
+    zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
+
+    nt.assert_true(np.allclose(zenith_source_lmn, np.array([0, 0, 1]), atol=1e-5))
+
+
 def test_source_zenith():
     """Test single source position at zenith."""
     time = Time('2018-03-01 00:00:00', scale='utc')
@@ -84,28 +111,6 @@ def test_source_zenith():
     nt.assert_true(np.allclose(zenith_source_lmn, np.array([0, 0, 1])))
 
 
-# This test is known to fail. We will skip execution for now.
-@nt.nottest
-def test_source_lst_zenith():
-    """Instantiate a source at zenith using LST=RA and array latitude=DEC."""
-    time = Time('2018-03-01 00:00:00', scale='utc')
-
-    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
-                                       height=1073.)
-    freq = (150e6 * units.Hz)
-
-    time.location = array_location
-    lst = time.sidereal_time('apparent')
-
-    source = pyuvsim.Source('testsrc', lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
-
-    source_lmn = source.pos_lmn(time, array_location)
-    print('Source lmn')
-    print(source_lmn)
-
-    nt.assert_true(np.allclose(source_lmn, np.array([0, 0, 1])))
-
-
 def test_single_zenith_source():
     """Test single zenith source."""
     time = Time('2018-03-01 00:00:00', scale='utc')
@@ -113,7 +118,6 @@ def test_single_zenith_source():
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
     time.location = array_location
-    lst = time.sidereal_time('apparent')
 
     freq = (150e6 * units.Hz)
     source = create_zenith_source(time, 'zensrc')
@@ -164,8 +168,6 @@ def test_single_zenith_source_uvdata():
     # setup the things that don't come from pyuvdata:
     # make a source at zenith
     time.location = array_location
-    lst = time.sidereal_time('mean')
-    # source = pyuvsim.Source(lst, Angle(array_location.lat), time, freq, [1, 0, 0, 0])
     source = create_zenith_source(time, 'zensrc')
 
     beam = UVBeam()
@@ -217,7 +219,6 @@ def test_single_offzenith_source_uvfits():
     # setup the things that don't come from pyuvdata:
     # make a source off zenith
     time.location = array_location
-    lst = time.sidereal_time('mean')
     source = create_offzenith_source(time, 'offzensrc', az=src_az, alt=src_alt)
 
     beam = UVBeam()
@@ -291,7 +292,6 @@ def test_offzenith_source_multibl_uvfits():
     # setup the things that don't come from pyuvdata:
     # make a source off zenith
     time.location = array_location
-    lst = time.sidereal_time('mean')
     source = create_offzenith_source(time, 'offzensrc', az=src_az, alt=src_alt)
 
     # beam = UVBeam()
@@ -379,7 +379,6 @@ def test_single_offzenith_source_miriad():
     # setup the things that don't come from pyuvdata:
     # make a source off zenith
     time.location = array_location
-    lst = time.sidereal_time('mean')
     source = create_offzenith_source(time, 'offzensrc', az=src_az, alt=src_alt)
 
     beam = UVBeam()
