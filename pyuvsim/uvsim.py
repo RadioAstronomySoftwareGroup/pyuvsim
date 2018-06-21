@@ -23,6 +23,37 @@ Npus = comm.Get_size()
 rank = comm.Get_rank()
 
 
+# The frame radio astronomers call the apparent or current epoch is the
+# "true equator & equinox" frame, notated E_gamma in the USNO circular
+# astropy doesn't have this frame but it's pretty easy to adapt the CIRS frame
+# by modifying the ra to reflect the difference between
+# GAST (Grenwich Apparent Sidereal Time) and the earth rotation angle (theta)
+def tee_to_cirs_ra(tee_ra, time):
+    from astropy import _erfa as erfa
+    from astropy.coordinates.builtin_frames.utils import get_jd12
+    era = erfa.era00(*get_jd12(time, 'ut1'))
+    theta_earth = Angle(era, unit='rad')
+
+    assert(isinstance(time, Time))
+    assert(isinstance(egamma_ra, Angle))
+    gast = time.sidereal_time('apparent', longitude=0)
+    cirs_ra = tee_ra - (gast - theta_earth)
+    return cirs_ra
+
+
+def cirs_to_tee_ra(cirs_ra, time):
+    from astropy import _erfa as erfa
+    from astropy.coordinates.builtin_frames.utils import get_jd12
+    era = erfa.era00(*get_jd12(time, 'ut1'))
+    theta_earth = Angle(era, unit='rad')
+
+    assert(isinstance(time, Time))
+    assert(isinstance(cirs_ra, Angle))
+    gast = time.sidereal_time('apparent', longitude=0)
+    tee_ra = cirs_ra + (gast - theta_earth)
+    return tee_ra
+
+
 class Source(object):
     name = None
     freq = None
@@ -117,8 +148,13 @@ class Source(object):
             # See Meeus's astronomical algorithms eq 14.1
             # also see Astroplan.observer.parallactic_angle method
             time.location = telescope_location
-            lst = time.sidereal_time('mean')
-            hour_angle = (lst - self.ra).rad
+            lst = time.sidereal_time('apparent')
+
+            source_coord = SkyCoord(self.ra, self.dec, frame='icrs')
+            cirs_source_coord = source_coord.transform_to('cirs')
+            tee_ra = cirs_to_tee_ra(cirs_source_coord.ra, time)
+
+            hour_angle = (lst - tee_ra.ra).rad
             sinX = np.sin(hour_angle)
             cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(hour_angle)
 
