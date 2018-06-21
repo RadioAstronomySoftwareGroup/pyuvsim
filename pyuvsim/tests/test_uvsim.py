@@ -59,6 +59,7 @@ def create_offzenith_source(time, name, az, alt):
     dec = icrs_coord.dec
     return pyuvsim.Source(name, ra, dec, time, freq, [1.0, 0, 0, 0])
 
+
 def test_source_zenith():
     """Test single source position at zenith."""
     time = Time('2018-03-01 00:00:00', scale='utc')
@@ -140,6 +141,7 @@ def test_single_zenith_source():
 
     nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3))
 
+
 def test_single_zenith_source_uvdata():
     """Test single zenith source using test uvdata file."""
     hera_uv = UVData()
@@ -184,6 +186,7 @@ def test_single_zenith_source_uvdata():
 
     nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3))
 
+
 def test_single_offzenith_source_uvfits():
     """Test single off-zenith source using test uvdata file."""
     hera_uv = UVData()
@@ -193,8 +196,8 @@ def test_single_offzenith_source_uvfits():
     src_alt = Angle('85.0d')
     src_za = Angle('90.0d') - src_alt
 
-    src_l = np.sin(src_az.rad)*np.sin(src_za.rad)
-    src_m = np.cos(src_az.rad)*np.sin(src_za.rad)
+    src_l = np.sin(src_az.rad) * np.sin(src_za.rad)
+    src_m = np.cos(src_az.rad) * np.sin(src_za.rad)
     src_n = np.cos(src_za.rad)
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
@@ -233,21 +236,21 @@ def test_single_offzenith_source_uvfits():
 
     visibility = engine.make_visibility()
 
-    #analytically calculate visibility
+    # analytically calculate visibility
 
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
     interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]), freq_array=np.array([freq.to('Hz').value]))
-    jones = np.zeros((2,2),dtype=np.complex64)
-    jones[0,0] = interpolated_beam[1,0,0,0,0]
-    jones[1,1] = interpolated_beam[0,0,1,0,0]
-    jones[1,0] = interpolated_beam[1,0,1,0,0]
-    jones[0,1] = interpolated_beam[0,0,0,0,0]
+    jones = np.zeros((2, 2), dtype=np.complex64)
+    jones[0, 0] = interpolated_beam[1, 0, 0, 0, 0]
+    jones[1, 1] = interpolated_beam[0, 0, 1, 0, 0]
+    jones[1, 0] = interpolated_beam[1, 0, 1, 0, 0]
+    jones[0, 1] = interpolated_beam[0, 0, 0, 0, 0]
 
     uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
 
-    vis_analytic = 0.5 * np.dot(jones,np.conj(jones).T) * np.exp(-2j*np.pi*(uvw_wavelength_array[0,0]*src_l + uvw_wavelength_array[0,1]*src_m + uvw_wavelength_array[0,2]*src_n)) 
-    vis_analytic = np.array([vis_analytic[0,0], vis_analytic[1,1], vis_analytic[1,0], vis_analytic[0,1]])
+    vis_analytic = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(-2j * np.pi * (uvw_wavelength_array[0, 0] * src_l + uvw_wavelength_array[0, 1] * src_m + uvw_wavelength_array[0, 2] * src_n))
+    vis_analytic = np.array([vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[1, 0], vis_analytic[0, 1]])
 
     print('Analytic visibility', vis_analytic)
     print('Calculated visibility', visibility)
@@ -267,8 +270,8 @@ def test_offzenith_source_multibl_uvfits():
     src_alt = Angle('85.0d')
     src_za = Angle('90.0d') - src_alt
 
-    src_l = np.sin(src_az.rad)*np.sin(src_za.rad)
-    src_m = np.cos(src_az.rad)*np.sin(src_za.rad)
+    src_l = np.sin(src_az.rad) * np.sin(src_za.rad)
+    src_m = np.cos(src_az.rad) * np.sin(src_za.rad)
     src_n = np.cos(src_za.rad)
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
@@ -291,12 +294,14 @@ def test_offzenith_source_multibl_uvfits():
     lst = time.sidereal_time('mean')
     source = create_offzenith_source(time, 'offzensrc', az=src_az, alt=src_alt)
 
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
+    # beam = UVBeam()
+    # beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
+    #                    telescope_name='HERA',
+    #                    feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+    #                    model_name='E-field pattern - Rigging height 4.9m',
+    #                    model_version='1.0')
+
+    beam = pyuvsim.AnalyticBeam('tophat')
 
     beam_list = [beam]
 
@@ -307,33 +312,37 @@ def test_offzenith_source_multibl_uvfits():
     tasks = [pyuvsim.UVTask(source, time, freq, bl, array) for bl in baselines]
 
     visibilities = []
+    uvws = []
     for t in tasks:
         engine = pyuvsim.UVEngine(t)
         visibilities.append(engine.make_visibility())
+        uvws.append(t.baseline.uvw)
 
-    #analytically calculate visibilities
+    uvws = np.array(uvws)
+    # analytically calculate visibilities
 
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
     interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]), freq_array=np.array([freq.to('Hz').value]))
-    jones = np.zeros((2,2),dtype=np.complex64)
-    jones[0,0] = interpolated_beam[1,0,0,0,0]
-    jones[1,1] = interpolated_beam[0,0,1,0,0]
-    jones[1,0] = interpolated_beam[1,0,1,0,0]
-    jones[0,1] = interpolated_beam[0,0,0,0,0]
+    jones = np.zeros((2, 2), dtype=np.complex64)
+    jones[0, 0] = interpolated_beam[1, 0, 0, 0, 0]
+    jones[1, 1] = interpolated_beam[0, 0, 1, 0, 0]
+    jones[1, 0] = interpolated_beam[1, 0, 1, 0, 0]
+    jones[0, 1] = interpolated_beam[0, 0, 0, 0, 0]
 
-    uvw_wavelength_array = hera_uv.uvw_array[0:hera_uv.Nbls] * units.m/const.c * freq.to('1/s')
+    uvw_wavelength_array = hera_uv.uvw_array[0:hera_uv.Nbls] * units.m / const.c * freq.to('1/s')
 
     visibilities_analytic = []
-    for u,v,w in uvw_wavelength_array:
-        vis = 0.5 * np.dot(jones,np.conj(jones).T) * np.exp(-2j*np.pi*(u*src_l + v*src_m + w*src_n)) 
-        visibilities_analytic.append(np.array([vis[0,0], vis[1,1], vis[1,0], vis[0,1]]))
-
+    for u, v, w in uvw_wavelength_array:
+        vis = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(-2j * np.pi * (u * src_l + v * src_m + w * src_n))
+        visibilities_analytic.append(np.array([vis[0, 0], vis[1, 1], vis[1, 0], vis[0, 1]]))
 
     print('Analytic visibility', visibilities_analytic)
     print('Calculated visibility', visibilities)
 
-    nt.assert_true(np.allclose(visibilities, visibilities_analytic, atol=5e-3))
+    nt.assert_true(np.allclose(uvws, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-5))
+
+    nt.assert_true(np.allclose(visibilities, visibilities_analytic, atol=1e-5))
 
 
 # This test is supposed to see if miriad works for conjugation, but right now there are too
@@ -349,8 +358,8 @@ def test_single_offzenith_source_miriad():
     src_alt = Angle('85.0d')
     src_za = Angle('90.0d') - src_alt
 
-    src_l = np.sin(src_az.rad)*np.sin(src_za.rad)
-    src_m = np.cos(src_az.rad)*np.sin(src_za.rad)
+    src_l = np.sin(src_az.rad) * np.sin(src_za.rad)
+    src_m = np.cos(src_az.rad) * np.sin(src_za.rad)
     src_n = np.cos(src_za.rad)
 
     time = Time(miriad_uv.time_array[0], scale='utc', format='jd')
@@ -389,26 +398,27 @@ def test_single_offzenith_source_miriad():
 
     visibility = engine.make_visibility()
 
-    #analytically calculate visibility
+    # analytically calculate visibility
 
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
     interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]), freq_array=np.array([freq.to('Hz').value]))
-    jones = np.zeros((2,2),dtype=np.complex64)
-    jones[0,0] = interpolated_beam[1,0,0,0,0]
-    jones[1,1] = interpolated_beam[0,0,1,0,0]
-    jones[1,0] = interpolated_beam[1,0,1,0,0]
-    jones[0,1] = interpolated_beam[0,0,0,0,0]
+    jones = np.zeros((2, 2), dtype=np.complex64)
+    jones[0, 0] = interpolated_beam[1, 0, 0, 0, 0]
+    jones[1, 1] = interpolated_beam[0, 0, 1, 0, 0]
+    jones[1, 0] = interpolated_beam[1, 0, 1, 0, 0]
+    jones[0, 1] = interpolated_beam[0, 0, 0, 0, 0]
 
     uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
 
-    vis_analytic = 0.5 * np.dot(jones,np.conj(jones).T) * np.exp(-2j*np.pi*(uvw_wavelength_array[0,0]*src_l + uvw_wavelength_array[0,1]*src_m + uvw_wavelength_array[0,2]*src_n)) 
-    vis_analytic = np.array([vis_analytic[0,0], vis_analytic[1,1], vis_analytic[1,0], vis_analytic[0,1]])
+    vis_analytic = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(-2j * np.pi * (uvw_wavelength_array[0, 0] * src_l + uvw_wavelength_array[0, 1] * src_m + uvw_wavelength_array[0, 2] * src_n))
+    vis_analytic = np.array([vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[1, 0], vis_analytic[0, 1]])
 
     print('Analytic visibility', vis_analytic)
     print('Calculated visibility', visibility)
 
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=5e-3))
+
 
 def test_file_to_tasks():
 
@@ -491,10 +501,10 @@ def test_uvdata_init():
     beam_list = [beam]
 
     uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list)
-    #for task in uvtask_list:
+    # for task in uvtask_list:
     #    task.time = Time(task.time, format='jd')
     #    task.freq = task.freq * units.Hz
-        
+
     uvdata_out = pyuvsim.initialize_uvdata(uvtask_list)
 
     uvdata_out.uvw_array *= -1   # uvws are flipped for uvfits files
@@ -566,6 +576,7 @@ def test_sources_equal():
     src2 = create_zenith_source(time, 'src')
     nt.assert_equal(src1, src2)
 
+
 def test_mock_catalog():
 
     src_az = Angle('90.0d')
@@ -578,7 +589,7 @@ def test_mock_catalog():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
 
     test_source = create_offzenith_source(time, 'src0', az=src_az, alt=src_alt)
-    cat = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang = src_za.deg)
+    cat = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
     cat_source = cat[0]
     for k in cat_source.__dict__:
         print 'Cat: ', k, cat_source.__dict__[k]
@@ -587,5 +598,6 @@ def test_mock_catalog():
 
     nt.assert_equal(cat_source, test_source)
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     test_offzenith_source_multibl_uvfits()
