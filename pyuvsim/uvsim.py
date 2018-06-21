@@ -606,6 +606,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
             'horizon'  = A single source on the horizon   ## TODO
             'zenith'   = Some number of sources placed at the zenith.
             'off-zenith' = A single source off zenith
+            'long-line' = Horizon to horizon line of point sources
 
     """
 
@@ -616,7 +617,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
                                        height=1073.)
     freq = (150e6 * units.Hz)
 
-    if not arrangement in ['off-zenith','zenith','cross','triangle']:
+    if not arrangement in ['off-zenith','zenith','cross','triangle','long-line']:
         raise KeyError("Invalid mock catalog arrangement"+str(arrangement))
 
     if arrangement == 'off-zenith':
@@ -647,13 +648,24 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
 
     if arrangement == 'zenith':
         Nsrcs = 1
-        if Nsrcs in kwargs:
+        if 'Nsrcs' in kwargs:
             Nsrcs = kwargs['Nsrcs']
         alts = np.ones(Nsrcs) * 90.
         azs = np.zeros(Nsrcs, dtype=float)
         fluxes = np.ones(Nsrcs) * 1 / Nsrcs
         # Divide total Stokes I intensity among all sources
         # Test file has Stokes I = 1 Jy
+    if arrangement == 'long-line':
+        Nsrcs = 10
+        if 'Nsrcs' in kwargs:
+            Nsrcs = kwargs['Nsrcs']
+        fluxes = np.ones(Nsrcs, dtype=float)
+        zas = np.linspace(-85, 85, Nsrcs)
+        alts = 90. - zas
+        azs = np.zeros(Nsrcs, dtype=float)
+        inds = np.where(alts > 90.0)
+        azs[inds] = 180.
+        alts[inds] = 90. + zas[inds]
 
     catalog = []
 
