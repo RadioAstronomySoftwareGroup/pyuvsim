@@ -126,7 +126,7 @@ def initialize_uvdata_from_params(param_dict):
                 bw = True
             if bw:
                 freq_params['Nfreqs'] = int(np.floor(freq_params['bandwidth'] /
-                                            freq_params['channel_width'])) + 1
+                                            freq_params['channel_width'])) + 1 
             else:
                 raise ValueError("Either bandwidth or band edges " +
                                  "must be specified: " + kws_used)
@@ -152,7 +152,8 @@ def initialize_uvdata_from_params(param_dict):
             if cf and bw:
                 freq_params['end_freq'] = freq_params['center_freq'] + freq_params['bandwidth']/2.
 
-        freq_arr = np.linspace(freq_params['start_freq'], freq_params['end_freq'], freq_params['Nfreqs'])
+        freq_arr = np.arange(freq_params['start_freq'], freq_params['end_freq'], freq_params['channel_width'])
+        assert freq_arr.size == freq_params["Nfreqs"]
 
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
@@ -279,12 +280,12 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
         layout_csv_path = check_file_exists_and_increment(os.path.join(path_out,uvdata_in.telescope_name + "_layout.csv"))
         layout_csv_name = os.path.basename(layout_csv_path)
 
-    antpos_enu = uvutils.ENU_from_ECEF((uvdata_in.antenna_positions +
-                                        uvdata_in.telescope_location).T,
-                                       * uvdata_in.telescope_location_lat_lon_alt).T
+    antpos_enu, antenna_numbers = uvdata_in.get_ENU_antpos()
+#    antpos_enu = uvutils.ENU_from_ECEF((uvdata_in.antenna_positions +
+#                                        uvdata_in.telescope_location).T,
+#                                       * uvdata_in.telescope_location_lat_lon_alt).T
 
     e, n, u = antpos_enu.T
-
     beam_ids = np.zeros_like(e).astype(int)
     col_width = max([len(name) for name in uvdata_in.antenna_names])
     header = ("{:"+str(col_width)+"} {:8} {:8} {:10} {:10} {:10}\n").format("Name", "Number", "BeamID", "E", "N", "U")

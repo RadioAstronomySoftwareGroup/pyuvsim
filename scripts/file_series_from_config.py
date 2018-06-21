@@ -1,3 +1,10 @@
+#!/bin/env python
+
+#SBATCH -J param2uvfits
+#SBATCH --mem=200M
+#SBATCH -t 5:00:00
+#SBATCH --array=0-721
+
 
 ## Make a series of simulation files from a given configuration
 
@@ -14,7 +21,7 @@ import numpy as np
 import copy
 
 
-def set_other_required_params(input_uv):
+def set_other_required_params(input_uv, nonzero_uvw=False):
     input_uv.Nblts = input_uv.Nbls * input_uv.Ntimes
     enu = uvutils.ENU_from_ECEF((input_uv.antenna_positions + input_uv.telescope_location).T, *input_uv.telescope_location_lat_lon_alt).T
     uvws = []
@@ -25,8 +32,11 @@ def set_other_required_params(input_uv):
             uvws.append(enu[j,:] - enu[i,:])
             ant_2_arr.append(i)
             ant_1_arr.append(j)
-   
     uvws = np.array(uvws)
+    if nonzero_uvw:
+        inds = uvws == 0.0
+        uvws[inds] = np.finfo(float).eps/2.    # set to less than machine precision, but nonzero
+        print np.finfo(float).eps/2.
     input_uv.ant_1_array = np.tile(ant_1_arr, input_uv.Ntimes).T
     input_uv.ant_2_array = np.tile(ant_2_arr, input_uv.Ntimes).T
     input_uv.uvw_array = np.tile(uvws.T, input_uv.Ntimes).T
@@ -152,10 +162,14 @@ else:
 
 params['Nfiles'] = Nfiles
 
+## There's a persistent bug in FHD that causes an error when a u, v, or w coordinate is exactly 0
+## This option sets zeros to the machine precision in this case.
+nonzero_uvw = False if not 'nonzero_uvw' in params else bool(params['nonzero_uvw'])
+
 if not serial:
     params['time'] = time_params
     input_uv, beam_list, beam_ids = simsetup.initialize_uvdata_from_params(params)
-    set_other_required_params(input_uv)
+    set_other_required_params(input_uv, nonzero_uvw)
     input_uv.history = 'Made on '+str(datetime.date.today())+ ' from config file '+args['paramsfile']+' by Adam Lanman'
     opath = set_ofilename(params, input_uv)
     input_uv.write_uvfits(opath,spoof_nonessential=True)
@@ -169,10 +183,10 @@ else:
         params['time'] = time_params
         params['snapshot_number'] = fi
         input_uv, beam_list, beam_ids = simsetup.initialize_uvdata_from_params(params)
-        set_other_required_params(input_uv)
+        set_other_required_params(input_uv, nonzero_uvw)
         input_uv.history = 'Made on '+str(datetime.date.today())+ ' from config file '+args['paramsfile']+' by Adam Lanman'
         opath = set_ofilename(params, input_uv)
         print opath
-#        input_uv.write_uvfits(opath,spoof_nonessential=True)
+        input_uv.write_uvfits(opath,spoof_nonessential=True)
 
 
