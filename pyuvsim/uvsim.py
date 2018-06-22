@@ -321,6 +321,7 @@ class Baseline(object):
                 and np.all(self.enu == other.enu)
                 and np.all(self.uvw == other.uvw))
 
+
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
     # need the array because we need an array location for mapping to locat az/za
@@ -395,7 +396,7 @@ class UVEngine(object):
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
 
         # need to convert uvws from meters to wavelengths
-        assert(isinstance(self.task.freq,Quantity))
+        assert(isinstance(self.task.freq, Quantity))
         uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
         fringe = np.exp(-2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
 
@@ -627,8 +628,8 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
                                        height=1073.)
     freq = (150e6 * units.Hz)
 
-    if not arrangement in ['off-zenith','zenith','cross','triangle','long-line']:
-        raise KeyError("Invalid mock catalog arrangement"+str(arrangement))
+    if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line']:
+        raise KeyError("Invalid mock catalog arrangement" + str(arrangement))
 
     if arrangement == 'off-zenith':
         if 'zen_ang' in kwargs:
@@ -686,11 +687,11 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
     ra = icrs_coord.ra
     dec = icrs_coord.dec
     for si in range(Nsrcs):
-        catalog.append(Source('src' + str(si), ra[si], dec[si], time,    ### epoch = julian date?
+        catalog.append(Source('src' + str(si), ra[si], dec[si], time,    # epoch = julian date?
                               freq, [fluxes[si], 0, 0, 0]))
     if rank == 0:
         if 'save' in kwargs:
-            np.savez('mock_catalog',ra=ra.rad,dec=dec.rad)
+            np.savez('mock_catalog', ra=ra.rad, dec=dec.rad)
 
     catalog = np.array(catalog)
     return catalog
@@ -708,7 +709,6 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
     uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
     uvdata_out = initialize_uvdata(uvtask_list)
-
 
     for task in uvtask_list:
         engine = UVEngine(task)
