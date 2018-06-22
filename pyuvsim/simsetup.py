@@ -136,7 +136,7 @@ def initialize_uvdata_from_params(param_dict):
                 raise ValueError("Either bandwidth or channel width" +
                                  " must be specified: " + kws_used)
             freq_params['channel_width'] = (freq_params['bandwidth'] /
-                                            float(freq_params['Nfreqs']))
+                                            float(freq_params['Nfreqs']-1))
     
         if not bw:
             freq_params['bandwidth'] = (freq_params['channel_width'] *
@@ -152,7 +152,7 @@ def initialize_uvdata_from_params(param_dict):
             if cf and bw:
                 freq_params['end_freq'] = freq_params['center_freq'] + freq_params['bandwidth']/2.
 
-        freq_arr = np.arange(freq_params['start_freq'], freq_params['end_freq'], freq_params['channel_width'])
+        freq_arr = np.arange(freq_params['start_freq'], freq_params['end_freq']+freq_params['channel_width'], freq_params['channel_width'])   #Include last freq.
         assert freq_arr.size == freq_params["Nfreqs"]
 
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
@@ -219,9 +219,12 @@ def initialize_uvdata_from_params(param_dict):
     if not (st or et):
         raise ValueError("Either a start or end time must be specified" + kws_used)
 
-    time_arr = np.linspace(time_params['start_time'],
-                           time_params['end_time'],
-                           time_params['Ntimes'])
+    inttime_days = time_params['integration_time'] * 1/(24.*3600.)
+    time_arr = np.arange(time_params['start_time'],
+                           time_params['end_time'] + inttime_days,
+                           inttime_days)
+
+    assert time_arr.size == time_params['Ntimes'] 
 
     Nbl = (param_dict['Nants_data']+1)*param_dict['Nants_data'] / 2
 

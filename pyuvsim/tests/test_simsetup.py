@@ -22,7 +22,10 @@ def compare_dictionaries(dic1, dic2):
         if isinstance(dic1[k],dict):
             compare *= compare_dictionaries(dic1[k],dic2[k])
         else:
-            compare *= (dic1[k] == dic2[k])
+            if isinstance(dic1[k], float):
+                compare *= np.isclose(dic1[k], dic2[k], atol=1e-5)
+            else:
+                compare *= (dic1[k] == dic2[k])
     return bool(compare)
 
 
