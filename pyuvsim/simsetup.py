@@ -3,7 +3,7 @@ import numpy as np
 import yaml
 import os
 import pyuvdata.utils as uvutils
-
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 # Utilities for setting up simulations for parameter files,
 # and for generating parameter files from uvfits files
 
@@ -87,6 +87,11 @@ def initialize_uvdata_from_params(param_dict):
     for beamID in np.unique(beam_ids):
         path = telparam['beam_paths'][beamID]
         uvb = UVBeam()
+        if not os.path.exists(path):
+            filename = path
+            path = os.path.join(SIM_DATA_PATH, filename)
+            if not os.path.exists(path):
+                raise OSError("Could not find file "+filename)
         uvb.read_beamfits(path)
         beam_list.append(uvb)
     param_dict['Nants_data'] = antnames.size
