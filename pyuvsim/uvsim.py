@@ -227,14 +227,15 @@ class Telescope(object):
 
 
 class AnalyticBeam(object):
-    supported_types = ['tophat']
+    supported_types = ['tophat', 'gaussian']
 
-    def __init__(self, type):
+    def __init__(self, type, sigma=None):
         if type in self.supported_types:
             self.type = type
         else:
             raise ValueError('type not recognized')
 
+        self.sigma = sigma
         self.data_normalization = 'peak'
 
     def peak_normalize(self):
@@ -248,6 +249,16 @@ class AnalyticBeam(object):
             interp_data[1, 0, 0, :] = 1
             interp_data[0, 0, 1, :] = 1
             interp_basis_vector = None
+
+        if self.type == 'gaussian':
+            if self.sigma is None:
+                raise ValueError("Sigma needed for gaussian beam")
+            interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
+            values = np.exp(-(az_array**2)/(2*self.sigma**2) )
+            interp_data[1, 0, 0, :] = values
+            interp_data[0, 0, 1, :] = values
+            interp_basis_vector = None
+
         else:
             raise ValueError('no interp for this type')
 
