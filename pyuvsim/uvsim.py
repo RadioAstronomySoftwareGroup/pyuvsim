@@ -249,18 +249,17 @@ class AnalyticBeam(object):
             interp_data[1, 0, 0, :] = 1
             interp_data[0, 0, 1, :] = 1
             interp_basis_vector = None
-
-        if self.type == 'gaussian':
+        elif self.type == 'gaussian':
             if self.sigma is None:
                 raise ValueError("Sigma needed for gaussian beam")
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
-            values = np.exp(-(az_array**2)/(2*self.sigma**2) )
+            values = np.exp(-(az_array**2) / (2 * self.sigma**2))
             interp_data[1, 0, 0, :] = values
             interp_data[0, 0, 1, :] = values
             interp_basis_vector = None
 
         else:
-            raise ValueError('no interp for this type')
+            raise ValueError('no interp for this type: ', self.type)
 
         return interp_data, interp_basis_vector
 
