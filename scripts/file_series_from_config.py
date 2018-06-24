@@ -51,7 +51,7 @@ def set_other_required_params(input_uv, nonzero_uvw=False):
     input_uv.flag_array = np.zeros((input_uv.Nblts, input_uv.Nspws, input_uv.Nfreqs, input_uv.Npols)).astype(bool)
     input_uv.antenna_positions = (uvutils.ECEF_from_ENU(enu.T,*input_uv.telescope_location_lat_lon_alt).T - input_uv.telescope_location)
     input_uv.set_lsts_from_time_array()
-    input_uv.phase_to_time(input_uv.time_array[0])
+#    input_uv.phase_to_time(input_uv.time_array[0])
     input_uv.spw_array = [0]
     input_uv.vis_units = 'Jy'
     input_uv.object_name='zenith'
@@ -177,7 +177,7 @@ if not serial:
     set_other_required_params(input_uv, nonzero_uvw)
     input_uv.history = 'Made on '+str(datetime.date.today())+ ' from config file '+args['paramsfile']+' by Adam Lanman'
     opath = set_ofilename(params, input_uv)
-    input_uv.write_uvfits(opath,spoof_nonessential=True)
+    input_uv.write_uvfits(opath,spoof_nonessential=True, force_phase=True)
 else:
     for fi in range(Nfiles):
         time_params['start_time'] = tzero + length_days * fi
@@ -192,6 +192,6 @@ else:
         input_uv.history = 'Made on '+str(datetime.date.today())+ ' from config file '+args['paramsfile']+' by Adam Lanman'
         opath = set_ofilename(params, input_uv)
         print opath
-        input_uv.write_uvfits(opath,spoof_nonessential=True)
+        input_uv.write_uvfits(opath,spoof_nonessential=True, force_phase=True)
 
 
