@@ -49,7 +49,6 @@ def set_other_required_params(input_uv, nonzero_uvw=False):
     input_uv.data_array = np.zeros((input_uv.Nblts, input_uv.Nspws, input_uv.Nfreqs, input_uv.Npols), dtype=np.complex)
     input_uv.nsample_array = np.zeros((input_uv.Nblts, input_uv.Nspws, input_uv.Nfreqs, input_uv.Npols)) + 1
     input_uv.flag_array = np.zeros((input_uv.Nblts, input_uv.Nspws, input_uv.Nfreqs, input_uv.Npols)).astype(bool)
-    input_uv.antenna_positions = (uvutils.ECEF_from_ENU(enu.T,*input_uv.telescope_location_lat_lon_alt).T - input_uv.telescope_location)
     input_uv.set_lsts_from_time_array()
 #    input_uv.phase_to_time(input_uv.time_array[0])
     input_uv.spw_array = [0]
