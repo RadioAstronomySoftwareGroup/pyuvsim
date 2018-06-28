@@ -157,7 +157,7 @@ def initialize_uvdata_from_params(param_dict):
             if cf and bw:
                 freq_params['end_freq'] = freq_params['center_freq'] + freq_params['bandwidth']/2.
 
-        freq_arr = np.arange(freq_params['start_freq'], freq_params['end_freq']+freq_params['channel_width'], freq_params['channel_width'])   #Include last freq.
+        freq_arr = np.arange(freq_params['start_freq'], freq_params['end_freq'], freq_params['channel_width'])   #Include last freq.
         assert freq_arr.size == freq_params["Nfreqs"]
 
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
@@ -213,8 +213,10 @@ def initialize_uvdata_from_params(param_dict):
         if 'snapshot_length_hours' in time_params:
             print 'Warning: Setting integration time from Ntimes for snapshots. This may not be well-defined.'
 
+    inttime_days = time_params['integration_time'] * 1/(24.*3600.)
     if not dd:
-        time_params['duration'] = time_params['integration_time'] * time_params['Ntimes']
+        time_params['duration'] = inttime_days * (time_params['Ntimes'])
+        dd = True
     if not st:
         if et and dd:
             time_params['start_time'] = time_params['end_time'] - time_params['duration']
@@ -223,12 +225,10 @@ def initialize_uvdata_from_params(param_dict):
             time_params['end_time'] = time_params['start_time'] + time_params['duration']
     if not (st or et):
         raise ValueError("Either a start or end time must be specified" + kws_used)
-
-    inttime_days = time_params['integration_time'] * 1/(24.*3600.)
+    onesec = 1/(24. * 3600.)
     time_arr = np.arange(time_params['start_time'],
-                           time_params['end_time'],
+                           time_params['end_time'] - time_params['end_time']%onesec,
                            inttime_days)
-
     assert time_arr.size == time_params['Ntimes'] 
 
     Nbl = (param_dict['Nants_data']+1)*param_dict['Nants_data'] / 2
