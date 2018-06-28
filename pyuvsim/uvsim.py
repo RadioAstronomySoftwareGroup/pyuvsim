@@ -257,7 +257,6 @@ class AnalyticBeam(object):
             interp_data[1, 0, 0, :] = values
             interp_data[0, 0, 1, :] = values
             interp_basis_vector = None
-
         else:
             raise ValueError('no interp for this type: ', self.type)
 
