@@ -226,7 +226,7 @@ def initialize_uvdata_from_params(param_dict):
 
     inttime_days = time_params['integration_time'] * 1/(24.*3600.)
     time_arr = np.arange(time_params['start_time'],
-                           time_params['end_time'] + inttime_days,
+                           time_params['end_time'],
                            inttime_days)
 
     assert time_arr.size == time_params['Ntimes'] 
