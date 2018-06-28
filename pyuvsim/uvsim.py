@@ -62,6 +62,7 @@ class Source(object):
     dec = None
     epoch = None
     coherency_radec = None
+    az_za = None
 
     def __init__(self, name, ra, dec, epoch, freq, stokes):
         """
@@ -189,6 +190,7 @@ class Source(object):
         source_altaz = source_coord.transform_to(AltAz(obstime=time, location=telescope_location))
 
         az_za = (source_altaz.az.rad, source_altaz.zen.rad)
+        self.az_za = az_za
         return az_za
 
     def pos_lmn(self, time, telescope_location):
@@ -402,6 +404,14 @@ class UVEngine(object):
         vij = self.apparent_coherency * fringe
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
+
+        ### Temporary -- write out task and other things to file.
+        bl = str(self.task.baseline.antenna1.number)+"_"+str(self.task.baseline.antenna2.number)
+        task_id = "rank_{}_{}_{:0.3f}_{:0.3f}_bl_{}".format(rank, self.task.source.name, self.task.time.value, self.task.freq.value/1e6, bl)
+        filename = task_id + "_data.npz"
+        opath = './task_data/' + filename
+        task_vals = {'freq':self.task.freq.value, 'time': self.task.time.value, 'az_za': self.task.source.az_za, 'radec': (self.task.source.ra, self.task.source.dec)}
+        np.savez(opath, task_vals=task_vals, fringe=fringe, uvw_wavelength=uvw_wavelength.value, vis_vector=vis_vector)
         return np.array(vis_vector)
 
     def update_task(self):
@@ -647,7 +657,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
         else:
             zen_ang = 3.0
         alts = [90. - zen_ang, 90. - zen_ang, 90. - zen_ang]
-        azs = [0., 120, 240.]
+        azs = [0., 120., 240.]
         fluxes = [1.0, 1.0, 1.0]
 
     if arrangement == 'cross':
