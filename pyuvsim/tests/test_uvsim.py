@@ -18,7 +18,7 @@ beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
 hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
-
+longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 
 def create_zenith_source(time, name):
     """Create pyuvsim Source object at zenith.
@@ -265,7 +265,8 @@ def test_offzenith_source_multibl_uvfits():
         Calculate visibilities for a baseline triangle.
     """
     hera_uv = UVData()
-    hera_uv.read_uvfits(triangle_uvfits_file, ant_str='cross')   # consists of a right triangle of baselines
+    #hera_uv.read_uvfits(triangle_uvfits_file, ant_str='cross')   # consists of a right triangle of baselines
+    hera_uv.read_uvfits(longbl_uvfits_file, ant_str='cross')   # consists of a right triangle of baselines
     hera_uv.unphase_to_drift()
 
     src_az = Angle('90.0d')
