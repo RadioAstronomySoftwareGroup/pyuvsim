@@ -130,8 +130,8 @@ if time_params['time_format'] == 'julian':
         tfin  =  Time(time_params['end_time'],format='jd').jd
     except KeyError:
         # If missing end_time, use Ntimes and start_time
-        tfinal = (time_params['integration_time'] * (time_params['Ntimes']))*1/(24.*3600.) + time_params['start_time']
-        tfin = Time(tfinal, format='jd').jd
+        tfinal = (time_params['integration_time'] * (time_params['Ntimes']-1))*1/(24.*3600.) + time_params['start_time']
+        tfin = tfinal - tfinal%(1/(24.*3600.))  #Round to the second
 
 file_params = params['filing']
 params.update(file_params)

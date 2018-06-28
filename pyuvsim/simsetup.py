@@ -157,8 +157,10 @@ def initialize_uvdata_from_params(param_dict):
             if cf and bw:
                 freq_params['end_freq'] = freq_params['center_freq'] + freq_params['bandwidth']/2.
 
-        freq_arr = np.arange(freq_params['start_freq'], freq_params['end_freq'], freq_params['channel_width'])   #Include last freq.
-        assert freq_arr.size == freq_params["Nfreqs"]
+        freq_arr = np.arange(freq_params['start_freq'],
+                             freq_params['end_freq'] + freq_params['channel_width']/2.0,
+                             freq_params['channel_width'])   #Include last freq.
+    assert freq_arr.size == freq_params["Nfreqs"]
 
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
@@ -227,7 +229,7 @@ def initialize_uvdata_from_params(param_dict):
         raise ValueError("Either a start or end time must be specified" + kws_used)
     onesec = 1/(24. * 3600.)
     time_arr = np.arange(time_params['start_time'],
-                           time_params['end_time'] - time_params['end_time']%onesec,
+                           time_params['end_time'] + inttime_days/2.0,
                            inttime_days)
     assert time_arr.size == time_params['Ntimes'] 
 
