@@ -1,10 +1,11 @@
 #!/bin/env python
 
 #SBATCH -J param2uvfits
-#SBATCH --mem=200M
+#SBATCH --mem=20G
 #SBATCH -t 5:00:00
 #SBATCH --array=0-721
-
+#SBATCH -o slurm_out/config2uvfits_%A_%a.out
+#SBATCH -e slurm_out/config2uvfits_%A_%a.err
 
 ## Make a series of simulation files from a given configuration
 
@@ -22,6 +23,7 @@ import copy
 
 
 def set_other_required_params(input_uv, nonzero_uvw=False):
+    input_uv.set_drift()
     input_uv.Nblts = input_uv.Nbls * input_uv.Ntimes
     enu = uvutils.ENU_from_ECEF((input_uv.antenna_positions + input_uv.telescope_location).T, *input_uv.telescope_location_lat_lon_alt).T
     uvws = []
@@ -43,7 +45,6 @@ def set_other_required_params(input_uv, nonzero_uvw=False):
     input_uv.polarization_array  =  np.arange(-5,-9,-1)
     input_uv.Npols = 4
     input_uv.Nspws = 1
-    input_uv.set_drift()
     input_uv.history = ''
     if input_uv.instrument is None: input_uv.instrument=input_uv.telescope_name
     input_uv.data_array = np.zeros((input_uv.Nblts, input_uv.Nspws, input_uv.Nfreqs, input_uv.Npols), dtype=np.complex)
@@ -152,7 +153,8 @@ if 'snapshot_length_hours' in time_params:
         time_params['end_time'] = time_params['start_time'] + length_days
         if time_params['end_time'] > tfin:
             time_params['end_time'] = tfin
-            time_params['Ntimes'] = int((tfin - tzero)/float(time_params['integration_time']))
+            inttime_days = time_params['integration_time'] * 1/(24.*3600.)
+            time_params['Ntimes'] = int((tfin - tzero)/inttime_days)
     except KeyError:
         print "Warning: Running in serial"
         serial=True
@@ -175,13 +177,19 @@ if not serial:
     opath = set_ofilename(params, input_uv)
     input_uv.write_uvfits(opath,spoof_nonessential=True, force_phase=True)
 else:
+    inttime_days = time_params['integration_time'] * 1/(24.*3600.)
     for fi in range(Nfiles):
+        print fi
         time_params['start_time'] = tzero + length_days * fi
-        time_params['end_time'] = time_params['start_time'] + length_days
+        time_params['end_time'] = time_params['start_time'] + length_days# - inttime_days
+        #TODO Not sure why this is +2. Will need to fix this later. Ensure the correct partitioning of times among files.
+        time_params['Ntimes'] = int((time_params['end_time'] - time_params['start_time'])/inttime_days) + 1
         if time_params['end_time'] > tfin:
             time_params['end_time'] = tfin
-            time_params['Ntimes'] = int((tfin - time_params['start_time'])*3600.*24./float(time_params['integration_time']))
+            time_params['Ntimes'] = int((tfin - time_params['start_time'])/inttime_days) + 2
         params['time'] = time_params
+#        print (params['time']['end_time'] - params['time']['start_time'])/inttime_days
+#        print params['time']
         params['snapshot_number'] = fi
         input_uv, beam_list, beam_ids = simsetup.initialize_uvdata_from_params(params)
         set_other_required_params(input_uv, nonzero_uvw)
@@ -189,5 +197,3 @@ else:
         opath = set_ofilename(params, input_uv)
         print opath
         input_uv.write_uvfits(opath,spoof_nonessential=True, force_phase=True)
-
-
