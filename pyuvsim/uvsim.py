@@ -399,7 +399,7 @@ class UVEngine(object):
         # need to convert uvws from meters to wavelengths
         assert(isinstance(self.task.freq, Quantity))
         uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
-        fringe = np.exp(-2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
+        fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
 
         vij = self.apparent_coherency * fringe
         # need to reshape to be [xx, yy, xy, yx]
@@ -407,11 +407,6 @@ class UVEngine(object):
 
         ### Temporary -- write out task and other things to file.
         bl = str(self.task.baseline.antenna1.number)+"_"+str(self.task.baseline.antenna2.number)
-        task_id = "rank_{}_{}_{:0.3f}_{:0.3f}_bl_{}".format(rank, self.task.source.name, self.task.time.value, self.task.freq.value/1e6, bl)
-        filename = task_id + "_data.npz"
-        opath = './task_data/' + filename
-        task_vals = {'freq':self.task.freq.value, 'time': self.task.time.value, 'az_za': self.task.source.az_za, 'radec': (self.task.source.ra, self.task.source.dec)}
-        np.savez(opath, task_vals=task_vals, fringe=fringe, uvw_wavelength=uvw_wavelength.value, vis_vector=vis_vector)
         return np.array(vis_vector)
 
     def update_task(self):
