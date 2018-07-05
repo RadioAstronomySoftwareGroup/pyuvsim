@@ -16,7 +16,7 @@ def strip_extension(filepath):
 
 def check_file_exists_and_increment(filepath):
     """
-        Given filepath (filename + path), check if it exists. If so, add a _1
+        Given filepath (path + filename), check if it exists. If so, add a _1
         at the end. etc.
     """
     if os.path.exists(filepath):
@@ -160,7 +160,12 @@ def initialize_uvdata_from_params(param_dict):
         freq_arr = np.arange(freq_params['start_freq'],
                              freq_params['end_freq'] + freq_params['channel_width']/2.0,
                              freq_params['channel_width'])   #Include last freq.
-    assert freq_arr.size == freq_params["Nfreqs"]
+    try:
+        assert freq_arr.size == freq_params["Nfreqs"]
+    except AssertionError as err:
+        print freq_arr.size, freq_params['Nfreqs']
+        print freq_arr
+        raise err
 
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
@@ -228,10 +233,16 @@ def initialize_uvdata_from_params(param_dict):
     if not (st or et):
         raise ValueError("Either a start or end time must be specified" + kws_used)
     onesec = 1/(24. * 3600.)
+    if time_params['Ntimes'] > 1: inttime_days = 0.0
     time_arr = np.arange(time_params['start_time'],
                            time_params['end_time'] + inttime_days/2.0,
                            inttime_days)
-    assert time_arr.size == time_params['Ntimes'] 
+    try:
+        assert time_arr.size == time_params['Ntimes'] 
+    except AssertionError as err:
+        print time_arr.size, time_params['Ntimes']
+        print time_arr
+        raise err
 
     Nbl = (param_dict['Nants_data']+1)*param_dict['Nants_data'] / 2
 
