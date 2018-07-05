@@ -11,6 +11,7 @@ from test_uvsim import create_zenith_source, beam_files
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfits')
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 param_filenames = [os.path.join(SIM_DATA_PATH,'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(5)]   # Five different test configs
+longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 
 
 def compare_dictionaries(dic1, dic2):
@@ -84,7 +85,8 @@ def test_uvfits_to_config():
     
     #Read uvfits file to params.
     uv0 = UVData()
-    uv0.read_uvfits(EW_uvfits_file)
+#    uv0.read_uvfits(EW_uvfits_file)
+    uv0.read_uvfits(longbl_uvfits_file)
     path, telescope_config, layout_fname = pyuvsim.simsetup.uvdata_to_telescope_config(uv0, herabeam_default, telescope_config_name=telescope_config, path_out=opath, return_names=True)
     pyuvsim.simsetup.uvdata_to_config_file(uv0, config_filename = param_filename, telescope_config_name = os.path.join(path, telescope_config), layout_csv_name = os.path.join(path, layout_fname), path_out=opath)
     
