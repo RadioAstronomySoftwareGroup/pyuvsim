@@ -622,6 +622,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
             'zenith'   = Some number of sources placed at the zenith.
             'off-zenith' = A single source off zenith
             'long-line' = Horizon to horizon line of point sources
+            'hera_text' = Spell out HERA around the zenith
 
     """
 
@@ -632,7 +633,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
                                        height=1073.)
     freq = (150e6 * units.Hz)
 
-    if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line']:
+    if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']:
         raise KeyError("Invalid mock catalog arrangement" + str(arrangement))
 
     if arrangement == 'off-zenith':
@@ -681,6 +682,28 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
         inds = np.where(alts > 90.0)
         azs[inds] = 180.
         alts[inds] = 90. + zas[inds]
+
+    if arrangement == 'hera_text':
+
+        azs = [-254.055, -248.199, -236.310, -225.000, -206.565,
+               -153.435, -123.690, -111.801, -105.945, -261.870,
+               -258.690, -251.565, -135.000, -116.565, -101.310,
+               -98.130, 90.000, 90.000, 90.000, 90.000, 90.000,
+               -90.000, -90.000, -90.000, -90.000, -90.000,
+               -90.000, 81.870, 78.690, 71.565, -45.000, -71.565,
+               -78.690, -81.870, 74.055, 68.199, 56.310, 45.000,
+               26.565, -26.565, -45.000, -56.310, -71.565]
+
+        zas = [7.280, 5.385, 3.606, 2.828, 2.236, 2.236, 3.606,
+               5.385, 7.280, 7.071, 5.099, 3.162, 1.414, 2.236,
+               5.099, 7.071, 7.000, 6.000, 5.000, 3.000, 2.000,
+               1.000, 2.000, 3.000, 5.000, 6.000, 7.000, 7.071,
+               5.099, 3.162, 1.414, 3.162, 5.099, 7.071, 7.280,
+               5.385, 3.606, 2.828, 2.236, 2.236, 2.828, 3.606, 6.325]
+
+        alts = 90. - zas
+        Nsrcs = zas.size
+        fluxes = np.ones_like(azs)
 
     catalog = []
 
