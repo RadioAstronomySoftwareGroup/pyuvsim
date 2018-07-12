@@ -322,6 +322,7 @@ class Baseline(object):
                 and np.allclose(self.enu.to('m').value, other.enu.to('m').value, atol=1e-3)
                 and np.allclose(self.uvw.to('m').value, other.uvw.to('m').value, atol=1e-3))
 
+
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
     # need the array because we need an array location for mapping to locat az/za
@@ -417,8 +418,8 @@ class UVEngine(object):
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
 
-        ### Temporary -- write out task and other things to file.
-        bl = str(self.task.baseline.antenna1.number)+"_"+str(self.task.baseline.antenna2.number)
+        # Temporary -- write out task and other things to file.
+        bl = str(self.task.baseline.antenna1.number) + "_" + str(self.task.baseline.antenna2.number)
         return np.array(vis_vector)
 
     def update_task(self):
