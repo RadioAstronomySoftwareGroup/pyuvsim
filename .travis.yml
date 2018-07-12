@@ -25,18 +25,15 @@ install:
 
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy nose pip coverage
   - source activate test-environment
-  - conda install astropy
-  - conda install h5py
-  - conda install pyyaml
-  - conda install mpi4py
-  - conda install -c conda-forge aipy
-  - pip install coveralls
+  - conda install astropy pyyaml mpi4py
+  - conda install -c conda-forge pycodestyle coveralls
   - pip install git+https://github.com/HERA-Team/pyuvdata.git
   - python setup.py install
 
-
 script:
   - nosetests pyuvsim --with-coverage --cover-package=pyuvsim
+  # unclear why this call needs to be different than in pyuvdata...
+  - pycodestyle  */*.py --ignore=E501,W503
 
 after_success:
   - coveralls

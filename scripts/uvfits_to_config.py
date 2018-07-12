@@ -18,4 +18,5 @@ uvd.read_uvfits(args.file_in[0])
 
 pyuvsim.simsetup.uvdata_to_config_file(uvd, config_filename=args.config_filename,
                                        telescope_config_name=args.telescope_config_path,
-                                       layout_csv_name=args.layout_csv_path, catalog='mock', path_out='.')
+                                       layout_csv_name=args.layout_csv_path,
+                                       catalog='mock', path_out='.')

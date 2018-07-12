@@ -20,6 +20,7 @@ EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 
+
 def create_zenith_source(time, name):
     """Create pyuvsim Source object at zenith.
 
@@ -37,7 +38,7 @@ def create_zenith_source(time, name):
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    return pyuvsim.Source(name, ra, dec, time, freq, [1, 0, 0, 0])
+    return pyuvsim.Source(name, ra, dec, freq, [1, 0, 0, 0])
 
 
 def create_offzenith_source(time, name, az, alt):
@@ -58,7 +59,7 @@ def create_offzenith_source(time, name, az, alt):
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    return pyuvsim.Source(name, ra, dec, time, freq, [1.0, 0, 0, 0])
+    return pyuvsim.Source(name, ra, dec, freq, [1.0, 0, 0, 0])
 
 
 def test_source_zenith_icrs():
@@ -81,7 +82,7 @@ def test_source_zenith_icrs():
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    zenith_source = pyuvsim.Source('icrs_zen', ra, dec, time, freq, [1, 0, 0, 0])
+    zenith_source = pyuvsim.Source('icrs_zen', ra, dec, freq, [1, 0, 0, 0])
 
     zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
 
@@ -95,15 +96,7 @@ def test_source_zenith():
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
     freq = (150e6 * units.Hz)
-    #
-    # source_coord = SkyCoord(alt=Angle(90 * units.deg), az=Angle(0 * units.deg),
-    #                         obstime=time, frame='altaz', location=array_location)
-    # icrs_coord = source_coord.transform_to('icrs')
-    #
-    # ra = icrs_coord.ra
-    # dec = icrs_coord.dec
-    #
-    # zenith_source = pyuvsim.Source(ra, dec, time, freq, [1, 0, 0, 0])
+
     zenith_source = create_zenith_source(time, 'zensrc')
     zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
     print('Zenith Source lmn')
@@ -266,7 +259,7 @@ def test_offzenith_source_multibl_uvfits():
     """
     hera_uv = UVData()
     hera_uv.read_uvfits(triangle_uvfits_file, ant_str='cross')   # consists of a right triangle of baselines
-    #hera_uv.read_uvfits(longbl_uvfits_file, ant_str='cross')   # consists of a right triangle of baselines
+    # hera_uv.read_uvfits(longbl_uvfits_file, ant_str='cross')   # consists of a right triangle of baselines
     hera_uv.unphase_to_drift()
 
     src_az = Angle('90.0d')
@@ -605,5 +598,5 @@ def test_mock_catalog():
 
 
 if __name__ == '__main__':
-#    test_offzenith_source_multibl_uvfits()
+    #  test_offzenith_source_multibl_uvfits()
     test_uvdata_init()

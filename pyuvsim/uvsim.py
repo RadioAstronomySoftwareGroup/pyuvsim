@@ -34,7 +34,7 @@ rank = comm.Get_rank()
 
 
 # The frame radio astronomers call the apparent or current epoch is the
-# "true equator & equinox" frame, notated E_gamma in the USNO circular
+# "true equator & equinox" frame, notated E_upsilon in the USNO circular
 # astropy doesn't have this frame but it's pretty easy to adapt the CIRS frame
 # by modifying the ra to reflect the difference between
 # GAST (Grenwich Apparent Sidereal Time) and the earth rotation angle (theta)
@@ -70,22 +70,19 @@ class Source(object):
     stokes = None
     ra = None
     dec = None
-    epoch = None
     coherency_radec = None
     az_za = None
 
-    def __init__(self, name, ra, dec, epoch, freq, stokes):
+    def __init__(self, name, ra, dec, freq, stokes):
         """
         Initialize from source catalog
 
         Args:
             name: Unique identifier for the source.
             ra: astropy Angle object
-                source RA at epoch
+                source RA in J2000 (or ICRS) coordinates
             dec: astropy Angle object
-                source Dec at epoch
-            epoch: astropy Time object
-                epoch for RA/dec
+                source Dec in J2000 (or ICRS) coordinates
             stokes:
                 4 element vector giving the source [I, Q, U, V]
             freq: astropy quantity
@@ -103,16 +100,13 @@ class Source(object):
             raise ValueError('freq must be an astropy Quantity object. '
                              'value was: {f}'.format(f=freq))
 
-        if not isinstance(epoch, Time):
-            raise ValueError('epoch must be an astropy Time object. '
-                             'value was: {t}'.format(t=epoch))
-
         self.name = name
         self.freq = freq
         self.stokes = stokes
         self.ra = ra
         self.dec = dec
-        self.epoch = epoch
+
+        self.skycoord = SkyCoord(self.ra, self.dec, frame='icrs')
 
         # The coherency is a 2x2 matrix giving electric field correlation in Jy.
         # Multiply by .5 to ensure that Trace sums to I not 2*I
@@ -124,7 +118,6 @@ class Source(object):
     def __eq__(self, other):
         return ((self.ra == other.ra)
                 and (self.dec == other.dec)
-                and (self.epoch == other.epoch)
                 and (self.stokes == other.stokes)
                 and (self.name == other.name)
                 and (self.freq == other.freq))
@@ -161,8 +154,7 @@ class Source(object):
             time.location = telescope_location
             lst = time.sidereal_time('apparent')
 
-            source_coord = SkyCoord(self.ra, self.dec, frame='icrs')
-            cirs_source_coord = source_coord.transform_to('cirs')
+            cirs_source_coord = self.skycoord.transform_to('cirs')
             tee_ra = cirs_to_tee_ra(cirs_source_coord.ra, time)
 
             hour_angle = (lst - tee_ra).rad
@@ -195,9 +187,7 @@ class Source(object):
             raise ValueError('telescope_location must be an astropy EarthLocation object. '
                              'value was: {al}'.format(al=telescope_location))
 
-        source_coord = SkyCoord(self.ra, self.dec, frame='icrs')
-
-        source_altaz = source_coord.transform_to(AltAz(obstime=time, location=telescope_location))
+        source_altaz = self.skycoord.transform_to(AltAz(obstime=time, location=telescope_location))
 
         az_za = (source_altaz.az.rad, source_altaz.zen.rad)
         self.az_za = az_za
@@ -330,7 +320,8 @@ class Baseline(object):
         return ((self.antenna1 == other.antenna1)
                 and (self.antenna2 == other.antenna2)
                 and np.allclose(self.enu.to('m').value, other.enu.to('m').value, atol=1e-3)
-                and np.allclose(self.uvw.to('m').value, other.uvw.to('m').value, atol=1e-3))   
+                and np.allclose(self.uvw.to('m').value, other.uvw.to('m').value, atol=1e-3))
+
 
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
@@ -355,7 +346,7 @@ class UVTask(object):
                 and (self.telescope == other.telescope))
 
     def __cmp__(self, other):
-        # NB __cmp__ is not allowed in Python3. 
+        # NB __cmp__ is not allowed in Python3.
 
         blti0, _, fi0 = self.uvdata_index
         blti1, _, fi1 = other.uvdata_index
@@ -427,8 +418,8 @@ class UVEngine(object):
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
 
-        ### Temporary -- write out task and other things to file.
-        bl = str(self.task.baseline.antenna1.number)+"_"+str(self.task.baseline.antenna2.number)
+        # Temporary -- write out task and other things to file.
+        bl = str(self.task.baseline.antenna1.number) + "_" + str(self.task.baseline.antenna2.number)
         return np.array(vis_vector)
 
     def update_task(self):
@@ -740,8 +731,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
     ra = icrs_coord.ra
     dec = icrs_coord.dec
     for si in range(Nsrcs):
-        catalog.append(Source('src' + str(si), ra[si], dec[si], time,    # epoch = julian date?
-                              freq, [fluxes[si], 0, 0, 0]))
+        catalog.append(Source('src' + str(si), ra[si], dec[si], freq, [fluxes[si], 0, 0, 0]))
     if rank == 0:
         if 'save' in kwargs:
             np.savez('mock_catalog', ra=ra.rad, dec=dec.rad)
