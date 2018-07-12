@@ -10,7 +10,7 @@ from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import warnings
 
-beam_files = os.path.join(DATA_PATH, 'HERA_NicCST_150MHz.txt')
+beam_file = os.path.join(DATA_PATH, 'HERA_NicCST_150MHz.txt')
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()

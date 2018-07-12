@@ -6,7 +6,6 @@ from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from pyuvdata import UVData
 import pyuvdata.utils as uvutils
-import os
 from itertools import izip
 from mpi4py import MPI
 
@@ -18,6 +17,7 @@ except(ImportError):
 
 # Initialize MPI, get the communicator, number of Processing Units (PUs)
 # and the rank of this PU
+
 comm = MPI.COMM_WORLD
 Npus = comm.Get_size()
 rank = comm.Get_rank()
@@ -223,7 +223,7 @@ class Telescope(object):
         self.beam_list = beam_list
 
     def __eq__(self, other):
-        return ((self.telescope_location == other.telescope_location)
+        return ((np.allclose(self.telescope_location.to('m').value, other.telescope_location.to("m").value, atol=1e-3))
                 and (self.beam_list == other.beam_list)
                 and (self.telescope_name == other.telescope_name))
 
@@ -304,7 +304,7 @@ class Antenna(object):
 
     def __eq__(self, other):
         return ((self.name == other.name)
-                and np.all(self.pos_enu == other.pos_enu)
+                and np.allclose(self.pos_enu.to('m').value, other.pos_enu.to('m').value, atol=1e-3)
                 and (self.beam_id == other.beam_id))
 
 
@@ -319,9 +319,8 @@ class Baseline(object):
     def __eq__(self, other):
         return ((self.antenna1 == other.antenna1)
                 and (self.antenna2 == other.antenna2)
-                and np.all(self.enu == other.enu)
-                and np.all(self.uvw == other.uvw))
-
+                and np.allclose(self.enu.to('m').value, other.enu.to('m').value, atol=1e-3)
+                and np.allclose(self.uvw.to('m').value, other.uvw.to('m').value, atol=1e-3))   
 
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
@@ -337,13 +336,26 @@ class UVTask(object):
         self.uvdata_index = None        # Where to add the visibility in the uvdata object.
 
     def __eq__(self, other):
-        return ((self.time == other.time)
-                and (self.freq == other.freq)
+        return (np.isclose(self.time, other.time, atol=1e-4)
+                and np.isclose(self.freq, other.freq, atol=1e-4)
                 and (self.source == other.source)
                 and (self.baseline == other.baseline)
                 and (self.visibility_vector == other.visibility_vector)
                 and (self.uvdata_index == other.uvdata_index)
                 and (self.telescope == other.telescope))
+
+    def __cmp__(self, other):
+        # NB __cmp__ is not allowed in Python3. 
+
+        blti0, _, fi0 = self.uvdata_index
+        blti1, _, fi1 = other.uvdata_index
+
+        if blti0 > blti1:
+            return 1
+        elif blti0 == blti1:
+            return 1 if fi0 > fi1 else -1
+        else:
+            return -1
 
 
 class UVEngine(object):
@@ -622,6 +634,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
             'zenith'   = Some number of sources placed at the zenith.
             'off-zenith' = A single source off zenith
             'long-line' = Horizon to horizon line of point sources
+            'hera_text' = Spell out HERA around the zenith
 
     """
 
@@ -632,7 +645,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
                                        height=1073.)
     freq = (150e6 * units.Hz)
 
-    if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line']:
+    if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']:
         raise KeyError("Invalid mock catalog arrangement" + str(arrangement))
 
     if arrangement == 'off-zenith':
@@ -681,6 +694,28 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
         inds = np.where(alts > 90.0)
         azs[inds] = 180.
         alts[inds] = 90. + zas[inds]
+
+    if arrangement == 'hera_text':
+
+        azs = [-254.055, -248.199, -236.310, -225.000, -206.565,
+               -153.435, -123.690, -111.801, -105.945, -261.870,
+               -258.690, -251.565, -135.000, -116.565, -101.310,
+               -98.130, 90.000, 90.000, 90.000, 90.000, 90.000,
+               -90.000, -90.000, -90.000, -90.000, -90.000,
+               -90.000, 81.870, 78.690, 71.565, -45.000, -71.565,
+               -78.690, -81.870, 74.055, 68.199, 56.310, 45.000,
+               26.565, -26.565, -45.000, -56.310, -71.565]
+
+        zas = [7.280, 5.385, 3.606, 2.828, 2.236, 2.236, 3.606,
+               5.385, 7.280, 7.071, 5.099, 3.162, 1.414, 2.236,
+               5.099, 7.071, 7.000, 6.000, 5.000, 3.000, 2.000,
+               1.000, 2.000, 3.000, 5.000, 6.000, 7.000, 7.071,
+               5.099, 3.162, 1.414, 3.162, 5.099, 7.071, 7.280,
+               5.385, 3.606, 2.828, 2.236, 2.236, 2.828, 3.606, 6.325]
+
+        alts = 90. - zas
+        Nsrcs = zas.size
+        fluxes = np.ones_like(azs)
 
     catalog = []
 
@@ -737,8 +772,6 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
 
         time = Time(input_uv.time_array[0], scale='utc', format='jd')
         if catalog is None:
-            if mock_arrangement is not None:
-                arrange = mock_arrangement
             array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
             if Nsrcs is not None:
                 print("Nsrcs:", Nsrcs)

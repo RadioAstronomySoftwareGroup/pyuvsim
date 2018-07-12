@@ -1,0 +1,21 @@
+filing:
+  outdir: '.'
+  outfile_prefix: 'sim_'
+  testfile_prefix: 'hera_5hour'   # For generating empty uvfits files
+freq:
+  Nfreqs: 10
+  channel_width: 80000.0
+  end_freq: 100720000.0
+  start_freq: 100000000.0
+sources:
+  catalog: 'mock'
+  mock_arrangement: 'zenith'
+telescope:
+  array_layout: 'data/test_config/ew_bl_layout.csv'
+  telescope_config_name: 'data/test_config/28mEWbl_10time_10chan.yaml'
+time:
+  time_format: 'lst'
+  start_time : 0.0
+  end_time: 5.0
+  integration_time: 11.0
+  snapshot_length_hours: 0.3

@@ -1,0 +1,19 @@
+filing:
+  outdir: '.'
+  outfile_prefix: 'sim_'
+freq:
+  Nfreqs: 10
+  channel_width: 80000.0
+  end_freq: 100720000.0
+  start_freq: 100000000.0
+sources:
+  catalog: 'mock'
+  mock_arrangement: 'zenith'
+telescope:
+  array_layout: 'ew_bl_layout.csv'
+  telescope_config_name: '28mEWbl_10time_10chan.yaml'
+time:
+  Ntimes: 10
+  end_time: 2457458.175040789
+  integration_time: 11.0
+  start_time: 2457458.1738949567
