@@ -320,7 +320,7 @@ class Baseline(object):
         return ((self.antenna1 == other.antenna1)
                 and (self.antenna2 == other.antenna2)
                 and np.allclose(self.enu.to('m').value, other.enu.to('m').value, atol=1e-3)
-                and np.allclose(self.uvw.to('m').value, other.uvw.to('m').value, atol=1e-3))   
+                and np.allclose(self.uvw.to('m').value, other.uvw.to('m').value, atol=1e-3))
 
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
@@ -345,7 +345,7 @@ class UVTask(object):
                 and (self.telescope == other.telescope))
 
     def __cmp__(self, other):
-        # NB __cmp__ is not allowed in Python3. 
+        # NB __cmp__ is not allowed in Python3.
 
         blti0, _, fi0 = self.uvdata_index
         blti1, _, fi1 = other.uvdata_index
