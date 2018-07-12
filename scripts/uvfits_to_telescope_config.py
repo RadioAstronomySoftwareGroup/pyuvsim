@@ -22,4 +22,3 @@ uvd.read_uvfits(args.file_in[0])
 pyuvsim.simsetup.uvdata_to_telescope_config(uvd, args.beam_filepath, layout_csv_name=args.layout_csv_name,
                                             telescope_config_name=args.telescope_config_name,
                                             return_names=False, path_out='.')
-
