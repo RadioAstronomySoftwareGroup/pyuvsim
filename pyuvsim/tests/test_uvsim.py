@@ -37,7 +37,7 @@ def create_zenith_source(time, name):
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    return pyuvsim.Source(name, ra, dec, time, freq, [1, 0, 0, 0])
+    return pyuvsim.Source(name, ra, dec, freq, [1, 0, 0, 0])
 
 
 def create_offzenith_source(time, name, az, alt):
@@ -58,7 +58,7 @@ def create_offzenith_source(time, name, az, alt):
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    return pyuvsim.Source(name, ra, dec, time, freq, [1.0, 0, 0, 0])
+    return pyuvsim.Source(name, ra, dec, freq, [1.0, 0, 0, 0])
 
 
 def test_source_zenith_icrs():
@@ -81,7 +81,7 @@ def test_source_zenith_icrs():
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    zenith_source = pyuvsim.Source('icrs_zen', ra, dec, time, freq, [1, 0, 0, 0])
+    zenith_source = pyuvsim.Source('icrs_zen', ra, dec, freq, [1, 0, 0, 0])
 
     zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
 
