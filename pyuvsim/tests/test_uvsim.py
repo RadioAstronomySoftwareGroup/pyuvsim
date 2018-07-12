@@ -251,13 +251,13 @@ def test_single_offzenith_source_uvfits():
 
     uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
 
-    vis_analytic = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(-2j * np.pi * (uvw_wavelength_array[0, 0] * src_l + uvw_wavelength_array[0, 1] * src_m + uvw_wavelength_array[0, 2] * src_n))
+    vis_analytic = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(2j * np.pi * (uvw_wavelength_array[0, 0] * src_l + uvw_wavelength_array[0, 1] * src_m + uvw_wavelength_array[0, 2] * src_n))
     vis_analytic = np.array([vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[1, 0], vis_analytic[0, 1]])
 
     print('Analytic visibility', vis_analytic)
     print('Calculated visibility', visibility)
 
-    nt.assert_true(np.allclose(visibility, vis_analytic, atol=5e-3))
+    nt.assert_true(np.allclose(visibility, vis_analytic, atol=5e-2))
 
 
 def test_offzenith_source_multibl_uvfits():
@@ -334,7 +334,7 @@ def test_offzenith_source_multibl_uvfits():
 
     visibilities_analytic = []
     for u, v, w in uvw_wavelength_array:
-        vis = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(-2j * np.pi * (u * src_l + v * src_m + w * src_n))
+        vis = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(2j * np.pi * (u * src_l + v * src_m + w * src_n))
         visibilities_analytic.append(np.array([vis[0, 0], vis[1, 1], vis[1, 0], vis[0, 1]]))
 
     print('pyuvsim uvws: ', np.around(uvws))
@@ -343,11 +343,8 @@ def test_offzenith_source_multibl_uvfits():
 
     pyuvdata_branch = pyuvdata.version.git_branch
 
-    if pyuvdata_branch == 'uvdata_time_array_fix':
-        # the file used different phasing code than the test uses -- increase the tolerance
-        nt.assert_true(np.allclose(uvws, hera_uv.uvw_array[0:hera_uv.Nbls], atol=5e-2))
-    else:
-        nt.assert_true(np.allclose(uvws, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-5))
+    # the file used different phasing code than the test uses -- increase the tolerance
+    nt.assert_true(np.allclose(uvws, hera_uv.uvw_array[0:hera_uv.Nbls], atol=5e-2))
 
     print('Analytic visibility', visibilities_analytic)
     print('Calculated visibility', visibilities)
@@ -355,11 +352,8 @@ def test_offzenith_source_multibl_uvfits():
 
     print(pyuvdata.version.git_branch)
 
-    if pyuvdata_branch == 'uvdata_time_array_fix':
-        # the file used different phasing code than the test uses -- increase the tolerance
-        nt.assert_true(np.allclose(visibilities, visibilities_analytic, atol=1e-2))
-    else:
-        nt.assert_true(np.allclose(visibilities, visibilities_analytic, atol=1e-5))
+    # the file used different phasing code than the test uses -- increase the tolerance
+    nt.assert_true(np.allclose(visibilities, visibilities_analytic, atol=5e-2))
 
 
 # This test is supposed to see if miriad works for conjugation, but right now there are too
@@ -503,7 +497,7 @@ def test_uvdata_init():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
 
-    hera_uv.unphase_to_drift()
+    hera_uv.unphase_to_drift(use_ant_pos=True)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources = np.array([create_zenith_source(time, 'zensrc')])
 
@@ -522,8 +516,6 @@ def test_uvdata_init():
     #    task.freq = task.freq * units.Hz
 
     uvdata_out = pyuvsim.initialize_uvdata(uvtask_list)
-
-    uvdata_out.uvw_array *= -1   # uvws are flipped for uvfits files
 
     hera_uv.data_array = np.zeros_like(hera_uv.data_array, dtype=np.complex)
     hera_uv.flag_array = np.zeros_like(hera_uv.data_array, dtype=bool)
