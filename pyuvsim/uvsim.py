@@ -10,6 +10,8 @@ import os
 import utils
 from itertools import izip
 from mpi4py import MPI
+from astropy.io.votable import parse_single_table
+import __builtin__
 
 try:
     import progressbar
@@ -31,6 +33,18 @@ except(KeyError):
 comm = MPI.COMM_WORLD
 Npus = comm.Get_size()
 rank = comm.Get_rank()
+
+
+def blank(func):
+    return func
+
+
+try:
+    __builtin__.profile
+    if not rank == 0:
+        __builtin__.profile = blank
+except AttributeError:
+    __builtin__.profile = blank
 
 
 # The frame radio astronomers call the apparent or current epoch is the
@@ -73,6 +87,7 @@ class Source(object):
     coherency_radec = None
     az_za = None
 
+    @profile
     def __init__(self, name, ra, dec, freq, stokes):
         """
         Initialize from source catalog
@@ -122,6 +137,7 @@ class Source(object):
                 and (self.name == other.name)
                 and (self.freq == other.freq))
 
+    @profile
     def coherency_calc(self, time, telescope_location):
         """
         Calculate the local coherency in az/za basis for this source at a time & location.
@@ -168,6 +184,7 @@ class Source(object):
 
         return coherency_local
 
+    @profile
     def az_za_calc(self, time, telescope_location):
         """
         calculate the azimuth & zenith angle for this source at a time & location
@@ -193,6 +210,7 @@ class Source(object):
         self.az_za = az_za
         return az_za
 
+    @profile
     def pos_lmn(self, time, telescope_location):
         """
         calculate the direction cosines of this source at a time & location
@@ -214,6 +232,7 @@ class Source(object):
 
 
 class Telescope(object):
+    @profile
     def __init__(self, telescope_name, telescope_location, beam_list):
         # telescope location (EarthLocation object)
         self.telescope_location = telescope_location
@@ -248,16 +267,23 @@ class AnalyticBeam(object):
 
         if self.type == 'tophat':
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
-            interp_data[1, 0, 0, :] = 1
-            interp_data[0, 0, 1, :] = 1
+            interp_data[1, 0, 0, :, :] = 1
+            interp_data[0, 0, 1, :, :] = 1
+            interp_data[1, 0, 1, :, :] = 1
+            interp_data[0, 0, 0, :, :] = 1
             interp_basis_vector = None
         elif self.type == 'gaussian':
             if self.sigma is None:
-                raise ValueError("Sigma needed for gaussian beam")
+                raise ValueError("Sigma needed for gaussian beam -- units: radians")
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
-            values = np.exp(-(az_array**2) / (2 * self.sigma**2))
-            interp_data[1, 0, 0, :] = values
-            interp_data[0, 0, 1, :] = values
+            # gaussian beam only depends on Zenith Angle (symmetric is azimuth)
+            values = np.exp(-(za_array**2) / (2 * self.sigma**2))
+            # copy along freq. axis
+            values = np.broadcast_to(values, (freq_array.size, az_array.size))
+            interp_data[1, 0, 0, :, :] = values
+            interp_data[0, 0, 1, :, :] = values
+            interp_data[1, 0, 1, :, :] = values
+            interp_data[0, 0, 0, :, :] = values
             interp_basis_vector = None
         else:
             raise ValueError('no interp for this type: ', self.type)
@@ -266,6 +292,7 @@ class AnalyticBeam(object):
 
 
 class Antenna(object):
+    @profile
     def __init__(self, name, number, enu_position, beam_id):
         self.name = name
         self.number = number
@@ -274,6 +301,7 @@ class Antenna(object):
         # index of beam for this antenna from array.beam_list
         self.beam_id = beam_id
 
+    @profile
     def get_beam_jones(self, array, source_az_za, frequency):
         # get_direction_jones needs to be defined on UVBeam
         # 2x2 array of Efield vectors in Az/ZA
@@ -309,6 +337,7 @@ class Antenna(object):
 
 
 class Baseline(object):
+    @profile
     def __init__(self, antenna1, antenna2):
         self.antenna1 = antenna1
         self.antenna2 = antenna2
@@ -327,6 +356,7 @@ class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
     # need the array because we need an array location for mapping to locat az/za
 
+    @profile
     def __init__(self, source, time, freq, baseline, telescope):
         self.time = time
         self.freq = freq
@@ -363,6 +393,7 @@ class UVEngine(object):
     # inputs x,y,z,flux,baseline(u,v,w), time, freq
     # x,y,z in same coordinate system as uvws
 
+    @profile
     def __init__(self, task):   # task_array  = list of tuples (source,time,freq,uvw)
         # self.rank
         self.task = task
@@ -376,7 +407,7 @@ class UVEngine(object):
     # Debate --- Do we allow for baseline-defined beams, or stick with just antenna beams?
     #   This would necessitate the Mueller matrix formalism.
     #   As long as we stay modular, it should be simple to redefine things.
-
+    @profile
     def apply_beam(self):
         # Supply jones matrices and their coordinate. Knows current coords of visibilities, applies rotations.
         # for every antenna calculate the apparent jones flux
@@ -402,6 +433,7 @@ class UVEngine(object):
 
         self.apparent_coherency = this_apparent_coherency
 
+    @profile
     def make_visibility(self):
         # dimensions?
         # polarization, ravel index (freq,time,source)
@@ -422,10 +454,34 @@ class UVEngine(object):
         bl = str(self.task.baseline.antenna1.number) + "_" + str(self.task.baseline.antenna2.number)
         return np.array(vis_vector)
 
+    @profile
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
 
 
+@profile
+def read_gleam_catalog(gleam_votable):
+    """
+    Creates a list of pyuvsim source objects from the GLEAM votable catalog.
+    Despite the semi-standard votable format, there are enough differences that every catalog probably
+    needs its own function.
+    List of tested catalogs: GLEAM EGC catalog, version 2
+    """
+
+    table = parse_single_table(gleam_votable)
+    data = table.array
+
+    sourcelist = []
+    for entry in data:
+        source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
+                        Angle(entry['DEJ2000'], unit=units.deg),
+                        freq=(200e6 * units.Hz),
+                        stokes=np.array([entry['Fintwide'], 0., 0., 0.]))
+        sourcelist.append(source)
+    return sourcelist
+
+
+@profile
 def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     """Create task list from pyuvdata compatible input file.
 
@@ -512,6 +568,7 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     return uvtask_list
 
 
+@profile
 def initialize_uvdata(uvtask_list):
     # writing 4 pol polarization files now
 
@@ -610,6 +667,7 @@ def initialize_uvdata(uvtask_list):
     return uv_obj
 
 
+@profile
 def serial_gather(uvtask_list, uv_out):
     """
         Initialize uvdata object, loop over uvtask list, acquire visibilities,
@@ -622,12 +680,13 @@ def serial_gather(uvtask_list, uv_out):
     return uv_out
 
 
-def create_mock_catalog(time, arrangement='zenith', **kwargs):
+@profile
+def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None, zen_ang=None, save=False):
     """
         Create mock catalog with test sources at zenith.
 
         arrangment = Choose test point source pattern (default = 1 source at zenith)
-        Accepted keywords:
+        Keywords:
             Nsrcs = Number of sources to put at zenith (ignored for other source arrangements)
             array_location = EarthLocation object.
             zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
@@ -643,9 +702,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
 
     """
 
-    if 'array_location' in kwargs:
-        array_location = kwargs['array_location']
-    else:
+    if array_location is None:
         array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                        height=1073.)
     freq = (150e6 * units.Hz)
@@ -654,10 +711,8 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
         raise KeyError("Invalid mock catalog arrangement" + str(arrangement))
 
     if arrangement == 'off-zenith':
-        if 'zen_ang' in kwargs:
-            zen_ang = kwargs['zen_ang']   # In degrees
-        else:
-            zen_ang = 5.0
+        if zen_ang is None:
+            zen_ang = 5.0  # Degrees
         Nsrcs = 1
         alts = [90. - zen_ang]
         azs = [90.]   # 0 = North pole, 90. = East pole
@@ -665,9 +720,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
 
     if arrangement == 'triangle':
         Nsrcs = 3
-        if 'zen_ang' in kwargs:
-            zen_ang = kwargs['zen_ang']   # In degrees
-        else:
+        if zen_ang is None:
             zen_ang = 3.0
         alts = [90. - zen_ang, 90. - zen_ang, 90. - zen_ang]
         azs = [0., 120., 240.]
@@ -680,18 +733,16 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
         fluxes = [5., 4., 1.0, 2.0]
 
     if arrangement == 'zenith':
-        Nsrcs = 1
-        if 'Nsrcs' in kwargs:
-            Nsrcs = kwargs['Nsrcs']
+        if Nsrcs is None:
+            Nsrcs = 1
         alts = np.ones(Nsrcs) * 90.
         azs = np.zeros(Nsrcs, dtype=float)
         fluxes = np.ones(Nsrcs) * 1 / Nsrcs
         # Divide total Stokes I intensity among all sources
         # Test file has Stokes I = 1 Jy
     if arrangement == 'long-line':
-        Nsrcs = 10
-        if 'Nsrcs' in kwargs:
-            Nsrcs = kwargs['Nsrcs']
+        if 'Nsrcs' is None:
+            Nsrcs = 10
         fluxes = np.ones(Nsrcs, dtype=float)
         zas = np.linspace(-85, 85, Nsrcs)
         alts = 90. - zas
@@ -702,21 +753,21 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
 
     if arrangement == 'hera_text':
 
-        azs = [-254.055, -248.199, -236.310, -225.000, -206.565,
-               -153.435, -123.690, -111.801, -105.945, -261.870,
-               -258.690, -251.565, -135.000, -116.565, -101.310,
-               -98.130, 90.000, 90.000, 90.000, 90.000, 90.000,
-               -90.000, -90.000, -90.000, -90.000, -90.000,
-               -90.000, 81.870, 78.690, 71.565, -45.000, -71.565,
-               -78.690, -81.870, 74.055, 68.199, 56.310, 45.000,
-               26.565, -26.565, -45.000, -56.310, -71.565]
+        azs = np.array([-254.055, -248.199, -236.310, -225.000, -206.565,
+                        -153.435, -123.690, -111.801, -105.945, -261.870,
+                        -258.690, -251.565, -135.000, -116.565, -101.310,
+                        -98.130, 90.000, 90.000, 90.000, 90.000, 90.000,
+                        -90.000, -90.000, -90.000, -90.000, -90.000,
+                        -90.000, 81.870, 78.690, 71.565, -45.000, -71.565,
+                        -78.690, -81.870, 74.055, 68.199, 56.310, 45.000,
+                        26.565, -26.565, -45.000, -56.310, -71.565])
 
-        zas = [7.280, 5.385, 3.606, 2.828, 2.236, 2.236, 3.606,
-               5.385, 7.280, 7.071, 5.099, 3.162, 1.414, 2.236,
-               5.099, 7.071, 7.000, 6.000, 5.000, 3.000, 2.000,
-               1.000, 2.000, 3.000, 5.000, 6.000, 7.000, 7.071,
-               5.099, 3.162, 1.414, 3.162, 5.099, 7.071, 7.280,
-               5.385, 3.606, 2.828, 2.236, 2.236, 2.828, 3.606, 6.325]
+        zas = np.array([7.280, 5.385, 3.606, 2.828, 2.236, 2.236, 3.606,
+                        5.385, 7.280, 7.071, 5.099, 3.162, 1.414, 2.236,
+                        5.099, 7.071, 7.000, 6.000, 5.000, 3.000, 2.000,
+                        1.000, 2.000, 3.000, 5.000, 6.000, 7.000, 7.071,
+                        5.099, 3.162, 1.414, 3.162, 5.099, 7.071, 7.280,
+                        5.385, 3.606, 2.828, 2.236, 2.236, 2.828, 3.606, 6.325])
 
         alts = 90. - zas
         Nsrcs = zas.size
@@ -732,9 +783,8 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
     dec = icrs_coord.dec
     for si in range(Nsrcs):
         catalog.append(Source('src' + str(si), ra[si], dec[si], freq, [fluxes[si], 0, 0, 0]))
-    if rank == 0:
-        if 'save' in kwargs:
-            np.savez('mock_catalog', ra=ra.rad, dec=dec.rad)
+    if rank == 0 and save:
+        np.savez('mock_catalog', ra=ra.rad, dec=dec.rad)
 
     catalog = np.array(catalog)
     return catalog
@@ -762,6 +812,7 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
     return uvdata_out
 
 
+@profile
 def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='zenith'):
     """Run uvsim."""
     if not isinstance(input_uv, UVData):
@@ -793,7 +844,6 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
         print("Sending Tasks To Processing Units")
     # Scatter the task list among all available PUs
     local_task_list = comm.scatter(uvtask_list, root=0)
-
     if rank == 0:
         print("Tasks Received. Begin Calculations.")
     summed_task_dict = {}

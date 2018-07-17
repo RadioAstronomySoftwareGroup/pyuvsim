@@ -19,6 +19,7 @@ hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
+GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
 
 
 def create_zenith_source(time, name):
@@ -251,6 +252,90 @@ def test_single_offzenith_source_uvfits():
     print('Calculated visibility', visibility)
 
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=5e-2))
+
+
+def test_tophat_beam():
+    beam = pyuvsim.AnalyticBeam('tophat')
+    beam.peak_normalize()
+    beam.interpolation_function = 'az_za_simple'
+
+    time = Time('2018-03-01 00:00:00', scale='utc')
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
+    source_list = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
+
+    nsrcs = len(source_list)
+    az_vals = []
+    za_vals = []
+    freq_vals = []
+    for src in source_list:
+        src_coord = SkyCoord(ra=src.ra, dec=src.dec, frame='icrs', obstime=time,
+                             location=array_location)
+        src_coord_altaz = src_coord.transform_to('altaz')
+        az_vals.append(src_coord_altaz.az.to('rad').value)
+        za_vals.append((Angle('90d') - src_coord_altaz.alt).to('rad').value)
+        if len(freq_vals) > 0:
+            if src.freq.to('Hz').value != freq_vals[0]:
+                freq_vals.append(src.freq.to('Hz').value)
+        else:
+            freq_vals.append(src.freq.to('Hz').value)
+
+    n_freqs = len(freq_vals)
+    interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array(az_vals),
+                                                         za_array=np.array(za_vals),
+                                                         freq_array=np.array(freq_vals))
+    expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=np.float)
+    expected_data[1, 0, 0, :, :] = 1
+    expected_data[0, 0, 1, :, :] = 1
+    expected_data[1, 0, 1, :, :] = 1
+    expected_data[0, 0, 0, :, :] = 1
+    nt.assert_true(np.allclose(interpolated_beam, expected_data))
+
+
+def test_gaussian_beam():
+    sigma_rad = Angle('5d').to('rad').value
+    beam = pyuvsim.AnalyticBeam('gaussian', sigma=sigma_rad)
+    beam.peak_normalize()
+    beam.interpolation_function = 'az_za_simple'
+
+    time = Time('2018-03-01 00:00:00', scale='utc')
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
+    source_list = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
+
+    nsrcs = len(source_list)
+    az_vals = []
+    za_vals = []
+    freq_vals = []
+    for src in source_list:
+        src_coord = SkyCoord(ra=src.ra, dec=src.dec, frame='icrs', obstime=time,
+                             location=array_location)
+        src_coord_altaz = src_coord.transform_to('altaz')
+        az_vals.append(src_coord_altaz.az.to('rad').value)
+        za_vals.append((Angle('90d') - src_coord_altaz.alt).to('rad').value)
+        if len(freq_vals) > 0:
+            if src.freq.to('Hz').value != freq_vals[0]:
+                freq_vals.append(src.freq.to('Hz').value)
+        else:
+            freq_vals.append(src.freq.to('Hz').value)
+
+    n_freqs = len(freq_vals)
+    interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array(az_vals),
+                                                         za_array=np.array(za_vals),
+                                                         freq_array=np.array(freq_vals))
+
+    expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=np.float)
+    interp_zas = np.zeros((n_freqs, nsrcs), dtype=np.float)
+    for f_ind in range(n_freqs):
+        interp_zas[f_ind, :] = np.array(za_vals)
+    gaussian_vals = np.exp(-(interp_zas**2) / (2 * sigma_rad**2))
+
+    expected_data[1, 0, 0, :, :] = gaussian_vals
+    expected_data[0, 0, 1, :, :] = gaussian_vals
+    expected_data[1, 0, 1, :, :] = gaussian_vals
+    expected_data[0, 0, 0, :, :] = gaussian_vals
+
+    nt.assert_true(np.allclose(interpolated_beam, expected_data))
 
 
 def test_offzenith_source_multibl_uvfits():
@@ -597,6 +682,8 @@ def test_mock_catalog():
     nt.assert_equal(cat_source, test_source)
 
 
-if __name__ == '__main__':
-    #  test_offzenith_source_multibl_uvfits()
-    test_uvdata_init()
+def test_read_gleam():
+
+    sourcelist = pyuvsim.read_gleam_catalog(GLEAM_vot)
+
+    nt.assert_equal(len(sourcelist), 50)
