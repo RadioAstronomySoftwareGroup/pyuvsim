@@ -451,6 +451,7 @@ class UVEngine(object):
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
 
+
 @profile
 def read_gleam_catalog(gleam_votable):
     """
