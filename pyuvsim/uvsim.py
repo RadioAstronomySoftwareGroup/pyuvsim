@@ -34,7 +34,9 @@ comm = MPI.COMM_WORLD
 Npus = comm.Get_size()
 rank = comm.Get_rank()
 
-def blank(func): return func
+
+def blank(func):
+    return func
 
 
 try:
@@ -718,7 +720,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
     if arrangement == 'cross':
         Nsrcs = 4
-        alts = [88., 0., 86., 85.]
+        alts = [88., 90., 86., 82.]
         azs = [270., 0., 90., 135.]
         fluxes = [5., 4., 1.0, 2.0]
 
