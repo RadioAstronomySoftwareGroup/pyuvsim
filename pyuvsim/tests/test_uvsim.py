@@ -19,6 +19,7 @@ hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
+GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
 
 
 def create_zenith_source(time, name):
@@ -596,7 +597,8 @@ def test_mock_catalog():
 
     nt.assert_equal(cat_source, test_source)
 
+def test_read_gleam():
 
-if __name__ == '__main__':
-    #  test_offzenith_source_multibl_uvfits()
-    test_uvdata_init()
+    sourcelist = pyuvsim.read_gleam_catalog(GLEAM_vot)
+    
+    nt.assert_equal(len(sourcelist), 50)
