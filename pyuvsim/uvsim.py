@@ -251,14 +251,21 @@ class AnalyticBeam(object):
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
             interp_data[1, 0, 0, :] = 1
             interp_data[0, 0, 1, :] = 1
+            interp_data[1, 0, 1, :] = 1
+            interp_data[0, 0, 0, :] = 1
             interp_basis_vector = None
         elif self.type == 'gaussian':
             if self.sigma is None:
-                raise ValueError("Sigma needed for gaussian beam")
+                raise ValueError("Sigma needed for gaussian beam -- units: radians")
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
-            values = np.exp(-(az_array**2) / (2 * self.sigma**2))
+            # gaussian beam only depends on Zenith Angle (symmetric is azimuth)
+            values = np.exp(-(za_array**2) / (2 * self.sigma**2))
+            # copy along freq. axis
+            values = np.broadcast_to(values, (freq_array.size, az_array.size))
             interp_data[1, 0, 0, :] = values
             interp_data[0, 0, 1, :] = values
+            interp_data[1, 0, 1, :] = values
+            interp_data[0, 0, 0, :] = values
             interp_basis_vector = None
         else:
             raise ValueError('no interp for this type: ', self.type)
