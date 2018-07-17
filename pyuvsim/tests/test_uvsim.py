@@ -285,10 +285,10 @@ def test_tophat_beam():
                                                          za_array=np.array(za_vals),
                                                          freq_array=np.array(freq_vals))
     expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=np.float)
-    expected_data[1, 0, 0, :] = 1
-    expected_data[0, 0, 1, :] = 1
-    expected_data[1, 0, 1, :] = 1
-    expected_data[0, 0, 0, :] = 1
+    expected_data[1, 0, 0, :, :] = 1
+    expected_data[0, 0, 1, :, :] = 1
+    expected_data[1, 0, 1, :, :] = 1
+    expected_data[0, 0, 0, :, :] = 1
     nt.assert_true(np.allclose(interpolated_beam, expected_data))
 
 
@@ -330,10 +330,10 @@ def test_gaussian_beam():
         interp_zas[f_ind, :] = np.array(za_vals)
     gaussian_vals = np.exp(-(interp_zas**2) / (2 * sigma_rad**2))
 
-    expected_data[1, 0, 0, :] = gaussian_vals
-    expected_data[0, 0, 1, :] = gaussian_vals
-    expected_data[1, 0, 1, :] = gaussian_vals
-    expected_data[0, 0, 0, :] = gaussian_vals
+    expected_data[1, 0, 0, :, :] = gaussian_vals
+    expected_data[0, 0, 1, :, :] = gaussian_vals
+    expected_data[1, 0, 1, :, :] = gaussian_vals
+    expected_data[0, 0, 0, :, :] = gaussian_vals
 
     nt.assert_true(np.allclose(interpolated_beam, expected_data))
 
