@@ -125,6 +125,21 @@ def test_uvfits_to_config():
 
     shutil.rmtree(opath)
 
+def test_point_catalog_reader():
+    catfile = os.path.join(SIM_DATA_PATH, 'test_config', 'pointsource_catalog.txt')
+    catalog = pyuvsim.simsetup.point_sources_from_params(catfile)
+    
+    header = open(catfile, 'r').readline()
+    header = [h.strip() for h in header.split()]
+    dt = np.format_parser(['a10', 'f8', 'f8', 'f8', 'f8'],
+                          ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], header)
 
-if __name__ == '__main__':
-    test_uvfits_to_config()
+    catalog_table = np.genfromtxt(catfile, autostrip=True, skip_header=1,
+                         dtype=dt.dtype)
+
+    for src in catalog:
+        nt.assert_true(src.name in catalog_table['source_id'])
+        nt.assert_true(src.ra.hour in catalog_table['ra_j2000'])
+        nt.assert_true(src.dec.deg in catalog_table['dec_j2000'])
+        nt.assert_true(src.stokes[0] in catalog_table['flux_density_I'])
+        nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])

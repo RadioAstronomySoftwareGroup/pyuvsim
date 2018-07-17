@@ -80,10 +80,15 @@ if rank == 0:
 
         source_params = params['sources']
         if source_params['catalog'] == 'mock':
-            params['mock_arrangement'] = source_params['mock_arrangement']   # TODO Would like to pass kwargs to create_mock_catalog
+            params['mock_arrangement'] = source_params['mock_arrangement']
+        if source_params['catalog'].endswith('txt'):
+            catalog = simsetup.point_sources_from_params(source_params['catalog'])
+        else:
+            catalog = None
 
 
-uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, mock_arrangement=params['mock_arrangement'])
+
+uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, mock_arrangement=params['mock_arrangement'], catalog=catalog)
 
 if rank == 0:
     if not os.path.exists(params['outdir']):

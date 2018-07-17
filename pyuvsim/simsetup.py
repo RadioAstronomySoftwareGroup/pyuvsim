@@ -4,6 +4,9 @@ import yaml
 import os
 import pyuvdata.utils as uvutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+import pyuvsim
+import astropy.units as units
+from astropy.coordinates import Angle
 # Utilities for setting up simulations for parameter files,
 # and for generating parameter files from uvfits files
 
@@ -43,6 +46,36 @@ def parse_layout_csv(layout_csv):
 
     return np.genfromtxt(layout_csv, autostrip=True, skip_header=1,
                          dtype=dt.dtype)
+
+def point_sources_from_params(catalog_csv):
+    """
+        Read in a text file of sources.
+        Columns:
+            Source_ID = source id
+            ra_j2000  = right ascension at J2000 epoch, in decimal hours
+            dec_j2000 = declination at J2000 epoch, in decimal degrees
+            flux_density_I = Stokes I flux density in Janskies
+            frequency = reference frequency (for future spectral indexing) [Hz]
+        For now, flat spectrum sources.
+    """
+    header = open(catalog_csv, 'r').readline()
+    header = [h.strip() for h in header.split()]
+    dt = np.format_parser(['a10', 'f8', 'f8', 'f8', 'f8'],
+                          ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], header)
+
+    catalog_table = np.genfromtxt(catalog_csv, autostrip=True, skip_header=1,
+                         dtype=dt.dtype)
+
+    catalog = []
+
+    for si in xrange(catalog_table.size):
+        catalog.append(pyuvsim.Source(catalog_table['source_id'],
+                              Angle(catalog_table['ra_j2000'],unit=units.hour),
+                              Angle(catalog_table['dec_j2000'], unit=units.deg),
+                              catalog_table['frequency']*units.Hz,
+                              [catalog_table['flux_density_I'], 0, 0, 0]))
+
+    return catalog
 
 
 def initialize_uvdata_from_params(param_dict):
