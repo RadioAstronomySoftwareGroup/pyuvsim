@@ -426,6 +426,7 @@ class UVEngine(object):
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
 
+
 def read_gleam_catalog(gleam_votable):
     """
     Creates a list of pyuvsim source objects from the GLEAM votable catalog.
@@ -439,10 +440,10 @@ def read_gleam_catalog(gleam_votable):
 
     sourcelist = []
     for entry in data:
-        source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg), 
+        source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
                         Angle(entry['DEJ2000'], unit=units.deg),
                         freq=(200e6 * units.Hz),
-                        stokes=np.array([entry['Fintwide'],0.,0.,0.]))
+                        stokes=np.array([entry['Fintwide'], 0., 0., 0.]))
         sourcelist.append(source)
     return sourcelist
 
