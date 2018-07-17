@@ -441,7 +441,7 @@ def read_gleam_catalog(gleam_votable):
     for entry in data:
         source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg), 
                         Angle(entry['DEJ2000'], unit=units.deg),
-                        Time(2000.0, format='jyear'), freq=(200e6 * units.Hz),
+                        freq=(200e6 * units.Hz),
                         stokes=np.array([entry['Fintwide'],0.,0.,0.]))
         sourcelist.append(source)
     return sourcelist
