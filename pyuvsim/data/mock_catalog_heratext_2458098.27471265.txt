@@ -1,4 +1,3 @@
-reading mock_catalog_heratext.npz
 SOURCE_ID	RA_J2000	Dec_J2000	Flux	Frequency
 HERATEST0 	4.56569 	-28.559917 	1 	100000000.0
 HERATEST1 	4.41405 	-28.669444 	1 	100000000.0
