@@ -27,6 +27,8 @@ parser.add_argument('file_in', metavar='<FILE>', type=str, nargs='+')
 parser.add_argument('--outdir', type=str, default='./')
 parser.add_argument('--Nsrcs', type=int, default=None)
 parser.add_argument('--mock_arrangement', type=str, default='zenith')
+parser.add_argument('--max_za', type=float, default=-1.0, help='Maximum zenith angle for mock arrangements')
+parser.add_argument('--save_catalog', action='store_true', default=False, help='Save catalog')
 # parser.add_argument('--overwrite', action='store_true')
 
 
@@ -46,10 +48,12 @@ for filename in args.file_in:
 #                       model_name='E-field pattern - Rigging height 4.9m',
 #                       model_version='1.0')
 
-    beam = pyuvsim.AnalyticBeam('tophat')
+    beam = pyuvsim.AnalyticBeam('gaussian', sigma = 0.0222)
     beam_list = [beam]
     uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list,
                                          mock_arrangement=args.mock_arrangement,
+                                         max_za=args.max_za,
+                                         save_catalog=args.save_catalog,
                                          Nsrcs=args.Nsrcs)
     if rank == 0:
         outfile = os.path.join(args.outdir, 'sim_' + os.path.basename(filename))
