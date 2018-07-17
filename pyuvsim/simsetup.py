@@ -47,6 +47,7 @@ def parse_layout_csv(layout_csv):
     return np.genfromtxt(layout_csv, autostrip=True, skip_header=1,
                          dtype=dt.dtype)
 
+
 def point_sources_from_params(catalog_csv):
     """
         Read in a text file of sources.
@@ -64,16 +65,16 @@ def point_sources_from_params(catalog_csv):
                           ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], header)
 
     catalog_table = np.genfromtxt(catalog_csv, autostrip=True, skip_header=1,
-                         dtype=dt.dtype)
+                                  dtype=dt.dtype)
 
     catalog = []
 
     for si in xrange(catalog_table.size):
         catalog.append(pyuvsim.Source(catalog_table['source_id'],
-                              Angle(catalog_table['ra_j2000'],unit=units.hour),
-                              Angle(catalog_table['dec_j2000'], unit=units.deg),
-                              catalog_table['frequency']*units.Hz,
-                              [catalog_table['flux_density_I'], 0, 0, 0]))
+                                      Angle(catalog_table['ra_j2000'], unit=units.hour),
+                                      Angle(catalog_table['dec_j2000'], unit=units.deg),
+                                      catalog_table['frequency'] * units.Hz,
+                                      [catalog_table['flux_density_I'], 0, 0, 0]))
 
     return catalog
 
@@ -106,12 +107,12 @@ def initialize_uvdata_from_params(param_dict):
     ant_layout = parse_layout_csv(layout_csv)
 
     with open(telescope_config_name, 'r') as yf:
-            telparam = yaml.safe_load(yf)
-            tloc = telparam['telescope_location'][1:-1]  # drop parens
-            tloc = map(float, tloc.split(","))
-            tloc[0] *= np.pi / 180.
-            tloc[1] *= np.pi / 180.   # Convert to radians
-            telparam['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*tloc)
+        telparam = yaml.safe_load(yf)
+        tloc = telparam['telescope_location'][1:-1]  # drop parens
+        tloc = map(float, tloc.split(","))
+        tloc[0] *= np.pi / 180.
+        tloc[1] *= np.pi / 180.   # Convert to radians
+        telparam['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*tloc)
 
     param_dict.update(telparam)
     E, N, U = ant_layout['e'], ant_layout['n'], ant_layout['u']
@@ -165,7 +166,7 @@ def initialize_uvdata_from_params(param_dict):
                 bw = True
             if bw:
                 freq_params['Nfreqs'] = int(np.floor(freq_params['bandwidth']
-                                            / freq_params['channel_width'])) + 1
+                                                     / freq_params['channel_width'])) + 1
             else:
                 raise ValueError("Either bandwidth or band edges "
                                  "must be specified: " + kws_used)
@@ -239,8 +240,8 @@ def initialize_uvdata_from_params(param_dict):
             dd = True
         if dd:
             time_params['Ntimes'] = int(np.floor(time_params['duration']
-                                        / (time_params['integration_time']
-                                        * dayspersec))) + 1
+                                                 / (time_params['integration_time']
+                                                    * dayspersec))) + 1
         else:
             raise ValueError("Either duration or time bounds must be specified: "
                              + kws_used)
@@ -294,8 +295,8 @@ def initialize_uvdata_from_params(param_dict):
             setattr(uv_obj, k, param_dict[k])
 
     bls = np.array([uv_obj.antnums_to_baseline(j, i)
-                   for i in range(0, uv_obj.Nants_data)
-                   for j in range(i, uv_obj.Nants_data)])
+                    for i in range(0, uv_obj.Nants_data)
+                    for j in range(i, uv_obj.Nants_data)])
 
     uv_obj.baseline_array = np.tile(bls, uv_obj.Ntimes)
     uv_obj.Nbls = bls.size
