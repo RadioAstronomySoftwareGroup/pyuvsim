@@ -254,6 +254,37 @@ def test_single_offzenith_source_uvfits():
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=5e-2))
 
 
+def test_tophat_beam():
+    beam = pyuvsim.AnalyticBeam('tophat')
+    beam.peak_normalize()
+    beam.interpolation_function = 'az_za_simple'
+
+    time = Time('2018-03-01 00:00:00', scale='utc')
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
+    source_list = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
+
+    nsrcs = len(source_list)
+    az_vals = []
+    za_vals = []
+    freq_vals = []
+    for src in source_list:
+        src_coord = SkyCoord(ra=src.ra, dec=src.dec, frame='icrs', obstime=time,
+                             location=array_location)
+        src_coord_altaz = src_coord.transform_to('altaz')
+        az_vals.append(src_coord_altaz.az.to('rad').value)
+        za_vals.append((Angle('90d') - src_coord_altaz.alt).to('rad').value)
+        freq_vals.append(src.freq.to('Hz').value)
+
+    interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array(az_vals),
+                                                         za_array=np.array(za_vals),
+                                                         freq_array=np.array(freq_vals))
+    expected_data = np.zeros((2, 1, 2, nsrcs, nsrcs), dtype=np.float)
+    expected_data[1, 0, 0, :] = 1
+    expected_data[0, 0, 1, :] = 1
+    nt.assert_true(np.allclose(interpolated_beam, expected_data))
+
+
 def test_offzenith_source_multibl_uvfits():
     """Test single off-zenith source using test uvdata file.
         Calculate visibilities for a baseline triangle.
@@ -597,8 +628,9 @@ def test_mock_catalog():
 
     nt.assert_equal(cat_source, test_source)
 
+
 def test_read_gleam():
 
     sourcelist = pyuvsim.read_gleam_catalog(GLEAM_vot)
-    
+
     nt.assert_equal(len(sourcelist), 50)
