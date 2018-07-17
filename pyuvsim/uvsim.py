@@ -644,12 +644,12 @@ def serial_gather(uvtask_list, uv_out):
     return uv_out
 
 
-def create_mock_catalog(time, arrangement='zenith', **kwargs):
+def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None, zen_ang=None, save=False):
     """
         Create mock catalog with test sources at zenith.
 
         arrangment = Choose test point source pattern (default = 1 source at zenith)
-        Accepted keywords:
+        Keywords:
             Nsrcs = Number of sources to put at zenith (ignored for other source arrangements)
             array_location = EarthLocation object.
             zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
@@ -665,9 +665,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
 
     """
 
-    if 'array_location' in kwargs:
-        array_location = kwargs['array_location']
-    else:
+    if array_location is None:
         array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                        height=1073.)
     freq = (150e6 * units.Hz)
@@ -676,10 +674,8 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
         raise KeyError("Invalid mock catalog arrangement" + str(arrangement))
 
     if arrangement == 'off-zenith':
-        if 'zen_ang' in kwargs:
-            zen_ang = kwargs['zen_ang']   # In degrees
-        else:
-            zen_ang = 5.0
+        if zen_ang is None:
+            zen_ang = 5.0  # Degrees
         Nsrcs = 1
         alts = [90. - zen_ang]
         azs = [90.]   # 0 = North pole, 90. = East pole
@@ -687,9 +683,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
 
     if arrangement == 'triangle':
         Nsrcs = 3
-        if 'zen_ang' in kwargs:
-            zen_ang = kwargs['zen_ang']   # In degrees
-        else:
+        if zen_ang is None:
             zen_ang = 3.0
         alts = [90. - zen_ang, 90. - zen_ang, 90. - zen_ang]
         azs = [0., 120., 240.]
@@ -702,18 +696,16 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
         fluxes = [5., 4., 1.0, 2.0]
 
     if arrangement == 'zenith':
-        Nsrcs = 1
-        if 'Nsrcs' in kwargs:
-            Nsrcs = kwargs['Nsrcs']
+        if Nsrcs is None:
+            Nsrcs = 1
         alts = np.ones(Nsrcs) * 90.
         azs = np.zeros(Nsrcs, dtype=float)
         fluxes = np.ones(Nsrcs) * 1 / Nsrcs
         # Divide total Stokes I intensity among all sources
         # Test file has Stokes I = 1 Jy
     if arrangement == 'long-line':
-        Nsrcs = 10
-        if 'Nsrcs' in kwargs:
-            Nsrcs = kwargs['Nsrcs']
+        if 'Nsrcs' is None:
+            Nsrcs = 10
         fluxes = np.ones(Nsrcs, dtype=float)
         zas = np.linspace(-85, 85, Nsrcs)
         alts = 90. - zas
@@ -754,8 +746,7 @@ def create_mock_catalog(time, arrangement='zenith', **kwargs):
     dec = icrs_coord.dec
     for si in range(Nsrcs):
         catalog.append(Source('src' + str(si), ra[si], dec[si], freq, [fluxes[si], 0, 0, 0]))
-    if rank == 0:
-        if 'save' in kwargs:
+    if rank == 0 and save:
             np.savez('mock_catalog', ra=ra.rad, dec=dec.rad)
 
     catalog = np.array(catalog)
