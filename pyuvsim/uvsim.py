@@ -224,6 +224,9 @@ class Source(object):
         """
         # calculate direction cosines of source at current time and array location
         az_za = self.az_za_calc(time, telescope_location)
+        # Need a horizon mask, for now using pi/2
+        if az_za[1] > (np.pi / 2.):
+            return None
 
         pos_l = np.sin(az_za[0]) * np.sin(az_za[1])
         pos_m = np.cos(az_za[0]) * np.sin(az_za[1])
@@ -440,6 +443,8 @@ class UVEngine(object):
         self.apply_beam()
 
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
+        if pos_lmn is None:
+            return np.array([0, 0, 0, 0])
 
         # need to convert uvws from meters to wavelengths
         assert(isinstance(self.task.freq, Quantity))
