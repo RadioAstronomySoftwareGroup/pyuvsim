@@ -141,6 +141,59 @@ def test_single_zenith_source():
     nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3))
 
 
+def test_source_below_horizon():
+    time = Time('2018-03-01 00:00:00', scale='utc')
+
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
+    time.location = array_location
+
+    freq = (150e6 * units.Hz)
+
+    source = create_offzenith_source(time, 'src_down', az=Angle('0d'), alt=Angle('-40d'))
+
+    antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
+    antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
+
+    baseline = pyuvsim.Baseline(antenna1, antenna2)
+
+    beam = UVBeam()
+    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+
+    task = pyuvsim.UVTask(source, time, freq, baseline, array)
+
+    engine = pyuvsim.UVEngine(task)
+
+    visibility = engine.make_visibility()
+
+    nt.assert_true(np.allclose(visibility, np.array([0, 0, 0, 0])))
+
+    # redo with RA/Dec defined source
+    time = Time(2458098.27471265, format='jd')
+    time.location = array_location
+
+    source_coord = SkyCoord(ra=Angle('13h20m'), dec=Angle('-30d43m17.5s'),
+                            obstime=time, frame='icrs', location=array_location)
+
+    source = pyuvsim.Source('src_down', source_coord.ra, source_coord.dec, freq,
+                            [1.0, 0, 0, 0])
+
+    task = pyuvsim.UVTask(source, time, freq, baseline, array)
+
+    engine = pyuvsim.UVEngine(task)
+
+    visibility = engine.make_visibility()
+
+    nt.assert_true(np.allclose(visibility, np.array([0, 0, 0, 0])))
+
+
 def test_single_zenith_source_uvdata():
     """Test single zenith source using test uvdata file."""
     hera_uv = UVData()
