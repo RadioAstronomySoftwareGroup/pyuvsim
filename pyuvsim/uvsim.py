@@ -560,7 +560,6 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
                                                  freq[freq_ind], times[blts_ind],
                                                  sources[source_ind], blts_ind,
                                                  freq_ind):
-
         task = UVTask(source, t, freqi, bl, telescope)
         task.uvdata_index = (blti, 0, fi)    # 0 = spectral window index
         uvtask_list.append(task)
@@ -715,7 +714,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     freq = (150e6 * units.Hz)
 
     if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']:
-        raise KeyError("Invalid mock catalog arrangement" + str(arrangement))
+        raise KeyError("Invalid mock catalog arrangement: " + str(arrangement))
 
     if arrangement == 'off-zenith':
         if zen_ang is None:
@@ -752,7 +751,6 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
             Nsrcs = 10
         if max_za < 0:
             max_za = 85
-        print Nsrcs, max_za
         fluxes = np.ones(Nsrcs, dtype=float)
         zas = np.linspace(-max_za, max_za, Nsrcs)
         alts = 90. - zas
@@ -834,13 +832,12 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
     if rank == 0:
         print('Nblts:', input_uv.Nblts)
         print('Nfreqs:', input_uv.Nfreqs)
-
         time = Time(input_uv.time_array[0], scale='utc', format='jd')
         if catalog is None:
             array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
             catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc,
                                           save=save_catalog, Nsrcs=Nsrcs, max_za=max_za)
-
+        print('Nsrcs:', catalog.size)
         uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
         uv_container = initialize_uvdata(uvtask_list)
         # To split into PUs make a list of lists length NPUs
