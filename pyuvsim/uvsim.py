@@ -687,7 +687,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
         arrangment = Choose test point source pattern (default = 1 source at zenith)
         Keywords:
-            Nsrcs = Number of sources to put at zenith (ignored for other source arrangements)
+            Nsrcs = Number of sources to put at zenith
             array_location = EarthLocation object.
             zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
             save = Save mock catalog as npz file.
