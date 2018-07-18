@@ -139,8 +139,9 @@ def initialize_uvdata_from_params(param_dict):
             path = os.path.join(SIM_DATA_PATH, filename)
             if not os.path.exists(path):
                 raise OSError("Could not find file " + filename)
-        # beam_model = path to beamfits
-        uvb.read_beamfits(beam_model)
+        else:
+            path = beam_model   # beam_model = path to beamfits
+        uvb.read_beamfits(path)
         beam_list.append(uvb)
     param_dict['Nants_data'] = antnames.size
     param_dict['Nants_telescope'] = antnames.size
