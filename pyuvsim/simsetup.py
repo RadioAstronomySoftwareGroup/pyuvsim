@@ -122,11 +122,11 @@ def initialize_uvdata_from_params(param_dict):
     for beamID in np.unique(beam_ids):
         beam_model = telparam['beam_paths'][beamID]
         uvb = UVBeam()
-        if  beam_model in ['gaussian', 'tophat']:
-            ## Identify analytic beams
+        if beam_model in ['gaussian', 'tophat']:
+            # Identify analytic beams
             if beam_model == 'gaussian':
                 try:
-                    beam = pyuvsim.AnalyticBeam('gaussian', sigma = telparam['sigma'])
+                    beam = pyuvsim.AnalyticBeam('gaussian', sigma=telparam['sigma'])
                 except KeyError as err:
                     print("Missing sigma for gaussian beam.")
                     raise err
@@ -207,14 +207,14 @@ def initialize_uvdata_from_params(param_dict):
                 freq_params['end_freq'] = freq_params['center_freq'] + freq_params['bandwidth'] / 2
 
         freq_arr = np.linspace(freq_params['start_freq'],
-                             freq_params['end_freq'],
-                             freq_params['Nfreqs'], endpoint=False)
+                               freq_params['end_freq'],
+                               freq_params['Nfreqs'], endpoint=False)
     if freq_params['Nfreqs'] != 1:
         try:
-            assert np.allclose(np.diff(freq_arr), freq_params['channel_width']*np.ones(freq_params["Nfreqs"]-1), atol=1.0) # 1 Hz
+            assert np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1), atol=1.0)  # 1 Hz
         except AssertionError as err:
             print freq_params
-            print freq_params['bandwidth']/2.
+            print freq_params['bandwidth'] / 2.
             print np.diff(freq_arr)[0]
             raise err
 
@@ -274,7 +274,7 @@ def initialize_uvdata_from_params(param_dict):
                   'This may not be well-defined.')
 
     inttime_days = time_params['integration_time'] * 1 / (24. * 3600.)
-    inttime_days = np.trunc(inttime_days * 24 * 3600)/(24.*3600.)
+    inttime_days = np.trunc(inttime_days * 24 * 3600) / (24. * 3600.)
     if not dd:
         time_params['duration'] = inttime_days * (time_params['Ntimes'])
         dd = True
@@ -288,12 +288,12 @@ def initialize_uvdata_from_params(param_dict):
         raise ValueError("Either a start or end time must be specified" + kws_used)
 
     time_arr = np.linspace(time_params['start_time'],
-                         time_params['end_time'],
-                         time_params['Ntimes'], endpoint=False)
+                           time_params['end_time'],
+                           time_params['Ntimes'], endpoint=False)
 
     if time_params['Ntimes'] != 1:
         try:
-            assert np.allclose(np.diff(time_arr), inttime_days*np.ones(time_params["Ntimes"]-1), atol=1e-5)   # To nearest second
+            assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=1e-5)   # To nearest second
         except AssertionError as err:
             print time_params
             print np.diff(time_arr)[0]
@@ -316,8 +316,8 @@ def initialize_uvdata_from_params(param_dict):
             setattr(uv_obj, k, param_dict[k])
 
     bls = np.array([uv_obj.antnums_to_baseline(uv_obj.antenna_numbers[j], uv_obj.antenna_numbers[i])
-                   for i in range(0, uv_obj.Nants_data)
-                   for j in range(i, uv_obj.Nants_data)])
+                    for i in range(0, uv_obj.Nants_data)
+                    for j in range(i, uv_obj.Nants_data)])
 
     uv_obj.baseline_array = np.tile(bls, uv_obj.Ntimes)
     uv_obj.Nbls = bls.size

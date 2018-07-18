@@ -792,7 +792,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     for si in range(Nsrcs):
         catalog.append(Source('src' + str(si), ra[si], dec[si], freq, [fluxes[si], 0, 0, 0]))
     if rank == 0 and save:
-        np.savez('mock_catalog_'+arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
+        np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
 
     catalog = np.array(catalog)
     return catalog
