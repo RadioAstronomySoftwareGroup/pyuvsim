@@ -48,7 +48,7 @@ for filename in args.file_in:
 #                       model_name='E-field pattern - Rigging height 4.9m',
 #                       model_version='1.0')
 
-    beam = pyuvsim.AnalyticBeam('gaussian', sigma = 0.0222)
+    beam = pyuvsim.AnalyticBeam('gaussian', sigma=0.0222)
     beam_list = [beam]
     uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list,
                                          mock_arrangement=args.mock_arrangement,
