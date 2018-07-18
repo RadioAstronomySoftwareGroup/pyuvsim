@@ -4,7 +4,7 @@ filing:
 freq:
   channel_width: 80000.0
   center_freq: 100360000.0
-  bandwidth: 720000.0
+  bandwidth: 800000.0
 sources:
   catalog: 'mock'
   mock_arrangement: 'zenith'

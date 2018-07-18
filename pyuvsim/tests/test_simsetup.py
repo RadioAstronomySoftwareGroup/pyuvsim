@@ -35,7 +35,7 @@ def compare_dictionaries(dic1, dic2):
 
 
 def test_param_reader():
-    for n in range(4):
+    for n in range(3):
         yield (check_param_reader, n)
 
 
