@@ -180,7 +180,7 @@ def initialize_uvdata_from_params(param_dict):
                 bw = True
             if bw:
                 freq_params['Nfreqs'] = int(np.floor(freq_params['bandwidth']
-                                                     / freq_params['channel_width'])) + 1
+                                                     / freq_params['channel_width']))
             else:
                 raise ValueError("Either bandwidth or band edges "
                                  "must be specified: " + kws_used)
@@ -211,6 +211,7 @@ def initialize_uvdata_from_params(param_dict):
             assert np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1), atol=1.0)  # 1 Hz
         except AssertionError as err:
             print freq_params
+            print freq_params['Nfreqs']
             print freq_params['bandwidth'] / 2.
             print np.diff(freq_arr)[0]
             raise err

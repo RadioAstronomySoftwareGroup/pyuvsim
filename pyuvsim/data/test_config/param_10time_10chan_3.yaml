@@ -3,7 +3,7 @@ filing:
   outfile_prefix: 'sim_'
 freq:
   channel_width: 80000.0
-  center_freq: 100360000.0
+  end_freq: 100800000.0
   bandwidth: 800000.0
 sources:
   catalog: 'mock'
