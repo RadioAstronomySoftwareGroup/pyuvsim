@@ -154,8 +154,8 @@ def initialize_uvdata_from_params(param_dict):
     freq_params = param_dict['freq']
 
     freq_keywords = ['freq_array', 'start_freq', 'end_freq', 'Nfreqs',
-                     'channel_width', 'bandwidth', 'center_freq']
-    fa, sf, ef, nf, cw, bw, cf = [fk in freq_params for fk in freq_keywords]
+                     'channel_width', 'bandwidth']
+    fa, sf, ef, nf, cw, bw = [fk in freq_params for fk in freq_keywords]
     kws_used = ", ".join(freq_params.keys())
 
     if fa:
@@ -198,13 +198,9 @@ def initialize_uvdata_from_params(param_dict):
         if not sf:
             if ef and bw:
                 freq_params['start_freq'] = freq_params['end_freq'] - freq_params['bandwidth']
-            if cf and bw:
-                freq_params['start_freq'] = freq_params['center_freq'] - freq_params['bandwidth'] / 2
         if not ef:
             if sf and bw:
                 freq_params['end_freq'] = freq_params['start_freq'] + freq_params['bandwidth']
-            if cf and bw:
-                freq_params['end_freq'] = freq_params['center_freq'] + freq_params['bandwidth'] / 2
 
         freq_arr = np.linspace(freq_params['start_freq'],
                                freq_params['end_freq'],
