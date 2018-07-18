@@ -122,6 +122,13 @@ def initialize_uvdata_from_params(param_dict):
     for beamID in np.unique(beam_ids):
         path = telparam['beam_paths'][beamID]
         uvb = UVBeam()
+        if path in ['gaussian', 'tophat']:    #TODO make this neater
+            if path == 'gaussian':
+                beam = pyuvsim.AnalyticBeam('gaussian', sigma = 0.01)   #TODO Fix this
+            else:
+                beam = pyuvsim.AnalyticBeam('tophat')
+            beam_list.append(beam)
+            continue
         if not os.path.exists(path):
             filename = path
             path = os.path.join(SIM_DATA_PATH, filename)
@@ -294,9 +301,9 @@ def initialize_uvdata_from_params(param_dict):
         if hasattr(uv_obj, k):
             setattr(uv_obj, k, param_dict[k])
 
-    bls = np.array([uv_obj.antnums_to_baseline(j, i)
-                    for i in range(0, uv_obj.Nants_data)
-                    for j in range(i, uv_obj.Nants_data)])
+    bls = np.array([uv_obj.antnums_to_baseline(uv_obj.antenna_numbers[j], uv_obj.antenna_numbers[i])
+                   for i in range(0, uv_obj.Nants_data)
+                   for j in range(i, uv_obj.Nants_data)])
 
     uv_obj.baseline_array = np.tile(bls, uv_obj.Ntimes)
     uv_obj.Nbls = bls.size

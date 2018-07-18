@@ -450,7 +450,8 @@ class UVEngine(object):
         assert(isinstance(self.task.freq, Quantity))
         uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
-
+#        with open("coherencies.out",'a+') as f:
+#            f.write(str(self.apparent_coherency)+"\n")
         vij = self.apparent_coherency * fringe
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
@@ -793,7 +794,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     for si in range(Nsrcs):
         catalog.append(Source('src' + str(si), ra[si], dec[si], freq, [fluxes[si], 0, 0, 0]))
     if rank == 0 and save:
-        np.savez('mock_catalog_'+arrangement, ra=ra.rad, dec=dec.rad)
+        np.savez('mock_catalog_'+arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
 
     catalog = np.array(catalog)
     return catalog

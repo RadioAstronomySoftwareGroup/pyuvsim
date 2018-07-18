@@ -31,15 +31,17 @@ with open(args['paramsfile'], 'r') as pfile:
 if params is None:
     params = {}
 
-if rank == 0:
+input_uv = UVData()
 
-    if 'uvfile' in params:
-        # simulate from a uvfits file if one is specified in the param file.
+##TODO restore the rank==0 check here and broadcast beams/input_uv etc.
+if 'uvfile' in params:
+    # simulate from a uvfits file if one is specified in the param file.
 
-        filename = params['uvfile']
-        print("Reading:", os.path.basename(filename))
-        input_uv = UVData()
-        input_uv.read_uvfits(filename)
+    filename = params['uvfile']
+    print("Reading:", os.path.basename(filename))
+    input_uv.read_uvfits(filename)
+
+    if 'beam_files' in params:
         beam_ids = params['beam_files'].keys()
         beamfits_files = params['beam_files'].values()
         beam_list = []
@@ -48,35 +50,39 @@ if rank == 0:
             uvb.read_beamfits()
             beam_list.append(bf)
 
-        beam_list = (np.array(beam_list)[beam_ids]).tolist()
-        outfile_name = os.path.join(params['outdir'], params['outfile_prefix'] + "_" + os.path.basename(filename))
-        outfile_name = outfile_name + ".uvfits"
+    beam_list = (np.array(beam_list)[beam_ids]).tolist()
+    outfile_name = os.path.join(params['outdir'], params['outfile_prefix'] + "_" + os.path.basename(filename))
+    outfile_name = outfile_name + ".uvfits"
 
+else:
+    # Not running off a uvfits.
+
+    input_uv, beam_list, beam_ids = simsetup.initialize_uvdata_from_params(params)
+
+    file_params = params['filing']
+    params.update(file_params)
+    del params['filing']
+    if 'outfile_name' not in params or params['outfile_name'] == '':
+        outfile_prefix = ""
+        outfile_suffix = "_results"
+        if 'outfile_prefix' in params:
+            outfile_prefix = params['outfile_prefix'] + "_"
+        if 'outfile_suffix' in params:
+            outfile_suffix = "_" + params['outfile_suffix']
+        outfile_name = os.path.join(params['outdir'], outfile_prefix
+                                    + os.path.basename(args['paramsfile'])[:-5]
+                                    + outfile_suffix)  # Strip .yaml extention
     else:
-        # Not running off a uvfits.
+        outfile_name = params['outfile_name']
 
-        input_uv, beam_list, beam_ids = simsetup.initialize_uvdata_from_params(params)
+    outfile_name = outfile_name + ".uvfits"
 
-        file_params = params['filing']
-        params.update(file_params)
-        del params['filing']
-        if 'outfile_name' not in params or params['outfile_name'] == '':
-            outfile_prefix = ""
-            outfile_suffix = "_results"
-            if 'outfile_prefix' in params:
-                outfile_prefix = params['outfile_prefix'] + "_"
-            if 'outfile_suffix' in params:
-                outfile_suffix = "_" + params['outfile_suffix']
-            outfile_name = os.path.join(params['outdir'], outfile_prefix
-                                        + os.path.basename(args['paramsfile'])[:-5]
-                                        + outfile_suffix)  # Strip .yaml extention
-        else:
-            outfile_name = params['outfile_name']
+    if 'clobber' not in params:
+        outfile_name = simsetup.check_file_exists_and_increment(outfile_name)
 
-        outfile_name = outfile_name + ".uvfits"
-
-        if 'clobber' not in params:
-            outfile_name = simsetup.check_file_exists_and_increment(outfile_name)
+    source_params = params['sources']
+    if source_params['catalog'] == 'mock':
+        params['mock_arrangement'] = source_params['mock_arrangement']   # TODO Would like to pass kwargs to create_mock_catalog
 
         source_params = params['sources']
         if source_params['catalog'] == 'mock':
@@ -86,6 +92,12 @@ if rank == 0:
         else:
             catalog = None
 
+    if 'beam_model' in params:
+        if params['beam_model'] == 'gaussian':
+            beam = pyuvsim.AnalyticBeam('gaussian', sigma = params['sigma'])
+        else:
+            beam = pyuvsim.AnalyticBeam('tophat')
+        beam_list = [beam]
 
 uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, mock_arrangement=params['mock_arrangement'], catalog=catalog)
 
