@@ -87,7 +87,6 @@ if rank == 0:
             catalog = None
 
 
-
 uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, mock_arrangement=params['mock_arrangement'], catalog=catalog)
 
 if rank == 0:
