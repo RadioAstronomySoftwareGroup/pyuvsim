@@ -11,7 +11,7 @@ from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
 import astropy.constants as const
-
+from memory_profiler import profile
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
@@ -21,7 +21,7 @@ triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.u
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
 
-
+@profile
 def create_zenith_source(time, name):
     """Create pyuvsim Source object at zenith.
 
@@ -39,6 +39,7 @@ def create_zenith_source(time, name):
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
+    del(icrs_coord)
     return pyuvsim.Source(name, ra, dec, freq, [1, 0, 0, 0])
 
 
@@ -105,7 +106,7 @@ def test_source_zenith():
 
     nt.assert_true(np.allclose(zenith_source_lmn, np.array([0, 0, 1])))
 
-
+@profile
 def test_single_zenith_source():
     """Test single zenith source."""
     time = Time('2018-03-01 00:00:00', scale='utc')
