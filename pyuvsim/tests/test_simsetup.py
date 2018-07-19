@@ -14,8 +14,9 @@ from test_uvsim import create_zenith_source, beam_files
 
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfits')
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
-param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(5)]   # Five different test configs
+param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(4)]   # Five different test configs
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
+triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 
 
 def compare_dictionaries(dic1, dic2):
@@ -46,7 +47,7 @@ def check_param_reader(config_num):
 
     param_filename = param_filenames[config_num]
     hera_uv = UVData()
-    hera_uv.read_uvfits(EW_uvfits_file)
+    hera_uv.read_uvfits(triangle_uvfits_file)
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources = np.array([create_zenith_source(time, 'zensrc')])
@@ -57,7 +58,7 @@ def check_param_reader(config_num):
     beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
     beam_list = [beam0, beam1, beam2]
 
-    beam_dict = {'ANT1': 0, 'ANT2' : 1, 'ANT3' : 2}
+    beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2}
     expected_uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list, beam_dict=beam_dict)
 
     with open(param_filename, 'r') as pf:
@@ -70,13 +71,20 @@ def check_param_reader(config_num):
     uvtask_list = pyuvsim.uvdata_to_task_list(uv_obj, sources, new_beam_list, beam_dict=new_beam_dict)
     # Tasks are not ordered in UVTask lists, so need to sort them.
     # This is enabled by the comparison operator in UVTask
+    uvtask_list = sorted(uvtask_list)
+    expected_uvtask_list = sorted(expected_uvtask_list)
 
-#    uvtask_list = sorted(uvtask_list)
-#    expected_uvtask_list = sorted(expected_uvtask_list)
     for ti in xrange(len(expected_uvtask_list)):
-            print uvtask_list[ti].baseline.antenna1.beam_id, expected_uvtask_list[ti].baseline.antenna1.beam_id
-            print uvtask_list[ti].baseline.antenna2.beam_id, expected_uvtask_list[ti].baseline.antenna2.beam_id
-            print '\n'
+        print uvtask_list[ti].baseline.antenna1.beam_id, expected_uvtask_list[ti].baseline.antenna1.beam_id
+        print uvtask_list[ti].baseline.antenna2.beam_id, expected_uvtask_list[ti].baseline.antenna2.beam_id
+        print uvtask_list[ti].baseline.antenna1.number, expected_uvtask_list[ti].baseline.antenna1.number
+        print uvtask_list[ti].baseline.antenna2.number, expected_uvtask_list[ti].baseline.antenna2.number
+        print uvtask_list[ti].baseline.antenna1.name, expected_uvtask_list[ti].baseline.antenna1.name
+        print uvtask_list[ti].baseline.antenna2.name, expected_uvtask_list[ti].baseline.antenna2.name
+        print uvtask_list[ti].freq - expected_uvtask_list[ti].freq
+        print uvtask_list[ti].time - expected_uvtask_list[ti].time
+        print uvtask_list[ti].uvdata_index, expected_uvtask_list[ti].uvdata_index
+        print '\n'
     nt.assert_true(uvtask_list == expected_uvtask_list)
 
 
@@ -153,5 +161,6 @@ def test_point_catalog_reader():
         nt.assert_true(src.stokes[0] in catalog_table['flux_density_I'])
         nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])
 
+
 if __name__ == '__main__':
-    check_param_reader(0)
+    check_param_reader(3)

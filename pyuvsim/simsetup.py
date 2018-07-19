@@ -259,7 +259,7 @@ def initialize_uvdata_from_params(param_dict):
             time_params['duration'] = time_params['end_time'] - time_params['start_time']
             dd = True
         if dd:
-            time_params['Ntimes'] = int(np.floor(time_params['duration']
+            time_params['Ntimes'] = int(np.round(time_params['duration']
                                                  / (time_params['integration_time']
                                                     * dayspersec))) + 1
         else:
@@ -296,7 +296,7 @@ def initialize_uvdata_from_params(param_dict):
 
     if time_params['Ntimes'] != 1:
         try:
-            assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=1e-5)   # To nearest second
+            assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=1e-4)   # To nearest second
         except AssertionError as err:
             print time_params
             print np.diff(time_arr)[0]
@@ -428,7 +428,7 @@ def uvdata_to_config_file(uvdata_in, config_filename=None, telescope_config_name
 
     freq_array = uvdata_in.freq_array[0, :].tolist()
     time_array = uvdata_in.time_array.tolist()
-
+    inttime_days = time_array[1] - time_array[0]
     param_dict = dict(
         time=dict(
             start_time=time_array[0],
@@ -438,7 +438,7 @@ def uvdata_to_config_file(uvdata_in, config_filename=None, telescope_config_name
         ),
         freq=dict(
             start_freq=freq_array[0],
-            end_freq=freq_array[-1],
+            end_freq=freq_array[-1] + uvdata_in.channel_width,
             channel_width=uvdata_in.channel_width,
             Nfreqs=uvdata_in.Nfreqs,
         ),

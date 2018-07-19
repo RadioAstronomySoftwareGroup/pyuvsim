@@ -296,7 +296,7 @@ class AnalyticBeam(object):
     def __eq__(self, other):
         if self.type == 'gaussian':
             return ((self.type == other.type) and
-                   (self.sigma == other.sigma))
+                    (self.sigma == other.sigma))
         elif self.type == 'tophat':
             return other.type == 'tophat'
         else:
@@ -349,10 +349,13 @@ class Antenna(object):
 
     def __gt__(self, other):
         return (self.number > other.number)
+
     def __ge__(self, other):
         return (self.number >= other.number)
+
     def __lt__(self, other):
         return not self.__ge__(other)
+
     def __le__(self, other):
         return not self.__gt__(other)
 
@@ -376,12 +379,15 @@ class Baseline(object):
         if self.antenna1 == other.antenna1:
             return self.antenna2 > other.antenna2
         return self.antenna1 > other.antenna1
+
     def __ge__(self, other):
         if self.antenna1 == other.antenna1:
             return self.antenna2 >= other.antenna2
         return self.antenna1 >= other.antenna1
+
     def __lt__(self, other):
         return not self.__ge__(other)
+
     def __le__(self, other):
         return not self.__gt__(other)
 
@@ -426,8 +432,10 @@ class UVTask(object):
                 return blti0 >= blti1
             return fi0 >= fi1
         return self.baseline >= other.baseline
+
     def __lt__(self, other):
         return not self.__ge__(other)
+
     def __le__(self, other):
         return not self.__gt__(other)
 

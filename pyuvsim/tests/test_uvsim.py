@@ -786,5 +786,5 @@ def test_gaussbeam_values():
 
     # Confirm the coherency values (ie., brightnesses) match the beam values.
 
-    beam_values = np.exp(-(zenith_angles)**2/(2*beam.sigma**2))
+    beam_values = np.exp(-(zenith_angles)**2 / (2 * beam.sigma**2))
     nt.assert_true(np.all(beam_values**2 == coherencies))
