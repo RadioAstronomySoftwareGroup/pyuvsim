@@ -51,11 +51,14 @@ def check_param_reader(config_num):
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources = np.array([create_zenith_source(time, 'zensrc')])
 
-    beam = UVBeam()
-    beam.read_beamfits(herabeam_default)
-    beam_list = [beam]
+    beam0 = UVBeam()
+    beam0.read_beamfits(herabeam_default)
+    beam1 = pyuvsim.AnalyticBeam('tophat')
+    beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
+    beam_list = [beam0, beam1, beam2]
 
-    expected_uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list)
+    beam_dict = {'ANT1': 0, 'ANT2' : 1, 'ANT3' : 2}
+    expected_uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list, beam_dict=beam_dict)
 
     with open(param_filename, 'r') as pf:
         param_dict = yaml.safe_load(pf)
@@ -63,17 +66,17 @@ def check_param_reader(config_num):
     param_dict['config_path'] = param_filename    # Ensure path is present
 
     # Check default configuration
-    uv_obj, new_beam_list, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
-    uvtask_list = pyuvsim.uvdata_to_task_list(uv_obj, sources, new_beam_list)
-
+    uv_obj, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uvtask_list = pyuvsim.uvdata_to_task_list(uv_obj, sources, new_beam_list, beam_dict=new_beam_dict)
     # Tasks are not ordered in UVTask lists, so need to sort them.
     # This is enabled by the comparison operator in UVTask
 
-    uvtask_list = sorted(uvtask_list)
-    expected_uvtask_list = sorted(expected_uvtask_list)
-    for ti in range(len(uvtask_list)):
-#        print uvtask_list[ti].time, expected_uvtask_list[ti].time
-        print uvtask_list[ti].freq -expected_uvtask_list[ti].freq
+#    uvtask_list = sorted(uvtask_list)
+#    expected_uvtask_list = sorted(expected_uvtask_list)
+    for ti in xrange(len(expected_uvtask_list)):
+            print uvtask_list[ti].baseline.antenna1.beam_id, expected_uvtask_list[ti].baseline.antenna1.beam_id
+            print uvtask_list[ti].baseline.antenna2.beam_id, expected_uvtask_list[ti].baseline.antenna2.beam_id
+            print '\n'
     nt.assert_true(uvtask_list == expected_uvtask_list)
 
 
@@ -107,7 +110,7 @@ def test_uvfits_to_config():
     param_dict['config_path'] = param_filename    # Ensure path is present
 
     orig_param_dict = copy.deepcopy(param_dict)   # The parameter dictionary gets modified in the function below.
-    uv1, new_beam_list, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv1, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
 
     # Generate parameters from new uvfits and compare with old.
     path, telescope_config, layout_fname = \
@@ -149,3 +152,6 @@ def test_point_catalog_reader():
         nt.assert_true(src.dec.deg in catalog_table['dec_j2000'])
         nt.assert_true(src.stokes[0] in catalog_table['flux_density_I'])
         nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])
+
+if __name__ == '__main__':
+    check_param_reader(0)

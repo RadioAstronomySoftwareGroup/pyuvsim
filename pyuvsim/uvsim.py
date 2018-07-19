@@ -507,7 +507,7 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
                           EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
                           beam_list)
 
-    if len(beam_list) > 1 and beam_dict is not None:
+    if len(beam_list) > 1 and beam_dict is None:
         raise ValueError('beam_dict must be supplied if beam_list has more than one element.')
 
     times = input_uv.time_array

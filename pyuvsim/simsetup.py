@@ -119,8 +119,12 @@ def initialize_uvdata_from_params(param_dict):
     antnames = ant_layout['name']
     beam_ids = ant_layout['beamid']
     beam_list = []
+    beam_dict = {}
     for beamID in np.unique(beam_ids):
         beam_model = telparam['beam_paths'][beamID]
+        which_ants = antnames[np.where(beam_ids == beamID)]
+        for a in which_ants:
+            beam_dict[a] = beamID
         uvb = UVBeam()
         if beam_model in ['gaussian', 'tophat']:
             # Identify analytic beams
@@ -143,6 +147,7 @@ def initialize_uvdata_from_params(param_dict):
             path = beam_model   # beam_model = path to beamfits
         uvb.read_beamfits(path)
         beam_list.append(uvb)
+
     param_dict['Nants_data'] = antnames.size
     param_dict['Nants_telescope'] = antnames.size
     param_dict['antenna_names'] = np.array(antnames.tolist())
@@ -324,7 +329,7 @@ def initialize_uvdata_from_params(param_dict):
     uv_obj.ant_1_array, uv_obj.ant_2_array = \
         uv_obj.baseline_to_antnums(uv_obj.baseline_array)
 
-    return uv_obj, beam_list, beam_ids
+    return uv_obj, beam_list, beam_dict, beam_ids
 
 
 def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
