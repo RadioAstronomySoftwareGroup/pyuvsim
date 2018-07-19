@@ -560,9 +560,8 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
 
     times = input_uv.time_array
 
-    antpos_ECEF = input_uv.antenna_positions + input_uv.telescope_location
-    antpos_ENU = uvutils.ENU_from_ECEF(antpos_ECEF.T,
-                                       *input_uv.telescope_location_lat_lon_alt).T
+    antpos_ENU, _ = input_uv.get_ENU_antpos()
+
     antenna_names = input_uv.antenna_names
     antennas = []
     for num, antname in enumerate(antenna_names):

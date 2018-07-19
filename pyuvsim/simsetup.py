@@ -154,7 +154,7 @@ def initialize_uvdata_from_params(param_dict):
     param_dict['antenna_numbers'] = np.array(ant_layout['number'])
     antpos_enu = np.vstack((E, N, U)).T
 
-    param_dict['antenna_positions'] = uvutils.ECEF_from_ENU(antpos_enu.T, *tloc).T - param_dict['telescope_location']
+    param_dict['antenna_positions'] = uvutils.ECEF_from_ENU(antpos_enu, *tloc) - param_dict['telescope_location']
 
     # Parse frequency structure
     freq_params = param_dict['freq']
@@ -181,7 +181,7 @@ def initialize_uvdata_from_params(param_dict):
                 raise ValueError("Either channel_width or Nfreqs "
                                  " must be included in parameters:" + kws_used)
             if sf and ef:
-                freq_params['bandwidth'] = freq_params['start_freq'] - freq_params['end_freq']
+                freq_params['bandwidth'] = freq_params['end_freq'] - freq_params['start_freq']
                 bw = True
             if bw:
                 freq_params['Nfreqs'] = int(np.floor(freq_params['bandwidth']
@@ -365,9 +365,6 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
         layout_csv_name = os.path.basename(layout_csv_path)
 
     antpos_enu, antenna_numbers = uvdata_in.get_ENU_antpos()
-#    antpos_enu = uvutils.ENU_from_ECEF((uvdata_in.antenna_positions +
-#                                        uvdata_in.telescope_location).T,
-#                                       * uvdata_in.telescope_location_lat_lon_alt).T
 
     e, n, u = antpos_enu.T
     beam_ids = np.zeros_like(e).astype(int)
