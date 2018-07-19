@@ -12,6 +12,8 @@ from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
 import astropy.constants as const
 from memory_profiler import profile
+import yaml
+import sys
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
@@ -20,7 +22,7 @@ EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
-
+longbl_yaml_file = os.path.join(SIM_DATA_PATH,'5km_triangle_1time_1chan.yaml')
 @profile
 def create_zenith_source(time, name):
     """Create pyuvsim Source object at zenith.
@@ -561,7 +563,27 @@ def test_single_offzenith_source_miriad():
 
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=5e-3))
 
+@profile
+def test_yaml_to_tasks():
+    params = yaml.safe_load(open(longbl_yaml_file))
+    params['config_path']=longbl_yaml_file #not sure why I need this
+    input_uv, beam_list, beam_ids = \
+    pyuvsim.simsetup.initialize_uvdata_from_params(params)
+    time = Time('2018-03-01 00:00:00', scale='utc')
+    HERA_location = EarthLocation(lat='-30d43m17.5s',
+                                    lon='21d25m41.9s',
+                                    height=1073.)
+    catalog = pyuvsim.create_mock_catalog(time,arrangement='zenith',
+                                Nsrcs=10,
+                                array_location=HERA_location)
+    print("Size of catalog:",sys.getsizeof(catalog)," bytes with ",
+                        len(catalog),"entries")                            
+    uvtask_list = pyuvsim.uvdata_to_task_list(input_uv,
+                                            catalog, beam_list)
+    print("Size of task list:",sys.getsizeof(uvtask_list)," bytes with ",
+                        len(uvtask_list),"entries")
 
+@profile
 def test_file_to_tasks():
 
     hera_uv = UVData()
