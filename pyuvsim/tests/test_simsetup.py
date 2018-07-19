@@ -71,7 +71,9 @@ def check_param_reader(config_num):
 
     uvtask_list = sorted(uvtask_list)
     expected_uvtask_list = sorted(expected_uvtask_list)
-
+    for ti in range(len(uvtask_list)):
+#        print uvtask_list[ti].time, expected_uvtask_list[ti].time
+        print uvtask_list[ti].freq -expected_uvtask_list[ti].freq
     nt.assert_true(uvtask_list == expected_uvtask_list)
 
 
@@ -82,7 +84,6 @@ def test_uvfits_to_config():
     opath = 'uvfits_yaml_temp'
     param_filename = 'test_config.yaml'
     second_param_filename = 'test2_config.yaml'
-    test_uv_name = 'test_uv.uvfits'
     telescope_config = 'test_telescope_config.yaml'
     if not os.path.exists(opath):
         os.makedirs(opath)        # Directory will be deleted when test completed.

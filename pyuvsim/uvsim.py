@@ -450,7 +450,8 @@ class UVEngine(object):
         assert(isinstance(self.task.freq, Quantity))
         uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
-
+#        with open("coherencies.out",'a+') as f:
+#            f.write(str(self.apparent_coherency)+"\n")
         vij = self.apparent_coherency * fringe
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
@@ -559,7 +560,6 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
                                                  freq[freq_ind], times[blts_ind],
                                                  sources[source_ind], blts_ind,
                                                  freq_ind):
-
         task = UVTask(source, t, freqi, bl, telescope)
         task.uvdata_index = (blti, 0, fi)    # 0 = spectral window index
         uvtask_list.append(task)
@@ -686,7 +686,8 @@ def serial_gather(uvtask_list, uv_out):
 
 
 @profile
-def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None, zen_ang=None, save=False):
+def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
+                        zen_ang=None, save=False, max_za=-1.0):
     """
         Create mock catalog with test sources at zenith.
 
@@ -713,7 +714,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     freq = (150e6 * units.Hz)
 
     if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']:
-        raise KeyError("Invalid mock catalog arrangement" + str(arrangement))
+        raise KeyError("Invalid mock catalog arrangement: " + str(arrangement))
 
     if arrangement == 'off-zenith':
         if zen_ang is None:
@@ -746,10 +747,12 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         # Divide total Stokes I intensity among all sources
         # Test file has Stokes I = 1 Jy
     if arrangement == 'long-line':
-        if 'Nsrcs' is None:
+        if Nsrcs is None:
             Nsrcs = 10
+        if max_za < 0:
+            max_za = 85
         fluxes = np.ones(Nsrcs, dtype=float)
-        zas = np.linspace(-85, 85, Nsrcs)
+        zas = np.linspace(-max_za, max_za, Nsrcs)
         alts = 90. - zas
         azs = np.zeros(Nsrcs, dtype=float)
         inds = np.where(alts > 90.0)
@@ -789,7 +792,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     for si in range(Nsrcs):
         catalog.append(Source('src' + str(si), ra[si], dec[si], freq, [fluxes[si], 0, 0, 0]))
     if rank == 0 and save:
-        np.savez('mock_catalog', ra=ra.rad, dec=dec.rad)
+        np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
 
     catalog = np.array(catalog)
     return catalog
@@ -818,7 +821,7 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
 
 @profile
-def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='zenith'):
+def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='zenith', max_za=-1, save_catalog=False):
     """Run uvsim."""
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
@@ -829,16 +832,12 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
     if rank == 0:
         print('Nblts:', input_uv.Nblts)
         print('Nfreqs:', input_uv.Nfreqs)
-
         time = Time(input_uv.time_array[0], scale='utc', format='jd')
         if catalog is None:
             array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
-            if Nsrcs is not None:
-                print("Nsrcs:", Nsrcs)
-                catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc, Nsrcs=Nsrcs)
-            else:
-                catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc)
-
+            catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc,
+                                          save=save_catalog, Nsrcs=Nsrcs, max_za=max_za)
+        print('Nsrcs:', catalog.size)
         uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
         uv_container = initialize_uvdata(uvtask_list)
         # To split into PUs make a list of lists length NPUs

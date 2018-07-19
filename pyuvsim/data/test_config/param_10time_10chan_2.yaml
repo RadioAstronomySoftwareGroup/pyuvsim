@@ -3,7 +3,7 @@ filing:
   outfile_prefix: 'sim_'
 freq:
   Nfreqs: 10
-  bandwidth: 720000.0
+  bandwidth: 800000.0
   start_freq: 100000000.0
 sources:
   catalog: 'mock'

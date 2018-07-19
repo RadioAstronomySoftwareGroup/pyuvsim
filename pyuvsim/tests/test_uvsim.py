@@ -740,3 +740,51 @@ def test_read_gleam():
     sourcelist = pyuvsim.read_gleam_catalog(GLEAM_vot)
 
     nt.assert_equal(len(sourcelist), 50)
+
+
+def test_gaussbeam_values():
+    """
+        Make the long-line point sources up to 10 degrees from zenith.
+        Obtain visibilities
+        Confirm that the values match the expected beam values at those zenith angles.
+    """
+    sigma = 0.05
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_file)
+
+    array_location = EarthLocation.from_geocentric(hera_uv.telescope_location[0],
+                                                   hera_uv.telescope_location[1],
+                                                   hera_uv.telescope_location[2],
+                                                   unit='m')
+    freq = hera_uv.freq_array[0, 0] * units.Hz
+
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+
+    catalog = pyuvsim.create_mock_catalog(time=time, arrangement='long-line', Nsrcs=41,
+                                          max_za=10., array_location=array_location)
+
+    beam = pyuvsim.AnalyticBeam('gaussian', sigma=sigma)
+    array = pyuvsim.Telescope('telescope_name', array_location, [beam])
+
+    # Need a dummy baseline for this test.
+    antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
+    antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
+
+    baseline = pyuvsim.Baseline(antenna1, antenna2)
+    coherencies = []
+    zenith_angles = []
+    for src in catalog:
+        task = pyuvsim.UVTask(src, time, freq, baseline, array)
+        engine = pyuvsim.UVEngine(task)
+        engine.apply_beam()
+#        task.source.az_za_calc(time, array_location)
+        zenith_angles.append(task.source.az_za[1])   # In radians.
+        coherencies.append(np.real(engine.apparent_coherency[0, 0]).astype(float))  # All four components should be identical
+
+    coherencies = np.array(coherencies)
+    zenith_angles = np.array(zenith_angles)
+
+    # Confirm the coherency values (ie., brightnesses) match the beam values.
+
+    beam_values = np.exp(-(zenith_angles)**2/(2*beam.sigma**2))
+    nt.assert_true(np.all(beam_values**2 == coherencies))
