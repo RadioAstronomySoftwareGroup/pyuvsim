@@ -70,11 +70,11 @@ def point_sources_from_params(catalog_csv):
     catalog = []
 
     for si in xrange(catalog_table.size):
-        catalog.append(pyuvsim.Source(catalog_table['source_id'],
-                                      Angle(catalog_table['ra_j2000'], unit=units.hour),
-                                      Angle(catalog_table['dec_j2000'], unit=units.deg),
-                                      catalog_table['frequency'] * units.Hz,
-                                      [catalog_table['flux_density_I'], 0, 0, 0]))
+        catalog.append(pyuvsim.Source(catalog_table['source_id'][si],
+                                      Angle(catalog_table['ra_j2000'][si], unit=units.hour),
+                                      Angle(catalog_table['dec_j2000'][si], unit=units.deg),
+                                      catalog_table['frequency'][si] * units.Hz,
+                                      [catalog_table['flux_density_I'][si], 0, 0, 0]))
 
     return catalog
 
@@ -120,13 +120,27 @@ def initialize_uvdata_from_params(param_dict):
     beam_ids = ant_layout['beamid']
     beam_list = []
     for beamID in np.unique(beam_ids):
-        path = telparam['beam_paths'][beamID]
+        beam_model = telparam['beam_paths'][beamID]
         uvb = UVBeam()
-        if not os.path.exists(path):
-            filename = path
+        if beam_model in ['gaussian', 'tophat']:
+            # Identify analytic beams
+            if beam_model == 'gaussian':
+                try:
+                    beam = pyuvsim.AnalyticBeam('gaussian', sigma=telparam['sigma'])
+                except KeyError as err:
+                    print("Missing sigma for gaussian beam.")
+                    raise err
+            else:
+                beam = pyuvsim.AnalyticBeam('tophat')
+            beam_list.append(beam)
+            continue
+        if not os.path.exists(beam_model):
+            filename = beam_model
             path = os.path.join(SIM_DATA_PATH, filename)
             if not os.path.exists(path):
                 raise OSError("Could not find file " + filename)
+        else:
+            path = beam_model   # beam_model = path to beamfits
         uvb.read_beamfits(path)
         beam_list.append(uvb)
     param_dict['Nants_data'] = antnames.size
@@ -141,8 +155,8 @@ def initialize_uvdata_from_params(param_dict):
     freq_params = param_dict['freq']
 
     freq_keywords = ['freq_array', 'start_freq', 'end_freq', 'Nfreqs',
-                     'channel_width', 'bandwidth', 'center_freq']
-    fa, sf, ef, nf, cw, bw, cf = [fk in freq_params for fk in freq_keywords]
+                     'channel_width', 'bandwidth']
+    fa, sf, ef, nf, cw, bw = [fk in freq_params for fk in freq_keywords]
     kws_used = ", ".join(freq_params.keys())
 
     if fa:
@@ -166,7 +180,7 @@ def initialize_uvdata_from_params(param_dict):
                 bw = True
             if bw:
                 freq_params['Nfreqs'] = int(np.floor(freq_params['bandwidth']
-                                                     / freq_params['channel_width'])) + 1
+                                                     / freq_params['channel_width']))
             else:
                 raise ValueError("Either bandwidth or band edges "
                                  "must be specified: " + kws_used)
@@ -176,30 +190,31 @@ def initialize_uvdata_from_params(param_dict):
                 raise ValueError("Either bandwidth or channel width"
                                  " must be specified: " + kws_used)
             freq_params['channel_width'] = (freq_params['bandwidth']
-                                            / float(freq_params['Nfreqs'] - 1))
+                                            / float(freq_params['Nfreqs']))
 
         if not bw:
             freq_params['bandwidth'] = (freq_params['channel_width']
                                         * freq_params['Nfreqs'])
+            bw = True
         if not sf:
             if ef and bw:
                 freq_params['start_freq'] = freq_params['end_freq'] - freq_params['bandwidth']
-            if cf and bw:
-                freq_params['start_freq'] = freq_params['center_freq'] - freq_params['bandwidth'] / 2.
         if not ef:
             if sf and bw:
                 freq_params['end_freq'] = freq_params['start_freq'] + freq_params['bandwidth']
-            if cf and bw:
-                freq_params['end_freq'] = freq_params['center_freq'] + freq_params['bandwidth'] / 2.
 
-        freq_params['end_freq'] += freq_params['channel_width'] / 2.0
-        freq_arr = np.arange(freq_params['start_freq'],
-                             freq_params['end_freq'],
-                             freq_params['channel_width'])   # Include last freq.
-    try:
-        assert freq_arr.size == freq_params["Nfreqs"]
-    except AssertionError as err:
-        raise err
+        freq_arr = np.linspace(freq_params['start_freq'],
+                               freq_params['end_freq'],
+                               freq_params['Nfreqs'], endpoint=False)
+    if freq_params['Nfreqs'] != 1:
+        try:
+            assert np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1), atol=1.0)  # 1 Hz
+        except AssertionError as err:
+            print freq_params
+            print freq_params['Nfreqs']
+            print freq_params['bandwidth'] / 2.
+            print np.diff(freq_arr)[0]
+            raise err
 
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
@@ -257,6 +272,7 @@ def initialize_uvdata_from_params(param_dict):
                   'This may not be well-defined.')
 
     inttime_days = time_params['integration_time'] * 1 / (24. * 3600.)
+    inttime_days = np.trunc(inttime_days * 24 * 3600) / (24. * 3600.)
     if not dd:
         time_params['duration'] = inttime_days * (time_params['Ntimes'])
         dd = True
@@ -269,14 +285,17 @@ def initialize_uvdata_from_params(param_dict):
     if not (st or et):
         raise ValueError("Either a start or end time must be specified" + kws_used)
 
-    time_params['end_time'] += inttime_days / 2.0
-    time_arr = np.arange(time_params['start_time'],
-                         time_params['end_time'],
-                         inttime_days)
-    try:
-        assert time_arr.size == time_params['Ntimes']
-    except AssertionError as err:
-        raise err
+    time_arr = np.linspace(time_params['start_time'],
+                           time_params['end_time'],
+                           time_params['Ntimes'], endpoint=False)
+
+    if time_params['Ntimes'] != 1:
+        try:
+            assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=1e-5)   # To nearest second
+        except AssertionError as err:
+            print time_params
+            print np.diff(time_arr)[0]
+            raise err
 
     Nbl = (param_dict['Nants_data'] + 1) * param_dict['Nants_data'] / 2
 
@@ -294,7 +313,7 @@ def initialize_uvdata_from_params(param_dict):
         if hasattr(uv_obj, k):
             setattr(uv_obj, k, param_dict[k])
 
-    bls = np.array([uv_obj.antnums_to_baseline(j, i)
+    bls = np.array([uv_obj.antnums_to_baseline(uv_obj.antenna_numbers[j], uv_obj.antenna_numbers[i])
                     for i in range(0, uv_obj.Nants_data)
                     for j in range(i, uv_obj.Nants_data)])
 

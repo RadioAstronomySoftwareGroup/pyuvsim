@@ -4,7 +4,7 @@ filing:
 freq:
   Nfreqs: 10
   channel_width: 80000.0
-  end_freq: 100720000.0
+  end_freq: 100800000.0
   start_freq: 100000000.0
 sources:
   catalog: 'mock'
@@ -17,3 +17,4 @@ time:
   end_time: 2457458.175040789
   integration_time: 11.0
   start_time: 2457458.1738949567
+  #start_time: 2457458.175168105
