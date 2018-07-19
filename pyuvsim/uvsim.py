@@ -295,8 +295,8 @@ class AnalyticBeam(object):
 
     def __eq__(self, other):
         if self.type == 'gaussian':
-            return ((self.type == other.type) and
-                    (self.sigma == other.sigma))
+            return ((self.type == other.type)
+                    and (self.sigma == other.sigma))
         elif self.type == 'tophat':
             return other.type == 'tophat'
         else:
@@ -679,7 +679,7 @@ def initialize_uvdata(uvtask_list):
 
     uv_obj.antenna_names = antnames.tolist()
     uv_obj.antenna_numbers = antnums
-    antpos_ecef = uvutils.ECEF_from_ENU(antpos.T, *uv_obj.telescope_location_lat_lon_alt).T - uv_obj.telescope_location
+    antpos_ecef = uvutils.ECEF_from_ENU(antpos, *uv_obj.telescope_location_lat_lon_alt) - uv_obj.telescope_location
     uv_obj.antenna_positions = antpos_ecef
     uv_obj.ant_1_array = np.array(ant_1_array)
     uv_obj.ant_2_array = np.array(ant_2_array)
