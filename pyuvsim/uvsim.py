@@ -293,6 +293,15 @@ class AnalyticBeam(object):
 
         return interp_data, interp_basis_vector
 
+    def __eq__(self, other):
+        if self.type == 'gaussian':
+            return ((self.type == other.type) and
+                   (self.sigma == other.sigma))
+        elif self.type == 'tophat':
+            return other.type == 'tophat'
+        else:
+            return False
+
 
 class Antenna(object):
     @profile
@@ -338,6 +347,15 @@ class Antenna(object):
                 and np.allclose(self.pos_enu.to('m').value, other.pos_enu.to('m').value, atol=1e-3)
                 and (self.beam_id == other.beam_id))
 
+    def __gt__(self, other):
+        return (self.number > other.number)
+    def __ge__(self, other):
+        return (self.number >= other.number)
+    def __lt__(self, other):
+        return not self.__ge__(other)
+    def __le__(self, other):
+        return not self.__gt__(other)
+
 
 class Baseline(object):
     @profile
@@ -353,6 +371,19 @@ class Baseline(object):
                 and (self.antenna2 == other.antenna2)
                 and np.allclose(self.enu.to('m').value, other.enu.to('m').value, atol=1e-3)
                 and np.allclose(self.uvw.to('m').value, other.uvw.to('m').value, atol=1e-3))
+
+    def __gt__(self, other):
+        if self.antenna1 == other.antenna1:
+            return self.antenna2 > other.antenna2
+        return self.antenna1 > other.antenna1
+    def __ge__(self, other):
+        if self.antenna1 == other.antenna1:
+            return self.antenna2 >= other.antenna2
+        return self.antenna1 >= other.antenna1
+    def __lt__(self, other):
+        return not self.__ge__(other)
+    def __le__(self, other):
+        return not self.__gt__(other)
 
 
 class UVTask(object):
@@ -378,18 +409,27 @@ class UVTask(object):
                 and (self.uvdata_index == other.uvdata_index)
                 and (self.telescope == other.telescope))
 
-    def __cmp__(self, other):
-        # NB __cmp__ is not allowed in Python3.
-
+    def __gt__(self, other):
         blti0, _, fi0 = self.uvdata_index
         blti1, _, fi1 = other.uvdata_index
+        if self.baseline == other.baseline:
+            if fi0 == fi1:
+                return blti0 > blti1
+            return fi0 > fi1
+        return self.baseline > other.baseline
 
-        if blti0 > blti1:
-            return 1
-        elif blti0 == blti1:
-            return 1 if fi0 > fi1 else -1
-        else:
-            return -1
+    def __ge__(self, other):
+        blti0, _, fi0 = self.uvdata_index
+        blti1, _, fi1 = other.uvdata_index
+        if self.baseline == other.baseline:
+            if fi0 == fi1:
+                return blti0 >= blti1
+            return fi0 >= fi1
+        return self.baseline >= other.baseline
+    def __lt__(self, other):
+        return not self.__ge__(other)
+    def __le__(self, other):
+        return not self.__gt__(other)
 
 
 class UVEngine(object):
