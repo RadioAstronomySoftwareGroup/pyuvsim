@@ -1,0 +1,21 @@
+filing:
+  outdir: .
+  outfile_name: ''
+  outfile_prefix: ''
+freq:
+  Nfreqs: 1
+  channel_width: 80000.0
+  end_freq: 100000000.0
+  start_freq: 100000000.0
+sources:
+  catalog: mock
+  mock_arrangement: zenith
+telescope:
+  array_layout: ../data/test_layout_6ant.csv
+  telescope_config_name: ../data/telescope_config_6ant.yaml
+time:
+  Ntimes: 1
+  end_time: 2457458.1738949567
+  integration_time: 11.0
+  start_time: 2457458.1738949567
+config_path: .
