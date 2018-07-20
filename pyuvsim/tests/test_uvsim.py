@@ -241,6 +241,7 @@ def test_single_offzenith_source_uvfits():
     """Test single off-zenith source using test uvdata file."""
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file, ant_str='cross')
+    hera_uv.unphase_to_drift()
 
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
@@ -258,8 +259,9 @@ def test_single_offzenith_source_uvfits():
     freq = hera_uv.freq_array[0, 0] * units.Hz
 
     # get antennas positions into ENU
-    antpos = hera_uv.antenna_positions[0:2, :] + hera_uv.telescope_location
-    antpos = uvutils.ENU_from_ECEF(antpos.T, *hera_uv.telescope_location_lat_lon_alt).T
+#    antpos = hera_uv.antenna_positions[0:2, :] + hera_uv.telescope_location
+#    antpos = uvutils.ENU_from_ECEF(antpos.T, *hera_uv.telescope_location_lat_lon_alt).T
+    antpos, _ = hera_uv.get_ENU_antpos()
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
@@ -279,6 +281,7 @@ def test_single_offzenith_source_uvfits():
     beam_list = [beam]
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
+
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
     task = pyuvsim.UVTask(source, time, freq, baseline, array)
     engine = pyuvsim.UVEngine(task)
@@ -299,12 +302,13 @@ def test_single_offzenith_source_uvfits():
     uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
 
     vis_analytic = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(2j * np.pi * (uvw_wavelength_array[0, 0] * src_l + uvw_wavelength_array[0, 1] * src_m + uvw_wavelength_array[0, 2] * src_n))
-    vis_analytic = np.array([vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[1, 0], vis_analytic[0, 1]])
+    vis_analytic = np.array([vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[0, 1], vis_analytic[1, 0]])
 
     print('Analytic visibility', vis_analytic)
     print('Calculated visibility', visibility)
-
-    nt.assert_true(np.allclose(visibility, vis_analytic, atol=5e-2))
+    print baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls]
+    nt.assert_true(np.allclose(baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4))
+    nt.assert_true(np.allclose(visibility, vis_analytic, atol=1e-4))
 
 
 def test_tophat_beam():
@@ -396,8 +400,7 @@ def test_offzenith_source_multibl_uvfits():
         Calculate visibilities for a baseline triangle.
     """
     hera_uv = UVData()
-    hera_uv.read_uvfits(triangle_uvfits_file, ant_str='cross')   # consists of a right triangle of baselines
-    # hera_uv.read_uvfits(longbl_uvfits_file, ant_str='cross')   # consists of a right triangle of baselines
+    hera_uv.read_uvfits(longbl_uvfits_file, ant_str='cross')   # consists of a right triangle of baselines with w term
     hera_uv.unphase_to_drift()
 
     src_az = Angle('90.0d')
@@ -437,9 +440,9 @@ def test_offzenith_source_multibl_uvfits():
 
     beam_list = [beam]
 
-    baselines = [pyuvsim.Baseline(antenna1, antenna2),
-                 pyuvsim.Baseline(antenna1, antenna3),
-                 pyuvsim.Baseline(antenna2, antenna3)]
+    baselines = [pyuvsim.Baseline(antenna2, antenna1),
+                 pyuvsim.Baseline(antenna3, antenna1),
+                 pyuvsim.Baseline(antenna3, antenna2)]
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
     tasks = [pyuvsim.UVTask(source, time, freq, bl, array) for bl in baselines]
     visibilities = []
@@ -472,19 +475,15 @@ def test_offzenith_source_multibl_uvfits():
     print('file uvws: ', np.around(hera_uv.uvw_array[0:hera_uv.Nbls]))
     print('Difference: ', uvws - hera_uv.uvw_array[0:hera_uv.Nbls])
 
-    pyuvdata_branch = pyuvdata.version.git_branch
-
     # the file used different phasing code than the test uses -- increase the tolerance
-    nt.assert_true(np.allclose(uvws, hera_uv.uvw_array[0:hera_uv.Nbls], atol=5e-2))
+    nt.assert_true(np.allclose(uvws, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4))
 
     print('Analytic visibility', visibilities_analytic)
     print('Calculated visibility', visibilities)
     print(np.array(visibilities) - np.array(visibilities_analytic))
 
-    print(pyuvdata.version.git_branch)
-
     # the file used different phasing code than the test uses -- increase the tolerance
-    nt.assert_true(np.allclose(visibilities, visibilities_analytic, atol=5e-2))
+    nt.assert_true(np.allclose(visibilities, visibilities_analytic, atol=1e-4))
 
 
 # This test is supposed to see if miriad works for conjugation, but right now there are too
