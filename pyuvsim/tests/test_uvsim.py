@@ -241,6 +241,74 @@ def test_single_zenith_source_uvdata():
     nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3))
 
 
+def test_redundant_baselines():
+    """Check that two perfectly redundant baselines are truly redundant. """
+
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_file, ant_str='cross')
+    hera_uv.unphase_to_drift()
+
+    src_az = Angle('90.0d')
+    src_alt = Angle('85.0d')
+    src_za = Angle('90.0d') - src_alt
+
+    src_l = np.sin(src_az.rad) * np.sin(src_za.rad)
+    src_m = np.cos(src_az.rad) * np.sin(src_za.rad)
+    src_n = np.cos(src_za.rad)
+
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    array_location = EarthLocation.from_geocentric(hera_uv.telescope_location[0],
+                                                   hera_uv.telescope_location[1],
+                                                   hera_uv.telescope_location[2],
+                                                   unit='m')
+    freq = hera_uv.freq_array[0, 0] * units.Hz
+
+    # get antennas positions into ENU
+    antpos, _ = hera_uv.get_ENU_antpos()
+
+    en_shift = [5., 5., 0]
+    antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
+    antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
+    antenna3 = pyuvsim.Antenna('ant3', 3, np.array(antpos[0, :]) + en_shift, 0)
+    antenna4 = pyuvsim.Antenna('ant4', 4, np.array(antpos[1, :]) + en_shift, 0)
+
+    # setup the things that don't come from pyuvdata:
+    # make a source off zenith
+    time.location = array_location
+    source = create_offzenith_source(time, 'offzensrc', az=src_az, alt=src_alt)
+
+    beam = UVBeam()
+    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+
+    baseline1 = pyuvsim.Baseline(antenna1, antenna2)
+    baseline2 = pyuvsim.Baseline(antenna3, antenna4)
+
+    print('Baseline1 uvw: ', baseline1.uvw)
+    print('Baseline2 uvw: ', baseline2.uvw)
+    print('Baseline1 enus: ', baseline1.antenna1.pos_enu, baseline1.antenna2.pos_enu)
+    print('Baseline2 enus: ', baseline2.antenna1.pos_enu, baseline2.antenna2.pos_enu)
+
+    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+
+    task1 = pyuvsim.UVTask(source, time, freq, baseline1, array)
+    engine = pyuvsim.UVEngine(task1)
+
+    visibility1 = engine.make_visibility()
+
+    task2 = pyuvsim.UVTask(source, time, freq, baseline2, array)
+    engine = pyuvsim.UVEngine(task2)
+
+    visibility2 = engine.make_visibility()
+
+    nt.assert_true(np.allclose(visibility1, visibility2, atol=1e-4))
+
+
 def test_single_offzenith_source_uvfits():
     """Test single off-zenith source using test uvdata file."""
     hera_uv = UVData()
