@@ -119,8 +119,12 @@ def initialize_uvdata_from_params(param_dict):
     antnames = ant_layout['name']
     beam_ids = ant_layout['beamid']
     beam_list = []
+    beam_dict = {}
     for beamID in np.unique(beam_ids):
         beam_model = telparam['beam_paths'][beamID]
+        which_ants = antnames[np.where(beam_ids == beamID)]
+        for a in which_ants:
+            beam_dict[a] = beamID
         uvb = UVBeam()
         if beam_model in ['gaussian', 'tophat']:
             # Identify analytic beams
@@ -143,13 +147,14 @@ def initialize_uvdata_from_params(param_dict):
             path = beam_model   # beam_model = path to beamfits
         uvb.read_beamfits(path)
         beam_list.append(uvb)
+
     param_dict['Nants_data'] = antnames.size
     param_dict['Nants_telescope'] = antnames.size
     param_dict['antenna_names'] = np.array(antnames.tolist())
     param_dict['antenna_numbers'] = np.array(ant_layout['number'])
     antpos_enu = np.vstack((E, N, U)).T
 
-    param_dict['antenna_positions'] = uvutils.ECEF_from_ENU(antpos_enu.T, *tloc).T - param_dict['telescope_location']
+    param_dict['antenna_positions'] = uvutils.ECEF_from_ENU(antpos_enu, *tloc) - param_dict['telescope_location']
 
     # Parse frequency structure
     freq_params = param_dict['freq']
@@ -176,7 +181,7 @@ def initialize_uvdata_from_params(param_dict):
                 raise ValueError("Either channel_width or Nfreqs "
                                  " must be included in parameters:" + kws_used)
             if sf and ef:
-                freq_params['bandwidth'] = freq_params['start_freq'] - freq_params['end_freq']
+                freq_params['bandwidth'] = freq_params['end_freq'] - freq_params['start_freq']
                 bw = True
             if bw:
                 freq_params['Nfreqs'] = int(np.floor(freq_params['bandwidth']
@@ -254,7 +259,7 @@ def initialize_uvdata_from_params(param_dict):
             time_params['duration'] = time_params['end_time'] - time_params['start_time']
             dd = True
         if dd:
-            time_params['Ntimes'] = int(np.floor(time_params['duration']
+            time_params['Ntimes'] = int(np.round(time_params['duration']
                                                  / (time_params['integration_time']
                                                     * dayspersec))) + 1
         else:
@@ -291,7 +296,7 @@ def initialize_uvdata_from_params(param_dict):
 
     if time_params['Ntimes'] != 1:
         try:
-            assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=1e-5)   # To nearest second
+            assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=1e-4)   # To nearest second
         except AssertionError as err:
             print time_params
             print np.diff(time_arr)[0]
@@ -324,7 +329,7 @@ def initialize_uvdata_from_params(param_dict):
     uv_obj.ant_1_array, uv_obj.ant_2_array = \
         uv_obj.baseline_to_antnums(uv_obj.baseline_array)
 
-    return uv_obj, beam_list, beam_ids
+    return uv_obj, beam_list, beam_dict, beam_ids
 
 
 def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
@@ -360,9 +365,6 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
         layout_csv_name = os.path.basename(layout_csv_path)
 
     antpos_enu, antenna_numbers = uvdata_in.get_ENU_antpos()
-#    antpos_enu = uvutils.ENU_from_ECEF((uvdata_in.antenna_positions +
-#                                        uvdata_in.telescope_location).T,
-#                                       * uvdata_in.telescope_location_lat_lon_alt).T
 
     e, n, u = antpos_enu.T
     beam_ids = np.zeros_like(e).astype(int)
@@ -423,7 +425,7 @@ def uvdata_to_config_file(uvdata_in, config_filename=None, telescope_config_name
 
     freq_array = uvdata_in.freq_array[0, :].tolist()
     time_array = uvdata_in.time_array.tolist()
-
+    inttime_days = time_array[1] - time_array[0]
     param_dict = dict(
         time=dict(
             start_time=time_array[0],
@@ -433,7 +435,7 @@ def uvdata_to_config_file(uvdata_in, config_filename=None, telescope_config_name
         ),
         freq=dict(
             start_freq=freq_array[0],
-            end_freq=freq_array[-1],
+            end_freq=freq_array[-1] + uvdata_in.channel_width,
             channel_width=uvdata_in.channel_width,
             Nfreqs=uvdata_in.Nfreqs,
         ),

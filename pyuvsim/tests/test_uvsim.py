@@ -654,8 +654,9 @@ def test_uvdata_init():
     hera_uv.history = 'UVSim'
     hera_uv.instrument = hera_uv.telescope_name
     hera_uv.integration_time = 1.
-
-    nt.assert_equals(hera_uv._antenna_positions, uvdata_out._antenna_positions)
+    enu_out = uvdata_out.get_ENU_antpos()
+    enu_in = hera_uv.get_ENU_antpos()
+    nt.assert_equal(hera_uv._antenna_positions, uvdata_out._antenna_positions)
     nt.assert_true(uvdata_out.__eq__(hera_uv, check_extra=False))
 
 
@@ -702,6 +703,9 @@ def test_run_serial_uvsim():
     beam_list = [beam]
 
     uv_out = pyuvsim.run_serial_uvsim(hera_uv, beam_list, catalog=None, Nsrcs=1)
+
+    print np.round(uv_out.data_array)
+    print hera_uv.data_array
 
     nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))
 
@@ -786,5 +790,5 @@ def test_gaussbeam_values():
 
     # Confirm the coherency values (ie., brightnesses) match the beam values.
 
-    beam_values = np.exp(-(zenith_angles)**2/(2*beam.sigma**2))
+    beam_values = np.exp(-(zenith_angles)**2 / (2 * beam.sigma**2))
     nt.assert_true(np.all(beam_values**2 == coherencies))

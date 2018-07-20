@@ -293,6 +293,15 @@ class AnalyticBeam(object):
 
         return interp_data, interp_basis_vector
 
+    def __eq__(self, other):
+        if self.type == 'gaussian':
+            return ((self.type == other.type)
+                    and (self.sigma == other.sigma))
+        elif self.type == 'tophat':
+            return other.type == 'tophat'
+        else:
+            return False
+
 
 class Antenna(object):
     @profile
@@ -338,6 +347,18 @@ class Antenna(object):
                 and np.allclose(self.pos_enu.to('m').value, other.pos_enu.to('m').value, atol=1e-3)
                 and (self.beam_id == other.beam_id))
 
+    def __gt__(self, other):
+        return (self.number > other.number)
+
+    def __ge__(self, other):
+        return (self.number >= other.number)
+
+    def __lt__(self, other):
+        return not self.__ge__(other)
+
+    def __le__(self, other):
+        return not self.__gt__(other)
+
 
 class Baseline(object):
     @profile
@@ -353,6 +374,22 @@ class Baseline(object):
                 and (self.antenna2 == other.antenna2)
                 and np.allclose(self.enu.to('m').value, other.enu.to('m').value, atol=1e-3)
                 and np.allclose(self.uvw.to('m').value, other.uvw.to('m').value, atol=1e-3))
+
+    def __gt__(self, other):
+        if self.antenna1 == other.antenna1:
+            return self.antenna2 > other.antenna2
+        return self.antenna1 > other.antenna1
+
+    def __ge__(self, other):
+        if self.antenna1 == other.antenna1:
+            return self.antenna2 >= other.antenna2
+        return self.antenna1 >= other.antenna1
+
+    def __lt__(self, other):
+        return not self.__ge__(other)
+
+    def __le__(self, other):
+        return not self.__gt__(other)
 
 
 class UVTask(object):
@@ -378,18 +415,29 @@ class UVTask(object):
                 and (self.uvdata_index == other.uvdata_index)
                 and (self.telescope == other.telescope))
 
-    def __cmp__(self, other):
-        # NB __cmp__ is not allowed in Python3.
-
+    def __gt__(self, other):
         blti0, _, fi0 = self.uvdata_index
         blti1, _, fi1 = other.uvdata_index
+        if self.baseline == other.baseline:
+            if fi0 == fi1:
+                return blti0 > blti1
+            return fi0 > fi1
+        return self.baseline > other.baseline
 
-        if blti0 > blti1:
-            return 1
-        elif blti0 == blti1:
-            return 1 if fi0 > fi1 else -1
-        else:
-            return -1
+    def __ge__(self, other):
+        blti0, _, fi0 = self.uvdata_index
+        blti1, _, fi1 = other.uvdata_index
+        if self.baseline == other.baseline:
+            if fi0 == fi1:
+                return blti0 >= blti1
+            return fi0 >= fi1
+        return self.baseline >= other.baseline
+
+    def __lt__(self, other):
+        return not self.__ge__(other)
+
+    def __le__(self, other):
+        return not self.__gt__(other)
 
 
 class UVEngine(object):
@@ -507,14 +555,13 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
                           EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
                           beam_list)
 
-    if len(beam_list) > 1 and beam_dict is not None:
+    if len(beam_list) > 1 and beam_dict is None:
         raise ValueError('beam_dict must be supplied if beam_list has more than one element.')
 
     times = input_uv.time_array
 
-    antpos_ECEF = input_uv.antenna_positions + input_uv.telescope_location
-    antpos_ENU = uvutils.ENU_from_ECEF(antpos_ECEF.T,
-                                       *input_uv.telescope_location_lat_lon_alt).T
+    antpos_ENU, _ = input_uv.get_ENU_antpos()
+
     antenna_names = input_uv.antenna_names
     antennas = []
     for num, antname in enumerate(antenna_names):
@@ -632,7 +679,7 @@ def initialize_uvdata(uvtask_list):
 
     uv_obj.antenna_names = antnames.tolist()
     uv_obj.antenna_numbers = antnums
-    antpos_ecef = uvutils.ECEF_from_ENU(antpos.T, *uv_obj.telescope_location_lat_lon_alt).T - uv_obj.telescope_location
+    antpos_ecef = uvutils.ECEF_from_ENU(antpos, *uv_obj.telescope_location_lat_lon_alt) - uv_obj.telescope_location
     uv_obj.antenna_positions = antpos_ecef
     uv_obj.ant_1_array = np.array(ant_1_array)
     uv_obj.ant_2_array = np.array(ant_2_array)
