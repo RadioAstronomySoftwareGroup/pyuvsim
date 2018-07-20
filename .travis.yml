@@ -27,7 +27,7 @@ install:
   - source activate test-environment
   - conda install astropy pyyaml mpi4py memory_profiler
   - conda install -c conda-forge pycodestyle coveralls
-  - pip install git+https://github.com/HERA-Team/pyuvdata.git
+  - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
   - python setup.py install
 
 script:

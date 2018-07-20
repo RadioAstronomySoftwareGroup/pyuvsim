@@ -1,3 +1,7 @@
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2018 Radio Astronomy Software Group
+# Licensed under the 2-clause BSD License
+
 from setuptools import setup
 import glob
 import os.path as op
@@ -10,8 +14,8 @@ import json
 
 setup_args = {
     'name': 'pyuvsim',
-    'author': '#datasim',
-    'url': 'https://github.com/HERA-Team/pyuvsim',
+    'author': 'Radio Astronomy Software Group',
+    'url': 'https://github.com/RadioAstronomySoftwareGroup/pyuvsim',
     'license': 'BSD',
     'description': 'A radio interferometer simulator',
     'package_dir': {'pyuvsim': 'pyuvsim'},
