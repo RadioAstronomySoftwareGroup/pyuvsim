@@ -223,7 +223,9 @@ class Source(object):
             (l, m, n) direction cosine values
         """
         # calculate direction cosines of source at current time and array location
-        az_za = self.az_za_calc(time, telescope_location)
+        if self.az_za is None:
+            az_za = self.az_za_calc(time, telescope_location)
+
         # Need a horizon mask, for now using pi/2
         if az_za[1] > (np.pi / 2.):
             return None
