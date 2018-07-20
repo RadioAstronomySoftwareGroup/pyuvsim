@@ -306,7 +306,7 @@ def test_redundant_baselines():
 
     visibility2 = engine.make_visibility()
 
-    nt.assert_true(np.allclose(visibility1, visibility2, atol=1e-4))
+    nt.assert_true(np.allclose(visibility1, visibility2))
 
 
 def test_single_offzenith_source_uvfits():
