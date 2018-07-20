@@ -279,6 +279,7 @@ def test_single_offzenith_source_uvfits():
     beam_list = [beam]
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
+    print baseline.uvw
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
     task = pyuvsim.UVTask(source, time, freq, baseline, array)
     engine = pyuvsim.UVEngine(task)
