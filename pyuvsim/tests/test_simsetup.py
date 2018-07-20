@@ -107,7 +107,7 @@ def test_uvfits_to_config():
         pyuvsim.simsetup.uvdata_to_telescope_config(uv0, herabeam_default,
                                                     telescope_config_name=telescope_config,
                                                     path_out=opath, return_names=True)
-    pyuvsim.simsetup.uvdata_to_config_file(uv0, config_filename=param_filename,
+    pyuvsim.simsetup.uvdata_to_config_file(uv0, param_filename=param_filename,
                                            telescope_config_name=os.path.join(path, telescope_config),
                                            layout_csv_name=os.path.join(path, layout_fname),
                                            path_out=opath)
@@ -126,7 +126,7 @@ def test_uvfits_to_config():
                                                     telescope_config_name=telescope_config,
                                                     layout_csv_name=layout_fname,
                                                     path_out=opath, return_names=True)
-    pyuvsim.simsetup.uvdata_to_config_file(uv1, config_filename=second_param_filename,
+    pyuvsim.simsetup.uvdata_to_config_file(uv1, param_filename=second_param_filename,
                                            telescope_config_name=os.path.join(path, telescope_config),
                                            layout_csv_name=os.path.join(path, layout_fname),
                                            path_out=opath)

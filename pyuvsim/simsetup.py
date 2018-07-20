@@ -401,7 +401,7 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
         return path_out, telescope_config_name, layout_csv_name
 
 
-def uvdata_to_config_file(uvdata_in, config_filename=None, telescope_config_name='',
+def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name='',
                           layout_csv_name='', catalog='mock', path_out='.'):
     """
     Extract simulation configuration settings from uvfits.
@@ -409,7 +409,7 @@ def uvdata_to_config_file(uvdata_in, config_filename=None, telescope_config_name
         uvdata_in (UVData) : uvdata object.
 
     Keywords:
-        config_filename (str, optional) : output param file name, defaults to config_#.yaml.
+        param_filename (str, optional) : output param file name, defaults to obsparam_#.yaml.
         telescope_config_name (str, optional) : Name of yaml file file. Defaults to blank string.
         layout_csv_name (str, optional) : Name of layout csv file. Defaults to blank string.
         catalog (str, optional): Path to catalog file, defaults to 'mock'.
@@ -420,8 +420,8 @@ def uvdata_to_config_file(uvdata_in, config_filename=None, telescope_config_name
 
     """
 
-    if config_filename is None:
-        config_filename = check_file_exists_and_increment(os.path.join(path_out, 'config.yaml'))
+    if param_filename is None:
+        param_filename = check_file_exists_and_increment(os.path.join(path_out, 'obsparam.yaml'))
 
     freq_array = uvdata_in.freq_array[0, :].tolist()
     time_array = uvdata_in.time_array.tolist()
@@ -458,5 +458,5 @@ def uvdata_to_config_file(uvdata_in, config_filename=None, telescope_config_name
     if catalog == 'mock':
         param_dict['sources']['mock_arrangement'] = 'zenith'
 
-    with open(os.path.join(path_out, config_filename), 'w') as yfile:
+    with open(os.path.join(path_out, param_filename), 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)
