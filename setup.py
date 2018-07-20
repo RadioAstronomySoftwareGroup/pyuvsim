@@ -4,13 +4,19 @@
 
 from setuptools import setup
 import glob
-import os.path as op
+import os
 from os import listdir
+import io
 import json
+from pyuvsim import version
 
-# data = [version.git_origin, version.git_hash, version.git_description, version.git_branch]
-# with open(op.join('pyuvsim', 'GIT_INFO'), 'w') as outfile:
-#     json.dump(data, outfile)
+data = [version.git_origin, version.git_hash, version.git_description, version.git_branch]
+with open(os.path.join('pyuvsim', 'GIT_INFO'), 'w') as outfile:
+    json.dump(data, outfile)
+
+with io.open('README.md', 'r', encoding='utf-8') as readme_file:
+    readme = readme_file.read()
+
 
 setup_args = {
     'name': 'pyuvsim',
@@ -18,6 +24,8 @@ setup_args = {
     'url': 'https://github.com/RadioAstronomySoftwareGroup/pyuvsim',
     'license': 'BSD',
     'description': 'A radio interferometer simulator',
+    'long_description': readme,
+    'long_description_content_type': 'text/markdown',
     'package_dir': {'pyuvsim': 'pyuvsim'},
     'packages': ['pyuvsim', 'pyuvsim.tests'],
     'scripts': glob.glob('scripts/*'),

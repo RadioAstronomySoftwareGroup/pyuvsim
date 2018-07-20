@@ -16,6 +16,7 @@ from itertools import izip
 from mpi4py import MPI
 from astropy.io.votable import parse_single_table
 import __builtin__
+from . import version as simversion
 
 try:
     import progressbar
@@ -627,11 +628,62 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
 
 
 @profile
-def initialize_uvdata(uvtask_list):
-    # writing 4 pol polarization files now
+def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None, obs_param_file=None,
+                      telescope_config_file=None, antenna_location_file=None):
+    """
+    Initialize an empty uvdata object to fill with simulation.
 
-    # Assume all tasks have the same telescope.
-    #   Enforce this generally!
+    Args:
+        uvtask_list: List of uvtasks to simulate.
+        source_list_name: Name of source list file or mock catalog.
+        uvdata_file: Name of input UVData file or None if initializing from
+            config files.
+        obs_param_file: Name of observation parameter config file or None if
+            initializing from a UVData file.
+        telescope_config_file: Name of telescope config file or None if
+            initializing from a UVData file.
+        antenna_location_file: Name of antenna location file or None if
+            initializing from a UVData file.
+    """
+
+    if not isinstance(source_list_name, str):
+        raise ValueError('source_list_name must be a string')
+
+    if uvdata_file is not None:
+        if not isinstance(uvdata_file, str):
+            raise ValueError('uvdata_file must be a string')
+        if (obs_param_file is not None or telescope_config_file is not None
+                or antenna_location_file is not None):
+            raise ValueError('If initializing from a uvdata_file, none of '
+                             'obs_param_file, telescope_config_file or '
+                             'antenna_location_file can be set.')
+    elif (obs_param_file is None or telescope_config_file is None
+            or antenna_location_file is None):
+        if not isinstance(obs_param_file, str):
+            raise ValueError('obs_param_file must be a string')
+        if not isinstance(telescope_config_file, str):
+            raise ValueError('telescope_config_file must be a string')
+        if not isinstance(antenna_location_file, str):
+            raise ValueError('antenna_location_file must be a string')
+        raise ValueError('If not initializing from a uvdata_file, all of '
+                         'obs_param_file, telescope_config_file or '
+                         'antenna_location_file must be set.')
+
+    # Version string to add to history
+    history = ('Simulated with pyuvsim version: ' + simversion.version + '.')
+    if simversion.git_hash is not '':
+        history += ('  Git origin: ' + uvversion.git_origin
+                    + '.  Git hash: ' + uvversion.git_hash
+                    + '.  Git branch: ' + uvversion.git_branch
+                    + '.  Git description: ' + uvversion.git_description + '.')
+
+    history += ' Sources from source list: ' + source_list_name
+
+    if uvdata_file is not None:
+        history += ' Based on UVData file ' + uvdata_file + '.'
+    else:
+        history += (' Based on config files ' + obs_param_file + ', '
+                    + telescope_config_file + ', ' + antenna_location_file)
 
     task_freqs = []
     task_bls = []
@@ -718,7 +770,7 @@ def initialize_uvdata(uvtask_list):
     uv_obj.data_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=np.complex)
     uv_obj.flag_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=bool)
     uv_obj.nsample_array = np.ones_like(uv_obj.data_array, dtype=float)
-    uv_obj.history = 'UVSim'
+    uv_obj.history = history
 
     uv_obj.check()
 
