@@ -13,7 +13,7 @@ import pyuvsim
 import astropy.constants as const
 from memory_profiler import profile
 import yaml
-import sys
+import sys,pickle
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
@@ -23,6 +23,7 @@ triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.u
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
 longbl_yaml_file = os.path.join(SIM_DATA_PATH,'5km_triangle_1time_1chan.yaml')
+laptop_size_sim = os.path.join(SIM_DATA_PATH,'laptop_size_sim.yaml')
 @profile
 def create_zenith_source(time, name):
     """Create pyuvsim Source object at zenith.
@@ -565,7 +566,8 @@ def test_single_offzenith_source_miriad():
 
 @profile
 def test_yaml_to_tasks():
-    params = yaml.safe_load(open(longbl_yaml_file))
+#    params = yaml.safe_load(open(longbl_yaml_file))
+    params = yaml.safe_load(open(laptop_size_sim))
     params['config_path']=longbl_yaml_file #not sure why I need this
     input_uv, beam_list, beam_ids = \
     pyuvsim.simsetup.initialize_uvdata_from_params(params)
@@ -577,11 +579,13 @@ def test_yaml_to_tasks():
                                 Nsrcs=10,
                                 array_location=HERA_location)
     print("Size of catalog:",sys.getsizeof(catalog)," bytes with ",
-                        len(catalog),"entries")                            
+                        len(catalog),"entries")
     uvtask_list = pyuvsim.uvdata_to_task_list(input_uv,
                                             catalog, beam_list)
-    print("Size of task list:",sys.getsizeof(uvtask_list)," bytes with ",
+    uvtask_pickle = pickle.dumps(uvtask_list)
+    print("getsizeof(uvtask_pickle) = ",sys.getsizeof(uvtask_pickle)," bytes with ",
                         len(uvtask_list),"entries")
+    print("len(uvtask_pickle) = ",len(uvtask_pickle))
 
 @profile
 def test_file_to_tasks():
