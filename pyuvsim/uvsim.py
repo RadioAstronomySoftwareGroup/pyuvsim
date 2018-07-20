@@ -903,7 +903,10 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     return catalog
 
 
-def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
+def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
+                     mock_arrangement='zenith', max_za=-1, save_catalog=False,
+                     uvdata_file=None, obs_param_file=None,
+                     telescope_config_file=None, antenna_location_file=None):
     """Run uvsim."""
 
     if not isinstance(input_uv, UVData):
@@ -911,10 +914,20 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
     time = Time(input_uv.time_array[0], scale='utc', format='jd')
     if catalog is None:
-        catalog = create_mock_catalog(time, arrangement='zenith')
+        array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
+        catalog = create_mock_catalog(time, arrangement=mock_arrangement,
+                                      array_location=array_loc,
+                                      save=save_catalog, Nsrcs=Nsrcs, max_za=max_za)
+        source_list_name = mock_arrangement + '_N=' + str(Nsrcs) + '_maxza=' + str(max_za)
+    else:
+        source_list_name = catalog
 
     uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
-    uvdata_out = initialize_uvdata(uvtask_list)
+    uvdata_out = initialize_uvdata(uvtask_list, source_list_name,
+                                   uvdata_file=uvdata_file,
+                                   obs_param_file=obs_param_file,
+                                   telescope_config_file=telescope_config_file,
+                                   antenna_location_file=antenna_location_file)
 
     for task in uvtask_list:
         engine = UVEngine(task)
@@ -926,7 +939,10 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
 
 @profile
-def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='zenith', max_za=-1, save_catalog=False):
+def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
+              mock_arrangement='zenith', max_za=-1, save_catalog=False,
+              uvdata_file=None, obs_param_file=None,
+              telescope_config_file=None, antenna_location_file=None):
     """Run uvsim."""
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
@@ -942,9 +958,18 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
             array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
             catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc,
                                           save=save_catalog, Nsrcs=Nsrcs, max_za=max_za)
+            source_list_name = mock_arrangement + '_N=' + str(Nsrcs) + '_maxza=' + str(max_za)
+        else:
+            source_list_name = catalog
+
         print('Nsrcs:', catalog.size)
         uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
-        uv_container = initialize_uvdata(uvtask_list)
+        uv_container = initialize_uvdata(uvtask_list, source_list_name,
+                                         uvdata_file=uvdata_file,
+                                         obs_param_file=obs_param_file,
+                                         telescope_config_file=telescope_config_file,
+                                         antenna_location_file=antenna_location_file)
+
         # To split into PUs make a list of lists length NPUs
         print("Splitting Task List")
         uvtask_list = np.array_split(uvtask_list, Npus)
