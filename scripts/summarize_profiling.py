@@ -1,4 +1,8 @@
-# Summarize profiling results in a table, given a set of directories
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2018 Radio Astronomy Software Group
+# Licensed under the 2-clause BSD License
+
+"""Summarize profiling results in a table, given a set of directories"""
 
 import os
 import sys
