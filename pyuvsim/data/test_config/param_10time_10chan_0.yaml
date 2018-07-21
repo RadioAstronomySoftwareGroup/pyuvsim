@@ -1,19 +1,19 @@
 filing:
-  outdir: '.'
-  outfile_prefix: 'sim_'
+  outdir: '.'   #Output file directory
+  outfile_prefix: 'sim_' # Prefix for the output uvfits file.
 freq:
-  Nfreqs: 10
-  channel_width: 80000.0
-  end_freq: 100800000.0
+  Nfreqs: 10    # Number of frequencies
+  channel_width: 80000.0    # Frequency channel width
+  end_freq: 100800000.0     # Start and end frequencies (Hz)
   start_freq: 100000000.0
 sources:
-  catalog: 'mock'
-  mock_arrangement: 'zenith'
+  catalog: 'mock'       #Choice of catalog file name (or specify mock to use builtin catalogs).
+  mock_arrangement: 'zenith'    # Choosing a mock layout
 telescope:
-  array_layout: 'triangle_bl_layout.csv'
-  telescope_config_name: '28m_triangle_10time_10chan.yaml'
+  array_layout: 'triangle_bl_layout.csv'    # Antenna layout csv file
+  telescope_config_name: '28m_triangle_10time_10chan.yaml'  # Telescope metadata file.
 time:
-  Ntimes: 10
-  end_time: 2457458.175168105
-  integration_time: 11.0
-  start_time: 2457458.1738949567
+  Ntimes: 10        # Number of times.
+  integration_time: 11.0  # Time step size  (seconds)
+  start_time: 2457458.1738949567    # Start and end times (Julian date)
+  end_time: 2457458.175168105   
