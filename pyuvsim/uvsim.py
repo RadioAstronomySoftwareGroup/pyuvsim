@@ -523,10 +523,10 @@ class UVEngine(object):
 def get_version_string():
     version_string = ('Simulated with pyuvsim version: ' + simversion.version + '.')
     if simversion.git_hash is not '':
-        version_string += ('  Git origin: ' + uvversion.git_origin
-                           + '.  Git hash: ' + uvversion.git_hash
-                           + '.  Git branch: ' + uvversion.git_branch
-                           + '.  Git description: ' + uvversion.git_description + '.')
+        version_string += ('  Git origin: ' + simversion.git_origin
+                           + '.  Git hash: ' + simversion.git_hash
+                           + '.  Git branch: ' + simversion.git_branch
+                           + '.  Git description: ' + simversion.git_description + '.')
     return version_string
 
 
