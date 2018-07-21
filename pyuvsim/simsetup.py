@@ -83,16 +83,24 @@ def point_sources_from_params(catalog_csv):
     return catalog
 
 
-def initialize_uvdata_from_params(param_dict):
+def initialize_uvdata_from_params(obs_params):
     """
         Construct a uvdata object from parameters in a valid yaml file.
 
         Arguments:
-            param_dict : Dictionary of parameters read in.
-                    Any uvdata parameters may be passed in through here.
+            obs_params: Either an obs_param file name or a dictionary of parameters read in.
+                Any uvdata parameters may be passed in through here.
         Returns:
             uv_obj, beam_list, beam_ids
     """
+
+    if isinstance(obs_params, str):
+        with open(obs_params, 'r') as pfile:
+            param_dict = yaml.safe_load(pfile)
+
+        param_dict['config_path'] = obs_params
+    else:
+        param_dict = obs_params
 
     # Parse telescope parameters
     tele_params = param_dict['telescope']
@@ -107,6 +115,12 @@ def initialize_uvdata_from_params(param_dict):
     if not os.path.exists(layout_csv):
         path = os.path.dirname(param_dict['config_path'])
         layout_csv = os.path.join(path, layout_csv)
+
+    extra_keywords = {'obs_param_file': os.path.basename(param_dict['config_path']),
+                      'telescope_config_file': tele_params['telescope_config_name'],
+                      'antenna_location_file': tele_params['array_layout']}
+
+    param_dict['extra_keywords'] = extra_keywords
 
     ant_layout = parse_layout_csv(layout_csv)
 

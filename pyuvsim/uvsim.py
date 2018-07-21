@@ -16,6 +16,7 @@ from itertools import izip
 from mpi4py import MPI
 from astropy.io.votable import parse_single_table
 import __builtin__
+from . import version as simversion
 
 try:
     import progressbar
@@ -519,6 +520,16 @@ class UVEngine(object):
         self.task.visibility_vector = self.make_visibility()
 
 
+def get_version_string():
+    version_string = ('Simulated with pyuvsim version: ' + simversion.version + '.')
+    if simversion.git_hash is not '':
+        version_string += ('  Git origin: ' + simversion.git_origin
+                           + '.  Git hash: ' + simversion.git_hash
+                           + '.  Git branch: ' + simversion.git_branch
+                           + '.  Git description: ' + simversion.git_description + '.')
+    return version_string
+
+
 @profile
 def read_gleam_catalog(gleam_votable):
     """
@@ -627,11 +638,60 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
 
 
 @profile
-def initialize_uvdata(uvtask_list):
-    # writing 4 pol polarization files now
+def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
+                      obs_param_file=None, telescope_config_file=None,
+                      antenna_location_file=None):
+    """
+    Initialize an empty uvdata object to fill with simulation.
 
-    # Assume all tasks have the same telescope.
-    #   Enforce this generally!
+    Args:
+        uvtask_list: List of uvtasks to simulate.
+        source_list_name: Name of source list file or mock catalog.
+        uvdata_file: Name of input UVData file or None if initializing from
+            config files.
+        obs_param_file: Name of observation parameter config file or None if
+            initializing from a UVData file.
+        telescope_config_file: Name of telescope config file or None if
+            initializing from a UVData file.
+        antenna_location_file: Name of antenna location file or None if
+            initializing from a UVData file.
+    """
+
+    if not isinstance(source_list_name, str):
+        raise ValueError('source_list_name must be a string')
+
+    if uvdata_file is not None:
+        if not isinstance(uvdata_file, str):
+            raise ValueError('uvdata_file must be a string')
+        if (obs_param_file is not None or telescope_config_file is not None
+                or antenna_location_file is not None):
+            raise ValueError('If initializing from a uvdata_file, none of '
+                             'obs_param_file, telescope_config_file or '
+                             'antenna_location_file can be set.')
+    elif (obs_param_file is None or telescope_config_file is None
+            or antenna_location_file is None):
+        if not isinstance(obs_param_file, str):
+            raise ValueError('obs_param_file must be a string')
+        if not isinstance(telescope_config_file, str):
+            raise ValueError('telescope_config_file must be a string')
+        if not isinstance(antenna_location_file, str):
+            raise ValueError('antenna_location_file must be a string')
+        raise ValueError('If not initializing from a uvdata_file, all of '
+                         'obs_param_file, telescope_config_file or '
+                         'antenna_location_file must be set.')
+
+    # Version string to add to history
+    history = get_version_string()
+
+    history += ' Sources from source list: ' + source_list_name + '.'
+
+    if uvdata_file is not None:
+        history += ' Based on UVData file: ' + uvdata_file + '.'
+    else:
+        history += (' Based on config files: ' + obs_param_file + ', '
+                    + telescope_config_file + ', ' + antenna_location_file)
+
+    history += ' Npus = ' + str(Npus) + '.'
 
     task_freqs = []
     task_bls = []
@@ -718,7 +778,7 @@ def initialize_uvdata(uvtask_list):
     uv_obj.data_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=np.complex)
     uv_obj.flag_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=bool)
     uv_obj.nsample_array = np.ones_like(uv_obj.data_array, dtype=float)
-    uv_obj.history = 'UVSim'
+    uv_obj.history = history
 
     uv_obj.check()
 
@@ -851,7 +911,10 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     return catalog
 
 
-def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
+def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
+                     mock_arrangement='zenith', max_za=-1, save_catalog=False,
+                     uvdata_file=None, obs_param_file=None,
+                     telescope_config_file=None, antenna_location_file=None):
     """Run uvsim."""
 
     if not isinstance(input_uv, UVData):
@@ -859,10 +922,29 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
     time = Time(input_uv.time_array[0], scale='utc', format='jd')
     if catalog is None:
-        catalog = create_mock_catalog(time, arrangement='zenith')
+        array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
+        catalog = create_mock_catalog(time, arrangement=mock_arrangement,
+                                      array_location=array_loc,
+                                      save=save_catalog, Nsrcs=Nsrcs, max_za=max_za)
+        source_list_name = mock_arrangement + '_N=' + str(Nsrcs) + '_maxza=' + str(max_za)
+    else:
+        source_list_name = catalog
 
     uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
-    uvdata_out = initialize_uvdata(uvtask_list)
+
+    if 'obs_param_file' in input_uv.extra_keywords:
+        obs_param_file = input_uv.extra_keywords['obs_param_file']
+        telescope_config_file = input_uv.extra_keywords['telescope_config_file']
+        antenna_location_file = input_uv.extra_keywords['antenna_location_file']
+        uvdata_file_pass = None
+    else:
+        uvdata_file_pass = uvdata_file
+
+    uvdata_out = initialize_uvdata(uvtask_list, source_list_name,
+                                   uvdata_file=uvdata_file_pass,
+                                   obs_param_file=obs_param_file,
+                                   telescope_config_file=telescope_config_file,
+                                   antenna_location_file=antenna_location_file)
 
     for task in uvtask_list:
         engine = UVEngine(task)
@@ -874,7 +956,10 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=3):
 
 
 @profile
-def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='zenith', max_za=-1, save_catalog=False):
+def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
+              mock_arrangement='zenith', max_za=-1, save_catalog=False,
+              uvdata_file=None, obs_param_file=None,
+              telescope_config_file=None, antenna_location_file=None):
     """Run uvsim."""
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
@@ -890,9 +975,27 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None, mock_arrangement='z
             array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
             catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc,
                                           save=save_catalog, Nsrcs=Nsrcs, max_za=max_za)
+            source_list_name = mock_arrangement + '_N=' + str(Nsrcs) + '_maxza=' + str(max_za)
+        else:
+            source_list_name = catalog
+
         print('Nsrcs:', catalog.size)
         uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
-        uv_container = initialize_uvdata(uvtask_list)
+
+        if 'obs_param_file' in input_uv.extra_keywords:
+            obs_param_file = input_uv.extra_keywords['obs_param_file']
+            telescope_config_file = input_uv.extra_keywords['telescope_config_file']
+            antenna_location_file = input_uv.extra_keywords['antenna_location_file']
+            uvdata_file_pass = None
+        else:
+            uvdata_file_pass = uvdata_file
+
+        uv_container = initialize_uvdata(uvtask_list, source_list_name,
+                                         uvdata_file=uvdata_file_pass,
+                                         obs_param_file=obs_param_file,
+                                         telescope_config_file=telescope_config_file,
+                                         antenna_location_file=antenna_location_file)
+
         # To split into PUs make a list of lists length NPUs
         print("Splitting Task List")
         uvtask_list = np.array_split(uvtask_list, Npus)
