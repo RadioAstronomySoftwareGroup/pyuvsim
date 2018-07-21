@@ -12,6 +12,7 @@ A comprehensive simulation package for radio interferometers in python.
    :maxdepth: 2
    :caption: Contents:
 
+   usage
    parameter_files
 
 
