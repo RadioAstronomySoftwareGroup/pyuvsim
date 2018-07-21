@@ -64,7 +64,7 @@ if rank == 0:
     else:
         # Not running off a uvfits.
         print("Simulating from parameters")
-        input_uv, beam_list, beam_ids = simsetup.initialize_uvdata_from_params(params)
+        input_uv, beam_list, beam_ids = simsetup.initialize_uvdata_from_params(args['paramsfile'], param_dict=params)
         print("Nfreqs: ", input_uv.Nfreqs)
         print("Ntimes: ", input_uv.Ntimes)
         beam = beam_list[0]

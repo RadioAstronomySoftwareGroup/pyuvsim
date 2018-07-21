@@ -64,13 +64,8 @@ def check_param_reader(config_num):
     beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2}
     expected_uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list, beam_dict=beam_dict)
 
-    with open(param_filename, 'r') as pf:
-        param_dict = yaml.safe_load(pf)
-
-    param_dict['config_path'] = param_filename    # Ensure path is present
-
     # Check default configuration
-    uv_obj, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv_obj, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_filename)
     uvtask_list = pyuvsim.uvdata_to_task_list(uv_obj, sources, new_beam_list, beam_dict=new_beam_dict)
     # Tasks are not ordered in UVTask lists, so need to sort them.
     # This is enabled by the comparison operator in UVTask

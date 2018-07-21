@@ -17,7 +17,8 @@ import pyuvsim
 import astropy.constants as const
 from memory_profiler import profile
 import yaml
-import sys,pickle
+import sys
+import pickle
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
@@ -26,8 +27,10 @@ EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
-longbl_yaml_file = os.path.join(SIM_DATA_PATH,'5km_triangle_1time_1chan.yaml')
-laptop_size_sim = os.path.join(SIM_DATA_PATH,'laptop_size_sim.yaml')
+longbl_yaml_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.yaml')
+laptop_size_sim = os.path.join(SIM_DATA_PATH, 'laptop_size_sim.yaml')
+
+
 @profile
 def create_zenith_source(time, name):
     """Create pyuvsim Source object at zenith.
@@ -112,6 +115,7 @@ def test_source_zenith():
     print(zenith_source_lmn)
 
     nt.assert_true(np.allclose(zenith_source_lmn, np.array([0, 0, 1])))
+
 
 @profile
 def test_single_zenith_source():
@@ -635,28 +639,28 @@ def test_single_offzenith_source_miriad():
 
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=5e-3))
 
+
 @profile
 def test_yaml_to_tasks():
-#    params = yaml.safe_load(open(longbl_yaml_file))
+    #    params = yaml.safe_load(open(longbl_yaml_file))
     params = yaml.safe_load(open(laptop_size_sim))
-    params['config_path']=longbl_yaml_file #not sure why I need this
+    params['config_path'] = longbl_yaml_file  # not sure why I need this
     input_uv, beam_list, beam_ids = \
-    pyuvsim.simsetup.initialize_uvdata_from_params(params)
+        pyuvsim.simsetup.initialize_uvdata_from_params(params)
     time = Time('2018-03-01 00:00:00', scale='utc')
     HERA_location = EarthLocation(lat='-30d43m17.5s',
-                                    lon='21d25m41.9s',
-                                    height=1073.)
-    catalog = pyuvsim.create_mock_catalog(time,arrangement='zenith',
-                                Nsrcs=10,
-                                array_location=HERA_location)
-    print("Size of catalog:",sys.getsizeof(catalog)," bytes with ",
-                        len(catalog),"entries")
-    uvtask_list = pyuvsim.uvdata_to_task_list(input_uv,
-                                            catalog, beam_list)
+                                  lon='21d25m41.9s',
+                                  height=1073.)
+    catalog = pyuvsim.create_mock_catalog(time, arrangement='zenith',
+                                          Nsrcs=10, array_location=HERA_location)
+    print("Size of catalog:", sys.getsizeof(catalog), " bytes with ",
+          len(catalog), "entries")
+    uvtask_list = pyuvsim.uvdata_to_task_list(input_uv, catalog, beam_list)
     uvtask_pickle = pickle.dumps(uvtask_list)
-    print("getsizeof(uvtask_pickle) = ",sys.getsizeof(uvtask_pickle)," bytes with ",
-                        len(uvtask_list),"entries")
-    print("len(uvtask_pickle) = ",len(uvtask_pickle))
+    print("getsizeof(uvtask_pickle) = ", sys.getsizeof(uvtask_pickle), " bytes with ",
+          len(uvtask_list), "entries")
+    print("len(uvtask_pickle) = ", len(uvtask_pickle))
+
 
 @profile
 def test_file_to_tasks():
@@ -744,12 +748,15 @@ def test_uvdata_init():
     #    task.time = Time(task.time, format='jd')
     #    task.freq = task.freq * units.Hz
 
-    uvdata_out = pyuvsim.initialize_uvdata(uvtask_list)
+    uvdata_out = pyuvsim.initialize_uvdata(uvtask_list, 'zenith_source',
+                                           uvdata_file=EW_uvfits_file)
 
     hera_uv.data_array = np.zeros_like(hera_uv.data_array, dtype=np.complex)
     hera_uv.flag_array = np.zeros_like(hera_uv.data_array, dtype=bool)
     hera_uv.nsample_array = np.ones_like(hera_uv.data_array)
-    hera_uv.history = 'UVSim'
+    hera_uv.history = (pyuvsim.get_version_string()
+                       + 'Sources from source list: zenith_source. '
+                       'Based on UVData file: ' + EW_uvfits_file + '. Npus = 1.')
     hera_uv.instrument = hera_uv.telescope_name
     hera_uv.integration_time = 1.
     enu_out = uvdata_out.get_ENU_antpos()
@@ -777,7 +784,8 @@ def test_gather():
     beam_list = [beam]
 
     uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list)
-    uv_out = pyuvsim.initialize_uvdata(uvtask_list)
+    uv_out = pyuvsim.initialize_uvdata(uvtask_list, 'zenith_source',
+                                       uvdata_file=EW_uvfits_file)
 
     for task in uvtask_list:
         engine = pyuvsim.UVEngine(task)
@@ -800,7 +808,8 @@ def test_run_serial_uvsim():
                        model_version='1.0')
     beam_list = [beam]
 
-    uv_out = pyuvsim.run_serial_uvsim(hera_uv, beam_list, catalog=None, Nsrcs=1)
+    uv_out = pyuvsim.run_serial_uvsim(hera_uv, beam_list, catalog=None, Nsrcs=1,
+                                      uvdata_file=EW_uvfits_file)
 
     print np.round(uv_out.data_array)
     print hera_uv.data_array

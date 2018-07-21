@@ -520,6 +520,16 @@ class UVEngine(object):
         self.task.visibility_vector = self.make_visibility()
 
 
+def get_version_string():
+    version_string = ('Simulated with pyuvsim version: ' + simversion.version + '.')
+    if simversion.git_hash is not '':
+        version_string += ('  Git origin: ' + uvversion.git_origin
+                           + '.  Git hash: ' + uvversion.git_hash
+                           + '.  Git branch: ' + uvversion.git_branch
+                           + '.  Git description: ' + uvversion.git_description + '.')
+    return version_string
+
+
 @profile
 def read_gleam_catalog(gleam_votable):
     """
@@ -628,8 +638,9 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
 
 
 @profile
-def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None, obs_param_file=None,
-                      telescope_config_file=None, antenna_location_file=None):
+def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
+                      obs_param_file=None, telescope_config_file=None,
+                      antenna_location_file=None):
     """
     Initialize an empty uvdata object to fill with simulation.
 
@@ -670,20 +681,17 @@ def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None, obs_param
                          'antenna_location_file must be set.')
 
     # Version string to add to history
-    history = ('Simulated with pyuvsim version: ' + simversion.version + '.')
-    if simversion.git_hash is not '':
-        history += ('  Git origin: ' + uvversion.git_origin
-                    + '.  Git hash: ' + uvversion.git_hash
-                    + '.  Git branch: ' + uvversion.git_branch
-                    + '.  Git description: ' + uvversion.git_description + '.')
+    history = get_version_string()
 
-    history += ' Sources from source list: ' + source_list_name
+    history += ' Sources from source list: ' + source_list_name + '.'
 
     if uvdata_file is not None:
-        history += ' Based on UVData file ' + uvdata_file + '.'
+        history += ' Based on UVData file: ' + uvdata_file + '.'
     else:
-        history += (' Based on config files ' + obs_param_file + ', '
+        history += (' Based on config files: ' + obs_param_file + ', '
                     + telescope_config_file + ', ' + antenna_location_file)
+
+    history += ' Npus = ' + str(Npus) + '.'
 
     task_freqs = []
     task_bls = []
@@ -923,8 +931,17 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
         source_list_name = catalog
 
     uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
+
+    if 'obs_param_file' in input_uv.extra_keywords:
+        obs_param_file = input_uv.extra_keywords['obs_param_file']
+        telescope_config_file = input_uv.extra_keywords['telescope_config_file']
+        antenna_location_file = input_uv.extra_keywords['antenna_location_file']
+        uvdata_file_pass = None
+    else:
+        uvdata_file_pass = uvdata_file
+
     uvdata_out = initialize_uvdata(uvtask_list, source_list_name,
-                                   uvdata_file=uvdata_file,
+                                   uvdata_file=uvdata_file_pass,
                                    obs_param_file=obs_param_file,
                                    telescope_config_file=telescope_config_file,
                                    antenna_location_file=antenna_location_file)
@@ -964,8 +981,17 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
 
         print('Nsrcs:', catalog.size)
         uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
+
+        if 'obs_param_file' in input_uv.extra_keywords:
+            obs_param_file = input_uv.extra_keywords['obs_param_file']
+            telescope_config_file = input_uv.extra_keywords['telescope_config_file']
+            antenna_location_file = input_uv.extra_keywords['antenna_location_file']
+            uvdata_file_pass = None
+        else:
+            uvdata_file_pass = uvdata_file
+
         uv_container = initialize_uvdata(uvtask_list, source_list_name,
-                                         uvdata_file=uvdata_file,
+                                         uvdata_file=uvdata_file_pass,
                                          obs_param_file=obs_param_file,
                                          telescope_config_file=telescope_config_file,
                                          antenna_location_file=antenna_location_file)

@@ -44,7 +44,6 @@ def construct_version_info():
         git_hash = get_git_output(['rev-parse', 'HEAD'], capture_stderr=True)
         git_description = get_git_output(['describe', '--dirty', '--tag', '--always'])
         git_branch = get_git_output(['rev-parse', '--abbrev-ref', 'HEAD'], capture_stderr=True)
-        git_version = get_git_output(['describe', '--tags', '--abbrev=0'])
     except subprocess.CalledProcessError:
         try:
             # Check if a GIT_INFO file was created when installing package

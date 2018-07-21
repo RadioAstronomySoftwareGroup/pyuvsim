@@ -39,6 +39,7 @@ def test_run_uvsim():
 
     beam_list = [beam]
 
-    uv_out = pyuvsim.run_uvsim(hera_uv, beam_list, catalog=None, Nsrcs=3)
+    uv_out = pyuvsim.run_uvsim(hera_uv, beam_list, catalog=None, Nsrcs=3,
+                               uvdata_file=EW_uvfits_file)
     if rank == 0:
         nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))
