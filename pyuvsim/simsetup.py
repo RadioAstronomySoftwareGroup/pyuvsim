@@ -141,7 +141,7 @@ def initialize_uvdata_from_params(obs_params):
             obs_params: Either an obs_param file name or a dictionary of parameters read in.
                 Any uvdata parameters may be passed in through here.
         Returns:
-            uv_obj, beam_list, beam_ids
+            uv_obj, beam_list, beam_dict, beam_ids
     """
 
     if isinstance(obs_params, str):
