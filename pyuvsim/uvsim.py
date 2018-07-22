@@ -983,7 +983,25 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
 
     # The Head node will initialize our simulation
     # Read input file and make uvtask list
-    uvtask_list = []
+
+
+    Nblts = input_uv.Nblts
+    Nfreqs = input_uv.Nfreqs
+    Nsrcs = len(catalog)
+
+    Ntasks = Nblts * Nfreqs * Nsrcs
+
+    # From the rank, determine which tasks to run here.
+    stride = Ntasks//Npus
+    task_ids = np.arange(rank*stride, (rank+1)*stride)
+    local_task_iter = uvdata_to_local_task_list(task_ids, input_uv, catalog, beam_list)
+    # The above function gives a task generator which can be looped over.
+    # Also allows for certain key calculations to be reused.
+
+    # Now loop over local_task_list and execute.
+    ## Better --- Compile a task iterator and loop over that.
+
+
     if rank == 0:
         print('Nblts:', input_uv.Nblts)
         print('Nfreqs:', input_uv.Nfreqs)
@@ -1015,7 +1033,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
             source_list_name = catalog
 
         print('Nsrcs:', catalog.size)
-        uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list, beam_dict=beam_dict)
+        task_array_dict = make_task_array_dict(input_uv, catalog, beam_list)
 
         if 'obs_param_file' in input_uv.extra_keywords:
             obs_param_file = input_uv.extra_keywords['obs_param_file']
