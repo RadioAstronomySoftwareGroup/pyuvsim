@@ -952,15 +952,26 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
 def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     """
-        Generate local tasks.
+        Generate local tasks, reusing quantities where possible.
     """
     # Loops, outer to inner: times, sources, frequencies, baselines
-
     # The task_ids refer to tasks on the flattened meshgrid.
-    # Need to know -- from the task_id, what are the source, time, frequency, baseline ids?
+
+    # There will always be relatively few antennas, so just build the full list.
+    antenna_names = input_uv.antenna_names
+    antennas = []
+    for num, antname in enumerate(antenna_names):
+        if beam_dict is None:
+            beam_id = 0
+        else:
+            beam_id = beam_dict[antname]
+        antennas.append(Antenna(antname, num, antpos_ENU[num], beam_id))
 
     baselines = {}
-    Nlocal_bls = 500  # TODO Need to know the number of baselines in this task set. To be figured out.
+    Ntimes = input_uv.Ntimes
+    Nfreqs = input_uv.Nfreqs
+    Nsrcs = len(catalog)
+    Nbls = input_uv.Nbls
 
     prev_src_ind = None
     prev_time_ind = None
@@ -970,12 +981,15 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
                           EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
                           beam_list)
 
-    for task_id in task_ids:
-        time_i, src_i, freq_i, bl_i = some_magic_function(task_id)  # TODO
-        blt_i = time_i + bl_i * input_uv.Ntimes   # TODO Check -- right order?
+    task_indices = np.unravel_index(task_ids, (Ntimes, Nsrcs, Nfreqs, Nbls))
+    fi_0 = task_indices[2,0]   # First frequency index
+
+        for (time_i, src_i, freq_i, bl_i) in task_indices:
+
+        blt_i = bl_i + time_i * Nbls   # baseline is the fast axis
 
         # We reuse a lot of baseline info, so make the baseline list on the first go and reuse.
-        if len(baselines.values()) < Nlocal_bls:
+        if freq_i == fi_0:
             antnum1 = input_uv.antenna_1_array[blti]
             antnum2 = input_uv.antenna_2_array[blti]
             index1 = np.where(input_uv.antenna_numbers == antnum1)[0][0]
@@ -985,11 +999,16 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         source = catalog[src_i]
         time = input_uv.time_array[blt_i]
         bl = baselines[bl_i]
+        freq = input_uv.freq_array(freq_i)
+
         # Recalculate source position if source or time has changed
         if (prev_src_ind != src_i) or (prev_time_ind != time_i):
             source.az_za_calc(input_uv.time_array[blt_i])
 
-        task = UVTask(source, t, freqi, bl, telescope)
+        # TODO Reuse calculated beam jones matrices until the source and frequency change.
+        #       If the beam is not frequency dependent, only update the jones matrices when source changes
+
+        task = UVTask(source, time, freq, bl, telescope)
         task.uvdata_index = (blt_i, 0, fi)    # 0 = spectral window index
 
         prev_src_ind = src_i
