@@ -537,14 +537,10 @@ class UVEngine(object):
         assert(isinstance(self.task.freq, Quantity))
         uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
-#        with open("coherencies.out",'a+') as f:
-#            f.write(str(self.apparent_coherency)+"\n")
         vij = self.apparent_coherency * fringe
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
 
-        # Temporary -- write out task and other things to file.
-        bl = str(self.task.baseline.antenna1.number) + "_" + str(self.task.baseline.antenna2.number)
         return np.array(vis_vector)
 
     @profile
@@ -954,6 +950,55 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     return catalog, mock_keywords
 
 
+def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
+    """
+        Generate local tasks.
+    """
+    # Loops, outer to inner: times, sources, frequencies, baselines
+
+    # The task_ids refer to tasks on the flattened meshgrid.
+    # Need to know -- from the task_id, what are the source, time, frequency, baseline ids?
+
+    baselines = {}
+    Nlocal_bls = 500  # TODO Need to know the number of baselines in this task set. To be figured out.
+
+    prev_src_ind = None
+    prev_time_ind = None
+    prev_freq_ind = None
+
+    telescope = Telescope(input_uv.telescope_name,
+                          EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
+                          beam_list)
+
+    for task_id in task_ids:
+        time_i, src_i, freq_i, bl_i = some_magic_function(task_id)  # TODO
+        blt_i = time_i + bl_i * input_uv.Ntimes   # TODO Check -- right order?
+
+        # We reuse a lot of baseline info, so make the baseline list on the first go and reuse.
+        if len(baselines.values()) < Nlocal_bls:
+            antnum1 = input_uv.antenna_1_array[blti]
+            antnum2 = input_uv.antenna_2_array[blti]
+            index1 = np.where(input_uv.antenna_numbers == antnum1)[0][0]
+            index2 = np.where(input_uv.antenna_numbers == antnum2)[0][0]
+            baselines[bl_i] = Baseline(antennas[index1], antennas[index2])
+
+        source = catalog[src_i]
+        time = input_uv.time_array[blt_i]
+        bl = baselines[bl_i]
+        # Recalculate source position if source or time has changed
+        if (prev_src_ind != src_i) or (prev_time_ind != time_i):
+            source.az_za_calc(input_uv.time_array[blt_i])
+
+        task = UVTask(source, t, freqi, bl, telescope)
+        task.uvdata_index = (blt_i, 0, fi)    # 0 = spectral window index
+
+        prev_src_ind = src_i
+        prev_time_ind = time_i
+        prev_freq_ind = freq_i
+
+        yield task
+
+
 @profile
 def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
               mock_keywords=None,
@@ -980,27 +1025,6 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
     """
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
-
-    # The Head node will initialize our simulation
-    # Read input file and make uvtask list
-
-
-    Nblts = input_uv.Nblts
-    Nfreqs = input_uv.Nfreqs
-    Nsrcs = len(catalog)
-
-    Ntasks = Nblts * Nfreqs * Nsrcs
-
-    # From the rank, determine which tasks to run here.
-    stride = Ntasks//Npus
-    task_ids = np.arange(rank*stride, (rank+1)*stride)
-    local_task_iter = uvdata_to_local_task_list(task_ids, input_uv, catalog, beam_list)
-    # The above function gives a task generator which can be looped over.
-    # Also allows for certain key calculations to be reused.
-
-    # Now loop over local_task_list and execute.
-    ## Better --- Compile a task iterator and loop over that.
-
 
     if rank == 0:
         print('Nblts:', input_uv.Nblts)
@@ -1032,9 +1056,17 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
         else:
             source_list_name = catalog
 
-        print('Nsrcs:', catalog.size)
-        task_array_dict = make_task_array_dict(input_uv, catalog, beam_list)
 
+@profile
+def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, Nsrcs=None,
+              mock_arrangement='zenith', max_za=-1, save_catalog=False,
+              uvdata_file=None, obs_param_file=None,
+              telescope_config_file=None, antenna_location_file=None):
+    """Run uvsim."""
+    if not isinstance(input_uv, UVData):
+        raise TypeError("input_uv must be UVData object")
+
+    if rank == 0:
         if 'obs_param_file' in input_uv.extra_keywords:
             obs_param_file = input_uv.extra_keywords['obs_param_file']
             telescope_config_file = input_uv.extra_keywords['telescope_config_file']
@@ -1042,53 +1074,40 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
             uvdata_file_pass = None
         else:
             uvdata_file_pass = uvdata_file
-
+        # TODO Will need to revise this function, since we no longer have a task list to intialize from.
         uv_container = initialize_uvdata(uvtask_list, source_list_name,
                                          uvdata_file=uvdata_file_pass,
                                          obs_param_file=obs_param_file,
                                          telescope_config_file=telescope_config_file,
                                          antenna_location_file=antenna_location_file)
 
-        # To split into PUs make a list of lists length NPUs
-        print("Splitting Task List")
-        uvtask_list = np.array_split(uvtask_list, Npus)
-        uvtask_list = [list(tl) for tl in uvtask_list]
+    Nblts = input_uv.Nblts
+    Nfreqs = input_uv.Nfreqs
+    Nsrcs = len(catalog)
 
-        print("Sending Tasks To Processing Units")
-    # Scatter the task list among all available PUs
-    local_task_list = comm.scatter(uvtask_list, root=0)
-    if rank == 0:
-        print("Tasks Received. Begin Calculations.")
-    summed_task_dict = {}
+    Ntasks = Nblts * Nfreqs * Nsrcs
 
-    # Sort the local task list:
-    local_task_list.sort()
+    # From the rank, determine which tasks to run here.
+    stride = Ntasks // Npus
+    task_ids = np.arange(rank * stride, (rank + 1) * stride)
+    local_task_iter = uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict)
+    # The above function gives a task generator which can be looped over.
+    # Also allows for certain key calculations to be reused.
 
-    prev_time, prev_freq, prev_bl, prev_src = None, None, None, None
-    prev_task = None
-    engine = UVEngine(local_task_list[0])
     if progsteps or progbar:
         count = 0
-        tot = len(local_task_list)
+        tot = Ntasks
         if progbar:
             pbar = progressbar.ProgressBar(maxval=tot).start()
         else:
             pbar = utils.progsteps(maxval=tot)
-    for count, task in enumerate(local_task_list):
-        # Time, freq, baseline, then source
-        # Quantities will only be re-calculated for each task if missing.
 
-        if count > 0:
-            engine.set_task(task)
-            if task.time == prev_time:
-                task.source.az_za = prev_src.az_za
+    summed_task_dict = {}
 
-            if task.freq == prev_freq:
-                if task.baseline.antenna1 == prev_bl.antenna1:
-                    task.baseline.antenna1.jones = prev_bl.antenna1.jones_matrix
-                if task.baseline.antenna2 == prev_bl.antenna2:
-                    task.baseline.antenna2.jones = prev_bl.antenna2.jones_matrix
-
+    engine = UVEngine()
+    for count, task in enumerate(local_task_iter):
+        # The iterator automatically handles reusing calculations. Just get visibilities here and add in place.
+        engine.set_task(task)
         try:
             summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
         except KeyError:
@@ -1097,14 +1116,6 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
 
         if progbar or progsteps:
             pbar.update(count)
-
-        prev_time = task.time
-        prev_freq = task.freq
-        prev_bl = task.baseline
-        prev_src = task.source
-
-    if rank == 0:
-        print("Calculations Complete.")
 
     # All the sources in this summed list are foobar-ed
     # Source are summed over but only have 1 name
