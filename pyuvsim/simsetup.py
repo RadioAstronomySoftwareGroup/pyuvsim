@@ -15,6 +15,36 @@ from astropy.coordinates import Angle
 # and for generating parameter files from uvfits files
 
 
+def write_uvfits(uv_obj, param_dict):
+    """
+        Parse output file information from parameters and write uvfits to file.
+    """
+    params = params['filing']
+    if 'outfile_name' not in params or params['outfile_name'] == '':
+        outfile_prefix = ""
+        outfile_suffix = "_results"
+        if 'outfile_prefix' in params:
+            outfile_prefix = params['outfile_prefix'] + "_"
+        if 'outfile_suffix' in params:
+            outfile_suffix = "_" + params['outfile_suffix']
+        outfile_name = os.path.join(params['outdir'], outfile_prefix
+                                    + os.path.basename(args['paramsfile'])[:-5]
+                                    + outfile_suffix)  # Strip .yaml extention
+    else:
+        outfile_name = params['outfile_name']
+    
+    outfile_name = outfile_name + ".uvfits"
+    
+    if 'clobber' not in params:
+        outfile_name = check_file_exists_and_increment(outfile_name)
+
+    if not os.path.exists(params['outdir']):
+        os.makedirs(params['outdir'])
+
+    uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
+
+
+
 def strip_extension(filepath):
     if '.' not in filepath:
         return filepath, ''
@@ -25,7 +55,7 @@ def strip_extension(filepath):
 def check_file_exists_and_increment(filepath):
     """
         Given filepath (path + filename), check if it exists. If so, add a _1
-        at the end. etc.
+        at the end, if that exists add a _2, and so on.
     """
     if os.path.exists(filepath):
         filepath, ext = strip_extension(filepath)

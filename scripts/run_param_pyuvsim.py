@@ -67,28 +67,7 @@ if rank == 0:
         input_uv, beam_list, beam_dict, beam_ids = simsetup.initialize_uvdata_from_params(args['paramsfile'])
         print("Nfreqs: ", input_uv.Nfreqs)
         print("Ntimes: ", input_uv.Ntimes)
-        beam = beam_list[0]
-        file_params = params['filing']
-        params.update(file_params)
-        del params['filing']
-        if 'outfile_name' not in params or params['outfile_name'] == '':
-            outfile_prefix = ""
-            outfile_suffix = "_results"
-            if 'outfile_prefix' in params:
-                outfile_prefix = params['outfile_prefix'] + "_"
-            if 'outfile_suffix' in params:
-                outfile_suffix = "_" + params['outfile_suffix']
-            outfile_name = os.path.join(params['outdir'], outfile_prefix
-                                        + os.path.basename(args['paramsfile'])[:-5]
-                                        + outfile_suffix)  # Strip .yaml extention
-        else:
-            outfile_name = params['outfile_name']
-
-        outfile_name = outfile_name + ".uvfits"
-
-        if 'clobber' not in params:
-            outfile_name = simsetup.check_file_exists_and_increment(outfile_name)
-
+        beam = beam_list[0]  ## TODO Replace this!
         source_params = params['sources']
         if source_params['catalog'] == 'mock':
             params['mock_arrangement'] = source_params['mock_arrangement']
@@ -108,6 +87,4 @@ beam_list = [beam]
 uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, mock_arrangement=mock_arrangement, catalog=catalog)
 
 if rank == 0:
-    if not os.path.exists(params['outdir']):
-        os.makedirs(params['outdir'])
-    uvdata_out.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
+    simsetup.write_uvfits(uvdata_out, params)
