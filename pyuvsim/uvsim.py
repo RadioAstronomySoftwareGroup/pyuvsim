@@ -446,27 +446,6 @@ class UVTask(object):
 
     def __le__(self, other):
         return not self.__gt__(other)
-#    def __cmp__(self, other):
-#        # NB __cmp__ is not allowed in Python3.
-#        ## slowest to fastest = Time, freq, baseline, then source
-#        #Return -1 if self < other, 0 if self==other, +1 if self> other
-#
-#        if self.source.name == other.source.name:
-#            if self.baseline.antenna1.number == other.baseline.antenna1.number:
-#                if self.baseline.antenna2.number == other.baseline.antenna2.number:
-#                    if self.freq == other.freq:
-#                        if self.time == other.time:
-#                            return 0
-#                        else:
-#                            return int(self.time - other.time)
-#                    else:
-#                        return int(self.freq - other.freq)
-#                else:
-#                    return self.baseline.antenna2.number - other.baseline.antenna2.number
-#            else:
-#                return self.baseline.antenna1.number - other.baseline.antenna1.number
-#        elif self.source.name < other.source.name: return -1
-#        else: return 1
 
 
 class UVEngine(object):
@@ -666,6 +645,78 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
 
 
 @profile
+def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
+                    obs_param_file=None, telescope_config_file=None,
+                    antenna_location_file=None):
+    """
+    Initialize an empty uvdata object to fill with simulated data.
+    Args:
+        uv_in: The input uvdata object.
+        source_list_name: Name of source list file or mock catalog.
+        uvdata_file: Name of input UVData file or None if initializing from
+            config files.
+        obs_param_file: Name of observation parameter config file or None if
+            initializing from a UVData file.
+        telescope_config_file: Name of telescope config file or None if
+            initializing from a UVData file.
+        antenna_location_file: Name of antenna location file or None if
+            initializing from a UVData file.
+    """
+    if not isinstance(source_list_name, str):
+        raise ValueError('source_list_name must be a string')
+
+    if uvdata_file is not None:
+        if not isinstance(uvdata_file, str):
+            raise ValueError('uvdata_file must be a string')
+        if (obs_param_file is not None or telescope_config_file is not None
+                or antenna_location_file is not None):
+            raise ValueError('If initializing from a uvdata_file, none of '
+                             'obs_param_file, telescope_config_file or '
+                             'antenna_location_file can be set.')
+    elif (obs_param_file is None or telescope_config_file is None
+            or antenna_location_file is None):
+        if not isinstance(obs_param_file, str):
+            raise ValueError('obs_param_file must be a string')
+        if not isinstance(telescope_config_file, str):
+            raise ValueError('telescope_config_file must be a string')
+        if not isinstance(antenna_location_file, str):
+            raise ValueError('antenna_location_file must be a string')
+        raise ValueError('If not initializing from a uvdata_file, all of '
+                         'obs_param_file, telescope_config_file or '
+                         'antenna_location_file must be set.')
+
+    # Version string to add to history
+    history = get_version_string()
+
+    history += ' Sources from source list: ' + source_list_name + '.'
+
+    if uvdata_file is not None:
+        history += ' Based on UVData file: ' + uvdata_file + '.'
+    else:
+        history += (' Based on config files: ' + obs_param_file + ', '
+                    + telescope_config_file + ', ' + antenna_location_file)
+
+    history += ' Npus = ' + str(Npus) + '.'
+
+    uv_obj = copy.copy(uv_in)
+
+    uv_obj.object_name = 'zenith'
+    uv_obj.set_drift()
+    uv_obj.vis_units = 'Jy'
+    uv_obj.polarization_array = np.array([-5, -6, -7, -8])
+
+    # Clear existing data, if any
+    uv_obj.data_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=np.complex)
+    uv_obj.flag_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=bool)
+    uv_obj.nsample_array = np.ones_like(uv_obj.data_array, dtype=float)
+    uv_obj.history = history
+
+    uv_obj.check()
+
+    return uv_obj
+
+
+@profile
 def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
                       obs_param_file=None, telescope_config_file=None,
                       antenna_location_file=None):
@@ -830,23 +881,24 @@ def serial_gather(uvtask_list, uv_out):
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
                         zen_ang=None, save=False, max_za=-1.0):
     """
-        Create mock catalog with test sources at zenith.
-
-        arrangement = Choose test point source pattern (default = 1 source at zenith)
-        Keywords:
-            Nsrcs = Number of sources to put at zenith
-            array_location = EarthLocation object.
-            zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
-            save = Save mock catalog as npz file.
-        Accepted arrangements:
-            'triangle' = Three point sources forming a triangle around the zenith
-            'cross'    = An asymmetric cross
-            'horizon'  = A single source on the horizon   ## TODO
-            'zenith'   = Some number of sources placed at the zenith.
-            'off-zenith' = A single source off zenith
-            'long-line' = Horizon to horizon line of point sources
-            'hera_text' = Spell out HERA around the zenith
-
+    Create mock catalog in AltAz
+    Args:
+        time = Julian date to specify AltAz -> RaDec transformation
+        arrangment = Choose test point source pattern (default = 1Jy source at zenith)
+    Keywords:
+        array_location = EarthLocation object. (Defaults to HERA site)
+        Nsrcs = Number of sources to put at zenith
+        zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
+        save = Save mock catalog as npz file.
+        max_za = Maximum zenith angle for long-line arrangement
+    Available Arrangements:
+        'triangle' = Three point sources forming a triangle around the zenith
+        'cross'    = An asymmetric cross
+        'horizon'  = A single source on the horizon   ## TODO
+        'zenith'   = Some number of sources placed at the zenith.
+        'off-zenith' = A single source off zenith
+        'long-line' = Horizon to horizon line of point sources
+        'hera_text' = Spell out 'HERA' in point sources around the zenith
     """
 
     if not isinstance(time, Time):
@@ -984,7 +1036,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     task_indices = np.unravel_index(task_ids, (Ntimes, Nsrcs, Nfreqs, Nbls))
     fi_0 = task_indices[2,0]   # First frequency index
 
-        for (time_i, src_i, freq_i, bl_i) in task_indices:
+    for (time_i, src_i, freq_i, bl_i) in task_indices:
 
         blt_i = bl_i + time_i * Nbls   # baseline is the fast axis
 
@@ -1094,11 +1146,13 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, Nsrcs=None,
         else:
             uvdata_file_pass = uvdata_file
         # TODO Will need to revise this function, since we no longer have a task list to intialize from.
-        uv_container = initialize_uvdata(uvtask_list, source_list_name,
-                                         uvdata_file=uvdata_file_pass,
-                                         obs_param_file=obs_param_file,
-                                         telescope_config_file=telescope_config_file,
-                                         antenna_location_file=antenna_location_file)
+        catalog_name = 'mock'
+        uv_container = init_uvdata_out(input_uv, catalog_name,
+                                       uvdata_file=uvdata_file_pass,
+                                       obs_param_file=obs_param_file,
+                                       telescope_config_file=telescope_config_file,
+                                       antenna_location_file=antenna_location_file)
+
 
     Nblts = input_uv.Nblts
     Nfreqs = input_uv.Nfreqs
@@ -1110,8 +1164,6 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, Nsrcs=None,
     stride = Ntasks // Npus
     task_ids = np.arange(rank * stride, (rank + 1) * stride)
     local_task_iter = uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict)
-    # The above function gives a task generator which can be looped over.
-    # Also allows for certain key calculations to be reused.
 
     if progsteps or progbar:
         count = 0
