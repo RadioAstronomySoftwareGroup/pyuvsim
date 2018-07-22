@@ -17,6 +17,7 @@ from mpi4py import MPI
 from astropy.io.votable import parse_single_table
 import __builtin__
 from . import version as simversion
+from sys import stdout
 
 try:
     import progressbar
@@ -1001,17 +1002,18 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
         uvtask_list = np.array_split(uvtask_list, Npus)
         uvtask_list = [list(tl) for tl in uvtask_list]
 
-        print("Sending Tasks To Processing Units")
+        print("Sending Tasks To Processing Units"); stdout.flush()
     # Scatter the task list among all available PUs
     local_task_list = comm.scatter(uvtask_list, root=0)
     if rank == 0:
-        print("Tasks Received. Begin Calculations.")
+        print("Tasks Received. Begin Calculations."); stdout.flush()
     summed_task_dict = {}
 
     if rank == 0:
         if progsteps or progbar:
             count = 0
             tot = len(local_task_list)
+            print("Local tasks: ", tot); stdout.flush()
             if progbar:
                 pbar = progressbar.ProgressBar(maxval=tot).start()
             else:
