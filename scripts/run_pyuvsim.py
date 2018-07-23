@@ -53,6 +53,10 @@ for filename in args.file_in:
 
     beam = pyuvsim.AnalyticBeam('gaussian', sigma=0.0222)
     beam_list = [beam]
+    extra_keywords = {'obs_param_file': 'uvfits_file='+os.path.basename(filename),
+                      'telescope_config_file': beam.type,
+                      'antenna_location_file': os.path.basename(filename)}
+    input_uv.extra_keywords = extra_keywords
     uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list,
                                          mock_arrangement=args.mock_arrangement,
                                          max_za=args.max_za,
