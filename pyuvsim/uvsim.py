@@ -804,7 +804,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     """
         Create mock catalog with test sources at zenith.
 
-        arrangment = Choose test point source pattern (default = 1 source at zenith)
+        arrangement = Choose test point source pattern (default = 1 source at zenith)
         Keywords:
             Nsrcs = Number of sources to put at zenith
             array_location = EarthLocation object.
@@ -821,7 +821,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
     """
 
-    if isinstance(time, str):
+    if not isinstance(time, Time):
         time = Time(time, scale, 'utc', format='jd')
 
     if array_location is None:
@@ -832,9 +832,13 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']:
         raise KeyError("Invalid mock catalog arrangement: " + str(arrangement))
 
+    mock_keywords = {'time': time.jd, 'arrangement': arrangement,
+                     'array_location': repr((array_location.lat, array_location.lon, array_location.alt))}
+
     if arrangement == 'off-zenith':
         if zen_ang is None:
             zen_ang = 5.0  # Degrees
+        mock_keywords['zen_ang'] = zen_ang
         Nsrcs = 1
         alts = [90. - zen_ang]
         azs = [90.]   # 0 = North pole, 90. = East pole
@@ -844,6 +848,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         Nsrcs = 3
         if zen_ang is None:
             zen_ang = 3.0
+        mock_keywords['zen_ang'] = zen_ang
         alts = [90. - zen_ang, 90. - zen_ang, 90. - zen_ang]
         azs = [0., 120., 240.]
         fluxes = [1.0, 1.0, 1.0]
@@ -857,6 +862,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     if arrangement == 'zenith':
         if Nsrcs is None:
             Nsrcs = 1
+        mock_keywords['Nsrcs'] = Nsrcs
         alts = np.ones(Nsrcs) * 90.
         azs = np.zeros(Nsrcs, dtype=float)
         fluxes = np.ones(Nsrcs) * 1 / Nsrcs
@@ -867,6 +873,8 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
             Nsrcs = 10
         if max_za < 0:
             max_za = 85
+        mock_keywords['Nsrcs'] = Nsrcs
+        mock_keywords['zen_ang'] = zen_ang
         fluxes = np.ones(Nsrcs, dtype=float)
         zas = np.linspace(-max_za, max_za, Nsrcs)
         alts = 90. - zas
@@ -911,7 +919,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
 
     catalog = np.array(catalog)
-    return catalog
+    return catalog, mock_keywords
 
 
 def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
@@ -959,8 +967,8 @@ def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
 
 
 @profile
-def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
-              mock_arrangement='zenith', max_za=-1, save_catalog=False,
+def run_uvsim(input_uv, beam_list, catalog=None,
+              mock_keywords=None,
               uvdata_file=None, obs_param_file=None,
               telescope_config_file=None, antenna_location_file=None):
     """Run uvsim."""
@@ -973,12 +981,25 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
     if rank == 0:
         print('Nblts:', input_uv.Nblts)
         print('Nfreqs:', input_uv.Nfreqs)
-        time = Time(input_uv.time_array[0], scale='utc', format='jd')
-        if catalog is None:
-            array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
-            catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc,
-                                          save=save_catalog, Nsrcs=Nsrcs, max_za=max_za)
-            source_list_name = mock_arrangement + '_N=' + str(Nsrcs) + '_maxza=' + str(max_za)
+
+        if catalog is None or catalog == 'mock':
+            # time, arrangement, array_location, save, Nsrcs, max_za
+
+            if mock_keywords is None:
+                array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
+                mock_keywords = {'array_location': array_loc}          # Will lead to default behavior
+
+            if not "array_location" in mock_keywords:
+                print("Warning: No array_location given for mock catalog. Defaulting to HERA site")
+            if not 'time' in mock_keywords:
+                print("Warning: No julian date given for mock catalog. Defaulting to first of input_UV object")
+
+            time = mock_keywords.pop('time', input_uv.time_array[0])
+
+            catalog, mock_keywords = create_mock_catalog(time, **mock_keywords)
+
+            mock_keyvals = [str(key) + str(val) for key, val in mock_keywords]
+            source_list_name = 'mock_' + "_".join(mock_keyvals)
         else:
             source_list_name = catalog
 

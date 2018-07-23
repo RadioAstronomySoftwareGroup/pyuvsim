@@ -96,10 +96,9 @@ if rank == 0:
             mock_keywords = None
             catalog = None   # Will default to a single point source at zenith
         if source_params['catalog'] == 'mock':
- #           time, arrangement='zenith', array_location=None, Nsrcs=None, zen_ang=None, save=False, max_za=-1.0
-            mock_keywords = { 'time' : input_uv.time_array[0], 'arrangement' : source_params['mock_arrangement'],
-                              'array_location' : EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')}
-            extra_mock_kwds = ['Nsrcs', 'zen_ang', 'save', 'max_za']
+            mock_keywords = {'time': input_uv.time_array[0], 'arrangement': source_params['mock_arrangement'],
+                              'array_location': EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')}
+            extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'max_za']
             for k in extra_mock_kwds:
                 if k in source_params.keys():
                     mock_keywords[k] = source_params[k]
@@ -112,7 +111,7 @@ if rank == 0:
 
     elif source_params['catalog'].endswith('txt'):
             catalog = np.array(simsetup.point_sources_from_params(source_params['catalog']))
-            catalog =  source_params['catalog']
+            catalog = source_params['catalog']
         else:
             catalog = None
 
