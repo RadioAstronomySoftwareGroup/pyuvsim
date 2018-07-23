@@ -822,6 +822,9 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
     """
 
+    if isinstance(time, str):
+        time = Time(time, scale, 'utc', format='jd')
+
     if array_location is None:
         array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                        height=1073.)
