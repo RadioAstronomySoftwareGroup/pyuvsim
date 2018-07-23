@@ -89,23 +89,36 @@ if rank == 0:
         if 'clobber' not in params:
             outfile_name = simsetup.check_file_exists_and_increment(outfile_name)
 
-        source_params = params['sources']
-        if source_params['catalog'] == 'mock':
-            params['mock_arrangement'] = source_params['mock_arrangement']
-
+        try:
             source_params = params['sources']
-            if source_params['catalog'] == 'mock':
-                params['mock_arrangement'] = source_params['mock_arrangement']
-        elif source_params['catalog'].endswith('txt'):
-            catalog = np.array(simsetup.point_sources_from_params(source_params['catalog']))
-            params['mock_arrangement'] = None
+        except KeyError:
+            print("Warning: No catalog information provided!")
+            mock_keywords = None
+            catalog = None   # Will default to a single point source at zenith
+        if source_params['catalog'] == 'mock':
+ #           time, arrangement='zenith', array_location=None, Nsrcs=None, zen_ang=None, save=False, max_za=-1.0
+            mock_keywords = { 'time' : input_uv.time_array[0], 'arrangement' : source_params['mock_arrangement'],
+                              'array_location' : EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')}
+            extra_mock_kwds = ['Nsrcs', 'zen_ang', 'save', 'max_za']
+            for k in extra_mock_kwds:
+                if k in source_params.keys():
+                    mock_keywords[k] = source_params[k]
+            catalog = 'mock'
+
+        if 'catalog' in source_params:
+            catalog = source_params['catalog']
         else:
             catalog = None
 
-    mock_arrangement = params['mock_arrangement']
+    elif source_params['catalog'].endswith('txt'):
+            catalog = np.array(simsetup.point_sources_from_params(source_params['catalog']))
+            catalog =  source_params['catalog']
+        else:
+            catalog = None
+
 beam = comm.bcast(beam, root=0)
 beam_list = [beam]
-uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, mock_arrangement=mock_arrangement, catalog=catalog)
+uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, catalog=catalog, mock_keywords=mock_keywords)
 
 if rank == 0:
     if not os.path.exists(params['outdir']):

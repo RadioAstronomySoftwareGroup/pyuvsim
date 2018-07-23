@@ -326,7 +326,8 @@ def initialize_uvdata_from_params(obs_params):
     param_dict['integration_time'] = time_params['integration_time']
     param_dict['time_array'] = time_arr
     param_dict['Ntimes'] = time_params['Ntimes']
-
+    param_dict['Nspws'] = 1
+    param_dict['Npols'] = 4
     # Now make a UVData object with these settings built in.
     # The syntax below allows for other valid uvdata keywords to be passed
     #  without explicitly setting them here.
