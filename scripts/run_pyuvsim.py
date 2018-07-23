@@ -53,15 +53,19 @@ for filename in args.file_in:
 
     beam = pyuvsim.AnalyticBeam('gaussian', sigma=0.0222)
     beam_list = [beam]
-    extra_keywords = {'obs_param_file': 'uvfits_file='+os.path.basename(filename),
+    extra_keywords = {'obs_param_file': 'uvfits_file=' + os.path.basename(filename),
                       'telescope_config_file': beam.type,
                       'antenna_location_file': os.path.basename(filename)}
     input_uv.extra_keywords = extra_keywords
+
+    mock_keywords = {}
+    mock_keywords['save'] = args.save_catalog
+    mock_keywords['max_za'] = args.save_catalog
+    mock_keywords['arrangement'] = args.mock_arrangement
+
     uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list,
-                                         mock_arrangement=args.mock_arrangement,
-                                         max_za=args.max_za,
-                                         save_catalog=args.save_catalog,
-                                         Nsrcs=args.Nsrcs)
+                                         mock_keywords=mock_keywords)
+
     if rank == 0:
         outfile = os.path.join(args.outdir, 'sim_' + os.path.basename(filename))
         if not os.path.exists(args.outdir):

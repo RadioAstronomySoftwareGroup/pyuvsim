@@ -822,7 +822,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     """
 
     if not isinstance(time, Time):
-        time = Time(time, scale, 'utc', format='jd')
+        time = Time(time, scale='utc', format='jd')
 
     if array_location is None:
         array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
@@ -923,11 +923,29 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
 
 @profile
-def run_uvsim(input_uv, beam_list, catalog=None,
+def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
               mock_keywords=None,
               uvdata_file=None, obs_param_file=None,
               telescope_config_file=None, antenna_location_file=None):
-    """Run uvsim."""
+    """
+    Run uvsim
+
+    Arguments:
+        input_uv: An input UVData object, containing baseline/time/frequency information.
+        beam_list: A list of UVBeam and/or AnalyticBeam objects
+
+    Keywords:
+        beam_dict: Dictionary of {antenna_name : beam_ID}, where beam_id is an index in 
+                   the beam_list. This assigns beams to antennas.
+                   Default: All antennas get the 0th beam in the beam_list.
+        catalog: Catalog file name.
+                   Default: Create a mock catalog
+        mock_keywords: Settings for a mock catalog (see keywords of create_mock_catalog)
+        uvdata_file: Name of input UVData file if running from a file.
+        obs_param_file: Parameter filename if running from config files.
+        telescope_config_file: Telescope configuration file if running from config files.
+        antenna_location_file: antenna_location file if running from config files.
+    """
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
 
@@ -942,25 +960,30 @@ def run_uvsim(input_uv, beam_list, catalog=None,
             # time, arrangement, array_location, save, Nsrcs, max_za
 
             if mock_keywords is None:
+                mock_keywords = {}
+
+            if not 'array_location' in mock_keywords:
                 array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
-                mock_keywords = {'array_location': array_loc}          # Will lead to default behavior
+                mock_keywords['array_location'] = array_loc
+            if not 'time' in mock_keywords:
+                mock_keywords['time'] = input_uv.time_array[0]
 
             if not "array_location" in mock_keywords:
                 print("Warning: No array_location given for mock catalog. Defaulting to HERA site")
             if not 'time' in mock_keywords:
                 print("Warning: No julian date given for mock catalog. Defaulting to first of input_UV object")
 
-            time = mock_keywords.pop('time', input_uv.time_array[0])
+            time = mock_keywords.pop('time')
 
             catalog, mock_keywords = create_mock_catalog(time, **mock_keywords)
 
-            mock_keyvals = [str(key) + str(val) for key, val in mock_keywords]
+            mock_keyvals = [str(key) + str(val) for key, val in mock_keywords.iteritems()]
             source_list_name = 'mock_' + "_".join(mock_keyvals)
         else:
             source_list_name = catalog
 
         print('Nsrcs:', catalog.size)
-        uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
+        uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list, beam_dict=beam_dict)
 
         if 'obs_param_file' in input_uv.extra_keywords:
             obs_param_file = input_uv.extra_keywords['obs_param_file']
