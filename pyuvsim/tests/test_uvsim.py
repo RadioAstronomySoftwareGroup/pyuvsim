@@ -399,7 +399,7 @@ def test_tophat_beam():
     time = Time('2018-03-01 00:00:00', scale='utc')
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
-    source_list = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
+    source_list, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
 
     nsrcs = len(source_list)
     az_vals = []
@@ -438,7 +438,7 @@ def test_gaussian_beam():
     time = Time('2018-03-01 00:00:00', scale='utc')
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
-    source_list = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
+    source_list, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
 
     nsrcs = len(source_list)
     az_vals = []
@@ -651,7 +651,7 @@ def test_yaml_to_tasks():
     HERA_location = EarthLocation(lat='-30d43m17.5s',
                                   lon='21d25m41.9s',
                                   height=1073.)
-    catalog = pyuvsim.create_mock_catalog(time, arrangement='zenith',
+    catalog, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith',
                                           Nsrcs=10, array_location=HERA_location)
     print("Size of catalog:", sys.getsizeof(catalog), " bytes with ",
           len(catalog), "entries")
@@ -815,7 +815,7 @@ def test_mock_catalog():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
 
     test_source = create_offzenith_source(time, 'src0', az=src_az, alt=src_alt)
-    cat = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
+    cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
     cat_source = cat[0]
     for k in cat_source.__dict__:
         print 'Cat: ', k, cat_source.__dict__[k]
@@ -850,7 +850,7 @@ def test_gaussbeam_values():
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
 
-    catalog = pyuvsim.create_mock_catalog(time=time, arrangement='long-line', Nsrcs=41,
+    catalog, mock_keywords = pyuvsim.create_mock_catalog(time=time, arrangement='long-line', Nsrcs=41,
                                           max_za=10., array_location=array_location)
 
     beam = pyuvsim.AnalyticBeam('gaussian', sigma=sigma)

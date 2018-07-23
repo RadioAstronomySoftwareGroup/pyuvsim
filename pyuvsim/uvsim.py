@@ -833,7 +833,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         raise KeyError("Invalid mock catalog arrangement: " + str(arrangement))
 
     mock_keywords = {'time': time.jd, 'arrangement': arrangement,
-                     'array_location': repr((array_location.lat, array_location.lon, array_location.alt))}
+                     'array_location': repr((array_location.lat.deg, array_location.lon.deg, array_location.height.value))}
 
     if arrangement == 'off-zenith':
         if zen_ang is None:
