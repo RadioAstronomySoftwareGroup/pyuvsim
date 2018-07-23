@@ -13,6 +13,7 @@ from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim import simsetup
+from astropy.coordinates import EarthLocation
 
 
 comm = MPI.COMM_WORLD
@@ -78,7 +79,7 @@ if rank == 0:
         source_params = params['sources']
         if source_params['catalog'] == 'mock':
             mock_keywords = {'time': input_uv.time_array[0], 'arrangement': source_params['mock_arrangement'],
-                              'array_location': EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')}
+                             'array_location': EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')}
             extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'max_za']
             for k in extra_mock_kwds:
                 if k in source_params.keys():
