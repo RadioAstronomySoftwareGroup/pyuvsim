@@ -922,50 +922,6 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     return catalog, mock_keywords
 
 
-def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
-                     mock_arrangement='zenith', max_za=-1, save_catalog=False,
-                     uvdata_file=None, obs_param_file=None,
-                     telescope_config_file=None, antenna_location_file=None):
-    """Run uvsim."""
-
-    if not isinstance(input_uv, UVData):
-        raise TypeError("input_uv must be UVData object")
-
-    time = Time(input_uv.time_array[0], scale='utc', format='jd')
-    if catalog is None:
-        array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
-        catalog = create_mock_catalog(time, arrangement=mock_arrangement,
-                                      array_location=array_loc,
-                                      save=save_catalog, Nsrcs=Nsrcs, max_za=max_za)
-        source_list_name = mock_arrangement + '_N=' + str(Nsrcs) + '_maxza=' + str(max_za)
-    else:
-        source_list_name = catalog
-
-    uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
-
-    if 'obs_param_file' in input_uv.extra_keywords:
-        obs_param_file = input_uv.extra_keywords['obs_param_file']
-        telescope_config_file = input_uv.extra_keywords['telescope_config_file']
-        antenna_location_file = input_uv.extra_keywords['antenna_location_file']
-        uvdata_file_pass = None
-    else:
-        uvdata_file_pass = uvdata_file
-
-    uvdata_out = initialize_uvdata(uvtask_list, source_list_name,
-                                   uvdata_file=uvdata_file_pass,
-                                   obs_param_file=obs_param_file,
-                                   telescope_config_file=telescope_config_file,
-                                   antenna_location_file=antenna_location_file)
-
-    for task in uvtask_list:
-        engine = UVEngine(task)
-        task.visibility_vector = engine.make_visibility()
-
-    uvdata_out = serial_gather(uvtask_list, uvdata_out)
-
-    return uvdata_out
-
-
 @profile
 def run_uvsim(input_uv, beam_list, catalog=None,
               mock_keywords=None,
