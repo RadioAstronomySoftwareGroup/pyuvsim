@@ -19,30 +19,28 @@ def write_uvfits(uv_obj, param_dict):
     """
         Parse output file information from parameters and write uvfits to file.
     """
-    params = params['filing']
-    if 'outfile_name' not in params or params['outfile_name'] == '':
+    param_dict = param_dict['filing']
+    if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
         outfile_prefix = ""
         outfile_suffix = "_results"
-        if 'outfile_prefix' in params:
-            outfile_prefix = params['outfile_prefix'] + "_"
-        if 'outfile_suffix' in params:
-            outfile_suffix = "_" + params['outfile_suffix']
-        outfile_name = os.path.join(params['outdir'], outfile_prefix
-                                    + os.path.basename(args['paramsfile'])[:-5]
+        if 'outfile_prefix' in param_dict:
+            outfile_prefix = param_dict['outfile_prefix'] + "_"
+        if 'outfile_suffix' in param_dict:
+            outfile_suffix = "_" + param_dict['outfile_suffix']
+        outfile_name = os.path.join(param_dict['outdir'], outfile_prefix
                                     + outfile_suffix)  # Strip .yaml extention
     else:
-        outfile_name = params['outfile_name']
-    
+        outfile_name = param_dict['outfile_name']
+
     outfile_name = outfile_name + ".uvfits"
-    
-    if 'clobber' not in params:
+
+    if 'clobber' not in param_dict:
         outfile_name = check_file_exists_and_increment(outfile_name)
 
-    if not os.path.exists(params['outdir']):
-        os.makedirs(params['outdir'])
+    if not os.path.exists(param_dict['outdir']):
+        os.makedirs(param_dict['outdir'])
 
     uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
-
 
 
 def strip_extension(filepath):

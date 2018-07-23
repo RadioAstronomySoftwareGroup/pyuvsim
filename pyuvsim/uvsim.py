@@ -936,7 +936,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
         beam_list: A list of UVBeam and/or AnalyticBeam objects
 
     Keywords:
-        beam_dict: Dictionary of {antenna_name : beam_ID}, where beam_id is an index in 
+        beam_dict: Dictionary of {antenna_name : beam_ID}, where beam_id is an index in
                    the beam_list. This assigns beams to antennas.
                    Default: All antennas get the 0th beam in the beam_list.
         catalog: Catalog file name.
@@ -963,15 +963,15 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
             if mock_keywords is None:
                 mock_keywords = {}
 
-            if not 'array_location' in mock_keywords:
+            if 'array_location' not in mock_keywords:
                 array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
                 mock_keywords['array_location'] = array_loc
-            if not 'time' in mock_keywords:
+            if 'time' not in mock_keywords:
                 mock_keywords['time'] = input_uv.time_array[0]
 
-            if not "array_location" in mock_keywords:
+            if "array_location" not in mock_keywords:
                 print("Warning: No array_location given for mock catalog. Defaulting to HERA site")
-            if not 'time' in mock_keywords:
+            if 'time' not in mock_keywords:
                 print("Warning: No julian date given for mock catalog. Defaulting to first of input_UV object")
 
             time = mock_keywords.pop('time')

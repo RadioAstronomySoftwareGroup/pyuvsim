@@ -9,7 +9,6 @@ from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy import units
 from pyuvdata import UVBeam, UVData
-import pyuvdata.utils as uvutils
 from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
@@ -38,8 +37,8 @@ def test_run_uvsim():
                        model_version='1.0')
 
     beam_list = [beam]
-
-    uv_out = pyuvsim.run_uvsim(hera_uv, beam_list, catalog=None, Nsrcs=3,
+    mock_keywords = {"Nsrcs" : 3}
+    uv_out = pyuvsim.run_uvsim(hera_uv, beam_list, catalog=None, mock_keywords=mock_keywords,
                                uvdata_file=EW_uvfits_file)
     if rank == 0:
         nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))
