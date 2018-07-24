@@ -11,6 +11,7 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from pyuvdata import UVData
 import pyuvdata.utils as uvutils
 import os
+import copy
 import utils
 from itertools import izip
 from mpi4py import MPI
@@ -39,6 +40,10 @@ comm = MPI.COMM_WORLD
 Npus = comm.Get_size()
 rank = comm.Get_rank()
 
+
+if not rank == 0:
+    progsteps = False
+    progbar = False
 
 def blank(func):
     return func
@@ -213,6 +218,7 @@ class Source(object):
 
         az_za = (source_altaz.az.rad, source_altaz.zen.rad)
         self.az_za = az_za
+
         return az_za
 
     @profile
@@ -452,8 +458,18 @@ class UVEngine(object):
     # x,y,z in same coordinate system as uvws
 
     @profile
-    def __init__(self, task):   # task_array  = list of tuples (source,time,freq,uvw)
+    def __init__(self, task=None):   # task_array  = list of tuples (source,time,freq,uvw)
         # self.rank
+        if task is not None:
+            self.task = task
+            # Initialize task.time to a Time object.
+            if isinstance(self.task.time, float):
+                self.task.time = Time(self.task.time, format='jd')
+            if isinstance(self.task.freq, float):
+                self.task.freq = self.task.freq * units.Hz
+            # construct self based on MPI input
+
+    def set_task(self, task):
         self.task = task
         # Initialize task.time to a Time object.
         if isinstance(self.task.time, float):
@@ -505,14 +521,10 @@ class UVEngine(object):
         assert(isinstance(self.task.freq, Quantity))
         uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
-#        with open("coherencies.out",'a+') as f:
-#            f.write(str(self.apparent_coherency)+"\n")
         vij = self.apparent_coherency * fringe
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
 
-        # Temporary -- write out task and other things to file.
-        bl = str(self.task.baseline.antenna1.number) + "_" + str(self.task.baseline.antenna2.number)
         return np.array(vis_vector)
 
     @profile
@@ -635,6 +647,83 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     if progbar:
         pbar.finish()
     return uvtask_list
+
+
+@profile
+def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
+                    obs_param_file=None, telescope_config_file=None,
+                    antenna_location_file=None):
+    """
+    Initialize an empty uvdata object to fill with simulated data.
+    Args:
+        uv_in: The input uvdata object.
+        source_list_name: Name of source list file or mock catalog.
+        uvdata_file: Name of input UVData file or None if initializing from
+            config files.
+        obs_param_file: Name of observation parameter config file or None if
+            initializing from a UVData file.
+        telescope_config_file: Name of telescope config file or None if
+            initializing from a UVData file.
+        antenna_location_file: Name of antenna location file or None if
+            initializing from a UVData file.
+    """
+    if not isinstance(source_list_name, str):
+        raise ValueError('source_list_name must be a string')
+
+    if uvdata_file is not None:
+        if not isinstance(uvdata_file, str):
+            raise ValueError('uvdata_file must be a string')
+        if (obs_param_file is not None or telescope_config_file is not None
+                or antenna_location_file is not None):
+            raise ValueError('If initializing from a uvdata_file, none of '
+                             'obs_param_file, telescope_config_file or '
+                             'antenna_location_file can be set.')
+    elif (obs_param_file is None or telescope_config_file is None
+            or antenna_location_file is None):
+        if not isinstance(obs_param_file, str):
+            raise ValueError('obs_param_file must be a string')
+        if not isinstance(telescope_config_file, str):
+            raise ValueError('telescope_config_file must be a string')
+        if not isinstance(antenna_location_file, str):
+            raise ValueError('antenna_location_file must be a string')
+        raise ValueError('If not initializing from a uvdata_file, all of '
+                         'obs_param_file, telescope_config_file or '
+                         'antenna_location_file must be set.')
+
+    # Version string to add to history
+    history = get_version_string()
+
+    history += ' Sources from source list: ' + source_list_name + '.'
+
+    if uvdata_file is not None:
+        history += ' Based on UVData file: ' + uvdata_file + '.'
+    else:
+        history += (' Based on config files: ' + obs_param_file + ', '
+                    + telescope_config_file + ', ' + antenna_location_file)
+
+    history += ' Npus = ' + str(Npus) + '.'
+
+    uv_obj = copy.copy(uv_in)
+
+    uv_obj.object_name = 'zenith'
+    uv_obj.set_drift()
+    uv_obj.vis_units = 'Jy'
+    uv_obj.polarization_array = np.array([-5, -6, -7, -8])
+    uv_obj.instrument = uv_obj.telescope_name
+    uv_obj.set_lsts_from_time_array()
+    uv_obj.spw_array = np.array([0])
+    uv_obj.set_uvws_from_antenna_positions()
+
+    # Clear existing data, if any
+    uv_obj.data_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=np.complex)
+    uv_obj.flag_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=bool)
+    uv_obj.nsample_array = np.ones_like(uv_obj.data_array, dtype=float)
+    uv_obj.history = history
+
+    uv_obj.extra_keywords = {}
+    uv_obj.check()
+
+    return uv_obj
 
 
 @profile
@@ -802,24 +891,28 @@ def serial_gather(uvtask_list, uv_out):
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
                         zen_ang=None, save=False, max_za=-1.0):
     """
-        Create mock catalog with test sources at zenith.
-
-        arrangment = Choose test point source pattern (default = 1 source at zenith)
-        Keywords:
-            Nsrcs = Number of sources to put at zenith
-            array_location = EarthLocation object.
-            zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
-            save = Save mock catalog as npz file.
-        Accepted arrangements:
-            'triangle' = Three point sources forming a triangle around the zenith
-            'cross'    = An asymmetric cross
-            'horizon'  = A single source on the horizon   ## TODO
-            'zenith'   = Some number of sources placed at the zenith.
-            'off-zenith' = A single source off zenith
-            'long-line' = Horizon to horizon line of point sources
-            'hera_text' = Spell out HERA around the zenith
-
+    Create mock catalog in AltAz
+    Args:
+        time = Julian date to specify AltAz -> RaDec transformation
+        arrangment = Choose test point source pattern (default = 1Jy source at zenith)
+    Keywords:
+        array_location = EarthLocation object. (Defaults to HERA site)
+        Nsrcs = Number of sources to put at zenith
+        zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
+        save = Save mock catalog as npz file.
+        max_za = Maximum zenith angle for long-line arrangement
+    Available Arrangements:
+        'triangle' = Three point sources forming a triangle around the zenith
+        'cross'    = An asymmetric cross
+        'horizon'  = A single source on the horizon   ## TODO
+        'zenith'   = Some number of sources placed at the zenith.
+        'off-zenith' = A single source off zenith
+        'long-line' = Horizon to horizon line of point sources
+        'hera_text' = Spell out 'HERA' in point sources around the zenith
     """
+
+    if not isinstance(time, Time):
+        time = Time(time, scale='utc', format='jd')
 
     if array_location is None:
         array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
@@ -829,9 +922,13 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']:
         raise KeyError("Invalid mock catalog arrangement: " + str(arrangement))
 
+    mock_keywords = {'time': time.jd, 'arrangement': arrangement,
+                     'array_location': repr((array_location.lat.deg, array_location.lon.deg, array_location.height.value))}
+
     if arrangement == 'off-zenith':
         if zen_ang is None:
             zen_ang = 5.0  # Degrees
+        mock_keywords['zen_ang'] = zen_ang
         Nsrcs = 1
         alts = [90. - zen_ang]
         azs = [90.]   # 0 = North pole, 90. = East pole
@@ -841,6 +938,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         Nsrcs = 3
         if zen_ang is None:
             zen_ang = 3.0
+        mock_keywords['zen_ang'] = zen_ang
         alts = [90. - zen_ang, 90. - zen_ang, 90. - zen_ang]
         azs = [0., 120., 240.]
         fluxes = [1.0, 1.0, 1.0]
@@ -854,6 +952,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     if arrangement == 'zenith':
         if Nsrcs is None:
             Nsrcs = 1
+        mock_keywords['Nsrcs'] = Nsrcs
         alts = np.ones(Nsrcs) * 90.
         azs = np.zeros(Nsrcs, dtype=float)
         fluxes = np.ones(Nsrcs) * 1 / Nsrcs
@@ -864,6 +963,8 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
             Nsrcs = 10
         if max_za < 0:
             max_za = 85
+        mock_keywords['Nsrcs'] = Nsrcs
+        mock_keywords['zen_ang'] = zen_ang
         fluxes = np.ones(Nsrcs, dtype=float)
         zas = np.linspace(-max_za, max_za, Nsrcs)
         alts = 90. - zas
@@ -908,79 +1009,135 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
 
     catalog = np.array(catalog)
-    return catalog
+    return catalog, mock_keywords
 
 
-def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
-                     mock_arrangement='zenith', max_za=-1, save_catalog=False,
-                     uvdata_file=None, obs_param_file=None,
-                     telescope_config_file=None, antenna_location_file=None):
-    """Run uvsim."""
+def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
+    """
+        Generate local tasks, reusing quantities where possible.
+    """
+    # Loops, outer to inner: times, sources, frequencies, baselines
+    # The task_ids refer to tasks on the flattened meshgrid.
 
-    if not isinstance(input_uv, UVData):
-        raise TypeError("input_uv must be UVData object")
+    # There will always be relatively few antennas, so just build the full list.
+    antenna_names = input_uv.antenna_names
+    antennas = []
+    antpos_enu, antnums = input_uv.get_ENU_antpos()
+    for num, antname in enumerate(antenna_names):
+        if beam_dict is None:
+            beam_id = 0
+        else:
+            beam_id = beam_dict[antname]
+        antennas.append(Antenna(antname, num, antpos_enu[num], beam_id))
 
-    time = Time(input_uv.time_array[0], scale='utc', format='jd')
-    if catalog is None:
-        array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
-        catalog = create_mock_catalog(time, arrangement=mock_arrangement,
-                                      array_location=array_loc,
-                                      save=save_catalog, Nsrcs=Nsrcs, max_za=max_za)
-        source_list_name = mock_arrangement + '_N=' + str(Nsrcs) + '_maxza=' + str(max_za)
-    else:
-        source_list_name = catalog
+    baselines = {}
+    Ntimes = input_uv.Ntimes
+    Nfreqs = input_uv.Nfreqs
+    Nsrcs = len(catalog)
+    Nbls = input_uv.Nbls
 
-    uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
+    prev_src_ind = None
+    prev_time_ind = None
+    prev_freq_ind = None
 
-    if 'obs_param_file' in input_uv.extra_keywords:
-        obs_param_file = input_uv.extra_keywords['obs_param_file']
-        telescope_config_file = input_uv.extra_keywords['telescope_config_file']
-        antenna_location_file = input_uv.extra_keywords['antenna_location_file']
-        uvdata_file_pass = None
-    else:
-        uvdata_file_pass = uvdata_file
+    telescope = Telescope(input_uv.telescope_name,
+                          EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
+                          beam_list)
 
-    uvdata_out = initialize_uvdata(uvtask_list, source_list_name,
-                                   uvdata_file=uvdata_file_pass,
-                                   obs_param_file=obs_param_file,
-                                   telescope_config_file=telescope_config_file,
-                                   antenna_location_file=antenna_location_file)
+    task_indices = np.array(np.unravel_index(task_ids, (Ntimes, Nsrcs, Nfreqs, Nbls))).T
+    fi_0 = task_indices[2,0]   # First frequency index
 
-    for task in uvtask_list:
-        engine = UVEngine(task)
-        task.visibility_vector = engine.make_visibility()
+    for (time_i, src_i, freq_i, bl_i) in task_indices:
 
-    uvdata_out = serial_gather(uvtask_list, uvdata_out)
+        blti = bl_i + time_i * Nbls   # baseline is the fast axis
 
-    return uvdata_out
+        # We reuse a lot of baseline info, so make the baseline list on the first go and reuse.
+        if bl_i not in baselines.keys():
+            antnum1 = input_uv.ant_1_array[blti]
+            antnum2 = input_uv.ant_2_array[blti]
+            index1 = np.where(input_uv.antenna_numbers == antnum1)[0][0]
+            index2 = np.where(input_uv.antenna_numbers == antnum2)[0][0]
+            baselines[bl_i] = Baseline(antennas[index1], antennas[index2])
+
+        source = catalog[src_i]
+        time = input_uv.time_array[blti]
+        bl = baselines[bl_i]
+        freq = input_uv.freq_array[0,freq_i]   #0 = spw axis
+
+        # Recalculate source position if source or time has changed
+        if (prev_src_ind != src_i) or (prev_time_ind != time_i):
+            source.az_za_calc(Time(input_uv.time_array[blti], scale='utc', format='jd'), telescope.telescope_location)
+
+        # TODO Reuse calculated beam jones matrices until the source and frequency change.
+        #       If the beam is not frequency dependent, only update the jones matrices when source changes
+
+        task = UVTask(source, time, freq, bl, telescope)
+        task.uvdata_index = (blti, 0, freq_i)    # 0 = spectral window index
+
+        prev_src_ind = src_i
+        prev_time_ind = time_i
+        prev_freq_ind = freq_i
+
+        yield task
 
 
 @profile
-def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
-              mock_arrangement='zenith', max_za=-1, save_catalog=False,
+def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
+              mock_keywords=None,
               uvdata_file=None, obs_param_file=None,
               telescope_config_file=None, antenna_location_file=None):
-    """Run uvsim."""
+    """
+    Run uvsim
+
+    Arguments:
+        input_uv: An input UVData object, containing baseline/time/frequency information.
+        beam_list: A list of UVBeam and/or AnalyticBeam objects
+
+    Keywords:
+        beam_dict: Dictionary of {antenna_name : beam_ID}, where beam_id is an index in
+                   the beam_list. This assigns beams to antennas.
+                   Default: All antennas get the 0th beam in the beam_list.
+        catalog_file: Catalog file name.
+                   Default: Create a mock catalog
+        mock_keywords: Settings for a mock catalog (see keywords of create_mock_catalog)
+        uvdata_file: Name of input UVData file if running from a file.
+        obs_param_file: Parameter filename if running from config files.
+        telescope_config_file: Telescope configuration file if running from config files.
+        antenna_location_file: antenna_location file if running from config files.
+    """
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
-
-    # The Head node will initialize our simulation
-    # Read input file and make uvtask list
-    uvtask_list = []
+    catalog=None
     if rank == 0:
         print('Nblts:', input_uv.Nblts)
         print('Nfreqs:', input_uv.Nfreqs)
-        time = Time(input_uv.time_array[0], scale='utc', format='jd')
-        if catalog is None:
-            array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
-            catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc,
-                                          save=save_catalog, Nsrcs=Nsrcs, max_za=max_za)
-            source_list_name = mock_arrangement + '_N=' + str(Nsrcs) + '_maxza=' + str(max_za)
-        else:
-            source_list_name = catalog
 
-        print('Nsrcs:', catalog.size)
-        uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
+        if catalog_file is None or catalog_file == 'mock':
+            # time, arrangement, array_location, save, Nsrcs, max_za
+
+            if mock_keywords is None:
+                mock_keywords = {}
+
+            if 'array_location' not in mock_keywords:
+                array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
+                mock_keywords['array_location'] = array_loc
+            if 'time' not in mock_keywords:
+                mock_keywords['time'] = input_uv.time_array[0]
+
+            if "array_location" not in mock_keywords:
+                print("Warning: No array_location given for mock catalog. Defaulting to HERA site")
+            if 'time' not in mock_keywords:
+                print("Warning: No julian date given for mock catalog. Defaulting to first of input_UV object")
+
+            time = mock_keywords.pop('time')
+
+            catalog, mock_keywords = create_mock_catalog(time, **mock_keywords)
+
+            mock_keyvals = [str(key) + str(val) for key, val in mock_keywords.iteritems()]
+            source_list_name = 'mock_' + "_".join(mock_keyvals)
+        elif isinstance(catalog_file, str) and catalog_file.endswith("txt"):
+            source_list_name = catalog_file
+            catalog = simsetup.point_sources_from_params(catalog_file)
 
         if 'obs_param_file' in input_uv.extra_keywords:
             obs_param_file = input_uv.extra_keywords['obs_param_file']
@@ -990,59 +1147,53 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
         else:
             uvdata_file_pass = uvdata_file
 
-        uv_container = initialize_uvdata(uvtask_list, source_list_name,
-                                         uvdata_file=uvdata_file_pass,
-                                         obs_param_file=obs_param_file,
-                                         telescope_config_file=telescope_config_file,
-                                         antenna_location_file=antenna_location_file)
+        uv_container = init_uvdata_out(input_uv, source_list_name,
+                                       uvdata_file=uvdata_file_pass,
+                                       obs_param_file=obs_param_file,
+                                       telescope_config_file=telescope_config_file,
+                                       antenna_location_file=antenna_location_file)
 
-        # To split into PUs make a list of lists length NPUs
-        print("Splitting Task List")
-        uvtask_list = np.array_split(uvtask_list, Npus)
-        uvtask_list = [list(tl) for tl in uvtask_list]
+    catalog = comm.bcast(catalog, root=0)
+    input_uv = comm.bcast(input_uv, root=0)
+    Nblts = input_uv.Nblts
+    Nbls = input_uv.Nbls
+    Ntimes = input_uv.Ntimes
+    Nfreqs = input_uv.Nfreqs
+    Nsrcs = len(catalog)
 
-        print("Sending Tasks To Processing Units")
-    # Scatter the task list among all available PUs
-    local_task_list = comm.scatter(uvtask_list, root=0)
-    if rank == 0:
-        print("Tasks Received. Begin Calculations.")
+    Ntasks = Nblts * Nfreqs * Nsrcs
+    catalog = comm.bcast(catalog, root=0)
+    mock_keywords = comm.bcast(mock_keywords, root=0)
+    # From the rank, determine which tasks to run here.
+    stride = Ntasks // Npus
+    if (rank+1)*stride >= Ntasks:
+        task_ids = np.arange(rank * stride, Ntasks)
+    else:
+        task_ids = np.arange(rank * stride, (rank + 1) * stride)
+
+    local_task_iter = uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict)
+
+    if progsteps or progbar:
+        count = 0
+        tot = task_ids.size  #Number of local tasks
+        if progbar:
+            pbar = progressbar.ProgressBar(maxval=tot).start()
+        else:
+            pbar = utils.progsteps(maxval=tot)
+
     summed_task_dict = {}
-
-    if rank == 0:
-        if progsteps or progbar:
-            count = 0
-            tot = len(local_task_list)
-            if progbar:
-                pbar = progressbar.ProgressBar(maxval=tot).start()
-            else:
-                pbar = utils.progsteps(maxval=tot)
-
-        for count, task in enumerate(local_task_list):
-            engine = UVEngine(task)
-            if task.uvdata_index not in summed_task_dict.keys():
-                summed_task_dict[task.uvdata_index] = task
-            if summed_task_dict[task.uvdata_index].visibility_vector is None:
-                summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
-            else:
-                summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
-
-            if progbar or progsteps:
-                pbar.update(count)
+    engine = UVEngine()
+    for count, task in enumerate(local_task_iter):
+        # The iterator automatically handles reusing calculations. Just get visibilities here and add in place.
+        engine.set_task(task)
+        try:
+            summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
+        except KeyError:
+            summed_task_dict[task.uvdata_index] = task
+            summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
 
         if progbar or progsteps:
-            pbar.finish()
-    else:
-        for task in local_task_list:
-            engine = UVEngine(task)
-            if task.uvdata_index not in summed_task_dict.keys():
-                summed_task_dict[task.uvdata_index] = task
-            if summed_task_dict[task.uvdata_index].visibility_vector is None:
-                summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
-            else:
-                summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
-
-    if rank == 0:
-        print("Calculations Complete.")
+            pbar.update(count)
 
     # All the sources in this summed list are foobar-ed
     # Source are summed over but only have 1 name

@@ -15,6 +15,34 @@ from astropy.coordinates import Angle
 # and for generating parameter files from uvfits files
 
 
+def write_uvfits(uv_obj, param_dict):
+    """
+        Parse output file information from parameters and write uvfits to file.
+    """
+    param_dict = param_dict['filing']
+    if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
+        outfile_prefix = ""
+        outfile_suffix = "_results"
+        if 'outfile_prefix' in param_dict:
+            outfile_prefix = param_dict['outfile_prefix'] + "_"
+        if 'outfile_suffix' in param_dict:
+            outfile_suffix = "_" + param_dict['outfile_suffix']
+        outfile_name = os.path.join(param_dict['outdir'], outfile_prefix
+                                    + outfile_suffix)  # Strip .yaml extention
+    else:
+        outfile_name = param_dict['outfile_name']
+
+    outfile_name = outfile_name + ".uvfits"
+
+    if 'clobber' not in param_dict:
+        outfile_name = check_file_exists_and_increment(outfile_name)
+
+    if not os.path.exists(param_dict['outdir']):
+        os.makedirs(param_dict['outdir'])
+
+    uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
+
+
 def strip_extension(filepath):
     if '.' not in filepath:
         return filepath, ''
@@ -25,7 +53,7 @@ def strip_extension(filepath):
 def check_file_exists_and_increment(filepath):
     """
         Given filepath (path + filename), check if it exists. If so, add a _1
-        at the end. etc.
+        at the end, if that exists add a _2, and so on.
     """
     if os.path.exists(filepath):
         filepath, ext = strip_extension(filepath)
@@ -326,7 +354,8 @@ def initialize_uvdata_from_params(obs_params):
     param_dict['integration_time'] = time_params['integration_time']
     param_dict['time_array'] = time_arr
     param_dict['Ntimes'] = time_params['Ntimes']
-
+    param_dict['Nspws'] = 1
+    param_dict['Npols'] = 4
     # Now make a UVData object with these settings built in.
     # The syntax below allows for other valid uvdata keywords to be passed
     #  without explicitly setting them here.

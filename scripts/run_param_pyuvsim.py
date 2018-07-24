@@ -13,6 +13,7 @@ from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim import simsetup
+from astropy.coordinates import EarthLocation
 
 
 comm = MPI.COMM_WORLD
@@ -36,10 +37,12 @@ if params is None:
 
 input_uv = UVData()
 
-beam = None
+beam_dict = None
 input_uv = UVData()
-mock_arrangement = None
+mock_keywords = None
 catalog = None
+Nbeams = 0
+beam_list = []
 if rank == 0:
     if 'uvfile' in params:
         # simulate from a uvfits file if one is specified in the param file.
@@ -67,47 +70,38 @@ if rank == 0:
         input_uv, beam_list, beam_dict, beam_ids = simsetup.initialize_uvdata_from_params(args['paramsfile'])
         print("Nfreqs: ", input_uv.Nfreqs)
         print("Ntimes: ", input_uv.Ntimes)
+        mock_keywords = None
+        try:
+            source_params = params['sources']
+        except KeyError:
+            print("Warning: No catalog information provided!")
+            catalog = None   # Will default to a single point source at zenith
         beam = beam_list[0]
-        file_params = params['filing']
-        params.update(file_params)
-        del params['filing']
-        if 'outfile_name' not in params or params['outfile_name'] == '':
-            outfile_prefix = ""
-            outfile_suffix = "_results"
-            if 'outfile_prefix' in params:
-                outfile_prefix = params['outfile_prefix'] + "_"
-            if 'outfile_suffix' in params:
-                outfile_suffix = "_" + params['outfile_suffix']
-            outfile_name = os.path.join(params['outdir'], outfile_prefix
-                                        + os.path.basename(args['paramsfile'])[:-5]
-                                        + outfile_suffix)  # Strip .yaml extention
-        else:
-            outfile_name = params['outfile_name']
-
-        outfile_name = outfile_name + ".uvfits"
-
-        if 'clobber' not in params:
-            outfile_name = simsetup.check_file_exists_and_increment(outfile_name)
-
         source_params = params['sources']
         if source_params['catalog'] == 'mock':
-            params['mock_arrangement'] = source_params['mock_arrangement']
+            mock_keywords = {'time': input_uv.time_array[0], 'arrangement': source_params['mock_arrangement'],
+                             'array_location': EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')}
+            extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'max_za']
+            for k in extra_mock_kwds:
+                if k in source_params.keys():
+                    mock_keywords[k] = source_params[k]
+            catalog = 'mock'
 
-            source_params = params['sources']
-            if source_params['catalog'] == 'mock':
-                params['mock_arrangement'] = source_params['mock_arrangement']
-        elif source_params['catalog'].endswith('txt'):
-            catalog = np.array(simsetup.point_sources_from_params(source_params['catalog']))
-            params['mock_arrangement'] = None
+        if 'catalog' in source_params:
+            catalog = source_params['catalog']
         else:
             catalog = None
-
-    mock_arrangement = params['mock_arrangement']
-beam = comm.bcast(beam, root=0)
-beam_list = [beam]
-uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, mock_arrangement=mock_arrangement, catalog=catalog)
+        Nbeams = len(beam_list)
+Nbeams = comm.bcast(Nbeams, root=0)
+if not rank == 0:
+    beam_list = np.empty(Nbeams, dtype=object)
+#catalog = comm.bcast(catalog, root=0)
+mock_keywords = comm.bcast(mock_keywords, root=0)
+#beam = comm.bcast(beam, root=0)   #TODO Move beam setup stuff to simsetup and instead pass along a list of strings
+for bi in range(Nbeams):
+    beam = comm.bcast(beam_list[bi], root=0)
+    beam_list[bi] = beam
+uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, catalog_file=catalog, mock_keywords=mock_keywords)
 
 if rank == 0:
-    if not os.path.exists(params['outdir']):
-        os.makedirs(params['outdir'])
-    uvdata_out.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
+    simsetup.write_uvfits(uvdata_out, params)

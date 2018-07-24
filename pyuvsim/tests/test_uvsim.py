@@ -399,7 +399,7 @@ def test_tophat_beam():
     time = Time('2018-03-01 00:00:00', scale='utc')
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
-    source_list = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
+    source_list, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
 
     nsrcs = len(source_list)
     az_vals = []
@@ -438,7 +438,7 @@ def test_gaussian_beam():
     time = Time('2018-03-01 00:00:00', scale='utc')
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
-    source_list = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
+    source_list, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
 
     nsrcs = len(source_list)
     az_vals = []
@@ -640,6 +640,29 @@ def test_single_offzenith_source_miriad():
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=5e-3))
 
 
+def test_task_sort():
+    hera_uv = UVData()
+    hera_uv.read_uvfits(triangle_uvfits_file)
+
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    sources = np.array([create_zenith_source(time, 'zensrc')])
+
+    beam = UVBeam()
+    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+
+    uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list)
+    uvtask_list.sort()
+
+    for task in uvtask_list:
+        print task.time, task.freq, task.baseline.antenna1.number, task.baseline.antenna2.number, task.source.name
+
+
 @profile
 def test_yaml_to_tasks():
     #    params = yaml.safe_load(open(longbl_yaml_file))
@@ -651,7 +674,7 @@ def test_yaml_to_tasks():
     HERA_location = EarthLocation(lat='-30d43m17.5s',
                                   lon='21d25m41.9s',
                                   height=1073.)
-    catalog = pyuvsim.create_mock_catalog(time, arrangement='zenith',
+    catalog, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith',
                                           Nsrcs=10, array_location=HERA_location)
     print("Size of catalog:", sys.getsizeof(catalog), " bytes with ",
           len(catalog), "entries")
@@ -796,27 +819,6 @@ def test_gather():
     nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))
 
 
-def test_run_serial_uvsim():
-    hera_uv = UVData()
-    hera_uv.read_uvfits(EW_uvfits_file)
-
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
-    beam_list = [beam]
-
-    uv_out = pyuvsim.run_serial_uvsim(hera_uv, beam_list, catalog=None, Nsrcs=1,
-                                      uvdata_file=EW_uvfits_file)
-
-    print np.round(uv_out.data_array)
-    print hera_uv.data_array
-
-    nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))
-
-
 def test_sources_equal():
     time = Time('2018-03-01 00:00:00', scale='utc')
     src1 = create_zenith_source(time, 'src')
@@ -836,7 +838,7 @@ def test_mock_catalog():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
 
     test_source = create_offzenith_source(time, 'src0', az=src_az, alt=src_alt)
-    cat = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
+    cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
     cat_source = cat[0]
     for k in cat_source.__dict__:
         print 'Cat: ', k, cat_source.__dict__[k]
@@ -871,7 +873,7 @@ def test_gaussbeam_values():
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
 
-    catalog = pyuvsim.create_mock_catalog(time=time, arrangement='long-line', Nsrcs=41,
+    catalog, mock_keywords = pyuvsim.create_mock_catalog(time=time, arrangement='long-line', Nsrcs=41,
                                           max_za=10., array_location=array_location)
 
     beam = pyuvsim.AnalyticBeam('gaussian', sigma=sigma)

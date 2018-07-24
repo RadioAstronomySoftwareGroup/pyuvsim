@@ -8,6 +8,9 @@ import os
 import six
 import subprocess
 import json
+from mpi4py import MPI
+
+rank = MPI.COMM_WORLD.Get_rank()
 
 
 def construct_version_info():
@@ -16,13 +19,11 @@ def construct_version_info():
     def get_git_output(args, capture_stderr=False):
         """Get output from Git, ensuring that it is of the ``str`` type,
         not bytes."""
-
-        argv = ['git', '-C', pyuvsim_dir] + args
-
-        if capture_stderr:
-            data = subprocess.check_output(argv, stderr=subprocess.STDOUT)
+        if rank == 0:
+            argv = ['git', '-C', pyuvsim_dir] + args
+            data = os.popen(" ".join(argv)).read()
         else:
-            data = subprocess.check_output(argv)
+            data = ""
 
         data = data.strip()
 
@@ -75,6 +76,7 @@ git_branch = version_info['git_branch']
 
 
 def main():
+    print("Rank = {0}".format(rank))
     print('Version = {0}'.format(version))
     print('git origin = {0}'.format(git_origin))
     print('git branch = {0}'.format(git_branch))
