@@ -1155,6 +1155,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
 
     Ntasks = Nblts * Nfreqs * Nsrcs
 
+    input_uv = comm.bcast(input_uv, root=0)
     # From the rank, determine which tasks to run here.
     stride = Ntasks // Npus
     task_ids = np.arange(rank * stride, (rank + 1) * stride)
