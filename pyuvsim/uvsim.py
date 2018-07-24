@@ -41,6 +41,10 @@ Npus = comm.Get_size()
 rank = comm.Get_rank()
 
 
+if not rank == 0:
+    progsteps = False
+    progbar = False
+
 def blank(func):
     return func
 
@@ -1048,7 +1052,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         blti = bl_i + time_i * Nbls   # baseline is the fast axis
 
         # We reuse a lot of baseline info, so make the baseline list on the first go and reuse.
-        if freq_i == fi_0:
+        if bl_i not in baselines.keys():
             antnum1 = input_uv.ant_1_array[blti]
             antnum2 = input_uv.ant_2_array[blti]
             index1 = np.where(input_uv.antenna_numbers == antnum1)[0][0]
@@ -1078,7 +1082,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
 
 
 @profile
-def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
+def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
               mock_keywords=None,
               uvdata_file=None, obs_param_file=None,
               telescope_config_file=None, antenna_location_file=None):
@@ -1093,7 +1097,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
         beam_dict: Dictionary of {antenna_name : beam_ID}, where beam_id is an index in
                    the beam_list. This assigns beams to antennas.
                    Default: All antennas get the 0th beam in the beam_list.
-        catalog: Catalog file name.
+        catalog_file: Catalog file name.
                    Default: Create a mock catalog
         mock_keywords: Settings for a mock catalog (see keywords of create_mock_catalog)
         uvdata_file: Name of input UVData file if running from a file.
@@ -1103,12 +1107,12 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
     """
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
-
+    catalog=None
     if rank == 0:
         print('Nblts:', input_uv.Nblts)
         print('Nfreqs:', input_uv.Nfreqs)
 
-        if catalog is None or catalog == 'mock':
+        if catalog_file is None or catalog_file == 'mock':
             # time, arrangement, array_location, save, Nsrcs, max_za
 
             if mock_keywords is None:
@@ -1131,9 +1135,9 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
 
             mock_keyvals = [str(key) + str(val) for key, val in mock_keywords.iteritems()]
             source_list_name = 'mock_' + "_".join(mock_keyvals)
-        elif isinstance(catalog, str) and catalog.endswith("txt"):
-            source_list_name = catalog
-            catalog = simsetup.point_sources_from_params(catalog)
+        elif isinstance(catalog_file, str) and catalog_file.endswith("txt"):
+            source_list_name = catalog_file
+            catalog = simsetup.point_sources_from_params(catalog_file)
 
         if 'obs_param_file' in input_uv.extra_keywords:
             obs_param_file = input_uv.extra_keywords['obs_param_file']
@@ -1149,28 +1153,35 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
                                        telescope_config_file=telescope_config_file,
                                        antenna_location_file=antenna_location_file)
 
+    catalog = comm.bcast(catalog, root=0)
+    input_uv = comm.bcast(input_uv, root=0)
     Nblts = input_uv.Nblts
+    Nbls = input_uv.Nbls
+    Ntimes = input_uv.Ntimes
     Nfreqs = input_uv.Nfreqs
     Nsrcs = len(catalog)
 
     Ntasks = Nblts * Nfreqs * Nsrcs
-
-    input_uv = comm.bcast(input_uv, root=0)
+    catalog = comm.bcast(catalog, root=0)
+    mock_keywords = comm.bcast(mock_keywords, root=0)
     # From the rank, determine which tasks to run here.
     stride = Ntasks // Npus
-    task_ids = np.arange(rank * stride, (rank + 1) * stride)
+    if (rank+1)*stride >= Ntasks:
+        task_ids = np.arange(rank * stride, Ntasks)
+    else:
+        task_ids = np.arange(rank * stride, (rank + 1) * stride)
+
     local_task_iter = uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict)
 
     if progsteps or progbar:
         count = 0
-        tot = Ntasks
+        tot = task_ids.size  #Number of local tasks
         if progbar:
             pbar = progressbar.ProgressBar(maxval=tot).start()
         else:
             pbar = utils.progsteps(maxval=tot)
 
     summed_task_dict = {}
-
     engine = UVEngine()
     for count, task in enumerate(local_task_iter):
         # The iterator automatically handles reusing calculations. Just get visibilities here and add in place.

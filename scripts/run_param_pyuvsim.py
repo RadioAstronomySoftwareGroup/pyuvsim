@@ -37,10 +37,12 @@ if params is None:
 
 input_uv = UVData()
 
-beam = None
+beam_dict = None
 input_uv = UVData()
-mock_arrangement = None
+mock_keywords = None
 catalog = None
+Nbeams = 0
+beam_list = []
 if rank == 0:
     if 'uvfile' in params:
         # simulate from a uvfits file if one is specified in the param file.
@@ -68,12 +70,11 @@ if rank == 0:
         input_uv, beam_list, beam_dict, beam_ids = simsetup.initialize_uvdata_from_params(args['paramsfile'])
         print("Nfreqs: ", input_uv.Nfreqs)
         print("Ntimes: ", input_uv.Ntimes)
-
+        mock_keywords = None
         try:
             source_params = params['sources']
         except KeyError:
             print("Warning: No catalog information provided!")
-            mock_keywords = None
             catalog = None   # Will default to a single point source at zenith
         beam = beam_list[0]
         source_params = params['sources']
@@ -90,10 +91,17 @@ if rank == 0:
             catalog = source_params['catalog']
         else:
             catalog = None
-
-beam = comm.bcast(beam, root=0)
-beam_list = [beam]
-uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, catalog=catalog, mock_keywords=mock_keywords)
+        Nbeams = len(beam_list)
+Nbeams = comm.bcast(Nbeams, root=0)
+if not rank == 0:
+    beam_list = np.empty(Nbeams, dtype=object)
+#catalog = comm.bcast(catalog, root=0)
+mock_keywords = comm.bcast(mock_keywords, root=0)
+#beam = comm.bcast(beam, root=0)   #TODO Move beam setup stuff to simsetup and instead pass along a list of strings
+for bi in range(Nbeams):
+    beam = comm.bcast(beam_list[bi], root=0)
+    beam_list[bi] = beam
+uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, catalog_file=catalog, mock_keywords=mock_keywords)
 
 if rank == 0:
     simsetup.write_uvfits(uvdata_out, params)
