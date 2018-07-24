@@ -24,10 +24,6 @@ def construct_version_info():
             data = os.popen(" ".join(argv)).read()
         else:
             data = ""
-#        if capture_stderr:
-#            data = subprocess.check_output(argv, stderr=subprocess.STDOUT)
-#        else:
-#            data = subprocess.check_output(argv)
 
         data = data.strip()
 
