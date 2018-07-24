@@ -11,6 +11,7 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from pyuvdata import UVData
 import pyuvdata.utils as uvutils
 import os
+import copy
 import utils
 from itertools import izip
 from mpi4py import MPI
@@ -1012,12 +1013,13 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     # There will always be relatively few antennas, so just build the full list.
     antenna_names = input_uv.antenna_names
     antennas = []
+    antpos_enu, antnums = input_uv.get_ENU_antpos()
     for num, antname in enumerate(antenna_names):
         if beam_dict is None:
             beam_id = 0
         else:
             beam_id = beam_dict[antname]
-        antennas.append(Antenna(antname, num, antpos_ENU[num], beam_id))
+        antennas.append(Antenna(antname, num, antpos_enu[num], beam_id))
 
     baselines = {}
     Ntimes = input_uv.Ntimes
@@ -1033,35 +1035,35 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
                           EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
                           beam_list)
 
-    task_indices = np.unravel_index(task_ids, (Ntimes, Nsrcs, Nfreqs, Nbls))
+    task_indices = np.array(np.unravel_index(task_ids, (Ntimes, Nsrcs, Nfreqs, Nbls))).T
     fi_0 = task_indices[2,0]   # First frequency index
 
     for (time_i, src_i, freq_i, bl_i) in task_indices:
 
-        blt_i = bl_i + time_i * Nbls   # baseline is the fast axis
+        blti = bl_i + time_i * Nbls   # baseline is the fast axis
 
         # We reuse a lot of baseline info, so make the baseline list on the first go and reuse.
         if freq_i == fi_0:
-            antnum1 = input_uv.antenna_1_array[blti]
-            antnum2 = input_uv.antenna_2_array[blti]
+            antnum1 = input_uv.ant_1_array[blti]
+            antnum2 = input_uv.ant_2_array[blti]
             index1 = np.where(input_uv.antenna_numbers == antnum1)[0][0]
             index2 = np.where(input_uv.antenna_numbers == antnum2)[0][0]
             baselines[bl_i] = Baseline(antennas[index1], antennas[index2])
 
         source = catalog[src_i]
-        time = input_uv.time_array[blt_i]
+        time = input_uv.time_array[blti]
         bl = baselines[bl_i]
-        freq = input_uv.freq_array(freq_i)
+        freq = input_uv.freq_array[0,freq_i]   #0 = spw axis
 
         # Recalculate source position if source or time has changed
         if (prev_src_ind != src_i) or (prev_time_ind != time_i):
-            source.az_za_calc(input_uv.time_array[blt_i])
+            source.az_za_calc(Time(input_uv.time_array[blti], scale='utc', format='jd'), telescope.telescope_location)
 
         # TODO Reuse calculated beam jones matrices until the source and frequency change.
         #       If the beam is not frequency dependent, only update the jones matrices when source changes
 
         task = UVTask(source, time, freq, bl, telescope)
-        task.uvdata_index = (blt_i, 0, fi)    # 0 = spectral window index
+        task.uvdata_index = (blti, 0, freq_i)    # 0 = spectral window index
 
         prev_src_ind = src_i
         prev_time_ind = time_i
@@ -1124,20 +1126,10 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
 
             mock_keyvals = [str(key) + str(val) for key, val in mock_keywords.iteritems()]
             source_list_name = 'mock_' + "_".join(mock_keyvals)
-        else:
+        elif isinstance(catalog, str) and catalog.endswith("txt"):
             source_list_name = catalog
+            catalog = simsetup.point_sources_from_params(catalog)
 
-
-@profile
-def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, Nsrcs=None,
-              mock_arrangement='zenith', max_za=-1, save_catalog=False,
-              uvdata_file=None, obs_param_file=None,
-              telescope_config_file=None, antenna_location_file=None):
-    """Run uvsim."""
-    if not isinstance(input_uv, UVData):
-        raise TypeError("input_uv must be UVData object")
-
-    if rank == 0:
         if 'obs_param_file' in input_uv.extra_keywords:
             obs_param_file = input_uv.extra_keywords['obs_param_file']
             telescope_config_file = input_uv.extra_keywords['telescope_config_file']
@@ -1145,14 +1137,12 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, Nsrcs=None,
             uvdata_file_pass = None
         else:
             uvdata_file_pass = uvdata_file
-        # TODO Will need to revise this function, since we no longer have a task list to intialize from.
-        catalog_name = 'mock'
-        uv_container = init_uvdata_out(input_uv, catalog_name,
+
+        uv_container = init_uvdata_out(input_uv, source_list_name,
                                        uvdata_file=uvdata_file_pass,
                                        obs_param_file=obs_param_file,
                                        telescope_config_file=telescope_config_file,
                                        antenna_location_file=antenna_location_file)
-
 
     Nblts = input_uv.Nblts
     Nfreqs = input_uv.Nfreqs
