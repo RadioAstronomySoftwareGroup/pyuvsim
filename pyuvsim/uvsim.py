@@ -705,6 +705,10 @@ def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
     uv_obj.set_drift()
     uv_obj.vis_units = 'Jy'
     uv_obj.polarization_array = np.array([-5, -6, -7, -8])
+    uv_obj.instrument = uv_obj.telescope_name
+    uv_obj.set_lsts_from_time_array()
+    uv_obj.spw_array = np.array([0])
+    uv_obj.set_uvws_from_antenna_positions()
 
     # Clear existing data, if any
     uv_obj.data_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=np.complex)
@@ -712,6 +716,7 @@ def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
     uv_obj.nsample_array = np.ones_like(uv_obj.data_array, dtype=float)
     uv_obj.history = history
 
+    uv_obj.extra_keywords = {}
     uv_obj.check()
 
     return uv_obj
