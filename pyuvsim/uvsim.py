@@ -958,7 +958,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
 
             mock_keyvals = [str(key) + str(val) for key, val in mock_keywords.iteritems()]
             source_list_name = 'mock_' + "_".join(mock_keyvals)
-        elif isinstance(catalog_file, str)
+        elif isinstance(catalog_file, str):
             source_list_name = catalog_file
             if catalog_file.endswith("txt"):
                 catalog = simsetup.point_sources_from_params(catalog_file)
