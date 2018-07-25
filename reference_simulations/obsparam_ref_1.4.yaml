@@ -6,7 +6,7 @@ freq:
   channel_width: 80000.0
   start_freq: 100000000.0
 sources:
-  catalog: "GLEAM_catalog.txt"
+  catalog: "../pyuvsim/data/gleam.vot"
 telescope:
   array_layout: '5km_triangle_layout.csv'
   telescope_config_name: '5km_triangle_config.yaml'

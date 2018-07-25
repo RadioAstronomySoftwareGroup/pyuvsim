@@ -25,10 +25,12 @@
 
 
 To Make:
+    'R' shaped source catalog
     5 km triangle config files
     baseline-lite layout
     2 separated sources catalog
 
 To Do:
     Write a wrapper that will do the MPI jobs and compile runtime data.
+        >> Collect slurm job IDs, runtime, maxRSS, NNodes, NTasks
     Investigate -- Can I kill the whole job if a single task errors, and notify me when this happens? Still compile error data?
