@@ -11,6 +11,7 @@ from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
 import astropy.units as units
 from astropy.coordinates import Angle
+from astropy.io.votable import parse_single_table
 # Utilities for setting up simulations for parameter files,
 # and for generating parameter files from uvfits files
 
@@ -93,7 +94,7 @@ def read_gleam_catalog(gleam_votable):
 
     sourcelist = []
     for entry in data:
-        source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
+        source = pyuvsim.Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
                         Angle(entry['DEJ2000'], unit=units.deg),
                         freq=(200e6 * units.Hz),
                         stokes=np.array([entry['Fintwide'], 0., 0., 0.]))

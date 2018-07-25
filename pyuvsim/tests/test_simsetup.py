@@ -163,6 +163,6 @@ def test_point_catalog_reader():
 
 def test_read_gleam():
 
-    sourcelist = simsetup.read_gleam_catalog(GLEAM_vot)
+    sourcelist = pyuvsim.simsetup.read_gleam_catalog(GLEAM_vot)
 
     nt.assert_equal(len(sourcelist), 50)

@@ -14,7 +14,6 @@ import os
 import utils
 from itertools import izip
 from mpi4py import MPI
-from astropy.io.votable import parse_single_table
 import __builtin__
 from . import version as simversion
 from sys import stdout
