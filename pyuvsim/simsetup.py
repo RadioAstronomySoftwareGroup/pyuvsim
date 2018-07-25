@@ -95,9 +95,9 @@ def read_gleam_catalog(gleam_votable):
     sourcelist = []
     for entry in data:
         source = pyuvsim.Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
-                        Angle(entry['DEJ2000'], unit=units.deg),
-                        freq=(200e6 * units.Hz),
-                        stokes=np.array([entry['Fintwide'], 0., 0., 0.]))
+                                Angle(entry['DEJ2000'], unit=units.deg),
+                                freq=(200e6 * units.Hz),
+                                stokes=np.array([entry['Fintwide'], 0., 0., 0.]))
         sourcelist.append(source)
     return sourcelist
 
