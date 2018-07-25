@@ -20,6 +20,7 @@ herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(4)]   # Five different test configs
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
+GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
 
 
 def compare_dictionaries(dic1, dic2):
@@ -158,3 +159,10 @@ def test_point_catalog_reader():
         nt.assert_true(src.dec.deg in catalog_table['dec_j2000'])
         nt.assert_true(src.stokes[0] in catalog_table['flux_density_I'])
         nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])
+
+
+def test_read_gleam():
+
+    sourcelist = pyuvsim.simsetup.read_gleam_catalog(GLEAM_vot)
+
+    nt.assert_equal(len(sourcelist), 50)

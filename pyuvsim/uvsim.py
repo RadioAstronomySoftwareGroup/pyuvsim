@@ -14,9 +14,9 @@ import os
 import utils
 from itertools import izip
 from mpi4py import MPI
-from astropy.io.votable import parse_single_table
 import __builtin__
 from . import version as simversion
+from sys import stdout
 
 try:
     import progressbar
@@ -531,28 +531,6 @@ def get_version_string():
 
 
 @profile
-def read_gleam_catalog(gleam_votable):
-    """
-    Creates a list of pyuvsim source objects from the GLEAM votable catalog.
-    Despite the semi-standard votable format, there are enough differences that every catalog probably
-    needs its own function.
-    List of tested catalogs: GLEAM EGC catalog, version 2
-    """
-
-    table = parse_single_table(gleam_votable)
-    data = table.array
-
-    sourcelist = []
-    for entry in data:
-        source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
-                        Angle(entry['DEJ2000'], unit=units.deg),
-                        freq=(200e6 * units.Hz),
-                        stokes=np.array([entry['Fintwide'], 0., 0., 0.]))
-        sourcelist.append(source)
-    return sourcelist
-
-
-@profile
 def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     """Create task list from pyuvdata compatible input file.
 
@@ -804,7 +782,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     """
         Create mock catalog with test sources at zenith.
 
-        arrangment = Choose test point source pattern (default = 1 source at zenith)
+        arrangement = Choose test point source pattern (default = 1 source at zenith)
         Keywords:
             Nsrcs = Number of sources to put at zenith
             array_location = EarthLocation object.
@@ -821,6 +799,9 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
     """
 
+    if not isinstance(time, Time):
+        time = Time(time, scale='utc', format='jd')
+
     if array_location is None:
         array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                        height=1073.)
@@ -829,9 +810,13 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']:
         raise KeyError("Invalid mock catalog arrangement: " + str(arrangement))
 
+    mock_keywords = {'time': time.jd, 'arrangement': arrangement,
+                     'array_location': repr((array_location.lat.deg, array_location.lon.deg, array_location.height.value))}
+
     if arrangement == 'off-zenith':
         if zen_ang is None:
             zen_ang = 5.0  # Degrees
+        mock_keywords['zen_ang'] = zen_ang
         Nsrcs = 1
         alts = [90. - zen_ang]
         azs = [90.]   # 0 = North pole, 90. = East pole
@@ -841,6 +826,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         Nsrcs = 3
         if zen_ang is None:
             zen_ang = 3.0
+        mock_keywords['zen_ang'] = zen_ang
         alts = [90. - zen_ang, 90. - zen_ang, 90. - zen_ang]
         azs = [0., 120., 240.]
         fluxes = [1.0, 1.0, 1.0]
@@ -854,6 +840,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     if arrangement == 'zenith':
         if Nsrcs is None:
             Nsrcs = 1
+        mock_keywords['Nsrcs'] = Nsrcs
         alts = np.ones(Nsrcs) * 90.
         azs = np.zeros(Nsrcs, dtype=float)
         fluxes = np.ones(Nsrcs) * 1 / Nsrcs
@@ -864,6 +851,8 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
             Nsrcs = 10
         if max_za < 0:
             max_za = 85
+        mock_keywords['Nsrcs'] = Nsrcs
+        mock_keywords['zen_ang'] = zen_ang
         fluxes = np.ones(Nsrcs, dtype=float)
         zas = np.linspace(-max_za, max_za, Nsrcs)
         alts = 90. - zas
@@ -908,59 +897,33 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
 
     catalog = np.array(catalog)
-    return catalog
-
-
-def run_serial_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
-                     mock_arrangement='zenith', max_za=-1, save_catalog=False,
-                     uvdata_file=None, obs_param_file=None,
-                     telescope_config_file=None, antenna_location_file=None):
-    """Run uvsim."""
-
-    if not isinstance(input_uv, UVData):
-        raise TypeError("input_uv must be UVData object")
-
-    time = Time(input_uv.time_array[0], scale='utc', format='jd')
-    if catalog is None:
-        array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
-        catalog = create_mock_catalog(time, arrangement=mock_arrangement,
-                                      array_location=array_loc,
-                                      save=save_catalog, Nsrcs=Nsrcs, max_za=max_za)
-        source_list_name = mock_arrangement + '_N=' + str(Nsrcs) + '_maxza=' + str(max_za)
-    else:
-        source_list_name = catalog
-
-    uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
-
-    if 'obs_param_file' in input_uv.extra_keywords:
-        obs_param_file = input_uv.extra_keywords['obs_param_file']
-        telescope_config_file = input_uv.extra_keywords['telescope_config_file']
-        antenna_location_file = input_uv.extra_keywords['antenna_location_file']
-        uvdata_file_pass = None
-    else:
-        uvdata_file_pass = uvdata_file
-
-    uvdata_out = initialize_uvdata(uvtask_list, source_list_name,
-                                   uvdata_file=uvdata_file_pass,
-                                   obs_param_file=obs_param_file,
-                                   telescope_config_file=telescope_config_file,
-                                   antenna_location_file=antenna_location_file)
-
-    for task in uvtask_list:
-        engine = UVEngine(task)
-        task.visibility_vector = engine.make_visibility()
-
-    uvdata_out = serial_gather(uvtask_list, uvdata_out)
-
-    return uvdata_out
+    return catalog, mock_keywords
 
 
 @profile
-def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
-              mock_arrangement='zenith', max_za=-1, save_catalog=False,
+def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
+              mock_keywords=None,
               uvdata_file=None, obs_param_file=None,
               telescope_config_file=None, antenna_location_file=None):
-    """Run uvsim."""
+    """
+    Run uvsim
+
+    Arguments:
+        input_uv: An input UVData object, containing baseline/time/frequency information.
+        beam_list: A list of UVBeam and/or AnalyticBeam objects
+
+    Keywords:
+        beam_dict: Dictionary of {antenna_name : beam_ID}, where beam_id is an index in
+                   the beam_list. This assigns beams to antennas.
+                   Default: All antennas get the 0th beam in the beam_list.
+        catalog: Catalog file name.
+                   Default: Create a mock catalog
+        mock_keywords: Settings for a mock catalog (see keywords of create_mock_catalog)
+        uvdata_file: Name of input UVData file if running from a file.
+        obs_param_file: Parameter filename if running from config files.
+        telescope_config_file: Telescope configuration file if running from config files.
+        antenna_location_file: antenna_location file if running from config files.
+    """
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
 
@@ -970,17 +933,39 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
     if rank == 0:
         print('Nblts:', input_uv.Nblts)
         print('Nfreqs:', input_uv.Nfreqs)
-        time = Time(input_uv.time_array[0], scale='utc', format='jd')
-        if catalog is None:
-            array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
-            catalog = create_mock_catalog(time, arrangement=mock_arrangement, array_location=array_loc,
-                                          save=save_catalog, Nsrcs=Nsrcs, max_za=max_za)
-            source_list_name = mock_arrangement + '_N=' + str(Nsrcs) + '_maxza=' + str(max_za)
-        else:
-            source_list_name = catalog
+
+        if catalog is None or catalog == 'mock':
+            # time, arrangement, array_location, save, Nsrcs, max_za
+
+            if mock_keywords is None:
+                mock_keywords = {}
+
+            if 'array_location' not in mock_keywords:
+                array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
+                mock_keywords['array_location'] = array_loc
+            if 'time' not in mock_keywords:
+                mock_keywords['time'] = input_uv.time_array[0]
+
+            if "array_location" not in mock_keywords:
+                print("Warning: No array_location given for mock catalog. Defaulting to HERA site")
+            if 'time' not in mock_keywords:
+                print("Warning: No julian date given for mock catalog. Defaulting to first of input_UV object")
+
+            time = mock_keywords.pop('time')
+
+            catalog, mock_keywords = create_mock_catalog(time, **mock_keywords)
+
+            mock_keyvals = [str(key) + str(val) for key, val in mock_keywords.iteritems()]
+            source_list_name = 'mock_' + "_".join(mock_keyvals)
+        elif isinstance(catalog_file, str):
+            source_list_name = catalog_file
+            if catalog_file.endswith("txt"):
+                catalog = simsetup.point_sources_from_params(catalog_file)
+            elif catalog_file.endswith('vot'):
+                catalog = simsetup.read_gleam_catalog(catalog_file)
 
         print('Nsrcs:', catalog.size)
-        uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list)
+        uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list, beam_dict=beam_dict)
 
         if 'obs_param_file' in input_uv.extra_keywords:
             obs_param_file = input_uv.extra_keywords['obs_param_file']
@@ -1002,16 +987,20 @@ def run_uvsim(input_uv, beam_list, catalog=None, Nsrcs=None,
         uvtask_list = [list(tl) for tl in uvtask_list]
 
         print("Sending Tasks To Processing Units")
+        stdout.flush()
     # Scatter the task list among all available PUs
     local_task_list = comm.scatter(uvtask_list, root=0)
     if rank == 0:
         print("Tasks Received. Begin Calculations.")
+        stdout.flush()
     summed_task_dict = {}
 
     if rank == 0:
         if progsteps or progbar:
             count = 0
             tot = len(local_task_list)
+            print("Local tasks: ", tot)
+            stdout.flush()
             if progbar:
                 pbar = progressbar.ProgressBar(maxval=tot).start()
             else:
