@@ -37,7 +37,9 @@ if params is None:
 
 input_uv = UVData()
 
-beam = None
+Nbeams = 0
+beam_list = None
+beam_dict = None
 input_uv = UVData()
 mock_arrangement = None
 catalog = None
@@ -59,6 +61,7 @@ if rank == 0:
                 beam_list.append(bf)
 
         beam_list = (np.array(beam_list)[beam_ids]).tolist()
+        Nbeams = len(beam_list)
         outfile_name = os.path.join(params['outdir'], params['outfile_prefix'] + "_" + os.path.basename(filename))
         outfile_name = outfile_name + ".uvfits"
 
@@ -68,7 +71,6 @@ if rank == 0:
         input_uv, beam_list, beam_dict, beam_ids = simsetup.initialize_uvdata_from_params(args['paramsfile'])
         print("Nfreqs: ", input_uv.Nfreqs)
         print("Ntimes: ", input_uv.Ntimes)
-        beam = beam_list[0]  ## TODO Replace this!
         source_params = params['sources']
         if source_params['catalog'] == 'mock':
             mock_keywords = {'time': input_uv.time_array[0], 'arrangement': source_params['mock_arrangement'],
@@ -83,16 +85,14 @@ if rank == 0:
             catalog = source_params['catalog']
         else:
             catalog = None
-
-    elif source_params['catalog'].endswith('txt'):
-            catalog = np.array(simsetup.point_sources_from_params(source_params['catalog']))
-            catalog = source_params['catalog']
-        else:
-            catalog = None
-
-beam = comm.bcast(beam, root=0)
-beam_list = [beam]
-uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, catalog=catalog, mock_keywords=mock_keywords)
+# Roundabout way to share the beam list.
+Nbeams = comm.bcast(Nbeams, root=0)
+if not rank == 0:
+    beam_list = np.zeros(Nbeams).tolist()
+for bi in range(Nbeams):
+    beam_list[bi] = comm.bcast(beam_list[bi], root=0)
+beam_dict = comm.bcast(beam_dict, root=0)
+uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog=catalog, mock_keywords=mock_keywords)
 
 if rank == 0:
     simsetup.write_uvfits(uvdata_out, params)
