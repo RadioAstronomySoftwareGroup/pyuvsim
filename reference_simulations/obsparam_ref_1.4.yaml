@@ -1,0 +1,16 @@
+filing:
+  outdir: .
+  outfile_name: 'ref_1.4_hera'
+freq:
+  Nfreqs: 1
+  channel_width: 80000.0
+  start_freq: 100000000.0
+sources:
+  catalog: "GLEAM_catalog.txt"
+telescope:
+  array_layout: '5km_triangle_layout.csv'
+  telescope_config_name: '5km_triangle_config.yaml'
+time:
+  Ntimes: 1
+  integration_time: 11.0
+  start_time: 2458098.27471265

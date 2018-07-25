@@ -1,0 +1,34 @@
+1. Baselines:
+    HERA text point source test pattern
+    MWA-nocore layout
+    10 times
+    1 freq
+    = 1.5 million tasks
+2. Times x 3 Beams (HERA, gaussian, flat)
+    2 sources far apart
+    4 antenna asymmetric layout (‘baseline-lite’)
+    1 second resolution (86400 times)
+    1 freq
+    = 1.728 million tasks
+3. Frequencies x 2 beams
+    10 sources (pattern?)
+    4 antenna asymmetric layout (‘baseline-lite’)
+    2 times
+    50 – 250 MHz (6144 channels)
+    = 1.2298 MTasks
+4. Sources
+    GLEAM (307456 sources)
+    Triangle baselines
+    1 time
+    1 freq
+    = 1.844736 MTasks
+
+
+To Make:
+    5 km triangle config files
+    baseline-lite layout
+    2 separated sources catalog
+
+To Do:
+    Write a wrapper that will do the MPI jobs and compile runtime data.
+    Investigate -- Can I kill the whole job if a single task errors, and notify me when this happens? Still compile error data?
