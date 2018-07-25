@@ -532,28 +532,6 @@ def get_version_string():
 
 
 @profile
-def read_gleam_catalog(gleam_votable):
-    """
-    Creates a list of pyuvsim source objects from the GLEAM votable catalog.
-    Despite the semi-standard votable format, there are enough differences that every catalog probably
-    needs its own function.
-    List of tested catalogs: GLEAM EGC catalog, version 2
-    """
-
-    table = parse_single_table(gleam_votable)
-    data = table.array
-
-    sourcelist = []
-    for entry in data:
-        source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
-                        Angle(entry['DEJ2000'], unit=units.deg),
-                        freq=(200e6 * units.Hz),
-                        stokes=np.array([entry['Fintwide'], 0., 0., 0.]))
-        sourcelist.append(source)
-    return sourcelist
-
-
-@profile
 def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     """Create task list from pyuvdata compatible input file.
 
@@ -980,8 +958,12 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
 
             mock_keyvals = [str(key) + str(val) for key, val in mock_keywords.iteritems()]
             source_list_name = 'mock_' + "_".join(mock_keyvals)
-        else:
-            source_list_name = catalog
+        elif isinstance(catalog_file, str)
+            source_list_name = catalog_file
+            if catalog_file.endswith("txt"):
+                catalog = simsetup.point_sources_from_params(catalog_file)
+            elif catalog_file.endswith('vot'):
+                catalog = simsetup.read_gleam_catalog(catalog_file)
 
         print('Nsrcs:', catalog.size)
         uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list, beam_dict=beam_dict)
@@ -1005,18 +987,21 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
         uvtask_list = np.array_split(uvtask_list, Npus)
         uvtask_list = [list(tl) for tl in uvtask_list]
 
-        print("Sending Tasks To Processing Units"); stdout.flush()
+        print("Sending Tasks To Processing Units")
+        stdout.flush()
     # Scatter the task list among all available PUs
     local_task_list = comm.scatter(uvtask_list, root=0)
     if rank == 0:
-        print("Tasks Received. Begin Calculations."); stdout.flush()
+        print("Tasks Received. Begin Calculations.")
+        stdout.flush()
     summed_task_dict = {}
 
     if rank == 0:
         if progsteps or progbar:
             count = 0
             tot = len(local_task_list)
-            print("Local tasks: ", tot); stdout.flush()
+            print("Local tasks: ", tot)
+            stdout.flush()
             if progbar:
                 pbar = progressbar.ProgressBar(maxval=tot).start()
             else:

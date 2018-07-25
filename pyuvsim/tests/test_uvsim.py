@@ -26,7 +26,6 @@ hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
-GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
 longbl_yaml_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.yaml')
 laptop_size_sim = os.path.join(SIM_DATA_PATH, 'laptop_size_sim.yaml')
 
@@ -652,7 +651,7 @@ def test_yaml_to_tasks():
                                   lon='21d25m41.9s',
                                   height=1073.)
     catalog, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith',
-                                          Nsrcs=10, array_location=HERA_location)
+                                                         Nsrcs=10, array_location=HERA_location)
     print("Size of catalog:", sys.getsizeof(catalog), " bytes with ",
           len(catalog), "entries")
     uvtask_list = pyuvsim.uvdata_to_task_list(input_uv, catalog, beam_list)
@@ -825,13 +824,6 @@ def test_mock_catalog():
     nt.assert_equal(cat_source, test_source)
 
 
-def test_read_gleam():
-
-    sourcelist = pyuvsim.read_gleam_catalog(GLEAM_vot)
-
-    nt.assert_equal(len(sourcelist), 50)
-
-
 def test_gaussbeam_values():
     """
         Make the long-line point sources up to 10 degrees from zenith.
@@ -851,7 +843,7 @@ def test_gaussbeam_values():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
 
     catalog, mock_keywords = pyuvsim.create_mock_catalog(time=time, arrangement='long-line', Nsrcs=41,
-                                          max_za=10., array_location=array_location)
+                                                         max_za=10., array_location=array_location)
 
     beam = pyuvsim.AnalyticBeam('gaussian', sigma=sigma)
     array = pyuvsim.Telescope('telescope_name', array_location, [beam])
