@@ -511,8 +511,6 @@ class UVEngine(object):
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
 
-        # Temporary -- write out task and other things to file.
-        bl = str(self.task.baseline.antenna1.number) + "_" + str(self.task.baseline.antenna2.number)
         return np.array(vis_vector)
 
     @profile
@@ -780,22 +778,24 @@ def serial_gather(uvtask_list, uv_out):
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
                         zen_ang=None, save=False, max_za=-1.0):
     """
-        Create mock catalog with test sources at zenith.
+        Create a mock catalog with test sources at zenith.
 
         arrangement = Choose test point source pattern (default = 1 source at zenith)
+
         Keywords:
-            Nsrcs = Number of sources to put at zenith
-            array_location = EarthLocation object.
-            zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
-            save = Save mock catalog as npz file.
+            * Nsrcs = Number of sources to put at zenith
+            * array_location = EarthLocation object.
+            * zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
+            * save = Save mock catalog as npz file.
+
         Accepted arrangements:
-            'triangle' = Three point sources forming a triangle around the zenith
-            'cross'    = An asymmetric cross
-            'horizon'  = A single source on the horizon   ## TODO
-            'zenith'   = Some number of sources placed at the zenith.
-            'off-zenith' = A single source off zenith
-            'long-line' = Horizon to horizon line of point sources
-            'hera_text' = Spell out HERA around the zenith
+            * 'triangle' = Three point sources forming a triangle around the zenith
+            * 'cross'    = An asymmetric cross
+            * 'horizon'  = A single source on the horizon   ## TODO
+            * 'zenith'   = Some number of sources placed at the zenith.
+            * 'off-zenith' = A single source off zenith
+            * 'long-line' = Horizon to horizon line of point sources
+            * 'hera_text' = Spell out HERA around the zenith
 
     """
 

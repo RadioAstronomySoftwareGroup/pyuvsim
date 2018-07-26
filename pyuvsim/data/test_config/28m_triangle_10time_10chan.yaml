@@ -1,4 +1,3 @@
-Nants: 0
 beam_paths:
   0: HERA_NicCST.uvbeam
   1: 'tophat'
