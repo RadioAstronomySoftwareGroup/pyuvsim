@@ -6,7 +6,7 @@ freq:
   start_freq:  50000000.0
   end_freq:   250000000.0
 sources:
-  catalog: "../pyuvsim/data/letter_R_10pt_2458098.27471265.txt"
+  catalog: "../pyuvsim/data/letter_R_12pt_2458098.27471265.txt"
 telescope:
   array_layout: baseline_lite.csv
   telescope_config_name: bl_lite_hera.yaml
