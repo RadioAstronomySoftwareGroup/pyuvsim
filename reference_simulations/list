@@ -1,5 +1,6 @@
 1. Baselines:
     HERA text point source test pattern
+    tophat beam
     MWA-nocore layout
     10 times
     1 freq
@@ -23,12 +24,6 @@
     1 freq
     = 1.844736 MTasks
 
-
-To Make:
-    *'R' shaped source catalog
-    5 km triangle config files
-    baseline-lite layout
-    2 separated sources catalog
 
 To Do:
     Write a wrapper that will do the MPI jobs and compile runtime data.

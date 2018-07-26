@@ -6,10 +6,10 @@ freq:
   channel_width: 80000.0
   start_freq: 100000000.0
 sources:
-  catalog: "../pyuvsim/data/two_distant_points_2458098.27471265.txt"
+  catalog: "catalog_files/two_distant_points_2458098.27471265.txt"
 telescope:
-  array_layout: baseline_lite.csv
-  telescope_config_name: bl_lite_hera.yaml
+  array_layout: telescope_config/baseline_lite.csv
+  telescope_config_name: telescope_config/bl_lite_hera.yaml
 time:
   Ntimes: 86400
   integration_time: 1.0

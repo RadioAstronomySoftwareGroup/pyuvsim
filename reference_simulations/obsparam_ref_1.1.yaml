@@ -6,10 +6,10 @@ freq:
   channel_width: 80000.0
   start_freq: 100000000.0
 sources:
-  catalog: "../pyuvsim/data/mock_catalog_heratext_2458098.27471265.txt"
+  catalog: "catalog_files/mock_catalog_heratext_2458098.27471265.txt"
 telescope:
-  array_layout: mwa_nocore_layout.csv
-  telescope_config_name: mwa88_nocore_config.yaml
+  array_layout: telescope_config/mwa_nocore_layout.csv
+  telescope_config_name: telescope_config/mwa88_nocore_config.yaml
 time:
   Ntimes: 10
   integration_time: 11.0
