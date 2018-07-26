@@ -26,7 +26,7 @@ def removeallspaces(s):
 
 
 parser = argparse.ArgumentParser(
-        description=("make a test pattern catalog that spells out something"))
+    description=("make a test pattern catalog that spells out something"))
 
 parser.add_argument('-t', '--text', dest='text', default='EH',
                     type=str, help='Text to make into sources')
@@ -45,7 +45,7 @@ args = parser.parse_args()
 
 
 catname = removeallspaces(args.text)
-imgfname = catname+'.bmp'
+imgfname = catname + '.bmp'
 
 
 # first lets construct our image
@@ -63,7 +63,7 @@ im_cmd = ["convert",
           "-density", str(dpi),
           "-trim", "+repage",
           "-antialias",
-          "label:"+text,
+          "label:" + text,
           "{imfilename}".format(imfilename=imgfname)]
 print(im_cmd)
 print("generating image file", imgfname)
@@ -86,8 +86,8 @@ dy = y - int(np.floor(ny/2.))
 
 pixsize_deg = 1.0
 
-zas = np.sqrt(dx**2 + dy**2)*pixsize_deg
-aztmp = np.arctan2(dy, dx)*180./np.pi
+zas = np.sqrt(dx**2 + dy**2) * pixsize_deg
+aztmp = np.arctan2(dy, dx) * 180./np.pi
 azs = np.arctan2(dy, dx) * 180./np.pi - 90.
 
 
@@ -109,7 +109,7 @@ if args.plot:
     az = np.radians(azs)
     za = np.radians(zas)
     aztmp = np.radians(aztmp)
-    pl.scatter(za*np.cos(aztmp), za*np.sin(aztmp), label='Original')
+    pl.scatter(za * np.cos(aztmp), za * np.sin(aztmp), label='Original')
     pl.legend()
     pl.show()
 
