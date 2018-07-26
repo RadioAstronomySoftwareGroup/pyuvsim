@@ -17,6 +17,7 @@ from mpi4py import MPI
 import __builtin__
 from . import version as simversion
 from sys import stdout
+import simsetup
 
 try:
     import progressbar
@@ -905,7 +906,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
 
 @profile
-def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
+def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
               mock_keywords=None,
               uvdata_file=None, obs_param_file=None,
               telescope_config_file=None, antenna_location_file=None):
@@ -920,7 +921,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
         beam_dict: Dictionary of {antenna_name : beam_ID}, where beam_id is an index in
                    the beam_list. This assigns beams to antennas.
                    Default: All antennas get the 0th beam in the beam_list.
-        catalog: Catalog file name.
+        catalog_file: Catalog file name.
                    Default: Create a mock catalog
         mock_keywords: Settings for a mock catalog (see keywords of create_mock_catalog)
         uvdata_file: Name of input UVData file if running from a file.
@@ -938,7 +939,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
         print('Nblts:', input_uv.Nblts)
         print('Nfreqs:', input_uv.Nfreqs)
 
-        if catalog is None or catalog == 'mock':
+        if catalog_file is None or catalog_file == 'mock':
             # time, arrangement, array_location, save, Nsrcs, max_za
 
             if mock_keywords is None:
@@ -968,7 +969,8 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
             elif catalog_file.endswith('vot'):
                 catalog = simsetup.read_gleam_catalog(catalog_file)
 
-        print('Nsrcs:', catalog.size)
+        catalog = np.array(catalog)
+        print('Nsrcs:', len(catalog))
         uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list, beam_dict=beam_dict)
 
         if 'obs_param_file' in input_uv.extra_keywords:
