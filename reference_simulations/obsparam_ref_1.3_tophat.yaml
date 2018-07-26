@@ -1,5 +1,5 @@
 filing:
-  outdir: .
+  outdir: "./simulation_results/"
   outfile_name: 'ref_1.3_tophat'
 freq:
   Nfreqs:      6144
