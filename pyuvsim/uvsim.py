@@ -17,7 +17,9 @@ from mpi4py import MPI
 import __builtin__
 from . import version as simversion
 from sys import stdout
+import sys
 import simsetup
+
 
 try:
     import progressbar
@@ -39,6 +41,15 @@ except(KeyError):
 comm = MPI.COMM_WORLD
 Npus = comm.Get_size()
 rank = comm.Get_rank()
+
+
+def mpi_excepthook(exctype, value, traceback):
+    """Kill the whole job on an uncaught python exception"""
+    sys.__excepthook__(exctype, value, traceback)
+    MPI.COMM_WORLD.Abort(1)
+
+
+sys.excepthook = mpi_excepthook
 
 
 def blank(func):
@@ -500,7 +511,7 @@ class UVEngine(object):
 
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
         if pos_lmn is None:
-            return np.array([0, 0, 0, 0])
+            return np.array([0., 0., 0., 0.], dtype=np.complex128)
 
         # need to convert uvws from meters to wavelengths
         assert(isinstance(self.task.freq, Quantity))
@@ -511,7 +522,6 @@ class UVEngine(object):
         vij = self.apparent_coherency * fringe
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
-
         return np.array(vis_vector)
 
     @profile
@@ -931,7 +941,6 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     """
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
-
     # The Head node will initialize our simulation
     # Read input file and make uvtask list
     uvtask_list = []
