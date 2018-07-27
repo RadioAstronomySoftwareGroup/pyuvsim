@@ -6,6 +6,7 @@ from pyuvdata import UVBeam, UVData
 import numpy as np
 import yaml
 import os
+import sys
 import pyuvdata.utils as uvutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
@@ -21,6 +22,8 @@ def write_uvfits(uv_obj, param_dict):
         Parse output file information from parameters and write uvfits to file.
     """
     param_dict = param_dict['filing']
+    if 'outdir' not in param_dict:
+        param_dict['outdir'] = '.'
     if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
         outfile_prefix = ""
         outfile_suffix = "_results"
@@ -31,8 +34,8 @@ def write_uvfits(uv_obj, param_dict):
         outfile_name = os.path.join(param_dict['outdir'], outfile_prefix
                                     + outfile_suffix)  # Strip .yaml extention
     else:
-        outfile_name = param_dict['outfile_name']
-
+        outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
+    print('Outfile path: ', outfile_name); sys.stdout.flush()
     outfile_name = outfile_name + ".uvfits"
 
     if 'clobber' not in param_dict:
