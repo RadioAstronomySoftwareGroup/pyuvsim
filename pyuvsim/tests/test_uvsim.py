@@ -755,7 +755,8 @@ def test_uvdata_init():
     hera_uv.nsample_array = np.ones_like(hera_uv.data_array)
     hera_uv.history = (pyuvsim.get_version_string()
                        + 'Sources from source list: zenith_source. '
-                       'Based on UVData file: ' + EW_uvfits_file + '. Npus = 1.')
+                       'Based on UVData file: ' + EW_uvfits_file + '. Npus = 1.'
+                       + hera_uv.pyuvdata_version_str)
     hera_uv.instrument = hera_uv.telescope_name
     hera_uv.integration_time = 1.
     enu_out = uvdata_out.get_ENU_antpos()
