@@ -710,6 +710,10 @@ def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
     freqs = np.unique(task_freqs)
 
     uv_obj = UVData()
+
+    # add pyuvdata version info
+    history += uv_obj.pyuvdata_version_str
+
     uv_obj.telescope_name = telescope_name
     uv_obj.telescope_location = np.array([tl.to('m').value for tl in telescope_location])
     uv_obj.instrument = telescope_name
