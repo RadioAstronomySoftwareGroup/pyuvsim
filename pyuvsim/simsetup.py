@@ -12,7 +12,7 @@ from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
 import astropy.units as units
 from astropy.coordinates import Angle
-from astropy.io.votable import parse_single_table
+from astropy.io.votable import parse
 # Utilities for setting up simulations for parameter files,
 # and for generating parameter files from uvfits files
 
@@ -91,8 +91,18 @@ def read_gleam_catalog(gleam_votable):
     needs its own function.
     List of tested catalogs: GLEAM EGC catalog, version 2
     """
+    class Found(Exception):
+        pass
 
-    table = parse_single_table(gleam_votable)
+    resources = parse(gleam_votable).resources
+    try:
+        for rs in resources:
+            for tab in rs.tables:
+                if 'GLEAM' in tab.array.dtype.names:
+                    raise Found
+    except Found:
+        table = tab
+
     data = table.array
 
     sourcelist = []
