@@ -35,7 +35,7 @@ def write_uvfits(uv_obj, param_dict):
                                     + outfile_suffix)  # Strip .yaml extention
     else:
         outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
-    print('Outfile path: ', outfile_name); sys.stdout.flush()
+    print('Outfile path: ', outfile_name)
     outfile_name = outfile_name + ".uvfits"
 
     if 'clobber' not in param_dict:
