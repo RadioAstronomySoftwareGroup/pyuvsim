@@ -101,7 +101,7 @@ Telescope Configuration
 
     This yaml file provides the telescope name, location in lat/lon/alt degrees, and the `beam dictionary`.
 
-    The beam dictionary, along with the beam IDs in the layout file, allow one to specify different beam models be used for different antennas. The ``beam_paths`` section of the telescope param file pairs each beam ID present in the layout with either the path to a beamfits file or a keyword specifying an existing analytic beam. Right now, only tophat and gaussian beams are supported. If the gaussian beam is used, the ``sigma`` keyword must also be given, which specifies the beam width in radians. (see documentation of the AnalyticBeam class for details).
+    The beam dictionary, along with the beam IDs in the layout file, allow one to specify different beam models be used for different antennas. The ``beam_paths`` section of the telescope param file pairs each beam ID present in the layout with either the path to a beamfits file or a keyword specifying an existing analytic beam. Right now, only uniform and gaussian beams are supported. If the gaussian beam is used, the ``sigma`` keyword must also be given, which specifies the beam width in radians. (see documentation of the AnalyticBeam class for details).
 
 Sources
 ^^^^^^^
