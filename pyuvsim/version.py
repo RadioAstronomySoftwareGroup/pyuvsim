@@ -76,7 +76,7 @@ git_branch = version_info['git_branch']
 
 
 def main():
-    print("Rank = {0}".format(rank))
+    # print("Rank = {0}".format(rank))
     print('Version = {0}'.format(version))
     print('git origin = {0}'.format(git_origin))
     print('git branch = {0}'.format(git_branch))
