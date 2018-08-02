@@ -1,5 +1,6 @@
 include *.md
 include LICENSE
+include pyuvsim/VERSION
 recursive-include pyuvsim/data *
 prune pyuvsim/data/test
 recursive-include docs *
