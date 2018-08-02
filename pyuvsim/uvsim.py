@@ -750,9 +750,11 @@ def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
         uv_obj.channel_width = np.diff(freqs)[0]
 
     if uv_obj.Ntimes == 1:
-        uv_obj.integration_time = 1.  # Second
+        uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
     else:
-        uv_obj.integration_time = np.diff(np.unique(task_times))[0]
+        # Note: currently only support a constant spacing of times
+        uv_obj.integration_time = (np.ones_like(uv_obj.time_array, dtype=np.float64)
+                                   * np.diff(np.unique(task_times))[0])
     uv_obj.set_lsts_from_time_array()
     uv_obj.zenith_ra = uv_obj.lst_array
     uv_obj.zenith_dec = np.repeat(uv_obj.telescope_location_lat_lon_alt[0], uv_obj.Nblts)  # Latitude

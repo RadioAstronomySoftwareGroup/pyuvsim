@@ -758,7 +758,6 @@ def test_uvdata_init():
                        'Based on UVData file: ' + EW_uvfits_file + '. Npus = 1.'
                        + hera_uv.pyuvdata_version_str)
     hera_uv.instrument = hera_uv.telescope_name
-    hera_uv.integration_time = 1.
     enu_out = uvdata_out.get_ENU_antpos()
     enu_in = hera_uv.get_ENU_antpos()
     nt.assert_equal(hera_uv._antenna_positions, uvdata_out._antenna_positions)
