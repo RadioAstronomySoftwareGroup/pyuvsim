@@ -208,7 +208,7 @@ def initialize_uvdata_from_params(obs_params):
         for a in which_ants:
             beam_dict[a] = beamID
         uvb = UVBeam()
-        if beam_model in ['gaussian', 'tophat']:
+        if beam_model in ['gaussian', 'uniform']:
             # Identify analytic beams
             if beam_model == 'gaussian':
                 try:
@@ -217,7 +217,7 @@ def initialize_uvdata_from_params(obs_params):
                     print("Missing sigma for gaussian beam.")
                     raise err
             else:
-                beam = pyuvsim.AnalyticBeam('tophat')
+                beam = pyuvsim.AnalyticBeam('uniform')
             beam_list.append(beam)
             continue
         if not os.path.exists(beam_model):

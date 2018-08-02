@@ -58,7 +58,7 @@ def check_param_reader(config_num):
 
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
-    beam1 = pyuvsim.AnalyticBeam('tophat')
+    beam1 = pyuvsim.AnalyticBeam('uniform')
     beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
     beam_list = [beam0, beam1, beam2]
 

@@ -270,7 +270,7 @@ class Telescope(object):
 
 
 class AnalyticBeam(object):
-    supported_types = ['tophat', 'gaussian']
+    supported_types = ['uniform', 'gaussian']
 
     def __init__(self, type, sigma=None):
         if type in self.supported_types:
@@ -287,7 +287,7 @@ class AnalyticBeam(object):
     def interp(self, az_array, za_array, freq_array):
         # (Naxes_vec, Nspws, Nfeeds or Npols, freq_array.size, az_array.size)
 
-        if self.type == 'tophat':
+        if self.type == 'uniform':
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
             interp_data[1, 0, 0, :, :] = 1
             interp_data[0, 0, 1, :, :] = 1
@@ -316,8 +316,8 @@ class AnalyticBeam(object):
         if self.type == 'gaussian':
             return ((self.type == other.type)
                     and (self.sigma == other.sigma))
-        elif self.type == 'tophat':
-            return other.type == 'tophat'
+        elif self.type == 'uniform':
+            return other.type == 'uniform'
         else:
             return False
 

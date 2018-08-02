@@ -1,6 +1,6 @@
 filing:
   outdir: "./simulation_results/"
-  outfile_name: 'ref_1.2_tophat'
+  outfile_name: 'ref_1.2_uniform'
 freq:
   Nfreqs: 1
   channel_width: 80000.0
@@ -9,7 +9,7 @@ sources:
   catalog: "catalog_files/two_distant_points_2458098.27471265.txt"
 telescope:
   array_layout: telescope_config/baseline_lite.csv
-  telescope_config_name: telescope_config/bl_lite_tophat.yaml
+  telescope_config_name: telescope_config/bl_lite_uniform.yaml
 time:
   Ntimes: 86400
   integration_time: 1.0
