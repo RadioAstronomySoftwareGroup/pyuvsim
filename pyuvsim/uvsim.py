@@ -150,7 +150,7 @@ class Source(object):
     def __eq__(self, other):
         return ((self.ra == other.ra)
                 and (self.dec == other.dec)
-                and (self.stokes == other.stokes)
+                and np.all(self.stokes == other.stokes)
                 and (self.name == other.name)
                 and (self.freq == other.freq))
 
