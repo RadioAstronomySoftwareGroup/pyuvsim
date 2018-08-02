@@ -7,6 +7,7 @@ import numpy as np
 import yaml
 import os
 import sys
+import warnings
 import pyuvdata.utils as uvutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
@@ -386,7 +387,8 @@ def initialize_uvdata_from_params(obs_params):
     Nbl = (param_dict['Nants_data'] + 1) * param_dict['Nants_data'] / 2
 
     time_arr = np.sort(np.tile(time_arr, Nbl))
-    param_dict['integration_time'] = time_params['integration_time']
+    param_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
+                                      * time_params['integration_time'])
     param_dict['time_array'] = time_arr
     param_dict['Ntimes'] = time_params['Ntimes']
     param_dict['Nspws'] = 1
@@ -507,13 +509,16 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
 
     freq_array = uvdata_in.freq_array[0, :].tolist()
     time_array = uvdata_in.time_array.tolist()
-    inttime_days = time_array[1] - time_array[0]
+    integration_time_array = np.array(uvdata_in.integration_time)
+    if np.max(integration_time_array) != np.min(integration_time_array):
+        warnings.warn('The integration time is not constant. Using the shortest integration time')
+    integration_time = float(np.min(integration_time_array))
     param_dict = dict(
         time=dict(
             start_time=time_array[0],
             end_time=time_array[-1],
             Ntimes=uvdata_in.Ntimes,
-            integration_time=uvdata_in.integration_time,
+            integration_time=integration_time,
         ),
         freq=dict(
             start_freq=freq_array[0],
