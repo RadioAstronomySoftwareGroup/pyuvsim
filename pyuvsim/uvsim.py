@@ -2,6 +2,7 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
+# CLEANUP: standard packages at the top, related next, then package specific imports
 import numpy as np
 import astropy.constants as const
 from scipy.special import jn
@@ -19,9 +20,10 @@ import __builtin__
 from . import version as simversion
 from sys import stdout
 import sys
-import simsetup
+from pyuvsim import simsetup
 
-
+# CLEANUP: find more streamlined way to import progressbar.  
+# CLEANUP: Should only appear in whatever file actually does the running of the code.
 try:
     import progressbar
     progbar = True
@@ -43,7 +45,7 @@ comm = MPI.COMM_WORLD
 Npus = comm.Get_size()
 rank = comm.Get_rank()
 
-
+# CLEANUP: move to utils (if possible?)
 def mpi_excepthook(exctype, value, traceback):
     """Kill the whole job on an uncaught python exception"""
     sys.__excepthook__(exctype, value, traceback)
@@ -52,7 +54,7 @@ def mpi_excepthook(exctype, value, traceback):
 
 sys.excepthook = mpi_excepthook
 
-
+# CLEANUP: These next ~10 lines are for profiling.  Can we find a way to move out?
 def blank(func):
     return func
 
@@ -64,6 +66,7 @@ try:
 except AttributeError:
     __builtin__.profile = blank
 
+# CLEANUP: move these next two functions to utils
 
 # The frame radio astronomers call the apparent or current epoch is the
 # "true equator & equinox" frame, notated E_upsilon in the USNO circular
@@ -95,7 +98,7 @@ def cirs_to_tee_ra(cirs_ra, time):
     tee_ra = cirs_ra + (gast - theta_earth)
     return tee_ra
 
-
+# CLEANUP: move to source.py
 class Source(object):
     name = None
     freq = None
@@ -253,7 +256,7 @@ class Source(object):
         pos_n = np.cos(self.az_za[1])
         return (pos_l, pos_m, pos_n)
 
-
+# CLEANUP: move to telescope.py
 class Telescope(object):
     @profile
     def __init__(self, telescope_name, telescope_location, beam_list):
@@ -269,7 +272,7 @@ class Telescope(object):
                 and (self.beam_list == other.beam_list)
                 and (self.telescope_name == other.telescope_name))
 
-
+# CLEANUP: move to analyticbeam.py
 class AnalyticBeam(object):
 
     supported_types = ['uniform', 'gaussian', 'airy']
@@ -341,7 +344,7 @@ class AnalyticBeam(object):
         else:
             return False
 
-
+#CLEANUP: move to antenna.py
 class Antenna(object):
     @profile
     def __init__(self, name, number, enu_position, beam_id):
@@ -398,7 +401,7 @@ class Antenna(object):
     def __le__(self, other):
         return not self.__gt__(other)
 
-
+# CLEANUP: move to baseline.py
 class Baseline(object):
     @profile
     def __init__(self, antenna1, antenna2):
@@ -478,7 +481,7 @@ class UVTask(object):
     def __le__(self, other):
         return not self.__gt__(other)
 
-
+# CLEANUP: read through and prune comments
 class UVEngine(object):
     # inputs x,y,z,flux,baseline(u,v,w), time, freq
     # x,y,z in same coordinate system as uvws
@@ -548,7 +551,7 @@ class UVEngine(object):
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
 
-
+# CLEANUP: move to utils
 def get_version_string():
     version_string = ('Simulated with pyuvsim version: ' + simversion.version + '.')
     if simversion.git_hash is not '':
