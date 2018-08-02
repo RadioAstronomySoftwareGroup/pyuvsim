@@ -38,7 +38,7 @@ def test_run_uvsim():
 
     beam_list = [beam]
     mock_keywords = {"Nsrcs" : 3}
-    uv_out = pyuvsim.run_uvsim(hera_uv, beam_list, catalog=None, mock_keywords=mock_keywords,
+    uv_out = pyuvsim.run_uvsim(hera_uv, beam_list, catalog_file=None, mock_keywords=mock_keywords,
                                uvdata_file=EW_uvfits_file)
     if rank == 0:
         nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))

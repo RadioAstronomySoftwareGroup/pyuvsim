@@ -1,8 +1,9 @@
 filing:
-  outdir: .
+  outdir: "./simulation_results/"
   outfile_name: 'ref_1.3_gauss'
 freq:
   Nfreqs:      6144
+  channel_width: 32552.0
   start_freq:  50000000.0
   end_freq:   250000000.0
 sources:

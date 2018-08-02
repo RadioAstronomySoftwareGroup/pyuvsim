@@ -41,7 +41,7 @@ Nbeams = 0
 beam_list = None
 beam_dict = None
 input_uv = UVData()
-mock_arrangement = None
+mock_keywords = None
 catalog = None
 if rank == 0:
     if 'uvfile' in params:
@@ -92,7 +92,7 @@ if not rank == 0:
 for bi in range(Nbeams):
     beam_list[bi] = comm.bcast(beam_list[bi], root=0)
 beam_dict = comm.bcast(beam_dict, root=0)
-uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog=catalog, mock_keywords=mock_keywords)
+uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
 
 if rank == 0:
     simsetup.write_uvfits(uvdata_out, params)

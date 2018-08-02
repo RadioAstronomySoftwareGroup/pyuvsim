@@ -17,6 +17,9 @@ from mpi4py import MPI
 import __builtin__
 from . import version as simversion
 from sys import stdout
+import sys
+import simsetup
+
 
 try:
     import progressbar
@@ -38,6 +41,15 @@ except(KeyError):
 comm = MPI.COMM_WORLD
 Npus = comm.Get_size()
 rank = comm.Get_rank()
+
+
+def mpi_excepthook(exctype, value, traceback):
+    """Kill the whole job on an uncaught python exception"""
+    sys.__excepthook__(exctype, value, traceback)
+    MPI.COMM_WORLD.Abort(1)
+
+
+sys.excepthook = mpi_excepthook
 
 
 def blank(func):
@@ -499,7 +511,7 @@ class UVEngine(object):
 
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
         if pos_lmn is None:
-            return np.array([0, 0, 0, 0])
+            return np.array([0., 0., 0., 0.], dtype=np.complex128)
 
         # need to convert uvws from meters to wavelengths
         assert(isinstance(self.task.freq, Quantity))
@@ -510,7 +522,6 @@ class UVEngine(object):
         vij = self.apparent_coherency * fringe
         # need to reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
-
         return np.array(vis_vector)
 
     @profile
@@ -905,7 +916,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
 
 @profile
-def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
+def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
               mock_keywords=None,
               uvdata_file=None, obs_param_file=None,
               telescope_config_file=None, antenna_location_file=None):
@@ -920,7 +931,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
         beam_dict: Dictionary of {antenna_name : beam_ID}, where beam_id is an index in
                    the beam_list. This assigns beams to antennas.
                    Default: All antennas get the 0th beam in the beam_list.
-        catalog: Catalog file name.
+        catalog_file: Catalog file name.
                    Default: Create a mock catalog
         mock_keywords: Settings for a mock catalog (see keywords of create_mock_catalog)
         uvdata_file: Name of input UVData file if running from a file.
@@ -930,7 +941,6 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
     """
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
-
     # The Head node will initialize our simulation
     # Read input file and make uvtask list
     uvtask_list = []
@@ -938,7 +948,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
         print('Nblts:', input_uv.Nblts)
         print('Nfreqs:', input_uv.Nfreqs)
 
-        if catalog is None or catalog == 'mock':
+        if catalog_file is None or catalog_file == 'mock':
             # time, arrangement, array_location, save, Nsrcs, max_za
 
             if mock_keywords is None:
@@ -968,7 +978,8 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None,
             elif catalog_file.endswith('vot'):
                 catalog = simsetup.read_gleam_catalog(catalog_file)
 
-        print('Nsrcs:', catalog.size)
+        catalog = np.array(catalog)
+        print('Nsrcs:', len(catalog))
         uvtask_list = uvdata_to_task_list(input_uv, catalog, beam_list, beam_dict=beam_dict)
 
         if 'obs_param_file' in input_uv.extra_keywords:
