@@ -1012,9 +1012,10 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         stdout.flush()
 
     for i, bm in enumerate(local_task_list[0].telescope.beam_list):
-        uvb = UVBeam()
-        uvb = bm
-        local_task_list[0].telescope.beam_list[i] = bm
+        if isinstance(bm, UVBeam):
+            uvb = UVBeam()
+            uvb = bm
+            local_task_list[0].telescope.beam_list[i] = bm
 
     summed_task_dict = {}
 
