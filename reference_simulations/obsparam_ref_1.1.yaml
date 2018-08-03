@@ -1,6 +1,6 @@
 filing:
   outdir: "./simulation_results/"
-  outfile_name: 'ref_1.1_hera'
+  outfile_name: 'ref_1.1_uniform'
 freq:
   Nfreqs: 1
   channel_width: 80000.0
