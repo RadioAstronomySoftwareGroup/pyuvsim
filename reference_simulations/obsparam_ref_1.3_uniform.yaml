@@ -7,11 +7,11 @@ freq:
   start_freq:  50000000.0
   end_freq:   250000000.0
 sources:
-  catalog: "catalog_files/letter_R_12pt_2458098.27471265.txt"
+  catalog: "catalog_files/letter_R_12pt_2458098.38824015.txt"
 telescope:
   array_layout: telescope_config/baseline_lite.csv
   telescope_config_name: telescope_config/bl_lite_uniform.yaml
 time:
   Ntimes: 2
   integration_time: 11.0
-  start_time: 2458098.27471265
+  start_time: 2458098.38824015
