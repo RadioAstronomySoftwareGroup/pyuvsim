@@ -8,7 +8,7 @@ import astropy.units as units
 from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
-from pyuvdata import UVData
+from pyuvdata import UVData, UVBeam
 import pyuvdata.utils as uvutils
 import os
 import utils
@@ -1010,6 +1010,12 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     if rank == 0:
         print("Tasks Received. Begin Calculations.")
         stdout.flush()
+
+    for i, bm in enumerate(local_task_list[0].telescope.beam_list):
+        uvb = UVBeam()
+        uvb = bm
+        local_task_list[0].telescope.beam_list[i] = bm
+
     summed_task_dict = {}
 
     if rank == 0:
