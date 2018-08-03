@@ -155,7 +155,7 @@ def test_point_catalog_reader():
 
     for src in catalog:
         nt.assert_true(src.name in catalog_table['source_id'])
-        nt.assert_true(src.ra.hour in catalog_table['ra_j2000'])
+        nt.assert_true(src.ra.deg in catalog_table['ra_j2000'])
         nt.assert_true(src.dec.deg in catalog_table['dec_j2000'])
         nt.assert_true(src.stokes[0] in catalog_table['flux_density_I'])
         nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])
