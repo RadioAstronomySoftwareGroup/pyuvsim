@@ -128,7 +128,7 @@ def point_sources_from_params(catalog_csv):
         For now, flat spectrum sources.
     """
     header = open(catalog_csv, 'r').readline()
-    header = [h.strip() for h in header.split() if not h[0] == '[' ]  #Ignore units in header
+    header = [h.strip() for h in header.split() if not h[0] == '[']  # Ignore units in header
     dt = np.format_parser(['a10', 'f8', 'f8', 'f8', 'f8'],
                           ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], header)
 
