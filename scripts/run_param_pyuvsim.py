@@ -55,8 +55,6 @@ if rank == 0:
             beamfits_files = params['beam_files'].values()
             beam_list = []
             for bf in beamfits_files:
-                uvb = UVBeam()
-                uvb.read_beamfits()
                 beam_list.append(bf)
 
         beam_list = (np.array(beam_list)[beam_ids]).tolist()
@@ -83,6 +81,7 @@ if rank == 0:
             catalog = source_params['catalog']
         else:
             catalog = None
+beam_dict = comm.bcast(beam_dict, root=0)
 uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
 
 if rank == 0:
