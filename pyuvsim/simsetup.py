@@ -121,14 +121,14 @@ def point_sources_from_params(catalog_csv):
         Read in a text file of sources.
         Columns:
             Source_ID = source id
-            ra_j2000  = right ascension at J2000 epoch, in decimal hours
+            ra_j2000  = right ascension at J2000 epoch, in decimal degrees
             dec_j2000 = declination at J2000 epoch, in decimal degrees
             flux_density_I = Stokes I flux density in Janskies
             frequency = reference frequency (for future spectral indexing) [Hz]
         For now, flat spectrum sources.
     """
     header = open(catalog_csv, 'r').readline()
-    header = [h.strip() for h in header.split()]
+    header = [h.strip() for h in header.split() if not h[0] == '[']  # Ignore units in header
     dt = np.format_parser(['a10', 'f8', 'f8', 'f8', 'f8'],
                           ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], header)
 
@@ -139,7 +139,7 @@ def point_sources_from_params(catalog_csv):
 
     for si in xrange(catalog_table.size):
         catalog.append(pyuvsim.Source(catalog_table['source_id'][si],
-                                      Angle(catalog_table['ra_j2000'][si], unit=units.hour),
+                                      Angle(catalog_table['ra_j2000'][si], unit=units.deg),
                                       Angle(catalog_table['dec_j2000'][si], unit=units.deg),
                                       catalog_table['frequency'][si] * units.Hz,
                                       [catalog_table['flux_density_I'][si], 0, 0, 0]))
@@ -208,7 +208,7 @@ def initialize_uvdata_from_params(obs_params):
         for a in which_ants:
             beam_dict[a] = beamID
         uvb = UVBeam()
-        if beam_model in ['gaussian', 'tophat']:
+        if beam_model in ['gaussian', 'uniform']:
             # Identify analytic beams
             if beam_model == 'gaussian':
                 try:
@@ -217,7 +217,7 @@ def initialize_uvdata_from_params(obs_params):
                     print("Missing sigma for gaussian beam.")
                     raise err
             else:
-                beam = pyuvsim.AnalyticBeam('tophat')
+                beam = pyuvsim.AnalyticBeam('uniform')
             beam_list.append(beam)
             continue
         if not os.path.exists(beam_model):

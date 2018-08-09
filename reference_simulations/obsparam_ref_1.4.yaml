@@ -1,6 +1,6 @@
 filing:
   outdir: "./simulation_results/"
-  outfile_name: 'ref_1.4_hera'
+  outfile_name: 'ref_1.4_gauss'
 freq:
   Nfreqs: 1
   channel_width: 80000.0
@@ -13,4 +13,4 @@ telescope:
 time:
   Ntimes: 1
   integration_time: 11.0
-  start_time: 2458098.27471265
+  start_time: 2458098.38824015

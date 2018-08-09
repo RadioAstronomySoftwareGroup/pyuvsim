@@ -8,7 +8,7 @@ import astropy.units as units
 from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
-from pyuvdata import UVData
+from pyuvdata import UVData, UVBeam
 import pyuvdata.utils as uvutils
 import os
 import utils
@@ -150,7 +150,7 @@ class Source(object):
     def __eq__(self, other):
         return ((self.ra == other.ra)
                 and (self.dec == other.dec)
-                and (self.stokes == other.stokes)
+                and np.all(self.stokes == other.stokes)
                 and (self.name == other.name)
                 and (self.freq == other.freq))
 
@@ -270,7 +270,7 @@ class Telescope(object):
 
 
 class AnalyticBeam(object):
-    supported_types = ['tophat', 'gaussian']
+    supported_types = ['uniform', 'gaussian']
 
     def __init__(self, type, sigma=None):
         if type in self.supported_types:
@@ -287,7 +287,7 @@ class AnalyticBeam(object):
     def interp(self, az_array, za_array, freq_array):
         # (Naxes_vec, Nspws, Nfeeds or Npols, freq_array.size, az_array.size)
 
-        if self.type == 'tophat':
+        if self.type == 'uniform':
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
             interp_data[1, 0, 0, :, :] = 1
             interp_data[0, 0, 1, :, :] = 1
@@ -316,8 +316,8 @@ class AnalyticBeam(object):
         if self.type == 'gaussian':
             return ((self.type == other.type)
                     and (self.sigma == other.sigma))
-        elif self.type == 'tophat':
-            return other.type == 'tophat'
+        elif self.type == 'uniform':
+            return other.type == 'uniform'
         else:
             return False
 
@@ -1010,6 +1010,14 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     if rank == 0:
         print("Tasks Received. Begin Calculations.")
         stdout.flush()
+
+    # UVBeam objects don't survive the scatter with prop_fget() working. This fixes it on each rank.
+    for i, bm in enumerate(local_task_list[0].telescope.beam_list):
+        if isinstance(bm, UVBeam):
+            uvb = UVBeam()
+            uvb = bm
+            local_task_list[0].telescope.beam_list[i] = bm
+
     summed_task_dict = {}
 
     if rank == 0:

@@ -58,7 +58,7 @@ def check_param_reader(config_num):
 
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
-    beam1 = pyuvsim.AnalyticBeam('tophat')
+    beam1 = pyuvsim.AnalyticBeam('uniform')
     beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
     beam_list = [beam0, beam1, beam2]
 
@@ -155,7 +155,7 @@ def test_point_catalog_reader():
 
     for src in catalog:
         nt.assert_true(src.name in catalog_table['source_id'])
-        nt.assert_true(src.ra.hour in catalog_table['ra_j2000'])
+        nt.assert_true(src.ra.deg in catalog_table['ra_j2000'])
         nt.assert_true(src.dec.deg in catalog_table['dec_j2000'])
         nt.assert_true(src.stokes[0] in catalog_table['flux_density_I'])
         nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])

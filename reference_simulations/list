@@ -1,6 +1,6 @@
 1. Baselines:
     HERA text point source test pattern
-    tophat beam
+    uniform beam
     MWA-nocore layout
     10 times
     1 freq
@@ -28,4 +28,3 @@
 To Do:
     Write a wrapper that will do the MPI jobs and compile runtime data.
         >> Collect slurm job IDs, runtime, maxRSS, NNodes, NTasks
-    Investigate -- Can I kill the whole job if a single task errors, and notify me when this happens? Still compile error data?

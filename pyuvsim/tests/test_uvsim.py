@@ -390,8 +390,8 @@ def test_single_offzenith_source_uvfits():
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=1e-4))
 
 
-def test_tophat_beam():
-    beam = pyuvsim.AnalyticBeam('tophat')
+def test_uniform_beam():
+    beam = pyuvsim.AnalyticBeam('uniform')
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
 
@@ -515,7 +515,7 @@ def test_offzenith_source_multibl_uvfits():
     #                    model_name='E-field pattern - Rigging height 4.9m',
     #                    model_version='1.0')
 
-    beam = pyuvsim.AnalyticBeam('tophat')
+    beam = pyuvsim.AnalyticBeam('uniform')
 
     beam_list = [beam]
 

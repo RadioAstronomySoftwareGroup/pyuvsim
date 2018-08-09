@@ -37,7 +37,6 @@ if params is None:
 
 input_uv = UVData()
 
-Nbeams = 0
 beam_list = None
 beam_dict = None
 input_uv = UVData()
@@ -61,7 +60,6 @@ if rank == 0:
                 beam_list.append(bf)
 
         beam_list = (np.array(beam_list)[beam_ids]).tolist()
-        Nbeams = len(beam_list)
         outfile_name = os.path.join(params['outdir'], params['outfile_prefix'] + "_" + os.path.basename(filename))
         outfile_name = outfile_name + ".uvfits"
 
@@ -85,13 +83,6 @@ if rank == 0:
             catalog = source_params['catalog']
         else:
             catalog = None
-# Roundabout way to share the beam list.
-Nbeams = comm.bcast(Nbeams, root=0)
-if not rank == 0:
-    beam_list = np.zeros(Nbeams).tolist()
-for bi in range(Nbeams):
-    beam_list[bi] = comm.bcast(beam_list[bi], root=0)
-beam_dict = comm.bcast(beam_dict, root=0)
 uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
 
 if rank == 0:
