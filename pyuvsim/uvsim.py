@@ -272,7 +272,7 @@ class Telescope(object):
 
 class AnalyticBeam(object):
 
-    supported_types = ['tophat', 'gaussian', 'airy']
+    supported_types = ['uniform', 'gaussian', 'airy']
 
     def __init__(self, type, sigma=None, diameter=None):
         if type in self.supported_types:
