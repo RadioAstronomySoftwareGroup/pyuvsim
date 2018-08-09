@@ -335,6 +335,9 @@ class AnalyticBeam(object):
                     and (self.sigma == other.sigma))
         elif self.type == 'uniform':
             return other.type == 'uniform'
+        elif self.type == 'airy':
+            return ((self.type == other.type)
+                    and (self.diameter == other.diameter))
         else:
             return False
 
