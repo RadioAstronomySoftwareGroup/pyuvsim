@@ -4,6 +4,7 @@
 
 import numpy as np
 import astropy.constants as const
+from scipy.special import jn
 import astropy.units as units
 from astropy.units import Quantity
 from astropy.time import Time
@@ -270,15 +271,17 @@ class Telescope(object):
 
 
 class AnalyticBeam(object):
-    supported_types = ['uniform', 'gaussian']
 
-    def __init__(self, type, sigma=None):
+    supported_types = ['uniform', 'gaussian', 'airy']
+
+    def __init__(self, type, sigma=None, diameter=None):
         if type in self.supported_types:
             self.type = type
         else:
             raise ValueError('type not recognized')
 
         self.sigma = sigma
+        self.diameter = diameter
         self.data_normalization = 'peak'
 
     def peak_normalize(self):
@@ -307,6 +310,20 @@ class AnalyticBeam(object):
             interp_data[1, 0, 1, :, :] = values
             interp_data[0, 0, 0, :, :] = values
             interp_basis_vector = None
+        elif self.type == 'airy':
+            if self.diameter is None:
+                raise ValueError("Diameter needed for airy beam -- units: meters")
+            interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
+            za_grid, f_grid = np.meshgrid(za_array, freq_array)
+            xvals = self.diameter / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8
+            values = np.zeros_like(xvals)
+            values[xvals > 0.] = (2. * jn(1, xvals[xvals > 0.]) / xvals[xvals > 0.]) ** 2.
+            values[xvals == 0.] = 1.
+            interp_data[1, 0, 0, :, :] = values
+            interp_data[0, 0, 1, :, :] = values
+            interp_data[1, 0, 1, :, :] = values
+            interp_data[0, 0, 0, :, :] = values
+            interp_basis_vector = None
         else:
             raise ValueError('no interp for this type: ', self.type)
 
@@ -318,6 +335,9 @@ class AnalyticBeam(object):
                     and (self.sigma == other.sigma))
         elif self.type == 'uniform':
             return other.type == 'uniform'
+        elif self.type == 'airy':
+            return ((self.type == other.type)
+                    and (self.diameter == other.diameter))
         else:
             return False
 
