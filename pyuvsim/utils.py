@@ -2,9 +2,40 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
+from mpi4py import MPI
 import time as pytime
 import sys
+from astropy import _erfa as erfa
+from astropy.coordinates.builtin_frames.utils import get_jd12
+from . import version as simversion
 
+
+def get_mpi():
+
+    comm = MPI.COMM_WORLD
+    Npus = comm.Get_size()
+    rank = comm.Get_rank()
+    return comm, rank, Npus
+
+
+def set_mpi_excepthook(mpi_comm):
+    """Kill the whole job on an uncaught python exception"""
+
+    def mpi_excepthook(exctype, value, traceback):
+        sys.__excepthook__(exctype, value, traceback)
+        mpi_comm.Abort(1)
+
+    sys.excepthook = mpi_excepthook
+
+
+def get_version_string():
+    version_string = ('Simulated with pyuvsim version: ' + simversion.version + '.')
+    if simversion.git_hash is not '':
+        version_string += ('  Git origin: ' + simversion.git_origin
+                           + '.  Git hash: ' + simversion.git_hash
+                           + '.  Git branch: ' + simversion.git_branch
+                           + '.  Git description: ' + simversion.git_description + '.')
+    return version_string
 
 class progsteps:
     """
@@ -29,3 +60,30 @@ class progsteps:
 
     def finish(self):
         self.update(self.maxval)
+
+
+# The frame radio astronomers call the apparent or current epoch is the
+# "true equator & equinox" frame, notated E_upsilon in the USNO circular
+# astropy doesn't have this frame but it's pretty easy to adapt the CIRS frame
+# by modifying the ra to reflect the difference between
+# GAST (Grenwich Apparent Sidereal Time) and the earth rotation angle (theta)
+def tee_to_cirs_ra(tee_ra, time):
+    era = erfa.era00(*get_jd12(time, 'ut1'))
+    theta_earth = Angle(era, unit='rad')
+
+    assert(isinstance(time, Time))
+    assert(isinstance(tee_ra, Angle))
+    gast = time.sidereal_time('apparent', longitude=0)
+    cirs_ra = tee_ra - (gast - theta_earth)
+    return cirs_ra
+
+
+def cirs_to_tee_ra(cirs_ra, time):
+    era = erfa.era00(*get_jd12(time, 'ut1'))
+    theta_earth = Angle(era, unit='rad')
+
+    assert(isinstance(time, Time))
+    assert(isinstance(cirs_ra, Angle))
+    gast = time.sidereal_time('apparent', longitude=0)
+    tee_ra = cirs_ra + (gast - theta_earth)
+    return tee_ra
