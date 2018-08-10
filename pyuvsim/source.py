@@ -1,3 +1,11 @@
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2018 Radio Astronomy Software Group
+# Licensed under the 2-clause BSD License
+
+import numpy as np
+from astropy.units import Quantity
+from astropy.time import Time
+from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
 class Source(object):
     name = None

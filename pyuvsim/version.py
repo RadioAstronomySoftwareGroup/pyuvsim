@@ -8,9 +8,10 @@ import os
 import six
 import subprocess
 import json
-from mpi4py import MPI
+from . import utils as simutils
 
-rank = MPI.COMM_WORLD.Get_rank()
+
+comm, rank, Npus = simutiles.get_mpi()
 
 
 def construct_version_info():
