@@ -3,6 +3,7 @@
 # Licensed under the 2-clause BSD License
 
 import numpy as np
+from scipy.special import spherical_jn as jn
 
 
 class AnalyticBeam(object):

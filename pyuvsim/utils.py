@@ -2,30 +2,15 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
-from mpi4py import MPI
+from __future__ import absolute_import, division, print_function
+
 import time as pytime
 import sys
 from astropy import _erfa as erfa
+from astropy.coordinates import Angle
+from astropy.time import Time
 from astropy.coordinates.builtin_frames.utils import get_jd12
 from . import version as simversion
-
-
-def get_mpi():
-
-    comm = MPI.COMM_WORLD
-    Npus = comm.Get_size()
-    rank = comm.Get_rank()
-    return comm, rank, Npus
-
-
-def set_mpi_excepthook(mpi_comm):
-    """Kill the whole job on an uncaught python exception"""
-
-    def mpi_excepthook(exctype, value, traceback):
-        sys.__excepthook__(exctype, value, traceback)
-        mpi_comm.Abort(1)
-
-    sys.excepthook = mpi_excepthook
 
 
 def get_version_string():

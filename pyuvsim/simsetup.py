@@ -9,11 +9,15 @@ import os
 import sys
 import warnings
 import pyuvdata.utils as uvutils
+from .source import Source
+from .analyticbeam import AnalyticBeam
+from .mpi import rank
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-import pyuvsim
 import astropy.units as units
 from astropy.coordinates import Angle
+from astropy.time import Time
 from astropy.io.votable import parse
+from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
 
 def write_uvfits(uv_obj, param_dict):
@@ -106,7 +110,7 @@ def read_gleam_catalog(gleam_votable):
 
     sourcelist = []
     for entry in data:
-        source = pyuvsim.Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
+        source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
                                 Angle(entry['DEJ2000'], unit=units.deg),
                                 freq=(200e6 * units.Hz),
                                 stokes=np.array([entry['Fintwide'], 0., 0., 0.]))
@@ -136,7 +140,7 @@ def point_sources_from_params(catalog_csv):
     catalog = []
 
     for si in xrange(catalog_table.size):
-        catalog.append(pyuvsim.Source(catalog_table['source_id'][si],
+        catalog.append(Source(catalog_table['source_id'][si],
                                       Angle(catalog_table['ra_j2000'][si], unit=units.deg),
                                       Angle(catalog_table['dec_j2000'][si], unit=units.deg),
                                       catalog_table['frequency'][si] * units.Hz,
@@ -145,7 +149,6 @@ def point_sources_from_params(catalog_csv):
     return catalog
 
 
-@profile
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
                         zen_ang=None, save=False, max_za=-1.0):
     """
@@ -332,16 +335,20 @@ def initialize_uvdata_from_params(obs_params):
         for a in which_ants:
             beam_dict[a] = beamID
         uvb = UVBeam()
-        if beam_model in ['gaussian', 'uniform']:
+        if beam_model in ['gaussian', 'uniform', 'airy']:
             # Identify analytic beams
             if beam_model == 'gaussian':
                 try:
-                    beam = pyuvsim.AnalyticBeam('gaussian', sigma=telparam['sigma'])
+                    beam = AnalyticBeam('gaussian', sigma=telparam['sigma'])
                 except KeyError as err:
-                    print("Missing sigma for gaussian beam.")
-                    raise err
+                    raise KeyError("Missing sigma for gaussian beam.")
+            elif beam_model == 'airy':
+                try:
+                    beam = AnalyticBeam('airy', diameter=telparam['diameter'])
+                except KeyError as err:
+                    raise KeyError("Missing diameter for airy beam")
             else:
-                beam = pyuvsim.AnalyticBeam('uniform')
+                beam = AnalyticBeam('uniform')
             beam_list.append(beam)
             continue
         if not os.path.exists(beam_model):

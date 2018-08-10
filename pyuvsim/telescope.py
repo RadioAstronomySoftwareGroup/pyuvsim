@@ -5,7 +5,6 @@
 import numpy as np
 
 class Telescope(object):
-    @profile
     def __init__(self, telescope_name, telescope_location, beam_list):
         # telescope location (EarthLocation object)
         self.telescope_location = telescope_location

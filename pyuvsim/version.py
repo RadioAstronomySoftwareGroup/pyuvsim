@@ -8,10 +8,7 @@ import os
 import six
 import subprocess
 import json
-from . import utils as simutils
-
-
-comm, rank, Npus = simutiles.get_mpi()
+from .mpi import rank
 
 
 def construct_version_info():

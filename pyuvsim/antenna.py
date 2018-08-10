@@ -3,9 +3,9 @@
 # Licensed under the 2-clause BSD License
 
 import numpy as np
+import astropy.units as units
 
 class Antenna(object):
-    @profile
     def __init__(self, name, number, enu_position, beam_id):
         self.name = name
         self.number = number
@@ -14,7 +14,6 @@ class Antenna(object):
         # index of beam for this antenna from array.beam_list
         self.beam_id = beam_id
 
-    @profile
     def get_beam_jones(self, array, source_az_za, frequency):
         # get_direction_jones needs to be defined on UVBeam
         # 2x2 array of Efield vectors in Az/ZA

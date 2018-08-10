@@ -3,23 +3,30 @@
 # Licensed under the 2-clause BSD License
 
 # CLEANUP: standard packages at the top, related next, then package specific imports
+
+from __future__ import absolute_import, division, print_function
+
 import numpy as np
 import os
 import sys
 from itertools import izip
-from mpi4py import MPI
 import __builtin__
 import astropy.constants as const
 import astropy.units as units
 from astropy.units import Quantity
 from astropy.time import Time
-from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
+from astropy.coordinates import EarthLocation
 from pyuvdata import UVData, UVBeam
 import pyuvdata.utils as uvutils
+from .mpi import comm, rank, Npus, set_mpi_excepthook
+from .antenna import Antenna
+from .baseline import Baseline
+from .telescope import Telescope
 from . import utils as simutils
 from . import simsetup
 
-
+__all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_list', 'run_uvsim', 'initialize_uvdata', 'serial_gather']
+ 
 # CLEANUP: find more streamlined way to import progressbar.  
 # CLEANUP: Should only appear in whatever file actually does the running of the code.
 try:
@@ -36,11 +43,7 @@ try:
 except(KeyError):
     progbar = progbar
 
-# Initialize MPI, get the communicator, number of Processing Units (PUs)
-# and the rank of this PU
-
-comm, rank, Npus = simutils.get_mpi()
-simutils.set_mpi_excepthook(comm)
+set_mpi_excepthook(comm)
 
 # CLEANUP: These next ~6 lines are for profiling.  Can we find a way to move out?
 try:
