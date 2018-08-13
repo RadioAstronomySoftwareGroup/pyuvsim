@@ -2,9 +2,11 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
-import profiling
 import numpy as np
 from scipy.special import spherical_jn as jn
+
+from . import profiling
+
 
 @profile
 class AnalyticBeam(object):

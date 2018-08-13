@@ -10,6 +10,7 @@ from astropy import _erfa as erfa
 from astropy.coordinates import Angle
 from astropy.time import Time
 from astropy.coordinates.builtin_frames.utils import get_jd12
+
 from . import version as simversion
 
 
@@ -21,6 +22,7 @@ def get_version_string():
                            + '.  Git branch: ' + simversion.git_branch
                            + '.  Git description: ' + simversion.git_description + '.')
     return version_string
+
 
 class progsteps:
     """

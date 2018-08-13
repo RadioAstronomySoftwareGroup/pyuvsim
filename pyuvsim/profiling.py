@@ -25,16 +25,19 @@ else:
 
 prof = LineProfiler()
 
+
 def profile(cls):
     """ cls can be a class or function."""
     if inspect.isfunction(cls):
         return prof(cls)
+
     class wrapper(object):
         def __init__(self, *args, **kwargs):
             self.oInstance = cls(*args, **kwargs)
+
         def __getattribute__(self, s):
             try:
-                x = super(wrapper,self).__getattribute__(s)
+                x = super(wrapper, self).__getattribute__(s)
             except AttributeError:
                 pass
             else:
@@ -53,8 +56,9 @@ def set_profiler():
     builtins.__dict__['profile'] = profile
     atexit.register(prof.print_stats)
 
+
 # By default, the profile decorator has no effect.
-if not 'profile' in builtins.__dict__:
+if 'profile' not in builtins.__dict__:
     builtins.__dict__['profile'] = lambda f: f
 else:
     set_profiler()  # Will activate if run with kernprof

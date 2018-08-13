@@ -15,9 +15,11 @@ import astropy.units as units
 from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import EarthLocation
+from .mpi import comm, rank, Npus, set_mpi_excepthook
+
 from pyuvdata import UVData, UVBeam
 import pyuvdata.utils as uvutils
-from .mpi import comm, rank, Npus, set_mpi_excepthook
+
 from . import profiling
 from .antenna import Antenna
 from .baseline import Baseline
@@ -26,8 +28,8 @@ from . import utils as simutils
 from . import simsetup
 
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_list', 'run_uvsim', 'initialize_uvdata', 'serial_gather']
- 
-# CLEANUP: find more streamlined way to import progressbar.  
+
+# CLEANUP: find more streamlined way to import progressbar.
 # CLEANUP: Should only appear in whatever file actually does the running of the code.
 try:
     import progressbar
@@ -151,7 +153,6 @@ class UVEngine(object):
 
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
-
 
 
 def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
@@ -393,8 +394,7 @@ def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
 
 def serial_gather(uvtask_list, uv_out):
     """
-        Initialize uvdata object, loop over uvtask list, acquire visibilities,
-        and add to uvdata object.
+        Loop over uvtask list, acquire visibilities and add to uvdata object.
     """
     for task in uvtask_list:
         blt_ind, spw_ind, freq_ind = task.uvdata_index

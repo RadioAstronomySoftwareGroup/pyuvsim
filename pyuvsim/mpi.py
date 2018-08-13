@@ -11,6 +11,7 @@ comm = MPI.COMM_WORLD
 Npus = comm.Get_size()
 rank = comm.Get_rank()
 
+
 def get_mpi():
     """
     Initialize MPI, get the communicator, number of Processing Units (PUs)

@@ -2,53 +2,24 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
-from pyuvdata import UVBeam, UVData
 import numpy as np
 import yaml
 import os
 import sys
 import warnings
+import astropy.units as units
+from astropy.time import Time
+from astropy.io.votable import parse
+from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
+
+from pyuvdata import UVBeam, UVData
 import pyuvdata.utils as uvutils
+
 from . import profiling
 from .source import Source
 from .analyticbeam import AnalyticBeam
 from .mpi import rank
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-import astropy.units as units
-from astropy.coordinates import Angle
-from astropy.time import Time
-from astropy.io.votable import parse
-from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
-
-
-def write_uvfits(uv_obj, param_dict):
-    """
-        Parse output file information from parameters and write uvfits to file.
-    """
-    param_dict = param_dict['filing']
-    if 'outdir' not in param_dict:
-        param_dict['outdir'] = '.'
-    if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
-        outfile_prefix = ""
-        outfile_suffix = "_results"
-        if 'outfile_prefix' in param_dict:
-            outfile_prefix = param_dict['outfile_prefix'] + "_"
-        if 'outfile_suffix' in param_dict:
-            outfile_suffix = "_" + param_dict['outfile_suffix']
-        outfile_name = os.path.join(param_dict['outdir'], outfile_prefix
-                                    + outfile_suffix)  # Strip .yaml extention
-    else:
-        outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
-    print('Outfile path: ', outfile_name)
-    outfile_name = outfile_name + ".uvfits"
-
-    if 'clobber' not in param_dict:
-        outfile_name = check_file_exists_and_increment(outfile_name)
-
-    if not os.path.exists(param_dict['outdir']):
-        os.makedirs(param_dict['outdir'])
-
-    uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
 
 
 def strip_extension(filepath):
@@ -112,9 +83,9 @@ def read_gleam_catalog(gleam_votable):
     sourcelist = []
     for entry in data:
         source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
-                                Angle(entry['DEJ2000'], unit=units.deg),
-                                freq=(200e6 * units.Hz),
-                                stokes=np.array([entry['Fintwide'], 0., 0., 0.]))
+                        Angle(entry['DEJ2000'], unit=units.deg),
+                        freq=(200e6 * units.Hz),
+                        stokes=np.array([entry['Fintwide'], 0., 0., 0.]))
         sourcelist.append(source)
     return sourcelist
 
@@ -142,10 +113,10 @@ def point_sources_from_params(catalog_csv):
 
     for si in xrange(catalog_table.size):
         catalog.append(Source(catalog_table['source_id'][si],
-                                      Angle(catalog_table['ra_j2000'][si], unit=units.deg),
-                                      Angle(catalog_table['dec_j2000'][si], unit=units.deg),
-                                      catalog_table['frequency'][si] * units.Hz,
-                                      [catalog_table['flux_density_I'][si], 0, 0, 0]))
+                              Angle(catalog_table['ra_j2000'][si], unit=units.deg),
+                              Angle(catalog_table['dec_j2000'][si], unit=units.deg),
+                              catalog_table['frequency'][si] * units.Hz,
+                              [catalog_table['flux_density_I'][si], 0, 0, 0]))
 
     return catalog
 
@@ -273,6 +244,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
     catalog = np.array(catalog)
     return catalog, mock_keywords
+
 
 @profile
 def initialize_uvdata_from_params(obs_params):
@@ -681,3 +653,33 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
 
     with open(os.path.join(path_out, param_filename), 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)
+
+
+def write_uvfits(uv_obj, param_dict):
+    """
+        Parse output file information from parameters and write uvfits to file.
+    """
+    param_dict = param_dict['filing']
+    if 'outdir' not in param_dict:
+        param_dict['outdir'] = '.'
+    if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
+        outfile_prefix = ""
+        outfile_suffix = "_results"
+        if 'outfile_prefix' in param_dict:
+            outfile_prefix = param_dict['outfile_prefix'] + "_"
+        if 'outfile_suffix' in param_dict:
+            outfile_suffix = "_" + param_dict['outfile_suffix']
+        outfile_name = os.path.join(param_dict['outdir'], outfile_prefix
+                                    + outfile_suffix)  # Strip .yaml extention
+    else:
+        outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
+    print('Outfile path: ', outfile_name)
+    outfile_name = outfile_name + ".uvfits"
+
+    if 'clobber' not in param_dict:
+        outfile_name = check_file_exists_and_increment(outfile_name)
+
+    if not os.path.exists(param_dict['outdir']):
+        os.makedirs(param_dict['outdir'])
+
+    uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
