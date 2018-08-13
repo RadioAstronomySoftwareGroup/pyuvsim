@@ -1,0 +1,4 @@
+beam_paths:
+  0: 'airy'
+telescope_location: (0., 0., 0.)
+telescope_name: TWOANT
