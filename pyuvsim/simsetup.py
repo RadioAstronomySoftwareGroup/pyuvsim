@@ -9,6 +9,7 @@ import os
 import sys
 import warnings
 import pyuvdata.utils as uvutils
+from . import profiling
 from .source import Source
 from .analyticbeam import AnalyticBeam
 from .mpi import rank
@@ -273,7 +274,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     catalog = np.array(catalog)
     return catalog, mock_keywords
 
-
+@profile
 def initialize_uvdata_from_params(obs_params):
     """
         Construct a uvdata object from parameters in a valid yaml file.
@@ -547,6 +548,7 @@ def initialize_uvdata_from_params(obs_params):
     return uv_obj, beam_list, beam_dict, beam_ids
 
 
+@profile
 def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
                                telescope_config_name=None,
                                return_names=False, path_out='.'):
@@ -616,6 +618,7 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
         return path_out, telescope_config_name, layout_csv_name
 
 
+@profile
 def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name='',
                           layout_csv_name='', catalog='mock', path_out='.'):
     """

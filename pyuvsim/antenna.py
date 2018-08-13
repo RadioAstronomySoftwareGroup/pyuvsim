@@ -2,9 +2,11 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
+import profiling
 import numpy as np
 import astropy.units as units
 
+@profile
 class Antenna(object):
     def __init__(self, name, number, enu_position, beam_id):
         self.name = name

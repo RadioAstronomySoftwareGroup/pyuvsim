@@ -2,8 +2,10 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
+import profiling
 import numpy as np
 
+@profile
 class Telescope(object):
     def __init__(self, telescope_name, telescope_location, beam_list):
         # telescope location (EarthLocation object)

@@ -10,7 +10,6 @@ import numpy as np
 import os
 import sys
 from itertools import izip
-import __builtin__
 import astropy.constants as const
 import astropy.units as units
 from astropy.units import Quantity
@@ -19,6 +18,7 @@ from astropy.coordinates import EarthLocation
 from pyuvdata import UVData, UVBeam
 import pyuvdata.utils as uvutils
 from .mpi import comm, rank, Npus, set_mpi_excepthook
+from . import profiling
 from .antenna import Antenna
 from .baseline import Baseline
 from .telescope import Telescope
@@ -45,21 +45,12 @@ except(KeyError):
 
 set_mpi_excepthook(comm)
 
-# CLEANUP: These next ~6 lines are for profiling.  Can we find a way to move out?
-try:
-    __builtin__.profile
-    if not rank == 0:
-        __builtin__.profile = lambda f: f
-except AttributeError:
-    __builtin__.profile = lambda f: f
 
-
-
+@profile
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
     # need the array because we need an array location for mapping to locat az/za
 
-    @profile
     def __init__(self, source, time, freq, baseline, telescope):
         self.time = time
         self.freq = freq
@@ -105,7 +96,6 @@ class UVTask(object):
 
 class UVEngine(object):
 
-    @profile
     def __init__(self, task):   # task_array  = list of tuples (source,time,freq,uvw)
         # self.rank
         self.task = task
@@ -116,7 +106,6 @@ class UVEngine(object):
         if isinstance(self.task.freq, float):
             self.task.freq = self.task.freq * units.Hz
 
-    @profile
     def apply_beam(self):
         """ Get apparent coherency from jones matrices and source coherency. """
         baseline = self.task.baseline
@@ -142,7 +131,6 @@ class UVEngine(object):
 
         self.apparent_coherency = this_apparent_coherency
 
-    @profile
     def make_visibility(self):
         """ Visibility contribution from a single source """
         assert(isinstance(self.task.freq, Quantity))
@@ -161,13 +149,11 @@ class UVEngine(object):
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
         return np.array(vis_vector)
 
-    @profile
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
 
 
 
-@profile
 def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     """Create task list from pyuvdata compatible input file.
 
@@ -252,7 +238,6 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     return uvtask_list
 
 
-@profile
 def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
                       obs_param_file=None, telescope_config_file=None,
                       antenna_location_file=None):
@@ -406,7 +391,6 @@ def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
     return uv_obj
 
 
-@profile
 def serial_gather(uvtask_list, uv_out):
     """
         Initialize uvdata object, loop over uvtask list, acquire visibilities,
@@ -419,7 +403,6 @@ def serial_gather(uvtask_list, uv_out):
     return uv_out
 
 
-@profile
 def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
               mock_keywords=None,
               uvdata_file=None, obs_param_file=None,

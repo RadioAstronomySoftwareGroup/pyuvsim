@@ -2,8 +2,10 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
+import profiling
 import numpy as np
 
+@profile
 class Baseline(object):
     def __init__(self, antenna1, antenna2):
         self.antenna1 = antenna1

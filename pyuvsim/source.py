@@ -2,11 +2,13 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
+import profiling
 import numpy as np
 from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
+@profile
 class Source(object):
     name = None
     freq = None

@@ -4,6 +4,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+from .profiling import *
 from .uvsim import *
 from .simsetup import *
 from .analyticbeam import *

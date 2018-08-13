@@ -2,6 +2,8 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
+from __future__ import absolute_import, division, print_function
+
 from mpi4py import MPI
 import sys
 
@@ -15,9 +17,6 @@ def get_mpi():
     and the rank of this PU
     """
 
-    comm = MPI.COMM_WORLD
-    Npus = comm.Get_size()
-    rank = comm.Get_rank()
     return comm, rank, Npus
 
 
