@@ -4,10 +4,7 @@
 
 import numpy as np
 
-from . import profiling
 
-
-@profile
 class Telescope(object):
     def __init__(self, telescope_name, telescope_location, beam_list):
         # telescope location (EarthLocation object)

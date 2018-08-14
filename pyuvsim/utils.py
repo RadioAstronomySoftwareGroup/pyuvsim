@@ -29,6 +29,7 @@ class progsteps:
         Similar to progress bar. Prints a percentage of completion.
         For when running in batch and progress bar doesn't work well.
     """
+
     def __init__(self, maxval=None):
         self.t0 = pytime.time()
         if maxval is None:

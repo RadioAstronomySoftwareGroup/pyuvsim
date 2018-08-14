@@ -26,34 +26,9 @@ else:
 prof = LineProfiler()
 
 
-def profile(cls):
-    """ cls can be a class or function."""
-    if inspect.isfunction(cls):
-        return prof(cls)
-
-    class wrapper(object):
-        def __init__(self, *args, **kwargs):
-            self.oInstance = cls(*args, **kwargs)
-
-        def __getattribute__(self, s):
-            try:
-                x = super(wrapper, self).__getattribute__(s)
-            except AttributeError:
-                pass
-            else:
-                return x
-            x = self.oInstance.__getattribute__(s)
-#            if type(x) == type(self.__init__):  # Instance method
-#                return prof(x)
-#            else:
-#                return x
-            return prof(x)
-    return wrapper
-
-
 def set_profiler():
     """ If profiling is requested, then assign it to the builtins """
-    builtins.__dict__['profile'] = profile
+    builtins.__dict__['profile'] = prof
     atexit.register(prof.print_stats)
 
 

@@ -15,7 +15,6 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from pyuvdata import UVBeam, UVData
 import pyuvdata.utils as uvutils
 
-from . import profiling
 from .source import Source
 from .analyticbeam import AnalyticBeam
 from .mpi import rank

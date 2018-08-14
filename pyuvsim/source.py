@@ -7,10 +7,7 @@ from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
-from . import profiling
 
-
-@profile
 class Source(object):
     name = None
     freq = None
@@ -69,6 +66,7 @@ class Source(object):
                 and (self.name == other.name)
                 and (self.freq == other.freq))
 
+    @profile
     def coherency_calc(self, time, telescope_location):
         """
         Calculate the local coherency in az/za basis for this source at a time & location.
@@ -115,6 +113,7 @@ class Source(object):
 
         return coherency_local
 
+    @profile
     def az_za_calc(self, time, telescope_location):
         """
         calculate the azimuth & zenith angle for this source at a time & location
@@ -140,6 +139,7 @@ class Source(object):
         self.az_za = az_za
         return az_za
 
+    @profile
     def pos_lmn(self, time, telescope_location):
         """
         calculate the direction cosines of this source at a time & location

@@ -5,14 +5,12 @@
 import numpy as np
 from scipy.special import spherical_jn as jn
 
-from . import profiling
 
-
-@profile
 class AnalyticBeam(object):
 
     supported_types = ['uniform', 'gaussian', 'airy']
 
+    @profile
     def __init__(self, type, sigma=None, diameter=None):
         if type in self.supported_types:
             self.type = type
@@ -26,6 +24,7 @@ class AnalyticBeam(object):
     def peak_normalize(self):
         pass
 
+    @profile
     def interp(self, az_array, za_array, freq_array):
         # (Naxes_vec, Nspws, Nfeeds or Npols, freq_array.size, az_array.size)
 
@@ -69,6 +68,8 @@ class AnalyticBeam(object):
         return interp_data, interp_basis_vector
 
     def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
         if self.type == 'gaussian':
             return ((self.type == other.type)
                     and (self.sigma == other.sigma))

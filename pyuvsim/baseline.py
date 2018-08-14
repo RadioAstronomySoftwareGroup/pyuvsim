@@ -4,10 +4,7 @@
 
 import numpy as np
 
-from . import profiling
 
-
-@profile
 class Baseline(object):
     def __init__(self, antenna1, antenna2):
         self.antenna1 = antenna1
