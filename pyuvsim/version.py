@@ -8,9 +8,7 @@ import os
 import six
 import subprocess
 import json
-from mpi4py import MPI
-
-rank = MPI.COMM_WORLD.Get_rank()
+from .mpi import rank
 
 
 def construct_version_info():

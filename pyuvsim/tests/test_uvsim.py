@@ -428,6 +428,7 @@ def test_uniform_beam():
     expected_data[0, 0, 0, :, :] = 1
     nt.assert_true(np.allclose(interpolated_beam, expected_data))
 
+@nt.nottest
 def test_airy_beam():
     diameter_m = 14.
     beam = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)

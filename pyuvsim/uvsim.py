@@ -2,26 +2,35 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
+# CLEANUP: standard packages at the top, related next, then package specific imports
+
+from __future__ import absolute_import, division, print_function
+
 import numpy as np
+import os
+import sys
+from itertools import izip
 import astropy.constants as const
-from scipy.special import jn
 import astropy.units as units
 from astropy.units import Quantity
 from astropy.time import Time
-from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
+from astropy.coordinates import EarthLocation
+from .mpi import comm, rank, Npus, set_mpi_excepthook
+
 from pyuvdata import UVData, UVBeam
 import pyuvdata.utils as uvutils
-import os
-import utils
-from itertools import izip
-from mpi4py import MPI
-import __builtin__
-from . import version as simversion
-from sys import stdout
-import sys
-import simsetup
 
+from . import profiling
+from .antenna import Antenna
+from .baseline import Baseline
+from .telescope import Telescope
+from . import utils as simutils
+from . import simsetup
 
+__all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_list', 'run_uvsim', 'initialize_uvdata', 'serial_gather']
+
+# CLEANUP: find more streamlined way to import progressbar.
+# CLEANUP: Should only appear in whatever file actually does the running of the code.
 try:
     import progressbar
     progbar = True
@@ -36,406 +45,13 @@ try:
 except(KeyError):
     progbar = progbar
 
-# Initialize MPI, get the communicator, number of Processing Units (PUs)
-# and the rank of this PU
-
-comm = MPI.COMM_WORLD
-Npus = comm.Get_size()
-rank = comm.Get_rank()
-
-
-def mpi_excepthook(exctype, value, traceback):
-    """Kill the whole job on an uncaught python exception"""
-    sys.__excepthook__(exctype, value, traceback)
-    MPI.COMM_WORLD.Abort(1)
-
-
-sys.excepthook = mpi_excepthook
-
-
-def blank(func):
-    return func
-
-
-try:
-    __builtin__.profile
-    if not rank == 0:
-        __builtin__.profile = blank
-except AttributeError:
-    __builtin__.profile = blank
-
-
-# The frame radio astronomers call the apparent or current epoch is the
-# "true equator & equinox" frame, notated E_upsilon in the USNO circular
-# astropy doesn't have this frame but it's pretty easy to adapt the CIRS frame
-# by modifying the ra to reflect the difference between
-# GAST (Grenwich Apparent Sidereal Time) and the earth rotation angle (theta)
-def tee_to_cirs_ra(tee_ra, time):
-    from astropy import _erfa as erfa
-    from astropy.coordinates.builtin_frames.utils import get_jd12
-    era = erfa.era00(*get_jd12(time, 'ut1'))
-    theta_earth = Angle(era, unit='rad')
-
-    assert(isinstance(time, Time))
-    assert(isinstance(tee_ra, Angle))
-    gast = time.sidereal_time('apparent', longitude=0)
-    cirs_ra = tee_ra - (gast - theta_earth)
-    return cirs_ra
-
-
-def cirs_to_tee_ra(cirs_ra, time):
-    from astropy import _erfa as erfa
-    from astropy.coordinates.builtin_frames.utils import get_jd12
-    era = erfa.era00(*get_jd12(time, 'ut1'))
-    theta_earth = Angle(era, unit='rad')
-
-    assert(isinstance(time, Time))
-    assert(isinstance(cirs_ra, Angle))
-    gast = time.sidereal_time('apparent', longitude=0)
-    tee_ra = cirs_ra + (gast - theta_earth)
-    return tee_ra
-
-
-class Source(object):
-    name = None
-    freq = None
-    stokes = None
-    ra = None
-    dec = None
-    coherency_radec = None
-    az_za = None
-
-    @profile
-    def __init__(self, name, ra, dec, freq, stokes):
-        """
-        Initialize from source catalog
-
-        Args:
-            name: Unique identifier for the source.
-            ra: astropy Angle object
-                source RA in J2000 (or ICRS) coordinates
-            dec: astropy Angle object
-                source Dec in J2000 (or ICRS) coordinates
-            stokes:
-                4 element vector giving the source [I, Q, U, V]
-            freq: astropy quantity
-                frequency of source catalog value
-        """
-        if not isinstance(ra, Angle):
-            raise ValueError('ra must be an astropy Angle object. '
-                             'value was: {ra}'.format(ra=ra))
-
-        if not isinstance(dec, Angle):
-            raise ValueError('dec must be an astropy Angle object. '
-                             'value was: {dec}'.format(dec=dec))
-
-        if not isinstance(freq, Quantity):
-            raise ValueError('freq must be an astropy Quantity object. '
-                             'value was: {f}'.format(f=freq))
-
-        self.name = name
-        self.freq = freq
-        self.stokes = stokes
-        self.ra = ra
-        self.dec = dec
-
-        self.skycoord = SkyCoord(self.ra, self.dec, frame='icrs')
-
-        # The coherency is a 2x2 matrix giving electric field correlation in Jy.
-        # Multiply by .5 to ensure that Trace sums to I not 2*I
-        self.coherency_radec = .5 * np.array([[self.stokes[0] + self.stokes[1],
-                                               self.stokes[2] - 1j * self.stokes[3]],
-                                              [self.stokes[2] + 1j * self.stokes[3],
-                                               self.stokes[0] - self.stokes[1]]])
-
-    def __eq__(self, other):
-        return ((self.ra == other.ra)
-                and (self.dec == other.dec)
-                and np.all(self.stokes == other.stokes)
-                and (self.name == other.name)
-                and (self.freq == other.freq))
-
-    @profile
-    def coherency_calc(self, time, telescope_location):
-        """
-        Calculate the local coherency in az/za basis for this source at a time & location.
-
-        The coherency is a 2x2 matrix giving electric field correlation in Jy.
-        It's specified on the object as a coherency in the ra/dec basis,
-        but must be rotated into local az/za.
-
-        Args:
-            time: astropy Time object
-            telescope_location: astropy EarthLocation object
-
-        Returns:
-            local coherency in az/za basis
-        """
-        if not isinstance(time, Time):
-            raise ValueError('time must be an astropy Time object. '
-                             'value was: {t}'.format(t=time))
-
-        if not isinstance(telescope_location, EarthLocation):
-            raise ValueError('telescope_location must be an astropy EarthLocation object. '
-                             'value was: {al}'.format(al=telescope_location))
-
-        if np.sum(np.abs(self.stokes[1:])) == 0:
-            rotation_matrix = np.array([[1, 0], [0, 1]])
-        else:
-            # First need to calculate the sin & cos of the parallactic angle
-            # See Meeus's astronomical algorithms eq 14.1
-            # also see Astroplan.observer.parallactic_angle method
-            time.location = telescope_location
-            lst = time.sidereal_time('apparent')
-
-            cirs_source_coord = self.skycoord.transform_to('cirs')
-            tee_ra = cirs_to_tee_ra(cirs_source_coord.ra, time)
-
-            hour_angle = (lst - tee_ra).rad
-            sinX = np.sin(hour_angle)
-            cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(hour_angle)
-
-            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
-
-        coherency_local = np.einsum('ab,bc,cd->ad', rotation_matrix.T,
-                                    self.coherency_radec, rotation_matrix)
-
-        return coherency_local
-
-    @profile
-    def az_za_calc(self, time, telescope_location):
-        """
-        calculate the azimuth & zenith angle for this source at a time & location
-
-        Args:
-            time: astropy Time object
-            telescope_location: astropy EarthLocation object
-
-        Returns:
-            (azimuth, zenith_angle) in radians
-        """
-        if not isinstance(time, Time):
-            raise ValueError('time must be an astropy Time object. '
-                             'value was: {t}'.format(t=time))
-
-        if not isinstance(telescope_location, EarthLocation):
-            raise ValueError('telescope_location must be an astropy EarthLocation object. '
-                             'value was: {al}'.format(al=telescope_location))
-
-        source_altaz = self.skycoord.transform_to(AltAz(obstime=time, location=telescope_location))
-
-        az_za = (source_altaz.az.rad, source_altaz.zen.rad)
-        self.az_za = az_za
-        return az_za
-
-    @profile
-    def pos_lmn(self, time, telescope_location):
-        """
-        calculate the direction cosines of this source at a time & location
-
-        Args:
-            time: astropy Time object
-            telescope_location: astropy EarthLocation object
-
-        Returns:
-            (l, m, n) direction cosine values
-        """
-        # calculate direction cosines of source at current time and array location
-        if self.az_za is None:
-            self.az_za_calc(time, telescope_location)
-
-        # Need a horizon mask, for now using pi/2
-        if self.az_za[1] > (np.pi / 2.):
-            return None
-
-        pos_l = np.sin(self.az_za[0]) * np.sin(self.az_za[1])
-        pos_m = np.cos(self.az_za[0]) * np.sin(self.az_za[1])
-        pos_n = np.cos(self.az_za[1])
-        return (pos_l, pos_m, pos_n)
-
-
-class Telescope(object):
-    @profile
-    def __init__(self, telescope_name, telescope_location, beam_list):
-        # telescope location (EarthLocation object)
-        self.telescope_location = telescope_location
-        self.telescope_name = telescope_name
-
-        # list of UVBeam objects, length of number of unique beams
-        self.beam_list = beam_list
-
-    def __eq__(self, other):
-        return ((np.allclose(self.telescope_location.to('m').value, other.telescope_location.to("m").value, atol=1e-3))
-                and (self.beam_list == other.beam_list)
-                and (self.telescope_name == other.telescope_name))
-
-
-class AnalyticBeam(object):
-
-    supported_types = ['uniform', 'gaussian', 'airy']
-
-    def __init__(self, type, sigma=None, diameter=None):
-        if type in self.supported_types:
-            self.type = type
-        else:
-            raise ValueError('type not recognized')
-
-        self.sigma = sigma
-        self.diameter = diameter
-        self.data_normalization = 'peak'
-
-    def peak_normalize(self):
-        pass
-
-    def interp(self, az_array, za_array, freq_array):
-        # (Naxes_vec, Nspws, Nfeeds or Npols, freq_array.size, az_array.size)
-
-        if self.type == 'uniform':
-            interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
-            interp_data[1, 0, 0, :, :] = 1
-            interp_data[0, 0, 1, :, :] = 1
-            interp_data[1, 0, 1, :, :] = 1
-            interp_data[0, 0, 0, :, :] = 1
-            interp_basis_vector = None
-        elif self.type == 'gaussian':
-            if self.sigma is None:
-                raise ValueError("Sigma needed for gaussian beam -- units: radians")
-            interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
-            # gaussian beam only depends on Zenith Angle (symmetric is azimuth)
-            values = np.exp(-(za_array**2) / (2 * self.sigma**2))
-            # copy along freq. axis
-            values = np.broadcast_to(values, (freq_array.size, az_array.size))
-            interp_data[1, 0, 0, :, :] = values
-            interp_data[0, 0, 1, :, :] = values
-            interp_data[1, 0, 1, :, :] = values
-            interp_data[0, 0, 0, :, :] = values
-            interp_basis_vector = None
-        elif self.type == 'airy':
-            if self.diameter is None:
-                raise ValueError("Diameter needed for airy beam -- units: meters")
-            interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
-            za_grid, f_grid = np.meshgrid(za_array, freq_array)
-            xvals = self.diameter / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8
-            values = np.zeros_like(xvals)
-            values[xvals > 0.] = (2. * jn(1, xvals[xvals > 0.]) / xvals[xvals > 0.]) ** 2.
-            values[xvals == 0.] = 1.
-            interp_data[1, 0, 0, :, :] = values
-            interp_data[0, 0, 1, :, :] = values
-            interp_data[1, 0, 1, :, :] = values
-            interp_data[0, 0, 0, :, :] = values
-            interp_basis_vector = None
-        else:
-            raise ValueError('no interp for this type: ', self.type)
-
-        return interp_data, interp_basis_vector
-
-    def __eq__(self, other):
-        if self.type == 'gaussian':
-            return ((self.type == other.type)
-                    and (self.sigma == other.sigma))
-        elif self.type == 'uniform':
-            return other.type == 'uniform'
-        elif self.type == 'airy':
-            return ((self.type == other.type)
-                    and (self.diameter == other.diameter))
-        else:
-            return False
-
-
-class Antenna(object):
-    @profile
-    def __init__(self, name, number, enu_position, beam_id):
-        self.name = name
-        self.number = number
-        # ENU position in meters relative to the telescope_location
-        self.pos_enu = enu_position * units.m
-        # index of beam for this antenna from array.beam_list
-        self.beam_id = beam_id
-
-    @profile
-    def get_beam_jones(self, array, source_az_za, frequency):
-        # get_direction_jones needs to be defined on UVBeam
-        # 2x2 array of Efield vectors in Az/ZA
-        # return array.beam_list[self.beam_id].get_direction_jones(source_lmn, frequency)
-
-        source_az = np.array([source_az_za[0]])
-        source_za = np.array([source_az_za[1]])
-        freq = np.array([frequency.to('Hz').value])
-
-        if array.beam_list[self.beam_id].data_normalization != 'peak':
-            array.beam_list[self.beam_id].peak_normalize()
-        array.beam_list[self.beam_id].interpolation_function = 'az_za_simple'
-
-        interp_data, interp_basis_vector = \
-            array.beam_list[self.beam_id].interp(az_array=source_az,
-                                                 za_array=source_za,
-                                                 freq_array=freq)
-
-        # interp_data has shape: (Naxes_vec, Nspws, Nfeeds, 1 (freq), 1 (source position))
-        jones_matrix = np.zeros((2, 2), dtype=np.complex)
-        # first axis is feed, second axis is theta, phi (opposite order of beam!)
-        jones_matrix[0, 0] = interp_data[1, 0, 0, 0, 0]
-        jones_matrix[1, 1] = interp_data[0, 0, 1, 0, 0]
-        jones_matrix[0, 1] = interp_data[0, 0, 0, 0, 0]
-        jones_matrix[1, 0] = interp_data[1, 0, 1, 0, 0]
-
-        return jones_matrix
-
-    def __eq__(self, other):
-        return ((self.name == other.name)
-                and np.allclose(self.pos_enu.to('m').value, other.pos_enu.to('m').value, atol=1e-3)
-                and (self.beam_id == other.beam_id))
-
-    def __gt__(self, other):
-        return (self.number > other.number)
-
-    def __ge__(self, other):
-        return (self.number >= other.number)
-
-    def __lt__(self, other):
-        return not self.__ge__(other)
-
-    def __le__(self, other):
-        return not self.__gt__(other)
-
-
-class Baseline(object):
-    @profile
-    def __init__(self, antenna1, antenna2):
-        self.antenna1 = antenna1
-        self.antenna2 = antenna2
-        self.enu = antenna2.pos_enu - antenna1.pos_enu
-        # we're using the local az/za frame so uvw is just enu
-        self.uvw = self.enu
-
-    def __eq__(self, other):
-        return ((self.antenna1 == other.antenna1)
-                and (self.antenna2 == other.antenna2)
-                and np.allclose(self.enu.to('m').value, other.enu.to('m').value, atol=1e-3)
-                and np.allclose(self.uvw.to('m').value, other.uvw.to('m').value, atol=1e-3))
-
-    def __gt__(self, other):
-        if self.antenna1 == other.antenna1:
-            return self.antenna2 > other.antenna2
-        return self.antenna1 > other.antenna1
-
-    def __ge__(self, other):
-        if self.antenna1 == other.antenna1:
-            return self.antenna2 >= other.antenna2
-        return self.antenna1 >= other.antenna1
-
-    def __lt__(self, other):
-        return not self.__ge__(other)
-
-    def __le__(self, other):
-        return not self.__gt__(other)
+set_mpi_excepthook(comm)
 
 
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
     # need the array because we need an array location for mapping to locat az/za
 
-    @profile
     def __init__(self, source, time, freq, baseline, telescope):
         self.time = time
         self.freq = freq
@@ -480,33 +96,27 @@ class UVTask(object):
 
 
 class UVEngine(object):
-    # inputs x,y,z,flux,baseline(u,v,w), time, freq
-    # x,y,z in same coordinate system as uvws
 
-    @profile
     def __init__(self, task):   # task_array  = list of tuples (source,time,freq,uvw)
         # self.rank
         self.task = task
-        # Initialize task.time to a Time object.
+        # Time and freq are scattered as floats.
+        # Convert them to astropy Quantities
         if isinstance(self.task.time, float):
             self.task.time = Time(self.task.time, format='jd')
         if isinstance(self.task.freq, float):
             self.task.freq = self.task.freq * units.Hz
-        # construct self based on MPI input
 
-    # Debate --- Do we allow for baseline-defined beams, or stick with just antenna beams?
-    #   This would necessitate the Mueller matrix formalism.
-    #   As long as we stay modular, it should be simple to redefine things.
     @profile
     def apply_beam(self):
-        # Supply jones matrices and their coordinate. Knows current coords of visibilities, applies rotations.
-        # for every antenna calculate the apparent jones flux
-        # Beam --> Takes coherency matrix alt/az to ENU
+        """ Get apparent coherency from jones matrices and source coherency. """
         baseline = self.task.baseline
         source = self.task.source
         # coherency is a 2x2 matrix
-        # (Ex^2 conj(Ex)Ey, conj(Ey)Ex Ey^2)
-        # where x and y vectors along the local za/az coordinates.
+        # [ |Ex|^2, Ex* Ey, Ey* Ex |Ey|^2 ]
+        # where x and y vectors along the local za/az axes.
+
+        # Apparent coherency gives the direction and polarization dependent baseline response to a source.
         beam1_jones = baseline.antenna1.get_beam_jones(self.task.telescope,
                                                        source.az_za_calc(self.task.time,
                                                                          self.task.telescope.telescope_location),
@@ -525,8 +135,8 @@ class UVEngine(object):
 
     @profile
     def make_visibility(self):
-        # dimensions?
-        # polarization, ravel index (freq,time,source)
+        """ Visibility contribution from a single source """
+        assert(isinstance(self.task.freq, Quantity))
         self.apply_beam()
 
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
@@ -534,29 +144,16 @@ class UVEngine(object):
             return np.array([0., 0., 0., 0.], dtype=np.complex128)
 
         # need to convert uvws from meters to wavelengths
-        assert(isinstance(self.task.freq, Quantity))
         uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
-#        with open("coherencies.out",'a+') as f:
-#            f.write(str(self.apparent_coherency)+"\n")
         vij = self.apparent_coherency * fringe
-        # need to reshape to be [xx, yy, xy, yx]
+
+        # Reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
         return np.array(vis_vector)
 
-    @profile
     def update_task(self):
         self.task.visibility_vector = self.make_visibility()
-
-
-def get_version_string():
-    version_string = ('Simulated with pyuvsim version: ' + simversion.version + '.')
-    if simversion.git_hash is not '':
-        version_string += ('  Git origin: ' + simversion.git_origin
-                           + '.  Git hash: ' + simversion.git_hash
-                           + '.  Git branch: ' + simversion.git_branch
-                           + '.  Git description: ' + simversion.git_description + '.')
-    return version_string
 
 
 @profile
@@ -688,7 +285,7 @@ def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
                          'antenna_location_file must be set.')
 
     # Version string to add to history
-    history = get_version_string()
+    history = simutils.get_version_string()
 
     history += ' Sources from source list: ' + source_list_name + '.'
 
@@ -798,143 +395,15 @@ def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
     return uv_obj
 
 
-@profile
 def serial_gather(uvtask_list, uv_out):
     """
-        Initialize uvdata object, loop over uvtask list, acquire visibilities,
-        and add to uvdata object.
+        Loop over uvtask list, acquire visibilities and add to uvdata object.
     """
     for task in uvtask_list:
         blt_ind, spw_ind, freq_ind = task.uvdata_index
         uv_out.data_array[blt_ind, spw_ind, freq_ind, :] += task.visibility_vector
 
     return uv_out
-
-
-@profile
-def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
-                        zen_ang=None, save=False, max_za=-1.0):
-    """
-        Create a mock catalog with test sources at zenith.
-
-        arrangement = Choose test point source pattern (default = 1 source at zenith)
-
-        Keywords:
-            * Nsrcs = Number of sources to put at zenith
-            * array_location = EarthLocation object.
-            * zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
-            * save = Save mock catalog as npz file.
-
-        Accepted arrangements:
-            * 'triangle' = Three point sources forming a triangle around the zenith
-            * 'cross'    = An asymmetric cross
-            * 'horizon'  = A single source on the horizon   ## TODO
-            * 'zenith'   = Some number of sources placed at the zenith.
-            * 'off-zenith' = A single source off zenith
-            * 'long-line' = Horizon to horizon line of point sources
-            * 'hera_text' = Spell out HERA around the zenith
-
-    """
-
-    if not isinstance(time, Time):
-        time = Time(time, scale='utc', format='jd')
-
-    if array_location is None:
-        array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
-                                       height=1073.)
-    freq = (150e6 * units.Hz)
-
-    if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']:
-        raise KeyError("Invalid mock catalog arrangement: " + str(arrangement))
-
-    mock_keywords = {'time': time.jd, 'arrangement': arrangement,
-                     'array_location': repr((array_location.lat.deg, array_location.lon.deg, array_location.height.value))}
-
-    if arrangement == 'off-zenith':
-        if zen_ang is None:
-            zen_ang = 5.0  # Degrees
-        mock_keywords['zen_ang'] = zen_ang
-        Nsrcs = 1
-        alts = [90. - zen_ang]
-        azs = [90.]   # 0 = North pole, 90. = East pole
-        fluxes = [1.0]
-
-    if arrangement == 'triangle':
-        Nsrcs = 3
-        if zen_ang is None:
-            zen_ang = 3.0
-        mock_keywords['zen_ang'] = zen_ang
-        alts = [90. - zen_ang, 90. - zen_ang, 90. - zen_ang]
-        azs = [0., 120., 240.]
-        fluxes = [1.0, 1.0, 1.0]
-
-    if arrangement == 'cross':
-        Nsrcs = 4
-        alts = [88., 90., 86., 82.]
-        azs = [270., 0., 90., 135.]
-        fluxes = [5., 4., 1.0, 2.0]
-
-    if arrangement == 'zenith':
-        if Nsrcs is None:
-            Nsrcs = 1
-        mock_keywords['Nsrcs'] = Nsrcs
-        alts = np.ones(Nsrcs) * 90.
-        azs = np.zeros(Nsrcs, dtype=float)
-        fluxes = np.ones(Nsrcs) * 1 / Nsrcs
-        # Divide total Stokes I intensity among all sources
-        # Test file has Stokes I = 1 Jy
-    if arrangement == 'long-line':
-        if Nsrcs is None:
-            Nsrcs = 10
-        if max_za < 0:
-            max_za = 85
-        mock_keywords['Nsrcs'] = Nsrcs
-        mock_keywords['zen_ang'] = zen_ang
-        fluxes = np.ones(Nsrcs, dtype=float)
-        zas = np.linspace(-max_za, max_za, Nsrcs)
-        alts = 90. - zas
-        azs = np.zeros(Nsrcs, dtype=float)
-        inds = np.where(alts > 90.0)
-        azs[inds] = 180.
-        alts[inds] = 90. + zas[inds]
-
-    if arrangement == 'hera_text':
-
-        azs = np.array([-254.055, -248.199, -236.310, -225.000, -206.565,
-                        -153.435, -123.690, -111.801, -105.945, -261.870,
-                        -258.690, -251.565, -135.000, -116.565, -101.310,
-                        -98.130, 90.000, 90.000, 90.000, 90.000, 90.000,
-                        -90.000, -90.000, -90.000, -90.000, -90.000,
-                        -90.000, 81.870, 78.690, 71.565, -45.000, -71.565,
-                        -78.690, -81.870, 74.055, 68.199, 56.310, 45.000,
-                        26.565, -26.565, -45.000, -56.310, -71.565])
-
-        zas = np.array([7.280, 5.385, 3.606, 2.828, 2.236, 2.236, 3.606,
-                        5.385, 7.280, 7.071, 5.099, 3.162, 1.414, 2.236,
-                        5.099, 7.071, 7.000, 6.000, 5.000, 3.000, 2.000,
-                        1.000, 2.000, 3.000, 5.000, 6.000, 7.000, 7.071,
-                        5.099, 3.162, 1.414, 3.162, 5.099, 7.071, 7.280,
-                        5.385, 3.606, 2.828, 2.236, 2.236, 2.828, 3.606, 6.325])
-
-        alts = 90. - zas
-        Nsrcs = zas.size
-        fluxes = np.ones_like(azs)
-
-    catalog = []
-
-    source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
-                            obstime=time, frame='altaz', location=array_location)
-    icrs_coord = source_coord.transform_to('icrs')
-
-    ra = icrs_coord.ra
-    dec = icrs_coord.dec
-    for si in range(Nsrcs):
-        catalog.append(Source('src' + str(si), ra[si], dec[si], freq, [fluxes[si], 0, 0, 0]))
-    if rank == 0 and save:
-        np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
-
-    catalog = np.array(catalog)
-    return catalog, mock_keywords
 
 
 @profile
@@ -989,7 +458,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
 
             time = mock_keywords.pop('time')
 
-            catalog, mock_keywords = create_mock_catalog(time, **mock_keywords)
+            catalog, mock_keywords = simsetup.create_mock_catalog(time, **mock_keywords)
 
             mock_keyvals = [str(key) + str(val) for key, val in mock_keywords.iteritems()]
             source_list_name = 'mock_' + "_".join(mock_keyvals)
@@ -1024,12 +493,12 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         uvtask_list = [list(tl) for tl in uvtask_list]
 
         print("Sending Tasks To Processing Units")
-        stdout.flush()
+        sys.stdout.flush()
     # Scatter the task list among all available PUs
     local_task_list = comm.scatter(uvtask_list, root=0)
     if rank == 0:
         print("Tasks Received. Begin Calculations.")
-        stdout.flush()
+        sys.stdout.flush()
 
     # UVBeam objects don't survive the scatter with prop_fget() working. This fixes it on each rank.
     for i, bm in enumerate(local_task_list[0].telescope.beam_list):
@@ -1045,7 +514,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
             count = 0
             tot = len(local_task_list)
             print("Local tasks: ", tot)
-            stdout.flush()
+            sys.stdout.flush()
             if progbar:
                 pbar = progressbar.ProgressBar(maxval=tot).start()
             else:

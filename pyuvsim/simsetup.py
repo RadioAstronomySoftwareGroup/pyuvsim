@@ -2,50 +2,23 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
-from pyuvdata import UVBeam, UVData
 import numpy as np
 import yaml
 import os
 import sys
 import warnings
-import pyuvdata.utils as uvutils
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-import pyuvsim
 import astropy.units as units
-from astropy.coordinates import Angle
+from astropy.time import Time
 from astropy.io.votable import parse
-# Utilities for setting up simulations for parameter files,
-# and for generating parameter files from uvfits files
+from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
+from pyuvdata import UVBeam, UVData
+import pyuvdata.utils as uvutils
 
-def write_uvfits(uv_obj, param_dict):
-    """
-        Parse output file information from parameters and write uvfits to file.
-    """
-    param_dict = param_dict['filing']
-    if 'outdir' not in param_dict:
-        param_dict['outdir'] = '.'
-    if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
-        outfile_prefix = ""
-        outfile_suffix = "_results"
-        if 'outfile_prefix' in param_dict:
-            outfile_prefix = param_dict['outfile_prefix'] + "_"
-        if 'outfile_suffix' in param_dict:
-            outfile_suffix = "_" + param_dict['outfile_suffix']
-        outfile_name = os.path.join(param_dict['outdir'], outfile_prefix
-                                    + outfile_suffix)  # Strip .yaml extention
-    else:
-        outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
-    print('Outfile path: ', outfile_name)
-    outfile_name = outfile_name + ".uvfits"
-
-    if 'clobber' not in param_dict:
-        outfile_name = check_file_exists_and_increment(outfile_name)
-
-    if not os.path.exists(param_dict['outdir']):
-        os.makedirs(param_dict['outdir'])
-
-    uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
+from .source import Source
+from .analyticbeam import AnalyticBeam
+from .mpi import rank
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 
 def strip_extension(filepath):
@@ -108,10 +81,10 @@ def read_gleam_catalog(gleam_votable):
 
     sourcelist = []
     for entry in data:
-        source = pyuvsim.Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
-                                Angle(entry['DEJ2000'], unit=units.deg),
-                                freq=(200e6 * units.Hz),
-                                stokes=np.array([entry['Fintwide'], 0., 0., 0.]))
+        source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
+                        Angle(entry['DEJ2000'], unit=units.deg),
+                        freq=(200e6 * units.Hz),
+                        stokes=np.array([entry['Fintwide'], 0., 0., 0.]))
         sourcelist.append(source)
     return sourcelist
 
@@ -138,15 +111,141 @@ def point_sources_from_params(catalog_csv):
     catalog = []
 
     for si in xrange(catalog_table.size):
-        catalog.append(pyuvsim.Source(catalog_table['source_id'][si],
-                                      Angle(catalog_table['ra_j2000'][si], unit=units.deg),
-                                      Angle(catalog_table['dec_j2000'][si], unit=units.deg),
-                                      catalog_table['frequency'][si] * units.Hz,
-                                      [catalog_table['flux_density_I'][si], 0, 0, 0]))
+        catalog.append(Source(catalog_table['source_id'][si],
+                              Angle(catalog_table['ra_j2000'][si], unit=units.deg),
+                              Angle(catalog_table['dec_j2000'][si], unit=units.deg),
+                              catalog_table['frequency'][si] * units.Hz,
+                              [catalog_table['flux_density_I'][si], 0, 0, 0]))
 
     return catalog
 
 
+def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
+                        zen_ang=None, save=False, max_za=-1.0):
+    """
+        Create a mock catalog with test sources at zenith.
+
+        arrangement = Choose test point source pattern (default = 1 source at zenith)
+
+        Keywords:
+            * Nsrcs = Number of sources to put at zenith
+            * array_location = EarthLocation object.
+            * zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
+            * save = Save mock catalog as npz file.
+
+        Accepted arrangements:
+            * 'triangle' = Three point sources forming a triangle around the zenith
+            * 'cross'    = An asymmetric cross
+            * 'horizon'  = A single source on the horizon   ## TODO
+            * 'zenith'   = Some number of sources placed at the zenith.
+            * 'off-zenith' = A single source off zenith
+            * 'long-line' = Horizon to horizon line of point sources
+            * 'hera_text' = Spell out HERA around the zenith
+
+    """
+
+    if not isinstance(time, Time):
+        time = Time(time, scale='utc', format='jd')
+
+    if array_location is None:
+        array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                       height=1073.)
+    freq = (150e6 * units.Hz)
+
+    if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']:
+        raise KeyError("Invalid mock catalog arrangement: " + str(arrangement))
+
+    mock_keywords = {'time': time.jd, 'arrangement': arrangement,
+                     'array_location': repr((array_location.lat.deg, array_location.lon.deg, array_location.height.value))}
+
+    if arrangement == 'off-zenith':
+        if zen_ang is None:
+            zen_ang = 5.0  # Degrees
+        mock_keywords['zen_ang'] = zen_ang
+        Nsrcs = 1
+        alts = [90. - zen_ang]
+        azs = [90.]   # 0 = North pole, 90. = East pole
+        fluxes = [1.0]
+
+    if arrangement == 'triangle':
+        Nsrcs = 3
+        if zen_ang is None:
+            zen_ang = 3.0
+        mock_keywords['zen_ang'] = zen_ang
+        alts = [90. - zen_ang, 90. - zen_ang, 90. - zen_ang]
+        azs = [0., 120., 240.]
+        fluxes = [1.0, 1.0, 1.0]
+
+    if arrangement == 'cross':
+        Nsrcs = 4
+        alts = [88., 90., 86., 82.]
+        azs = [270., 0., 90., 135.]
+        fluxes = [5., 4., 1.0, 2.0]
+
+    if arrangement == 'zenith':
+        if Nsrcs is None:
+            Nsrcs = 1
+        mock_keywords['Nsrcs'] = Nsrcs
+        alts = np.ones(Nsrcs) * 90.
+        azs = np.zeros(Nsrcs, dtype=float)
+        fluxes = np.ones(Nsrcs) * 1 / Nsrcs
+        # Divide total Stokes I intensity among all sources
+        # Test file has Stokes I = 1 Jy
+    if arrangement == 'long-line':
+        if Nsrcs is None:
+            Nsrcs = 10
+        if max_za < 0:
+            max_za = 85
+        mock_keywords['Nsrcs'] = Nsrcs
+        mock_keywords['zen_ang'] = zen_ang
+        fluxes = np.ones(Nsrcs, dtype=float)
+        zas = np.linspace(-max_za, max_za, Nsrcs)
+        alts = 90. - zas
+        azs = np.zeros(Nsrcs, dtype=float)
+        inds = np.where(alts > 90.0)
+        azs[inds] = 180.
+        alts[inds] = 90. + zas[inds]
+
+    if arrangement == 'hera_text':
+
+        azs = np.array([-254.055, -248.199, -236.310, -225.000, -206.565,
+                        -153.435, -123.690, -111.801, -105.945, -261.870,
+                        -258.690, -251.565, -135.000, -116.565, -101.310,
+                        -98.130, 90.000, 90.000, 90.000, 90.000, 90.000,
+                        -90.000, -90.000, -90.000, -90.000, -90.000,
+                        -90.000, 81.870, 78.690, 71.565, -45.000, -71.565,
+                        -78.690, -81.870, 74.055, 68.199, 56.310, 45.000,
+                        26.565, -26.565, -45.000, -56.310, -71.565])
+
+        zas = np.array([7.280, 5.385, 3.606, 2.828, 2.236, 2.236, 3.606,
+                        5.385, 7.280, 7.071, 5.099, 3.162, 1.414, 2.236,
+                        5.099, 7.071, 7.000, 6.000, 5.000, 3.000, 2.000,
+                        1.000, 2.000, 3.000, 5.000, 6.000, 7.000, 7.071,
+                        5.099, 3.162, 1.414, 3.162, 5.099, 7.071, 7.280,
+                        5.385, 3.606, 2.828, 2.236, 2.236, 2.828, 3.606, 6.325])
+
+        alts = 90. - zas
+        Nsrcs = zas.size
+        fluxes = np.ones_like(azs)
+
+    catalog = []
+
+    source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
+                            obstime=time, frame='altaz', location=array_location)
+    icrs_coord = source_coord.transform_to('icrs')
+
+    ra = icrs_coord.ra
+    dec = icrs_coord.dec
+    for si in range(Nsrcs):
+        catalog.append(Source('src' + str(si), ra[si], dec[si], freq, [fluxes[si], 0, 0, 0]))
+    if rank == 0 and save:
+        np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
+
+    catalog = np.array(catalog)
+    return catalog, mock_keywords
+
+
+@profile
 def initialize_uvdata_from_params(obs_params):
     """
         Construct a uvdata object from parameters in a valid yaml file.
@@ -208,16 +307,20 @@ def initialize_uvdata_from_params(obs_params):
         for a in which_ants:
             beam_dict[a] = beamID
         uvb = UVBeam()
-        if beam_model in ['gaussian', 'uniform']:
+        if beam_model in ['gaussian', 'uniform', 'airy']:
             # Identify analytic beams
             if beam_model == 'gaussian':
                 try:
-                    beam = pyuvsim.AnalyticBeam('gaussian', sigma=telparam['sigma'])
+                    beam = AnalyticBeam('gaussian', sigma=telparam['sigma'])
                 except KeyError as err:
-                    print("Missing sigma for gaussian beam.")
-                    raise err
+                    raise KeyError("Missing sigma for gaussian beam.")
+            elif beam_model == 'airy':
+                try:
+                    beam = AnalyticBeam('airy', diameter=telparam['diameter'])
+                except KeyError as err:
+                    raise KeyError("Missing diameter for airy beam")
             else:
-                beam = pyuvsim.AnalyticBeam('uniform')
+                beam = AnalyticBeam('uniform')
             beam_list.append(beam)
             continue
         if not os.path.exists(beam_model):
@@ -416,6 +519,7 @@ def initialize_uvdata_from_params(obs_params):
     return uv_obj, beam_list, beam_dict, beam_ids
 
 
+@profile
 def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
                                telescope_config_name=None,
                                return_names=False, path_out='.'):
@@ -485,6 +589,7 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
         return path_out, telescope_config_name, layout_csv_name
 
 
+@profile
 def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name='',
                           layout_csv_name='', catalog='mock', path_out='.'):
     """
@@ -547,3 +652,33 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
 
     with open(os.path.join(path_out, param_filename), 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)
+
+
+def write_uvfits(uv_obj, param_dict):
+    """
+        Parse output file information from parameters and write uvfits to file.
+    """
+    param_dict = param_dict['filing']
+    if 'outdir' not in param_dict:
+        param_dict['outdir'] = '.'
+    if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
+        outfile_prefix = ""
+        outfile_suffix = "_results"
+        if 'outfile_prefix' in param_dict:
+            outfile_prefix = param_dict['outfile_prefix'] + "_"
+        if 'outfile_suffix' in param_dict:
+            outfile_suffix = "_" + param_dict['outfile_suffix']
+        outfile_name = os.path.join(param_dict['outdir'], outfile_prefix
+                                    + outfile_suffix)  # Strip .yaml extention
+    else:
+        outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
+    print('Outfile path: ', outfile_name)
+    outfile_name = outfile_name + ".uvfits"
+
+    if 'clobber' not in param_dict:
+        outfile_name = check_file_exists_and_increment(outfile_name)
+
+    if not os.path.exists(param_dict['outdir']):
+        os.makedirs(param_dict['outdir'])
+
+    uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
