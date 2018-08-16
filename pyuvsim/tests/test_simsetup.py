@@ -39,6 +39,14 @@ def compare_dictionaries(dic1, dic2):
     return bool(compare)
 
 
+def test_setup_airy():
+    pyuvsim.initialize_uvdata_from_params(os.path.join(SIM_DATA_PATH,
+                                                       'simple_equator_sim_airy.yaml'))
+    nt.assert_raises(KeyError,pyuvsim.initialize_uvdata_from_params,os.path.join(SIM_DATA_PATH,
+                                                                              'simple_equator_sim_airy_broken.yaml'))
+
+
+
 def test_param_reader():
     for n in range(4):
         yield (check_param_reader, n)

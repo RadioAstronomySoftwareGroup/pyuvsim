@@ -1,0 +1,5 @@
+beam_paths:
+  0: 'airy'
+telescope_location: (0., 0., 0.)
+telescope_name: TWOANT
+diameter: 6. #dishes are 6 meters across

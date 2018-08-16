@@ -40,6 +40,7 @@ class AnalyticBeam(object):
                 raise ValueError("Sigma needed for gaussian beam -- units: radians")
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
             # gaussian beam only depends on Zenith Angle (symmetric is azimuth)
+            # standard deviation of sigma is refereing to the standard deviation of e-field beam!
             values = np.exp(-(za_array**2) / (2 * self.sigma**2))
             # copy along freq. axis
             values = np.broadcast_to(values, (freq_array.size, az_array.size))
@@ -55,7 +56,7 @@ class AnalyticBeam(object):
             za_grid, f_grid = np.meshgrid(za_array, freq_array)
             xvals = self.diameter / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8
             values = np.zeros_like(xvals)
-            values[xvals > 0.] = (2. * jn(1, xvals[xvals > 0.]) / xvals[xvals > 0.]) ** 2.
+            values[xvals > 0.] = 2. * jn(1, xvals[xvals > 0.]) / xvals[xvals > 0.]
             values[xvals == 0.] = 1.
             interp_data[1, 0, 0, :, :] = values
             interp_data[0, 0, 1, :, :] = values
