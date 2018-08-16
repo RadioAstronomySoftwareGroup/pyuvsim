@@ -4,3 +4,5 @@
 
 from .uvsim import *
 from .simsetup import *
+
+__version__ = version.version
