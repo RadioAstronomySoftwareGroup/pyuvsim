@@ -14,3 +14,4 @@ from .source import *
 from .telescope import *
 from .utils import *
 from .version import *
+__version__ = version.version

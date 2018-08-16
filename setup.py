@@ -29,7 +29,7 @@ setup_args = {
     'package_dir': {'pyuvsim': 'pyuvsim'},
     'packages': ['pyuvsim', 'pyuvsim.tests'],
     'scripts': glob.glob('scripts/*'),
-    'version': '0.0.1',
+    'version': version.version,
     'include_package_data': True,
     'install_requires': ['numpy>=1.10', 'astropy>=1.2', 'pyuvdata'],
     'classifiers': ['Development Status :: 2 - Pre-Alpha',
