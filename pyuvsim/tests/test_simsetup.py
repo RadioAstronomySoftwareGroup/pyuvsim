@@ -42,9 +42,8 @@ def compare_dictionaries(dic1, dic2):
 def test_setup_airy():
     pyuvsim.initialize_uvdata_from_params(os.path.join(SIM_DATA_PATH,
                                                        'simple_equator_sim_airy.yaml'))
-    nt.assert_raises(KeyError,pyuvsim.initialize_uvdata_from_params,os.path.join(SIM_DATA_PATH,
-                                                                              'simple_equator_sim_airy_broken.yaml'))
-
+    nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, os.path.join(SIM_DATA_PATH,
+                                                                                   'simple_equator_sim_airy_broken.yaml'))
 
 
 def test_param_reader():
@@ -75,7 +74,10 @@ def check_param_reader(config_num):
 
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_filename)
+    for i, bm in enumerate(new_beam_list):
+        new_beam_list[i] = pyuvsim.simsetup.beam_string_to_object(bm)
     uvtask_list = pyuvsim.uvdata_to_task_list(uv_obj, sources, new_beam_list, beam_dict=new_beam_dict)
+
     # Tasks are not ordered in UVTask lists, so need to sort them.
     # This is enabled by the comparison operator in UVTask
     uvtask_list = sorted(uvtask_list)

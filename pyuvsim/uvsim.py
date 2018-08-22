@@ -500,12 +500,10 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         print("Tasks Received. Begin Calculations.")
         sys.stdout.flush()
 
-    # UVBeam objects don't survive the scatter with prop_fget() working. This fixes it on each rank.
-    for i, bm in enumerate(local_task_list[0].telescope.beam_list):
-        if isinstance(bm, UVBeam):
-            uvb = UVBeam()
-            uvb = bm
-            local_task_list[0].telescope.beam_list[i] = bm
+    # The scatter only shares identifying information for the beams. This actually generates them.
+    # Only need the first task, because all tasks will refer to it.
+    for i, beam_model in enumerate(local_task_list[0].telescope.beam_list):
+        local_task_list[0].telescope.beam_list[i] = simsetup.beam_string_to_object(beam_model)
 
     summed_task_dict = {}
 
@@ -543,6 +541,9 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
                 summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
             else:
                 summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
+
+    for uv_index in summed_task_dict.keys():
+        summed_task_dict[uv_index].telescope.beam_list = None  # No longer need beam models
 
     if rank == 0:
         print("Calculations Complete.")
