@@ -23,6 +23,7 @@ from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 # Utilities for setting up simulations for parameter files,
 # and for generating parameter files from uvfits files
 
+
 def beam_string_to_object(beam_model):
     """
         Make a beam object given an identifying string.

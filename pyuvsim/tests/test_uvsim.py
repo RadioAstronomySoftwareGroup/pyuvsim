@@ -21,6 +21,8 @@ import sys
 from scipy.special import jn
 import pickle
 
+import pyuvsim
+
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
 hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
@@ -428,6 +430,7 @@ def test_uniform_beam():
     expected_data[0, 0, 0, :, :] = 1
     nt.assert_true(np.allclose(interpolated_beam, expected_data))
 
+
 @nt.nottest
 def test_airy_beam():
     diameter_m = 14.
@@ -467,10 +470,10 @@ def test_airy_beam():
         interp_zas[f_ind, :] = np.array(za_vals)
     #gaussian_vals = np.exp(-(interp_zas**2) / (2 * sigma_rad**2))
     za_grid, f_grid = np.meshgrid(interp_zas, freq_vals)
-    xvals = diameter_m/2.*np.sin(za_grid)*2.*np.pi*f_grid/3e8
+    xvals = diameter_m / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8
     airy_vals = np.zeros_like(xvals)
-    airy_vals[xvals>0.] = 2.*jn(1,xvals[xvals>0.])/xvals[xvals>0.] 
-    airy_vals[xvals==0.] = 1.
+    airy_vals[xvals > 0.] = 2. * jn(1, xvals[xvals > 0.]) / xvals[xvals > 0.]
+    airy_vals[xvals == 0.] = 1.
 
     expected_data[1, 0, 0, :, :] = airy_vals
     expected_data[0, 0, 1, :, :] = airy_vals
