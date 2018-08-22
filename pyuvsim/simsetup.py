@@ -31,12 +31,12 @@ def beam_string_to_object(beam_model):
     # Identify analytic beams
     if beam_model.startswith('gaussian'):
         sigma = float(beam_model.split("_")[1])
-        return pyuvsim.AnalyticBeam('gaussian', sigma=sigma)
+        return AnalyticBeam('gaussian', sigma=sigma)
     elif beam_model.startswith('airy'):
         diameter = float(beam_model.split("_")[1])
-        return pyuvsim.AnalyticBeam('airy', sigma=diameter)
+        return AnalyticBeam('airy', sigma=diameter)
     elif beam_model.startswith('uniform'):
-        return pyuvsim.AnalyticBeam('uniform')
+        return AnalyticBeam('uniform')
     if not os.path.exists(beam_model):
         filename = beam_model
         path = os.path.join(SIM_DATA_PATH, filename)
