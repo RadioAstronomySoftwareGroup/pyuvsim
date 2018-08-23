@@ -2,8 +2,6 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
-# CLEANUP: standard packages at the top, related next, then package specific imports
-
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
@@ -28,22 +26,6 @@ from . import utils as simutils
 from . import simsetup
 
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_list', 'run_uvsim', 'initialize_uvdata', 'serial_gather']
-
-# CLEANUP: find more streamlined way to import progressbar.
-# CLEANUP: Should only appear in whatever file actually does the running of the code.
-try:
-    import progressbar
-    progbar = True
-except(ImportError):
-    progbar = False
-
-progsteps = False
-try:
-    if os.environ['PYUVSIM_BATCH_JOB'] == '1':
-        progsteps = True
-        progbar = False
-except(KeyError):
-    progbar = progbar
 
 set_mpi_excepthook(comm)
 
@@ -216,13 +198,9 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     print('Making Tasks')
     print('Number of tasks:', len(blts_ind))
 
-    if progsteps or progbar:
-        count = 0
-        tot = len(blts_ind)
-        if progbar:
-            pbar = progressbar.ProgressBar(maxval=tot).start()
-        else:
-            pbar = utils.progsteps(maxval=tot)
+    count = 0
+    tot = len(blts_ind)
+    pbar = simutils.progsteps(maxval=tot)
 
     for (bl, freqi, t, source, blti, fi) in izip(baselines[blts_ind],
                                                  freq[freq_ind], times[blts_ind],
@@ -232,12 +210,9 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
         task.uvdata_index = (blti, 0, fi)    # 0 = spectral window index
         uvtask_list.append(task)
 
-        if progbar or progsteps:
-            count += 1
-            pbar.update(count)
+        count += 1
+        pbar.update(count)
 
-    if progbar:
-        pbar.finish()
     return uvtask_list
 
 
@@ -510,15 +485,11 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     summed_task_dict = {}
 
     if rank == 0:
-        if progsteps or progbar:
-            count = 0
-            tot = len(local_task_list)
-            print("Local tasks: ", tot)
-            sys.stdout.flush()
-            if progbar:
-                pbar = progressbar.ProgressBar(maxval=tot).start()
-            else:
-                pbar = utils.progsteps(maxval=tot)
+        count = 0
+        tot = len(local_task_list)
+        print("Local tasks: ", tot)
+        sys.stdout.flush()
+        pbar = simutils.progsteps(maxval=tot)
 
         for count, task in enumerate(local_task_list):
             engine = UVEngine(task)
@@ -529,11 +500,9 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
             else:
                 summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
 
-            if progbar or progsteps:
-                pbar.update(count)
+            pbar.update(count)
 
-        if progbar or progsteps:
-            pbar.finish()
+        pbar.finish()
     else:
         for task in local_task_list:
             engine = UVEngine(task)
