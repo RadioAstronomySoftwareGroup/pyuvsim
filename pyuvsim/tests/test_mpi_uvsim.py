@@ -5,19 +5,10 @@
 import os
 import numpy as np
 import nose.tools as nt
-from astropy.time import Time
-from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
-from astropy import units
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
-from mpi4py import MPI
-
-# Initialize MPI variables
-comm = MPI.COMM_WORLD
-size = comm.Get_size()
-rank = comm.Get_rank()
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]

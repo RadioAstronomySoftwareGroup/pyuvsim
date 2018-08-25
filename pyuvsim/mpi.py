@@ -12,15 +12,6 @@ Npus = comm.Get_size()
 rank = comm.Get_rank()
 
 
-def get_mpi():
-    """
-    Initialize MPI, get the communicator, number of Processing Units (PUs)
-    and the rank of this PU
-    """
-
-    return comm, rank, Npus
-
-
 def set_mpi_excepthook(mpi_comm):
     """Kill the whole job on an uncaught python exception"""
 
