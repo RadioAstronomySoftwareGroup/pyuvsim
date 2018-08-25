@@ -1,0 +1,16 @@
+filing:
+  outdir: '.'
+  outfile_prefix: 'sim_'
+freq:
+  Nfreqs: 1
+  start_freq: 100000000.0
+  channel_width: 1000000.0
+sources:
+  catalog: 'single_source.txt'
+telescope:
+  array_layout: 'triangle_bl_layout.csv'
+  telescope_config_name: '28m_triangle_10time_10chan.yaml'
+time:
+  Ntimes: 1
+  integration_time: 11.0
+  start_time: 2457458.1738949567

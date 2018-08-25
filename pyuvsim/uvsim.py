@@ -134,9 +134,6 @@ class UVEngine(object):
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
         return np.array(vis_vector)
 
-    def update_task(self):
-        self.task.visibility_vector = self.make_visibility()
-
 
 @profile
 def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
