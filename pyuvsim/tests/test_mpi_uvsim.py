@@ -2,6 +2,8 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 2-clause BSD License
 
+from __future__ import absolute_import, division, print_function
+
 import os
 import numpy as np
 import nose.tools as nt
@@ -9,6 +11,8 @@ from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
+
+from pyuvsim.mpi import rank
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
@@ -28,7 +32,7 @@ def test_run_uvsim():
                        model_version='1.0')
 
     beam_list = [beam]
-    mock_keywords = {"Nsrcs" : 3}
+    mock_keywords = {"Nsrcs": 3}
     uv_out = pyuvsim.run_uvsim(hera_uv, beam_list, catalog_file=None, mock_keywords=mock_keywords,
                                uvdata_file=EW_uvfits_file)
     if rank == 0:

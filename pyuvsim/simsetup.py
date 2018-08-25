@@ -38,7 +38,7 @@ def check_file_exists_and_increment(filepath):
         if not filepath.endswith("_0"):
             filepath += "_0" + ext
         else:
-            filepath += ext 
+            filepath += ext
     else:
         return filepath
     n = 1

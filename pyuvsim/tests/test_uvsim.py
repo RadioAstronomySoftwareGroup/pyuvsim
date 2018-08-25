@@ -465,12 +465,11 @@ def test_airy_beam():
     interp_zas = np.zeros((n_freqs, nsrcs), dtype=np.float)
     for f_ind in range(n_freqs):
         interp_zas[f_ind, :] = np.array(za_vals)
-    #gaussian_vals = np.exp(-(interp_zas**2) / (2 * sigma_rad**2))
     za_grid, f_grid = np.meshgrid(interp_zas, freq_vals)
     xvals = diameter_m / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8
     airy_vals = np.zeros_like(xvals)
     airy_vals[xvals > 0.] = 2. * jn(1, xvals[xvals > 0.]) / xvals[xvals > 0.]
-    airy_vals[xvals==0.] = 1.
+    airy_vals[xvals == 0.] = 1.
 
     expected_data[1, 0, 0, :, :] = airy_vals
     expected_data[0, 0, 1, :, :] = airy_vals
@@ -925,7 +924,7 @@ def test_gaussbeam_values():
 
 def test_tee_ra_loop():
     time = Time(2457458.1739, scale='utc', format='jd')
-    tee_ra = Angle(np.pi/4., unit='rad')  #rad
+    tee_ra = Angle(np.pi / 4., unit='rad')  # rad
     cirs_ra = pyuvsim.utils.tee_to_cirs_ra(tee_ra, time)
     new_tee_ra = pyuvsim.utils.cirs_to_tee_ra(cirs_ra, time)
     nt.assert_equal(new_tee_ra, tee_ra)
