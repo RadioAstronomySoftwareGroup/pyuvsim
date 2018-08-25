@@ -60,6 +60,7 @@ def check_param_reader(config_num):
     param_filename = param_filenames[config_num]
     hera_uv = UVData()
     hera_uv.read_uvfits(triangle_uvfits_file)
+    hera_uv.telescope_name = 'HERA'
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources = np.array([create_zenith_source(time, 'zensrc')])
@@ -68,9 +69,10 @@ def check_param_reader(config_num):
     beam0.read_beamfits(herabeam_default)
     beam1 = pyuvsim.AnalyticBeam('uniform')
     beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
-    beam_list = [beam0, beam1, beam2]
+    beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.6)
+    beam_list = [beam0, beam1, beam2, beam3]
 
-    beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2}
+    beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2, 'ANT4': 3}
     expected_uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list, beam_dict=beam_dict)
 
     # Check default configuration
@@ -80,7 +82,6 @@ def check_param_reader(config_num):
     # This is enabled by the comparison operator in UVTask
     uvtask_list = sorted(uvtask_list)
     expected_uvtask_list = sorted(expected_uvtask_list)
-
     for ti in xrange(len(expected_uvtask_list)):
         print uvtask_list[ti].baseline.antenna1.beam_id, expected_uvtask_list[ti].baseline.antenna1.beam_id
         print uvtask_list[ti].baseline.antenna2.beam_id, expected_uvtask_list[ti].baseline.antenna2.beam_id
@@ -91,6 +92,7 @@ def check_param_reader(config_num):
         print uvtask_list[ti].freq - expected_uvtask_list[ti].freq
         print uvtask_list[ti].time - expected_uvtask_list[ti].time
         print uvtask_list[ti].uvdata_index, expected_uvtask_list[ti].uvdata_index
+        print uvtask_list[ti].telescope.name, expected_uvtask_list[ti].telescope.name
         print '\n'
     nt.assert_true(uvtask_list == expected_uvtask_list)
 
