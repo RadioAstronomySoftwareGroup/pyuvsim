@@ -101,15 +101,15 @@ class UVEngine(object):
         # Apparent coherency gives the direction and polarization dependent baseline response to a source.
         beam1_jones = baseline.antenna1.get_beam_jones(self.task.telescope,
                                                        source.az_za_calc(self.task.time,
-                                                                         self.task.telescope.telescope_location),
+                                                                         self.task.telescope.location),
                                                        self.task.freq)
         beam2_jones = baseline.antenna2.get_beam_jones(self.task.telescope,
                                                        source.az_za_calc(self.task.time,
-                                                                         self.task.telescope.telescope_location),
+                                                                         self.task.telescope.location),
                                                        self.task.freq)
         this_apparent_coherency = np.dot(beam1_jones,
                                          source.coherency_calc(self.task.time,
-                                                               self.task.telescope.telescope_location))
+                                                               self.task.telescope.location))
         this_apparent_coherency = np.dot(this_apparent_coherency,
                                          (beam2_jones.conj().T))
 
@@ -121,7 +121,7 @@ class UVEngine(object):
         assert(isinstance(self.task.freq, Quantity))
         self.apply_beam()
 
-        pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
+        pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.location)
         if pos_lmn is None:
             return np.array([0., 0., 0., 0.], dtype=np.complex128)
 
@@ -281,8 +281,8 @@ def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
     task_uvw = []
     ant_1_array = []
     ant_2_array = []
-    telescope_name = uvtask_list[0].telescope.telescope_name
-    telescope_location = uvtask_list[0].telescope.telescope_location.geocentric
+    telescope_name = uvtask_list[0].telescope.name
+    telescope_location = uvtask_list[0].telescope.location.geocentric
 
     source_0 = uvtask_list[0].source
     freq_0 = uvtask_list[0].freq
