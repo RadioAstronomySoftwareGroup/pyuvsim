@@ -35,7 +35,10 @@ def check_file_exists_and_increment(filepath):
     """
     if os.path.exists(filepath):
         filepath, ext = strip_extension(filepath)
-        filepath += "_0" + ext
+        if not filepath.endswith("_0"):
+            filepath += "_0" + ext
+        else:
+            filepath += ext 
     else:
         return filepath
     n = 1
@@ -191,6 +194,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         fluxes = np.ones(Nsrcs) * 1 / Nsrcs
         # Divide total Stokes I intensity among all sources
         # Test file has Stokes I = 1 Jy
+
     if arrangement == 'long-line':
         if Nsrcs is None:
             Nsrcs = 10

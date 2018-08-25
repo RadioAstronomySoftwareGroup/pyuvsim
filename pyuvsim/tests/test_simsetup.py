@@ -176,3 +176,32 @@ def test_read_gleam():
     sourcelist = pyuvsim.simsetup.read_gleam_catalog(GLEAM_vot)
 
     nt.assert_equal(len(sourcelist), 50)
+
+
+def test_file_namer():
+    """
+    File name incrementer utility
+    """
+    existing_file = param_filenames[0]
+    new_filepath = pyuvsim.simsetup.check_file_exists_and_increment(existing_file)
+    print new_filepath
+    print existing_file
+    nt.assert_true(new_filepath.endswith("_4.yaml"))    # There are four other of these param test files
+
+
+def test_mock_catalogs():
+    mock_types = ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']
+    time = Time(2457458.1739, scale='utc', format='jd')
+    cat1, mock_kwds1 = pyuvsim.simsetup.create_mock_catalog(time, 'zenith')
+    cat2, mock_kwds2 = pyuvsim.simsetup.create_mock_catalog(time, 'off-zenith')
+    cat3, mock_kwds3 = pyuvsim.simsetup.create_mock_catalog(time, 'cross')
+    cat4, mock_kwds4 = pyuvsim.simsetup.create_mock_catalog(time, 'triangle')
+    cat5, mock_kwds5 = pyuvsim.simsetup.create_mock_catalog(time, 'long-line')
+    cat6, mock_kwds6 = pyuvsim.simsetup.create_mock_catalog(time, 'hera_text')
+
+    nt.assert_true(len(cat1) == 1)
+    nt.assert_true(len(cat2) == 1)
+    nt.assert_true(len(cat3) == 4)
+    nt.assert_true(len(cat4) == 3)
+    nt.assert_true(len(cat5) == 10)
+    nt.assert_true(len(cat6) == 43)
