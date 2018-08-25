@@ -61,7 +61,7 @@ def parse_layout_csv(layout_csv):
                          dtype=dt.dtype)
 
 
-def read_gleam_catalog(gleam_votable):
+def read_votable_catalog(gleam_votable):
     """
     Creates a list of pyuvsim source objects from the GLEAM votable catalog.
     Despite the semi-standard votable format, there are enough differences that every catalog probably

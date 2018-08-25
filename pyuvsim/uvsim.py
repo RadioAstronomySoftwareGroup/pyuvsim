@@ -439,7 +439,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
             if catalog_file.endswith("txt"):
                 catalog = simsetup.point_sources_from_params(catalog_file)
             elif catalog_file.endswith('vot'):
-                catalog = simsetup.read_gleam_catalog(catalog_file)
+                catalog = simsetup.read_votable_catalog(catalog_file)
 
         catalog = np.array(catalog)
         print('Nsrcs:', len(catalog))
