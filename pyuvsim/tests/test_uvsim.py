@@ -6,9 +6,8 @@ import os
 import numpy as np
 import nose.tools as nt
 from astropy.time import Time
-from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
+from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy import units
-import pyuvdata
 from pyuvdata import UVBeam, UVData
 import pyuvdata.utils as uvutils
 from pyuvdata.data import DATA_PATH
@@ -107,8 +106,6 @@ def test_source_zenith():
 
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
-    freq = (150e6 * units.Hz)
-
     zenith_source = create_zenith_source(time, 'zensrc')
     zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
     print('Zenith Source lmn')
@@ -259,10 +256,6 @@ def test_redundant_baselines():
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
     src_za = Angle('90.0d') - src_alt
-
-    src_l = np.sin(src_az.rad) * np.sin(src_za.rad)
-    src_m = np.cos(src_az.rad) * np.sin(src_za.rad)
-    src_n = np.cos(src_za.rad)
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     array_location = EarthLocation.from_geocentric(hera_uv.telescope_location[0],
@@ -797,6 +790,14 @@ def test_uvdata_init():
     #    task.time = Time(task.time, format='jd')
     #    task.freq = task.freq * units.Hz
 
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 1.0)
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', uvdata_file=1.0)
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', uvdata_file='testfile', telescope_config_file='tconfig')
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str')
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', obs_param_file=1.0)
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', telescope_config_file=1.0)
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', antenna_location_file=1.0)
+
     uvdata_out = pyuvsim.initialize_uvdata(uvtask_list, 'zenith_source',
                                            uvdata_file=EW_uvfits_file)
 
@@ -808,8 +809,6 @@ def test_uvdata_init():
                        'Based on UVData file: ' + EW_uvfits_file + '. Npus = 1.'
                        + hera_uv.pyuvdata_version_str)
     hera_uv.instrument = hera_uv.telescope_name
-    enu_out = uvdata_out.get_ENU_antpos()
-    enu_in = hera_uv.get_ENU_antpos()
     nt.assert_equal(hera_uv._antenna_positions, uvdata_out._antenna_positions)
     nt.assert_true(uvdata_out.__eq__(hera_uv, check_extra=False))
 

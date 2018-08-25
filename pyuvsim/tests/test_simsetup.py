@@ -12,7 +12,7 @@ import shutil
 import copy
 import nose.tools as nt
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-from test_uvsim import create_zenith_source, beam_files
+from test_uvsim import create_zenith_source
 
 
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfits')
@@ -189,7 +189,6 @@ def test_file_namer():
 
 
 def test_mock_catalogs():
-    mock_types = ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']
     time = Time(2457458.1739, scale='utc', format='jd')
     cat1, mock_kwds1 = pyuvsim.simsetup.create_mock_catalog(time, 'zenith')
     cat2, mock_kwds2 = pyuvsim.simsetup.create_mock_catalog(time, 'off-zenith')

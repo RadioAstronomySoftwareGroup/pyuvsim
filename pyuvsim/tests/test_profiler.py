@@ -3,7 +3,6 @@
 # Licensed under the 2-clause BSD License
 
 import pyuvsim
-import nose.tools as nt
 
 
 def test_profiling():
