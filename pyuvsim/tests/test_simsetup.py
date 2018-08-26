@@ -47,7 +47,7 @@ def test_setup_airy():
 
 
 def test_param_reader():
-    for n in range(4):
+    for n in range(5):
         yield (check_param_reader, n)
 
 
@@ -73,6 +73,57 @@ def check_param_reader(config_num):
 
     beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2, 'ANT4': 3}
     expected_uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list, beam_dict=beam_dict)
+
+    # Check error conditions:
+    if config_num == 0:
+        with open(param_filename, 'r') as pfile:
+            params_bad = yaml.safe_load(pfile)
+        params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
+        params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nosigma.yaml')
+        nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, params_bad)
+        params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml')
+        nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, params_bad)
+        params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml')
+        nt.assert_raises(OSError, pyuvsim.initialize_uvdata_from_params, params_bad)
+
+        # Errors on frequency configuration
+        with open(param_filename, 'r') as pfile:
+            params_bad = yaml.safe_load(pfile)
+        # Define freq_arr but not channel_width
+        params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
+        params_bad['freq']['freq_array'] = np.array([1e8])
+        del params_bad['freq']['channel_width']
+        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+        del params_bad['freq']['freq_array']
+
+        # Don't define Nfreqs or channel_width
+        del params_bad['freq']['Nfreqs']
+        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+
+        # Define Nfreqs but not bandwidth
+        del params_bad['freq']['end_freq']  # Can't make bandwidth without start and end
+        params_bad['freq']['Nfreqs'] = 10
+        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+
+
+        # Now check time configuration:
+        with open(param_filename, 'r') as pfile:
+            params_bad = yaml.safe_load(pfile)
+        params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
+
+        # Don't define start or end time:
+        del params_bad['time']['end_time']
+        del params_bad['time']['start_time']
+        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+
+        # Don't define Ntimes or integration_time
+        del params_bad['time']['Ntimes']
+        del params_bad['time']['integration_time']
+        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+
+        params_bad['time']['Ntimes'] = 10
+        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+
 
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_filename)
@@ -185,7 +236,7 @@ def test_file_namer():
     new_filepath = pyuvsim.simsetup.check_file_exists_and_increment(existing_file)
     print new_filepath
     print existing_file
-    nt.assert_true(new_filepath.endswith("_4.yaml"))    # There are four other of these param test files
+    nt.assert_true(new_filepath.endswith("_5.yaml"))    # There are four other of these param test files
 
 
 def test_mock_catalogs():

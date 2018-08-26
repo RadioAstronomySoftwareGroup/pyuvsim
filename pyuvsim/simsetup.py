@@ -268,20 +268,17 @@ def initialize_uvdata_from_params(obs_params):
         param_dict['config_path'] = obs_params
     else:
         param_dict = obs_params
-
     # Parse telescope parameters
     tele_params = param_dict['telescope']
 
     telescope_config_name = tele_params['telescope_config_name']
     layout_csv = tele_params['array_layout']
-
+    if not os.path.isdir(param_dict['config_path']):
+        param_dict['config_path'] = os.path.dirname(param_dict['config_path'])
     if not os.path.exists(telescope_config_name):
-        path = os.path.dirname(param_dict['config_path'])
-        telescope_config_name = os.path.join(path, telescope_config_name)
-
+        telescope_config_name = os.path.join(param_dict['config_path'], telescope_config_name)
     if not os.path.exists(layout_csv):
-        path = os.path.dirname(param_dict['config_path'])
-        layout_csv = os.path.join(path, layout_csv)
+        layout_csv = os.path.join(param_dict['config_path'], layout_csv)
 
     extra_keywords = {'obs_param_file': os.path.basename(param_dict['config_path']),
                       'telescope_config_file': tele_params['telescope_config_name'],
@@ -314,15 +311,13 @@ def initialize_uvdata_from_params(obs_params):
         if beam_model in ['gaussian', 'uniform', 'airy']:
             # Identify analytic beams
             if beam_model == 'gaussian':
-                try:
-                    beam = AnalyticBeam('gaussian', sigma=telparam['sigma'])
-                except KeyError as err:
+                if not 'sigma' in telparam:
                     raise KeyError("Missing sigma for gaussian beam.")
+                beam = AnalyticBeam('gaussian', sigma=telparam['sigma'])
             elif beam_model == 'airy':
-                try:
-                    beam = AnalyticBeam('airy', diameter=telparam['diameter'])
-                except KeyError as err:
+                if not 'diameter' in telparam:
                     raise KeyError("Missing diameter for airy beam")
+                beam = AnalyticBeam('airy', diameter=telparam['diameter'])
             else:
                 beam = AnalyticBeam('uniform')
             beam_list.append(beam)
@@ -331,7 +326,7 @@ def initialize_uvdata_from_params(obs_params):
             filename = beam_model
             path = os.path.join(SIM_DATA_PATH, filename)
             if not os.path.exists(path):
-                raise OSError("Could not find file " + filename)
+                raise OSError("Could not find beam file " + filename)
         else:
             path = beam_model   # beam_model = path to beamfits
         uvb.read_beamfits(path)
@@ -356,12 +351,9 @@ def initialize_uvdata_from_params(obs_params):
     if fa:
         freq_arr = np.array(freq_params['freq_array'])
         freq_params['Nfreqs'] = freq_arr.size
-        try:
-            if freq_params['Nfreqs'] > 1:
-                freq_params['channel_width'] = np.diff(freq_arr)[0]
-            else:
-                freq_params['channel_width'] = freq_params['channel_width']
-        except KeyError:
+        if freq_params['Nfreqs'] > 1:
+            freq_params['channel_width'] = np.diff(freq_arr)[0]
+        elif 'channel_width' not in freq_params:
             raise ValueError("Channel width must be specified "
                              "if freq_arr has length 1")
     else:
@@ -401,14 +393,7 @@ def initialize_uvdata_from_params(obs_params):
                                freq_params['end_freq'],
                                freq_params['Nfreqs'], endpoint=False)
     if freq_params['Nfreqs'] != 1:
-        try:
-            assert np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1), atol=1.0)  # 1 Hz
-        except AssertionError as err:
-            print freq_params
-            print freq_params['Nfreqs']
-            print freq_params['bandwidth'] / 2.
-            print np.diff(freq_arr)[0]
-            raise err
+        assert np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1), atol=1.0)  # 1 Hz
 
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
@@ -477,19 +462,14 @@ def initialize_uvdata_from_params(obs_params):
         if st and dd:
             time_params['end_time'] = time_params['start_time'] + time_params['duration']
     if not (st or et):
-        raise ValueError("Either a start or end time must be specified" + kws_used)
+        raise ValueError("Either a start or end time must be specified: " + kws_used)
 
     time_arr = np.linspace(time_params['start_time'],
                            time_params['end_time'],
                            time_params['Ntimes'], endpoint=False)
 
     if time_params['Ntimes'] != 1:
-        try:
-            assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=1e-4)   # To nearest second
-        except AssertionError as err:
-            print time_params
-            print np.diff(time_arr)[0]
-            raise err
+        assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=1e-4)   # To nearest second
 
     Nbl = (param_dict['Nants_data'] + 1) * param_dict['Nants_data'] / 2
 
