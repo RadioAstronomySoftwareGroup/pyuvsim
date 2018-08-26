@@ -13,7 +13,6 @@ import astropy.units as units
 from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import EarthLocation
-from .mpi import comm, rank, Npus, set_mpi_excepthook
 
 from pyuvdata import UVData, UVBeam
 import pyuvdata.utils as uvutils
@@ -22,6 +21,7 @@ from . import profiling
 from .antenna import Antenna
 from .baseline import Baseline
 from .telescope import Telescope
+from .mpi import comm, rank, Npus, set_mpi_excepthook
 from . import utils as simutils
 from . import simsetup
 
@@ -482,33 +482,23 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     summed_task_dict = {}
 
     if rank == 0:
-        count = 0
-        tot = len(local_task_list)
-        print("Local tasks: ", tot)
+        tot = len(local_task_list)*Npus
+        print("Tasks: ", tot)
         sys.stdout.flush()
         pbar = simutils.progsteps(maxval=tot)
 
-        for count, task in enumerate(local_task_list):
-            engine = UVEngine(task)
-            if task.uvdata_index not in summed_task_dict.keys():
-                summed_task_dict[task.uvdata_index] = task
-            if summed_task_dict[task.uvdata_index].visibility_vector is None:
-                summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
-            else:
-                summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
-
-            pbar.update(count)
-
+    for count, task in enumerate(local_task_list):
+        engine = UVEngine(task)
+        if task.uvdata_index not in summed_task_dict.keys():
+            summed_task_dict[task.uvdata_index] = task
+        if summed_task_dict[task.uvdata_index].visibility_vector is None:
+            summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
+        else:
+            summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
+        if rank == 0:
+            pbar.update(count*Npus)
+    if rank == 0:
         pbar.finish()
-    else:
-        for task in local_task_list:
-            engine = UVEngine(task)
-            if task.uvdata_index not in summed_task_dict.keys():
-                summed_task_dict[task.uvdata_index] = task
-            if summed_task_dict[task.uvdata_index].visibility_vector is None:
-                summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
-            else:
-                summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
 
     if rank == 0:
         print("Calculations Complete.")
