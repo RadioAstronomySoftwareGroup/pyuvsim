@@ -105,7 +105,6 @@ def check_param_reader(config_num):
         params_bad['freq']['Nfreqs'] = 10
         nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
 
-
         # Now check time configuration:
         with open(param_filename, 'r') as pfile:
             params_bad = yaml.safe_load(pfile)
@@ -123,7 +122,6 @@ def check_param_reader(config_num):
 
         params_bad['time']['Ntimes'] = 10
         nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-
 
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_filename)

@@ -482,7 +482,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     summed_task_dict = {}
 
     if rank == 0:
-        tot = len(local_task_list)*Npus
+        tot = len(local_task_list) * Npus
         print("Tasks: ", tot)
         sys.stdout.flush()
         pbar = simutils.progsteps(maxval=tot)
@@ -496,7 +496,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         else:
             summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
         if rank == 0:
-            pbar.update(count*Npus)
+            pbar.update(count * Npus)
     if rank == 0:
         pbar.finish()
 
