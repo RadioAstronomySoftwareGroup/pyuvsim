@@ -677,7 +677,8 @@ def write_uvfits(uv_obj, param_dict):
     else:
         outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
     print('Outfile path: ', outfile_name)
-    outfile_name = outfile_name + ".uvfits"
+    if not outfile_name.endswith(".uvfits"):
+        outfile_name = outfile_name + ".uvfits"
 
     if 'clobber' not in param_dict:
         outfile_name = check_file_exists_and_increment(outfile_name)

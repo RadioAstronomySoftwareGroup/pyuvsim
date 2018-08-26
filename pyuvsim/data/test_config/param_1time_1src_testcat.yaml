@@ -1,6 +1,6 @@
 filing:
   outdir: '.'
-  outfile_prefix: 'sim_'
+  outfile_name: 'tempfile.uvfits'
 freq:
   Nfreqs: 1
   start_freq: 100000000.0

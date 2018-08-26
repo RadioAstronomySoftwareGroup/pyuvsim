@@ -20,6 +20,8 @@ beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
 hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(4)]   # Five different test configs
+singlesource_vot = os.path.join(SIM_DATA_PATH, 'single_source.vot')
+singlesource_txt = os.path.join(SIM_DATA_PATH, 'single_source.txt')
 
 
 def test_run_uvsim():
@@ -47,15 +49,26 @@ def test_run_param_uvsim():
     uv_in, beam_list, beam_dict, beam_ids = pyuvsim.simsetup.initialize_uvdata_from_params(param_filename)
     beam_list[0] = pyuvsim.analyticbeam.AnalyticBeam('uniform')  # Replace the one that's a HERA beam
     catalog = os.path.join(SIM_DATA_PATH, params_dict['sources']['catalog'])
-    print(catalog)
     uv_out = pyuvsim.run_uvsim(uv_in, beam_list, catalog_file=catalog, beam_dict=beam_dict)
-    print(uv_out.lst_array*180/np.pi)
-    uv_out.write_uvfits("tempfile.uvfits", force_phase=True, spoof_nonessential=True)
+    tempfilename = params_dict['filing']['outfile_name']
+    uv_out.write_uvfits(tempfilename, force_phase=True, spoof_nonessential=True)
 
     uv_new = UVData()
-    uv_new.read_uvfits('tempfile.uvfits')
-    os.remove('tempfile.uvfits')
+    uv_new.read_uvfits(tempfilename)
+    os.remove(tempfilename)
     uv_ref = UVData()
     uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
+    uv_new.history = uv_ref.history  # History includes irrelevant info for comparison
+    nt.assert_equal(uv_new, uv_ref)
+
+    # Test votable catalog
+    catalog = singlesource_vot
+    del uv_out, uv_new
+    uv_out = pyuvsim.run_uvsim(uv_in, beam_list, catalog_file=catalog, beam_dict=beam_dict)
+    pyuvsim.simsetup.write_uvfits(uv_out, params_dict)
+    uv_new = UVData()
+    uv_new.read_uvfits(tempfilename)
+    print(tempfilename)
+    os.remove(tempfilename)
     uv_new.history = uv_ref.history  # History includes irrelevant info for comparison
     nt.assert_equal(uv_new, uv_ref)
