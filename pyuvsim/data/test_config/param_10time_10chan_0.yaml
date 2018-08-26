@@ -1,6 +1,6 @@
 filing:
   outdir: '.'   #Output file directory
-  outfile_prefix: 'sim_' # Prefix for the output uvfits file.
+  outfile_prefix: 'sim' # Prefix for the output uvfits file.
 freq:
   Nfreqs: 10    # Number of frequencies
   channel_width: 80000.0    # Frequency channel width

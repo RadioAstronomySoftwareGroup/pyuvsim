@@ -638,7 +638,7 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
         yaml.dump(param_dict, yfile, default_flow_style=False)
 
 
-def write_uvfits(uv_obj, param_dict):
+def write_uvfits(uv_obj, param_dict, return_filename=False, dryrun=False):
     """
         Parse output file information from parameters and write uvfits to file.
     """
@@ -647,13 +647,13 @@ def write_uvfits(uv_obj, param_dict):
         param_dict['outdir'] = '.'
     if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
         outfile_prefix = ""
-        outfile_suffix = "_results"
+        outfile_suffix = "results"
         if 'outfile_prefix' in param_dict:
-            outfile_prefix = param_dict['outfile_prefix'] + "_"
+            outfile_prefix = param_dict['outfile_prefix']
         if 'outfile_suffix' in param_dict:
-            outfile_suffix = "_" + param_dict['outfile_suffix']
-        outfile_name = os.path.join(param_dict['outdir'], outfile_prefix
-                                    + outfile_suffix)  # Strip .yaml extention
+            outfile_suffix = param_dict['outfile_suffix']
+        outfile_name = "_".join([outfile_prefix, outfile_suffix])
+        outfile_name = os.path.join(param_dict['outdir'], outfile_name)
     else:
         outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
     print('Outfile path: ', outfile_name)
@@ -666,4 +666,7 @@ def write_uvfits(uv_obj, param_dict):
     if not os.path.exists(param_dict['outdir']):
         os.makedirs(param_dict['outdir'])
 
-    uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
+    if not dryrun:
+        uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
+    if return_filename:
+        return outfile_name

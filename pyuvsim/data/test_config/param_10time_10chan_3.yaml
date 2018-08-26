@@ -1,6 +1,6 @@
 filing:
   outdir: '.'
-  outfile_prefix: 'sim_'
+  outfile_name: 'sim_results'
 freq:
   channel_width: 80000.0
   end_freq: 100800000.0

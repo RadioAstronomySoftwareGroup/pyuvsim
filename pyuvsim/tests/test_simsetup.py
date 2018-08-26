@@ -17,7 +17,7 @@ from test_uvsim import create_zenith_source
 
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfits')
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
-param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(4)]   # Five different test configs
+param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(5)]   # Five different test configs
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
@@ -127,6 +127,19 @@ def check_param_reader(config_num):
 
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_filename)
+
+    # write_uvfits test:
+    param_dict = yaml.safe_load(open(param_filename, 'r'))
+    expected_ofilepath = pyuvsim.simsetup.write_uvfits(uv_obj, param_dict, return_filename=True, dryrun=True)
+    ofilename = 'sim_results.uvfits'
+    if config_num == 1:
+        if os.path.isdir('tempdir'):
+            os.rmdir('tempdir')
+        ofilename = os.path.join('.', 'tempdir', ofilename)
+    else:
+        ofilename = os.path.join('.', ofilename)
+    nt.assert_equal(ofilename, expected_ofilepath)
+
     uvtask_list = pyuvsim.uvdata_to_task_list(uv_obj, sources, new_beam_list, beam_dict=new_beam_dict)
     # Tasks are not ordered in UVTask lists, so need to sort them.
     # This is enabled by the comparison operator in UVTask
