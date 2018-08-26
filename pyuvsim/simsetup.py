@@ -311,11 +311,11 @@ def initialize_uvdata_from_params(obs_params):
         if beam_model in ['gaussian', 'uniform', 'airy']:
             # Identify analytic beams
             if beam_model == 'gaussian':
-                if not 'sigma' in telparam:
+                if 'sigma' not in telparam:
                     raise KeyError("Missing sigma for gaussian beam.")
                 beam = AnalyticBeam('gaussian', sigma=telparam['sigma'])
             elif beam_model == 'airy':
-                if not 'diameter' in telparam:
+                if 'diameter' not in telparam:
                     raise KeyError("Missing diameter for airy beam")
                 beam = AnalyticBeam('airy', diameter=telparam['diameter'])
             else:
