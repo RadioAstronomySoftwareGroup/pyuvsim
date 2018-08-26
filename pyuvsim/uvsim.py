@@ -437,7 +437,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         elif isinstance(catalog_file, str):
             source_list_name = catalog_file
             if catalog_file.endswith("txt"):
-                catalog = simsetup.point_sources_from_params(catalog_file)
+                catalog = simsetup.read_text_catalog(catalog_file)
             elif catalog_file.endswith('vot'):
                 catalog = simsetup.read_votable_catalog(catalog_file)
 

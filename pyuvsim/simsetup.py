@@ -92,7 +92,7 @@ def read_votable_catalog(gleam_votable):
     return sourcelist
 
 
-def point_sources_from_params(catalog_csv):
+def read_text_catalog(catalog_csv):
     """
         Read in a text file of sources.
         Columns:

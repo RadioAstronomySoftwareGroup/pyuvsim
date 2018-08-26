@@ -42,16 +42,18 @@ def test_run_uvsim():
     if rank == 0:
         nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))
 
+
 def test_run_param_uvsim():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
     with open(param_filename, 'r') as pfile:
         params_dict = yaml.safe_load(pfile)
     uv_in, beam_list, beam_dict, beam_ids = pyuvsim.simsetup.initialize_uvdata_from_params(param_filename)
     beam_list[0] = pyuvsim.analyticbeam.AnalyticBeam('uniform')  # Replace the one that's a HERA beam
+    # This test obsparam file has "single_source.txt" as its catalog.
     catalog = os.path.join(SIM_DATA_PATH, params_dict['sources']['catalog'])
     uv_out = pyuvsim.run_uvsim(uv_in, beam_list, catalog_file=catalog, beam_dict=beam_dict)
+    pyuvsim.simsetup.write_uvfits(uv_out, params_dict)
     tempfilename = params_dict['filing']['outfile_name']
-    uv_out.write_uvfits(tempfilename, force_phase=True, spoof_nonessential=True)
 
     uv_new = UVData()
     uv_new.read_uvfits(tempfilename)

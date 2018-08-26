@@ -152,7 +152,7 @@ def test_uvfits_to_config():
 
 def test_point_catalog_reader():
     catfile = os.path.join(SIM_DATA_PATH, 'test_config', 'pointsource_catalog.txt')
-    catalog = pyuvsim.simsetup.point_sources_from_params(catfile)
+    catalog = pyuvsim.simsetup.read_text_catalog(catfile)
 
     header = open(catfile, 'r').readline()
     header = [h.strip() for h in header.split()]
