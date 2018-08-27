@@ -17,7 +17,7 @@ import pyuvdata.utils as uvutils
 
 from .source import Source
 from .analyticbeam import AnalyticBeam
-from .mpi import rank
+from .mpi import get_rank
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 
@@ -242,7 +242,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     dec = icrs_coord.dec
     for si in range(Nsrcs):
         catalog.append(Source('src' + str(si), ra[si], dec[si], freq, [fluxes[si], 0, 0, 0]))
-    if rank == 0 and save:
+    if get_rank() == 0 and save:
         np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
 
     catalog = np.array(catalog)

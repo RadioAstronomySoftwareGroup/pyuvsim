@@ -4,12 +4,15 @@
 
 from __future__ import absolute_import, division, print_function
 
+import mpi4py
+mpi4py.rc.initialize = False
+
 from mpi4py import MPI
 import sys
 
-comm = MPI.COMM_WORLD
-Npus = comm.Get_size()
-rank = comm.Get_rank()
+rank = 0
+Npus = 1
+comm = None
 
 
 def set_mpi_excepthook(mpi_comm):
@@ -20,3 +23,26 @@ def set_mpi_excepthook(mpi_comm):
         mpi_comm.Abort(1)
 
     sys.excepthook = mpi_excepthook
+
+
+def start_mpi():
+    MPI.Init()
+    global comm, Npus, rank
+    comm = MPI.COMM_WORLD
+    Npus = comm.Get_size()
+    rank = comm.Get_rank()
+    set_mpi_excepthook(comm)
+
+
+def get_rank():
+    return rank
+
+
+def get_Npus():
+    return Npus
+
+
+def get_comm():
+    return comm
+
+#print(Npus, rank)

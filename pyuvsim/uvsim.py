@@ -23,11 +23,9 @@ from .baseline import Baseline
 from .telescope import Telescope
 from . import utils as simutils
 from . import simsetup
-from .mpi import comm, rank, Npus, set_mpi_excepthook  # This needs to be the last import. Initializes the MPI environment.
+from . import mpi
 
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_list', 'run_uvsim', 'initialize_uvdata', 'serial_gather']
-
-set_mpi_excepthook(comm)
 
 
 class UVTask(object):
@@ -402,6 +400,9 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         telescope_config_file: Telescope configuration file if running from config files.
         antenna_location_file: antenna_location file if running from config files.
     """
+
+    mpi.start_mpi()
+    rank = mpi.get_rank()
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
     # The Head node will initialize our simulation
