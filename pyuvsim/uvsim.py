@@ -21,9 +21,9 @@ from . import profiling
 from .antenna import Antenna
 from .baseline import Baseline
 from .telescope import Telescope
-from .mpi import comm, rank, Npus, set_mpi_excepthook
 from . import utils as simutils
 from . import simsetup
+from .mpi import comm, rank, Npus, set_mpi_excepthook  # This needs to be the last import. Initializes the MPI environment.
 
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_list', 'run_uvsim', 'initialize_uvdata', 'serial_gather']
 
