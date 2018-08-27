@@ -26,12 +26,14 @@ def set_mpi_excepthook(mpi_comm):
 
 
 def start_mpi():
-    MPI.Init()
-    global comm, Npus, rank
-    comm = MPI.COMM_WORLD
-    Npus = comm.Get_size()
-    rank = comm.Get_rank()
-    set_mpi_excepthook(comm)
+    # Avoid accidentally doing MPI_INIT twice
+    if comm is None:
+        MPI.Init()
+        global comm, Npus, rank
+        comm = MPI.COMM_WORLD
+        Npus = comm.Get_size()
+        rank = comm.Get_rank()
+        set_mpi_excepthook(comm)
 
 
 def get_rank():

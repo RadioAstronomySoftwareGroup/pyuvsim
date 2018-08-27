@@ -76,7 +76,6 @@ def test_construct_version_info():
 
 
 def test_main():
-    import pyuvsim
     version_info = pyuvsim.version.construct_version_info()
 
     saved_stdout = sys.stdout

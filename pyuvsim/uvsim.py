@@ -265,7 +265,7 @@ def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
         history += (' Based on config files: ' + obs_param_file + ', '
                     + telescope_config_file + ', ' + antenna_location_file)
 
-    history += ' Npus = ' + str(Npus) + '.'
+    history += ' Npus = ' + str(mpi.get_Npus()) + '.'
 
     task_freqs = []
     task_bls = []
@@ -462,12 +462,13 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
 
         # To split into PUs make a list of lists length NPUs
         print("Splitting Task List")
-        uvtask_list = np.array_split(uvtask_list, Npus)
+        uvtask_list = np.array_split(uvtask_list, mpi.get_Npus())
         uvtask_list = [list(tl) for tl in uvtask_list]
 
         print("Sending Tasks To Processing Units")
         sys.stdout.flush()
     # Scatter the task list among all available PUs
+    comm = mpi.get_comm()
     local_task_list = comm.scatter(uvtask_list, root=0)
     if rank == 0:
         print("Tasks Received. Begin Calculations.")
@@ -483,7 +484,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     summed_task_dict = {}
 
     if rank == 0:
-        tot = len(local_task_list) * Npus
+        tot = len(local_task_list) * mpi.get_Npus()
         print("Tasks: ", tot)
         sys.stdout.flush()
         pbar = simutils.progsteps(maxval=tot)
@@ -497,7 +498,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         else:
             summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
         if rank == 0:
-            pbar.update(count * Npus)
+            pbar.update(count * mpi.get_Npus())
     if rank == 0:
         pbar.finish()
 

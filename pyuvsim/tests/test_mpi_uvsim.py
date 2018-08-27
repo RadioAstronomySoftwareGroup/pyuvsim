@@ -13,7 +13,9 @@ from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
 import yaml
 
-from pyuvsim.mpi import rank
+import mpi4py
+mpi4py.rc.initialize = False
+from pyuvsim import mpi
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
@@ -39,6 +41,7 @@ def test_run_uvsim():
     mock_keywords = {"Nsrcs": 3}
     uv_out = pyuvsim.run_uvsim(hera_uv, beam_list, catalog_file=None, mock_keywords=mock_keywords,
                                uvdata_file=EW_uvfits_file)
+    rank = mpi.get_rank()
     if rank == 0:
         nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))
 
@@ -74,3 +77,9 @@ def test_run_param_uvsim():
     os.remove(tempfilename)
     uv_new.history = uv_ref.history  # History includes irrelevant info for comparison
     nt.assert_equal(uv_new, uv_ref)
+
+
+def test_mpi_funcs():
+    nt.assert_true(mpi.get_rank() == 0)
+    nt.assert_true(mpi.get_Npus() == 1)
+    nt.assert_true(isinstance(mpi.comm, mpi4py.MPI.Intracomm))
