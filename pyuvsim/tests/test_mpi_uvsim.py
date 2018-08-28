@@ -12,10 +12,10 @@ from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
 import yaml
+from mpi4py import MPI
 
-import mpi4py
-mpi4py.rc.initialize = False
 from pyuvsim import mpi
+
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
@@ -80,6 +80,7 @@ def test_run_param_uvsim():
 
 
 def test_mpi_funcs():
+    mpi.start_mpi()
     nt.assert_true(mpi.get_rank() == 0)
     nt.assert_true(mpi.get_Npus() == 1)
-    nt.assert_true(isinstance(mpi.comm, mpi4py.MPI.Intracomm))
+    nt.assert_true(isinstance(mpi.get_comm(), MPI.Intracomm))
