@@ -453,8 +453,8 @@ def initialize_uvdata_from_params(obs_params):
         time_params['integration_time'] = (time_params['duration']
                                            / float(time_params['Ntimes']))
         if 'snapshot_length_hours' in time_params:
-            print('Warning: Setting integration time from Ntimes for snapshots. '
-                  'This may not be well-defined.')
+            warnings.warn('Warning: Setting integration time from Ntimes for snapshots. '
+                          'This may not be well-defined.')
 
     inttime_days = time_params['integration_time'] * 1 / (24. * 3600.)
     inttime_days = np.trunc(inttime_days * 24 * 3600) / (24. * 3600.)

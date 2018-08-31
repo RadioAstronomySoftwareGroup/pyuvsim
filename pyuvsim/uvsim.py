@@ -8,6 +8,7 @@ import numpy as np
 import os
 import sys
 from itertools import izip
+import warnings
 import astropy.constants as const
 import astropy.units as units
 from astropy.units import Quantity
@@ -425,9 +426,9 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
                 mock_keywords['time'] = input_uv.time_array[0]
 
             if "array_location" not in mock_keywords:
-                print("Warning: No array_location given for mock catalog. Defaulting to HERA site")
+                warnings.warn("Warning: No array_location given for mock catalog. Defaulting to HERA site")
             if 'time' not in mock_keywords:
-                print("Warning: No julian date given for mock catalog. Defaulting to first of input_UV object")
+                warnings.warn("Warning: No julian date given for mock catalog. Defaulting to first of input_UV object")
 
             time = mock_keywords.pop('time')
 
