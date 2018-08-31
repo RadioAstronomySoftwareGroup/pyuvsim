@@ -185,7 +185,7 @@ def test_uvfits_to_config():
 
     with open(os.path.join(opath, param_filename), 'r') as pf:
         param_dict = yaml.safe_load(pf)
-    param_dict['config_path'] = param_filename    # Ensure path is present
+    param_dict['config_path'] = opath    # Ensure path is present
 
     orig_param_dict = copy.deepcopy(param_dict)   # The parameter dictionary gets modified in the function below.
     uv1, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
@@ -204,8 +204,6 @@ def test_uvfits_to_config():
     del param_dict
     with open(os.path.join(path, second_param_filename), 'r') as pf:
         param_dict = yaml.safe_load(pf)
-
-    param_dict['config_path'] = param_filename
 
     nt.assert_true(compare_dictionaries(param_dict, orig_param_dict))
 

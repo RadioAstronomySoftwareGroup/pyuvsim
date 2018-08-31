@@ -265,7 +265,7 @@ def initialize_uvdata_from_params(obs_params):
         with open(obs_params, 'r') as pfile:
             param_dict = yaml.safe_load(pfile)
 
-        param_dict['config_path'] = obs_params
+        param_dict['config_path'] = os.path.dirname(obs_params)
     else:
         param_dict = obs_params
     # Parse telescope parameters
