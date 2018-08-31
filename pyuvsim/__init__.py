@@ -4,6 +4,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+from . import version
 from .profiling import *
 from .uvsim import *
 from .simsetup import *

@@ -1,0 +1,635 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Produced with astropy.io.votable version 2.0.8
+     http://www.astropy.org/ -->
+<VOTABLE version="1.3" xmlns="http://www.ivoa.net/xml/VOTable/v1.3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.ivoa.net/xml/VOTable/v1.3">
+ <RESOURCE type="results">
+  <TABLE ID="VIII_100_table1" name="VIII/100/table1" nrows="28">
+   <DESCRIPTION>
+    GLEAM first year observing parameters
+   </DESCRIPTION>
+   <FIELD ID="Obs.Date" arraysize="10" datatype="char" name="Obs.Date" ucd="time.epoch;obs" unit="&quot;Y:M:D&quot;">
+    <DESCRIPTION>
+     Observation date
+    </DESCRIPTION>
+    <VALUES null=" "/>
+   </FIELD>
+   <FIELD ID="RA1" datatype="float" name="RA1" precision="1" ucd="pos.eq.ra" unit="h" width="4">
+    <DESCRIPTION>
+     RA range
+    </DESCRIPTION>
+   </FIELD>
+   <FIELD ID="RA2" datatype="float" name="RA2" precision="1" ucd="pos.eq.ra" unit="h" width="4">
+    <DESCRIPTION>
+     RA range
+    </DESCRIPTION>
+   </FIELD>
+   <FIELD ID="DE" datatype="short" name="DE" ucd="pos.eq.dec" unit="deg" width="3">
+    <DESCRIPTION>
+     Declination
+    </DESCRIPTION>
+   </FIELD>
+   <FIELD ID="Nflag" datatype="short" name="Nflag" ucd="meta.number" width="2">
+    <DESCRIPTION>
+     Number of flagged tiles out of the 128 available
+    </DESCRIPTION>
+   </FIELD>
+   <FIELD ID="Cal" arraysize="11" datatype="char" name="Cal" ucd="meta.id">
+    <DESCRIPTION>
+     Calibrator (1)
+    </DESCRIPTION>
+   </FIELD>
+   <DATA>
+    <TABLEDATA>
+     <TR>
+      <TD>2013-08-09</TD>
+      <TD>19.5</TD>
+      <TD> 3.5</TD>
+      <TD>-55</TD>
+      <TD>10</TD>
+      <TD>3C444</TD>
+     </TR>
+     <TR>
+      <TD>2013-08-10</TD>
+      <TD>19.5</TD>
+      <TD> 3.5</TD>
+      <TD>-27</TD>
+      <TD>4</TD>
+      <TD>3C444</TD>
+     </TR>
+     <TR>
+      <TD>2013-08-18</TD>
+      <TD>19.5</TD>
+      <TD> 3.5</TD>
+      <TD>-72</TD>
+      <TD>7</TD>
+      <TD>Pictor A</TD>
+     </TR>
+     <TR>
+      <TD>2013-08-22</TD>
+      <TD>19.5</TD>
+      <TD> 3.5</TD>
+      <TD>-13</TD>
+      <TD>3</TD>
+      <TD>3C444</TD>
+     </TR>
+     <TR>
+      <TD>2013-08-25</TD>
+      <TD>19.5</TD>
+      <TD> 3.5</TD>
+      <TD>-40</TD>
+      <TD>5</TD>
+      <TD>3C444</TD>
+     </TR>
+     <TR>
+      <TD>2013-11-05</TD>
+      <TD> 0.0</TD>
+      <TD> 8.0</TD>
+      <TD>-13</TD>
+      <TD>4</TD>
+      <TD>Hydra A</TD>
+     </TR>
+     <TR>
+      <TD>2013-11-06</TD>
+      <TD> 0.0</TD>
+      <TD> 8.0</TD>
+      <TD>-40</TD>
+      <TD>4</TD>
+      <TD>Hydra A</TD>
+     </TR>
+     <TR>
+      <TD>2013-11-07</TD>
+      <TD> 0.0</TD>
+      <TD> 8.0</TD>
+      <TD>2</TD>
+      <TD>4</TD>
+      <TD>Hydra A</TD>
+     </TR>
+     <TR>
+      <TD>2013-11-08</TD>
+      <TD> 0.0</TD>
+      <TD> 8.0</TD>
+      <TD>-55</TD>
+      <TD>4</TD>
+      <TD>Hydra A</TD>
+     </TR>
+     <TR>
+      <TD>2013-11-11</TD>
+      <TD> 0.0</TD>
+      <TD> 8.0</TD>
+      <TD>19</TD>
+      <TD>4</TD>
+      <TD>Hydra A</TD>
+     </TR>
+     <TR>
+      <TD>2013-11-12</TD>
+      <TD> 0.0</TD>
+      <TD> 8.0</TD>
+      <TD>-72</TD>
+      <TD>4</TD>
+      <TD>Hydra A</TD>
+     </TR>
+     <TR>
+      <TD>2013-11-25</TD>
+      <TD> 0.0</TD>
+      <TD> 8.0</TD>
+      <TD>-27</TD>
+      <TD>4</TD>
+      <TD>Hydra A</TD>
+     </TR>
+     <TR>
+      <TD>2014-03-03</TD>
+      <TD> 6.0</TD>
+      <TD>16.0</TD>
+      <TD>-27</TD>
+      <TD>4</TD>
+      <TD>Hydra A</TD>
+     </TR>
+     <TR>
+      <TD>2014-03-04</TD>
+      <TD> 6.0</TD>
+      <TD>16.0</TD>
+      <TD>-13</TD>
+      <TD>4</TD>
+      <TD>Hydra A</TD>
+     </TR>
+     <TR>
+      <TD>2014-03-06</TD>
+      <TD> 6.0</TD>
+      <TD>16.0</TD>
+      <TD>2</TD>
+      <TD>4</TD>
+      <TD>Hydra A</TD>
+     </TR>
+     <TR>
+      <TD>2014-03-08</TD>
+      <TD> 6.0</TD>
+      <TD>16.0</TD>
+      <TD>19</TD>
+      <TD>4</TD>
+      <TD>Hydra A</TD>
+     </TR>
+     <TR>
+      <TD>2014-03-09</TD>
+      <TD> 6.0</TD>
+      <TD>16.0</TD>
+      <TD>-72</TD>
+      <TD>4</TD>
+      <TD>Virgo A</TD>
+     </TR>
+     <TR>
+      <TD>2014-03-16</TD>
+      <TD> 6.0</TD>
+      <TD>16.0</TD>
+      <TD>-40</TD>
+      <TD>4</TD>
+      <TD>Virgo A</TD>
+     </TR>
+     <TR>
+      <TD>2014-03-17</TD>
+      <TD> 6.0</TD>
+      <TD>16.0</TD>
+      <TD>-55</TD>
+      <TD>4</TD>
+      <TD>Hydra A</TD>
+     </TR>
+     <TR>
+      <TD>2014-06-09</TD>
+      <TD>12.0</TD>
+      <TD>22.0</TD>
+      <TD>-27</TD>
+      <TD>8</TD>
+      <TD>3C444</TD>
+     </TR>
+     <TR>
+      <TD>2014-06-10</TD>
+      <TD>12.0</TD>
+      <TD>22.0</TD>
+      <TD>-40</TD>
+      <TD>8</TD>
+      <TD>3C444</TD>
+     </TR>
+     <TR>
+      <TD>2014-06-11</TD>
+      <TD>12.0</TD>
+      <TD>22.0</TD>
+      <TD>2</TD>
+      <TD>8</TD>
+      <TD>Hercules A</TD>
+     </TR>
+     <TR>
+      <TD>2014-06-12</TD>
+      <TD>12.0</TD>
+      <TD>18.5</TD>
+      <TD>-55</TD>
+      <TD>8</TD>
+      <TD>3C444</TD>
+     </TR>
+     <TR>
+      <TD>2014-06-13</TD>
+      <TD>12.0</TD>
+      <TD>19.0</TD>
+      <TD>-13</TD>
+      <TD>8</TD>
+      <TD>Centaurus A</TD>
+     </TR>
+     <TR>
+      <TD>2014-06-14</TD>
+      <TD>12.0</TD>
+      <TD>22.0</TD>
+      <TD>-72</TD>
+      <TD>9</TD>
+      <TD>Hercules A</TD>
+     </TR>
+     <TR>
+      <TD>2014-06-15</TD>
+      <TD>12.0</TD>
+      <TD>22.0</TD>
+      <TD>18</TD>
+      <TD>13</TD>
+      <TD>Virgo A</TD>
+     </TR>
+     <TR>
+      <TD>2014-06-16</TD>
+      <TD>18.5</TD>
+      <TD>22.0</TD>
+      <TD>-13</TD>
+      <TD>8</TD>
+      <TD>3C444</TD>
+     </TR>
+     <TR>
+      <TD>2014-06-18</TD>
+      <TD>18.5</TD>
+      <TD>22.0</TD>
+      <TD>-55</TD>
+      <TD>8</TD>
+      <TD>3C444</TD>
+     </TR>
+    </TABLEDATA>
+   </DATA>
+  </TABLE>
+  <TABLE>
+   <FIELD ID="_RAJ2000" datatype="double" name="_RAJ2000" precision="8" ref="J2000" ucd="pos.eq.ra" unit="deg" width="12">
+    <DESCRIPTION>
+     Right ascension (FK5, Equinox=J2000.0) (computed by VizieR, not
+     part of the original data. The format may include more digits
+     than the original data because of internal accuracy requirements
+     in VizieR and across other CDS services)
+    </DESCRIPTION>
+   </FIELD>
+   <FIELD ID="_DEJ2000" datatype="double" name="_DEJ2000" precision="8" ref="J2000" ucd="pos.eq.dec" unit="deg" width="12">
+    <DESCRIPTION>
+     Declination (FK5, Equinox=J2000.0) (computed by VizieR, not part
+     of the original data. The format may include more digits than the
+     original data because of internal accuracy requirements in VizieR
+     and across other CDS services)
+    </DESCRIPTION>
+   </FIELD>
+   <FIELD ID="GLEAM" arraysize="14" datatype="char" name="GLEAM" ucd="meta.id;meta.main">
+    <DESCRIPTION>
+     GLEAM name (JHHMMSS+DDMMSS) (Name)
+    </DESCRIPTION>
+   </FIELD>
+   <FIELD ID="RAJ2000" datatype="double" name="RAJ2000" precision="6" ref="J2000" ucd="pos.eq.ra" unit="deg" width="10">
+    <DESCRIPTION>
+     Right Ascension J2000 (RAJ2000)
+    </DESCRIPTION>
+   </FIELD>
+   <FIELD ID="DEJ2000" datatype="double" name="DEJ2000" precision="6" ref="J2000" ucd="pos.eq.dec" unit="deg" width="10">
+    <DESCRIPTION>
+     Declination J2000 (DEJ2000)
+    </DESCRIPTION>
+   </FIELD>
+   <FIELD ID="Fpwide" datatype="double" name="Fpwide" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="10">
+    <DESCRIPTION>
+     Peak flux in wide (170-231MHz) image (peak_flux_wide)
+    </DESCRIPTION>
+   </FIELD>
+   <FIELD ID="Fintwide" datatype="double" name="Fintwide" precision="6" ucd="phot.flux" unit="Jy" width="10">
+    <DESCRIPTION>
+     Integrated flux in wide (170-231MHz) image (int_flux_wide)
+    </DESCRIPTION>
+   </FIELD>
+   <FIELD ID="eabsFpct" datatype="short" name="eabsFpct" ucd="stat.error" unit="%" width="2">
+    <DESCRIPTION>
+     Percent error in absolute flux scale - all frequencies
+     (err_abs_flux_pct)
+    </DESCRIPTION>
+   </FIELD>
+   <FIELD ID="efitFpct" datatype="unsignedByte" name="efitFpct" ucd="stat.error" unit="%" width="1">
+    <DESCRIPTION>
+     Percent error on internal flux scale - all frequencies
+     (err_fit_flux_pct)
+    </DESCRIPTION>
+   </FIELD>
+   <FIELD ID="Fp076" datatype="double" name="Fp076" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 072-080MHz image (peak_flux_076)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint076" datatype="double" name="Fint076" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 072-080MHz image (int_flux_076)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp084" datatype="double" name="Fp084" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 080-088MHz image (peak_flux_084)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint084" datatype="double" name="Fint084" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 080-088MHz image (int_flux_084)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp092" datatype="double" name="Fp092" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 088-095MHz image (peak_flux_092)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint092" datatype="double" name="Fint092" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 088-095MHz image (int_flux_092)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp099" datatype="double" name="Fp099" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 095-103MHz image (peak_flux_099)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint099" datatype="double" name="Fint099" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 095-103MHz image (int_flux_099)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp107" datatype="double" name="Fp107" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 103-111MHz image (peak_flux_107)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint107" datatype="double" name="Fint107" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 103-111MHz image (int_flux_107)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp115" datatype="double" name="Fp115" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 111-118MHz image (peak_flux_115)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint115" datatype="double" name="Fint115" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 111-118MHz image (int_flux_115)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp122" datatype="double" name="Fp122" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 118-126MHz image (peak_flux_122)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint122" datatype="double" name="Fint122" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 118-126MHz image (int_flux_122)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp130" datatype="double" name="Fp130" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 126-134MHz image (peak_flux_130)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint130" datatype="double" name="Fint130" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 126-134MHz image (int_flux_130)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp143" datatype="double" name="Fp143" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 139-147MHz image (peak_flux_143)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint143" datatype="double" name="Fint143" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 139-147MHz image (int_flux_143)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp151" datatype="double" name="Fp151" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 147-154MHz image (peak_flux_151)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint151" datatype="double" name="Fint151" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 147-154MHz image (int_flux_151)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp158" datatype="double" name="Fp158" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 154-162MHz image (peak_flux_158)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint158" datatype="double" name="Fint158" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 154-162MHz image (int_flux_158)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp166" datatype="double" name="Fp166" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 162-170MHz image (peak_flux_166)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint166" datatype="double" name="Fint166" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 162-170MHz image (int_flux_166)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp174" datatype="double" name="Fp174" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 170-177MHz image (peak_flux_174)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint174" datatype="double" name="Fint174" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 170-177MHz image (int_flux_174)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp181" datatype="double" name="Fp181" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 177-185MHz image (peak_flux_181)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint181" datatype="double" name="Fint181" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 177-185MHz image (int_flux_181)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp189" datatype="double" name="Fp189" precision="6" ucd="phot.flux.density;em.radio.200-400MHz" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 185-193MHz image (peak_flux_189)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint189" datatype="double" name="Fint189" precision="6" ucd="phot.flux.density;em.radio.200-400MHz" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 185-193MHz image (int_flux_189)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp197" datatype="double" name="Fp197" precision="6" ucd="phot.flux.density;em.radio.200-400MHz" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 193-200MHz image (peak_flux_197)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint197" datatype="double" name="Fint197" precision="6" ucd="phot.flux.density;em.radio.200-400MHz" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 193-200MHz image (int_flux_197)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp204" datatype="double" name="Fp204" precision="6" ucd="phot.flux.density;em.radio.200-400MHz" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 200-208MHz image (peak_flux_204)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint204" datatype="double" name="Fint204" precision="6" ucd="phot.flux.density;em.radio.200-400MHz" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 200-208MHz image (int_flux_204)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp212" datatype="double" name="Fp212" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 208-216MHz image (peak_flux_212)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint212" datatype="double" name="Fint212" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 208-216MHz image (int_flux_212)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp220" datatype="double" name="Fp220" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 216-223MHz image (peak_flux_220)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint220" datatype="double" name="Fint220" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 216-223MHz image (int_flux_220)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fp227" datatype="double" name="Fp227" precision="6" ucd="phot.flux.density" unit="Jy/beam" width="11">
+    <DESCRIPTION>
+     ? Peak flux in 223-231MHz image (peak_flux_227)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fint227" datatype="double" name="Fint227" precision="6" ucd="phot.flux" unit="Jy" width="11">
+    <DESCRIPTION>
+     ? Integrated flux in 223-231MHz image (int_flux_227)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="alpha" datatype="double" name="alpha" precision="6" ucd="spect.index;meta.modelled" width="9">
+    <DESCRIPTION>
+     ? Fitted spectral index (alpha)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <FIELD ID="Fintfit200" datatype="double" name="Fintfit200" precision="6" ucd="stat.fit;phot.flux" unit="Jy" width="10">
+    <DESCRIPTION>
+     ? Fitted 200MHz integrated flux density (int_flux_fit_200)
+    </DESCRIPTION>
+    <VALUES null="nan"/>
+   </FIELD>
+   <DATA>
+    <TABLEDATA>
+     <TR>
+      <TD>0.00000000</TD>
+      <TD>0.0000000</TD>
+      <TD>TEST</TD>
+      <TD>0.000000</TD>
+      <TD>-30.000000</TD>
+      <TD>0.000000</TD>
+      <TD>  1.000000</TD>
+      <TD>16959</TD>
+      <TD>63</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+      <TD>0.000000</TD>
+     </TR>
+    </TABLEDATA>
+   </DATA>
+  </TABLE>
+ </RESOURCE>
+</VOTABLE>

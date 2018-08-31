@@ -68,7 +68,6 @@ def test_construct_version_info():
             git_hash = ''
             git_description = ''
             git_branch = ''
-
     test_version_info = {'version': pyuvsim.__version__, 'git_origin': git_origin,
                          'git_hash': git_hash, 'git_description': git_description,
                          'git_branch': git_branch}

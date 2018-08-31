@@ -8,7 +8,8 @@ import os
 import six
 import subprocess
 import json
-from .mpi import rank
+
+# This must only be before MPI.INIT()
 
 
 def construct_version_info():
@@ -17,11 +18,12 @@ def construct_version_info():
     def get_git_output(args, capture_stderr=False):
         """Get output from Git, ensuring that it is of the ``str`` type,
         not bytes."""
-        if rank == 0:
-            argv = ['git', '-C', pyuvsim_dir] + args
-            data = os.popen(" ".join(argv)).read()
+
+        argv = ['git', '-C', pyuvsim_dir] + args
+        if capture_stderr:
+            data = subprocess.check_output(argv, stderr=subprocess.STDOUT)
         else:
-            data = ""
+            data = subprocess.check_output(argv)
 
         data = data.strip()
 

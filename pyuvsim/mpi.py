@@ -4,21 +4,13 @@
 
 from __future__ import absolute_import, division, print_function
 
-from mpi4py import MPI
+import mpi4py
 import sys
+mpi4py.rc.initialize = False
 
-comm = MPI.COMM_WORLD
-Npus = comm.Get_size()
-rank = comm.Get_rank()
-
-
-def get_mpi():
-    """
-    Initialize MPI, get the communicator, number of Processing Units (PUs)
-    and the rank of this PU
-    """
-
-    return comm, rank, Npus
+rank = 0
+Npus = 1
+comm = None
 
 
 def set_mpi_excepthook(mpi_comm):
@@ -29,3 +21,26 @@ def set_mpi_excepthook(mpi_comm):
         mpi_comm.Abort(1)
 
     sys.excepthook = mpi_excepthook
+
+
+def start_mpi():
+    # Avoid accidentally doing MPI_INIT twice
+    if comm is None:
+        mpi4py.MPI.Init()
+        global comm, Npus, rank
+        comm = mpi4py.MPI.COMM_WORLD
+        Npus = comm.Get_size()
+        rank = comm.Get_rank()
+        set_mpi_excepthook(comm)
+
+
+def get_rank():
+    return rank
+
+
+def get_Npus():
+    return Npus
+
+
+def get_comm():
+    return comm

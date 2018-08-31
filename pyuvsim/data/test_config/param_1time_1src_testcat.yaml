@@ -1,18 +1,16 @@
 filing:
   outdir: '.'
-  outfile_name: 'sim_results'
+  outfile_name: 'tempfile.uvfits'
 freq:
-  channel_width: 80000.0
-  end_freq: 100800000.0
-  bandwidth: 800000.0
+  Nfreqs: 1
+  start_freq: 100000000.0
+  channel_width: 1000000.0
 sources:
-  catalog: 'mock'
-  mock_arrangement: 'zenith'
+  catalog: 'single_source.txt'
 telescope:
   array_layout: 'triangle_bl_layout.csv'
   telescope_config_name: '28m_triangle_10time_10chan.yaml'
 time:
-  Ntimes: 10
-  end_time: 2457458.175040789
+  Ntimes: 1
   integration_time: 11.0
   start_time: 2457458.1738949567

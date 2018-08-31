@@ -1,6 +1,6 @@
 filing:
-  outdir: '.'
-  outfile_prefix: 'sim_'
+  outdir: './tempdir/'
+  outfile_prefix: 'sim'
 freq:
   freq_array : [1.00000000e+08,   1.00080000e+08,   1.00160000e+08, 1.00240000e+08, 
               1.00320000e+08,   1.00400000e+08,   1.00480000e+08, 1.00560000e+08,

@@ -6,9 +6,8 @@ import os
 import numpy as np
 import nose.tools as nt
 from astropy.time import Time
-from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
+from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy import units
-import pyuvdata
 from pyuvdata import UVBeam, UVData
 import pyuvdata.utils as uvutils
 from pyuvdata.data import DATA_PATH
@@ -18,7 +17,7 @@ import astropy.constants as const
 from memory_profiler import profile
 import yaml
 import sys
-from scipy.special import jn
+from scipy.special import spherical_jn as jn
 import pickle
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
@@ -107,8 +106,6 @@ def test_source_zenith():
 
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
-    freq = (150e6 * units.Hz)
-
     zenith_source = create_zenith_source(time, 'zensrc')
     zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
     print('Zenith Source lmn')
@@ -259,10 +256,6 @@ def test_redundant_baselines():
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
     src_za = Angle('90.0d') - src_alt
-
-    src_l = np.sin(src_az.rad) * np.sin(src_za.rad)
-    src_m = np.cos(src_az.rad) * np.sin(src_za.rad)
-    src_n = np.cos(src_za.rad)
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     array_location = EarthLocation.from_geocentric(hera_uv.telescope_location[0],
@@ -428,7 +421,7 @@ def test_uniform_beam():
     expected_data[0, 0, 0, :, :] = 1
     nt.assert_true(np.allclose(interpolated_beam, expected_data))
 
-@nt.nottest
+
 def test_airy_beam():
     diameter_m = 14.
     beam = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)
@@ -465,18 +458,16 @@ def test_airy_beam():
     interp_zas = np.zeros((n_freqs, nsrcs), dtype=np.float)
     for f_ind in range(n_freqs):
         interp_zas[f_ind, :] = np.array(za_vals)
-    #gaussian_vals = np.exp(-(interp_zas**2) / (2 * sigma_rad**2))
     za_grid, f_grid = np.meshgrid(interp_zas, freq_vals)
-    xvals = diameter_m/2.*np.sin(za_grid)*2.*np.pi*f_grid/3e8
+    xvals = diameter_m / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8
     airy_vals = np.zeros_like(xvals)
-    airy_vals[xvals>0.] = 2.*jn(1,xvals[xvals>0.])/xvals[xvals>0.] 
-    airy_vals[xvals==0.] = 1.
+    airy_vals[xvals > 0.] = 2. * jn(1, xvals[xvals > 0.]) / xvals[xvals > 0.]
+    airy_vals[xvals == 0.] = 1.
 
     expected_data[1, 0, 0, :, :] = airy_vals
     expected_data[0, 0, 1, :, :] = airy_vals
     expected_data[1, 0, 1, :, :] = airy_vals
     expected_data[0, 0, 0, :, :] = airy_vals
-
     nt.assert_true(np.allclose(interpolated_beam, expected_data))
 
 
@@ -799,6 +790,14 @@ def test_uvdata_init():
     #    task.time = Time(task.time, format='jd')
     #    task.freq = task.freq * units.Hz
 
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 1.0)
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', uvdata_file=1.0)
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', uvdata_file='testfile', telescope_config_file='tconfig')
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str')
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', obs_param_file=1.0)
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', telescope_config_file=1.0)
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', antenna_location_file=1.0)
+
     uvdata_out = pyuvsim.initialize_uvdata(uvtask_list, 'zenith_source',
                                            uvdata_file=EW_uvfits_file)
 
@@ -810,8 +809,6 @@ def test_uvdata_init():
                        'Based on UVData file: ' + EW_uvfits_file + '. Npus = 1.'
                        + hera_uv.pyuvdata_version_str)
     hera_uv.instrument = hera_uv.telescope_name
-    enu_out = uvdata_out.get_ENU_antpos()
-    enu_in = hera_uv.get_ENU_antpos()
     nt.assert_equal(hera_uv._antenna_positions, uvdata_out._antenna_positions)
     nt.assert_true(uvdata_out.__eq__(hera_uv, check_extra=False))
 
@@ -922,3 +919,11 @@ def test_gaussbeam_values():
 
     beam_values = np.exp(-(zenith_angles)**2 / (2 * beam.sigma**2))
     nt.assert_true(np.all(beam_values**2 == coherencies))
+
+
+def test_tee_ra_loop():
+    time = Time(2457458.1739, scale='utc', format='jd')
+    tee_ra = Angle(np.pi / 4., unit='rad')  # rad
+    cirs_ra = pyuvsim.utils.tee_to_cirs_ra(tee_ra, time)
+    new_tee_ra = pyuvsim.utils.cirs_to_tee_ra(cirs_ra, time)
+    nt.assert_equal(new_tee_ra, tee_ra)

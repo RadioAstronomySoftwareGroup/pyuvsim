@@ -1,6 +1,6 @@
 filing:
   outdir: '.'
-  outfile_prefix: 'sim_'
+  outfile_name: 'sim_results.uvfits'
 freq:
   Nfreqs: 10
   bandwidth: 800000.0

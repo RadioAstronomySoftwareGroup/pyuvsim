@@ -13,7 +13,6 @@ import astropy.units as units
 from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import EarthLocation
-from .mpi import comm, rank, Npus, set_mpi_excepthook
 
 from pyuvdata import UVData, UVBeam
 import pyuvdata.utils as uvutils
@@ -24,10 +23,9 @@ from .baseline import Baseline
 from .telescope import Telescope
 from . import utils as simutils
 from . import simsetup
+from . import mpi
 
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_list', 'run_uvsim', 'initialize_uvdata', 'serial_gather']
-
-set_mpi_excepthook(comm)
 
 
 class UVTask(object):
@@ -101,15 +99,15 @@ class UVEngine(object):
         # Apparent coherency gives the direction and polarization dependent baseline response to a source.
         beam1_jones = baseline.antenna1.get_beam_jones(self.task.telescope,
                                                        source.az_za_calc(self.task.time,
-                                                                         self.task.telescope.telescope_location),
+                                                                         self.task.telescope.location),
                                                        self.task.freq)
         beam2_jones = baseline.antenna2.get_beam_jones(self.task.telescope,
                                                        source.az_za_calc(self.task.time,
-                                                                         self.task.telescope.telescope_location),
+                                                                         self.task.telescope.location),
                                                        self.task.freq)
         this_apparent_coherency = np.dot(beam1_jones,
                                          source.coherency_calc(self.task.time,
-                                                               self.task.telescope.telescope_location))
+                                                               self.task.telescope.location))
         this_apparent_coherency = np.dot(this_apparent_coherency,
                                          (beam2_jones.conj().T))
 
@@ -121,7 +119,7 @@ class UVEngine(object):
         assert(isinstance(self.task.freq, Quantity))
         self.apply_beam()
 
-        pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.telescope_location)
+        pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.location)
         if pos_lmn is None:
             return np.array([0., 0., 0., 0.], dtype=np.complex128)
 
@@ -133,9 +131,6 @@ class UVEngine(object):
         # Reshape to be [xx, yy, xy, yx]
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
         return np.array(vis_vector)
-
-    def update_task(self):
-        self.task.visibility_vector = self.make_visibility()
 
 
 @profile
@@ -270,7 +265,7 @@ def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
         history += (' Based on config files: ' + obs_param_file + ', '
                     + telescope_config_file + ', ' + antenna_location_file)
 
-    history += ' Npus = ' + str(Npus) + '.'
+    history += ' Npus = ' + str(mpi.get_Npus()) + '.'
 
     task_freqs = []
     task_bls = []
@@ -281,8 +276,8 @@ def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
     task_uvw = []
     ant_1_array = []
     ant_2_array = []
-    telescope_name = uvtask_list[0].telescope.telescope_name
-    telescope_location = uvtask_list[0].telescope.telescope_location.geocentric
+    telescope_name = uvtask_list[0].telescope.name
+    telescope_location = uvtask_list[0].telescope.location.geocentric
 
     source_0 = uvtask_list[0].source
     freq_0 = uvtask_list[0].freq
@@ -405,6 +400,9 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         telescope_config_file: Telescope configuration file if running from config files.
         antenna_location_file: antenna_location file if running from config files.
     """
+
+    mpi.start_mpi()
+    rank = mpi.get_rank()
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
     # The Head node will initialize our simulation
@@ -440,9 +438,9 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         elif isinstance(catalog_file, str):
             source_list_name = catalog_file
             if catalog_file.endswith("txt"):
-                catalog = simsetup.point_sources_from_params(catalog_file)
+                catalog = simsetup.read_text_catalog(catalog_file)
             elif catalog_file.endswith('vot'):
-                catalog = simsetup.read_gleam_catalog(catalog_file)
+                catalog = simsetup.read_votable_catalog(catalog_file)
 
         catalog = np.array(catalog)
         print('Nsrcs:', len(catalog))
@@ -464,12 +462,13 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
 
         # To split into PUs make a list of lists length NPUs
         print("Splitting Task List")
-        uvtask_list = np.array_split(uvtask_list, Npus)
+        uvtask_list = np.array_split(uvtask_list, mpi.get_Npus())
         uvtask_list = [list(tl) for tl in uvtask_list]
 
         print("Sending Tasks To Processing Units")
         sys.stdout.flush()
     # Scatter the task list among all available PUs
+    comm = mpi.get_comm()
     local_task_list = comm.scatter(uvtask_list, root=0)
     if rank == 0:
         print("Tasks Received. Begin Calculations.")
@@ -485,33 +484,23 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     summed_task_dict = {}
 
     if rank == 0:
-        count = 0
-        tot = len(local_task_list)
-        print("Local tasks: ", tot)
+        tot = len(local_task_list) * mpi.get_Npus()
+        print("Tasks: ", tot)
         sys.stdout.flush()
         pbar = simutils.progsteps(maxval=tot)
 
-        for count, task in enumerate(local_task_list):
-            engine = UVEngine(task)
-            if task.uvdata_index not in summed_task_dict.keys():
-                summed_task_dict[task.uvdata_index] = task
-            if summed_task_dict[task.uvdata_index].visibility_vector is None:
-                summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
-            else:
-                summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
-
-            pbar.update(count)
-
+    for count, task in enumerate(local_task_list):
+        engine = UVEngine(task)
+        if task.uvdata_index not in summed_task_dict.keys():
+            summed_task_dict[task.uvdata_index] = task
+        if summed_task_dict[task.uvdata_index].visibility_vector is None:
+            summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
+        else:
+            summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
+        if rank == 0:
+            pbar.update(count * mpi.get_Npus())
+    if rank == 0:
         pbar.finish()
-    else:
-        for task in local_task_list:
-            engine = UVEngine(task)
-            if task.uvdata_index not in summed_task_dict.keys():
-                summed_task_dict[task.uvdata_index] = task
-            if summed_task_dict[task.uvdata_index].visibility_vector is None:
-                summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
-            else:
-                summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
 
     if rank == 0:
         print("Calculations Complete.")
