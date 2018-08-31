@@ -7,7 +7,8 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import os
 import sys
-from itertools import izip
+import six
+from six.moves import map, range, zip
 import warnings
 import astropy.constants as const
 import astropy.units as units
@@ -198,10 +199,10 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
     tot = len(blts_ind)
     pbar = simutils.progsteps(maxval=tot)
 
-    for (bl, freqi, t, source, blti, fi) in izip(baselines[blts_ind],
-                                                 freq[freq_ind], times[blts_ind],
-                                                 sources[source_ind], blts_ind,
-                                                 freq_ind):
+    for (bl, freqi, t, source, blti, fi) in zip(baselines[blts_ind],
+                                                freq[freq_ind], times[blts_ind],
+                                                sources[source_ind], blts_ind,
+                                                freq_ind):
         task = UVTask(source, t, freqi, bl, telescope)
         task.uvdata_index = (blti, 0, fi)    # 0 = spectral window index
         uvtask_list.append(task)
@@ -434,7 +435,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
 
             catalog, mock_keywords = simsetup.create_mock_catalog(time, **mock_keywords)
 
-            mock_keyvals = [str(key) + str(val) for key, val in mock_keywords.iteritems()]
+            mock_keyvals = [str(key) + str(val) for key, val in six.iteritems(mock_keywords)]
             source_list_name = 'mock_' + "_".join(mock_keyvals)
         elif isinstance(catalog_file, str):
             source_list_name = catalog_file
@@ -509,7 +510,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     # All the sources in this summed list are foobar-ed
     # Source are summed over but only have 1 name
     # Some source may be correct
-    summed_local_task_list = summed_task_dict.values()
+    summed_local_task_list = list(summed_task_dict.values())
     # gather all the finished local tasks into a list of list of len NPUs
     # gather is a blocking communication, have to wait for all PUs
     full_tasklist = comm.gather(summed_local_task_list, root=0)

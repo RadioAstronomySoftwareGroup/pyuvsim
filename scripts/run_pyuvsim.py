@@ -3,16 +3,19 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-# from pyuvsim import uvsim
-import pyuvsim
+from __future__ import absolute_import, division, print_function
+
 import argparse
 import os
 import numpy as np
+import warnings
 from mpi4py import MPI
+
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
+
+import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-import warnings
 
 beam_file = os.path.join(DATA_PATH, 'HERA_NicCST_150MHz.txt')
 

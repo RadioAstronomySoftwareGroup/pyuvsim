@@ -2,9 +2,13 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
+from __future__ import absolute_import, division, print_function
+
 import argparse
-import pyuvsim.simsetup
+
 from pyuvdata import UVData
+
+import pyuvsim.simsetup
 
 # Take a uvfits file, and save sim parameters as a yaml file.
 

@@ -1,6 +1,7 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import matplotlib.image as mpimg
@@ -8,6 +9,9 @@ import pylab as pl
 import sys
 import psutil
 import argparse
+import numpy as np
+import matplotlib.image as mpimg
+import pylab as pl
 from astropy.coordinates import SkyCoord, Angle, EarthLocation
 from astropy import units as u
 from astropy.time import Time

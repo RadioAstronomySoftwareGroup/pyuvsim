@@ -6,14 +6,15 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import numpy as np
-import nose.tools as nt
-from pyuvdata import UVBeam, UVData
-from pyuvdata.data import DATA_PATH
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-import pyuvsim
 import yaml
+import nose.tools as nt
 from mpi4py import MPI
 
+from pyuvdata import UVBeam, UVData
+from pyuvdata.data import DATA_PATH
+
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+import pyuvsim
 from pyuvsim import mpi
 
 
