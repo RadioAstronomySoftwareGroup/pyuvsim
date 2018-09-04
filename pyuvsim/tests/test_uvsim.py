@@ -686,8 +686,9 @@ def test_single_offzenith_source_miriad():
 def test_yaml_to_tasks():
     #    params = yaml.safe_load(open(longbl_yaml_file))
     params = yaml.safe_load(open(laptop_size_sim))
-    params['config_path'] = longbl_yaml_file  # not sure why I need this
-    input_uv, beam_list, beam_ids = \
+    params['config_path'] = SIM_DATA_PATH
+    output = pyuvsim.simsetup.initialize_uvdata_from_params(params)
+    input_uv, beam_list, beam_dict, beam_ids = \
         pyuvsim.simsetup.initialize_uvdata_from_params(params)
     time = Time('2018-03-01 00:00:00', scale='utc')
     HERA_location = EarthLocation(lat='-30d43m17.5s',

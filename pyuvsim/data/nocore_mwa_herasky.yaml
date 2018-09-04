@@ -18,4 +18,3 @@ time:
   start_time: 2458098.27471265
   #end_time: 2458098.2816570946
   integration_time: 20.0
-config_path: pyuvsim/tests/

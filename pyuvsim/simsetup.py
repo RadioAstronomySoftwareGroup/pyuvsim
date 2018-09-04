@@ -265,7 +265,7 @@ def initialize_uvdata_from_params(obs_params):
         with open(obs_params, 'r') as pfile:
             param_dict = yaml.safe_load(pfile)
 
-        param_dict['config_path'] = obs_params
+        param_dict['config_path'] = os.path.dirname(obs_params)
     else:
         param_dict = obs_params
     # Parse telescope parameters
@@ -275,10 +275,16 @@ def initialize_uvdata_from_params(obs_params):
     layout_csv = tele_params['array_layout']
     if not os.path.isdir(param_dict['config_path']):
         param_dict['config_path'] = os.path.dirname(param_dict['config_path'])
+        if not os.path.isdir(param_dict['config_path']):
+            raise ValueError('config_path from yaml is not a directory')
     if not os.path.exists(telescope_config_name):
         telescope_config_name = os.path.join(param_dict['config_path'], telescope_config_name)
+        if not os.path.exists(telescope_config_name):
+            raise ValueError('telescope_config_name file from yaml does not exist')
     if not os.path.exists(layout_csv):
         layout_csv = os.path.join(param_dict['config_path'], layout_csv)
+        if not os.path.exists(layout_csv):
+            raise ValueError('layout_csv file from yaml does not exist')
 
     extra_keywords = {'obs_param_file': os.path.basename(param_dict['config_path']),
                       'telescope_config_file': tele_params['telescope_config_name'],

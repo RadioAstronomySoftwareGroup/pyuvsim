@@ -25,9 +25,9 @@ def set_mpi_excepthook(mpi_comm):
 
 def start_mpi():
     # Avoid accidentally doing MPI_INIT twice
+    global comm, Npus, rank
     if comm is None:
         mpi4py.MPI.Init()
-        global comm, Npus, rank
         comm = mpi4py.MPI.COMM_WORLD
         Npus = comm.Get_size()
         rank = comm.Get_rank()
