@@ -381,7 +381,7 @@ def test_single_offzenith_source_uvfits():
 
     print('Analytic visibility', vis_analytic)
     print('Calculated visibility', visibility)
-    print baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls]
+    print(baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls])
     nt.assert_true(np.allclose(baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4))
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=1e-4))
 
@@ -869,9 +869,9 @@ def test_mock_catalog():
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
     cat_source = cat[0]
     for k in cat_source.__dict__:
-        print 'Cat: ', k, cat_source.__dict__[k]
-        print 'Test: ', k, test_source.__dict__[k]
-        print '\n'
+        print('Cat: ', k, cat_source.__dict__[k])
+        print('Test: ', k, test_source.__dict__[k])
+        print('\n')
 
     nt.assert_equal(cat_source, test_source)
 

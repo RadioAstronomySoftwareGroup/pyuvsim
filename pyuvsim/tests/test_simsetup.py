@@ -146,17 +146,17 @@ def check_param_reader(config_num):
     uvtask_list = sorted(uvtask_list)
     expected_uvtask_list = sorted(expected_uvtask_list)
     for ti in xrange(len(expected_uvtask_list)):
-        print uvtask_list[ti].baseline.antenna1.beam_id, expected_uvtask_list[ti].baseline.antenna1.beam_id
-        print uvtask_list[ti].baseline.antenna2.beam_id, expected_uvtask_list[ti].baseline.antenna2.beam_id
-        print uvtask_list[ti].baseline.antenna1.number, expected_uvtask_list[ti].baseline.antenna1.number
-        print uvtask_list[ti].baseline.antenna2.number, expected_uvtask_list[ti].baseline.antenna2.number
-        print uvtask_list[ti].baseline.antenna1.name, expected_uvtask_list[ti].baseline.antenna1.name
-        print uvtask_list[ti].baseline.antenna2.name, expected_uvtask_list[ti].baseline.antenna2.name
-        print uvtask_list[ti].freq - expected_uvtask_list[ti].freq
-        print uvtask_list[ti].time - expected_uvtask_list[ti].time
-        print uvtask_list[ti].uvdata_index, expected_uvtask_list[ti].uvdata_index
-        print uvtask_list[ti].telescope.name, expected_uvtask_list[ti].telescope.name
-        print '\n'
+        print(uvtask_list[ti].baseline.antenna1.beam_id, expected_uvtask_list[ti].baseline.antenna1.beam_id)
+        print(uvtask_list[ti].baseline.antenna2.beam_id, expected_uvtask_list[ti].baseline.antenna2.beam_id)
+        print(uvtask_list[ti].baseline.antenna1.number, expected_uvtask_list[ti].baseline.antenna1.number)
+        print(uvtask_list[ti].baseline.antenna2.number, expected_uvtask_list[ti].baseline.antenna2.number)
+        print(uvtask_list[ti].baseline.antenna1.name, expected_uvtask_list[ti].baseline.antenna1.name)
+        print(uvtask_list[ti].baseline.antenna2.name, expected_uvtask_list[ti].baseline.antenna2.name)
+        print(uvtask_list[ti].freq - expected_uvtask_list[ti].freq)
+        print(uvtask_list[ti].time - expected_uvtask_list[ti].time)
+        print(uvtask_list[ti].uvdata_index, expected_uvtask_list[ti].uvdata_index)
+        print(uvtask_list[ti].telescope.name, expected_uvtask_list[ti].telescope.name)
+        print('\n')
     nt.assert_true(uvtask_list == expected_uvtask_list)
 
 
@@ -245,8 +245,8 @@ def test_file_namer():
     """
     existing_file = param_filenames[0]
     new_filepath = pyuvsim.simsetup.check_file_exists_and_increment(existing_file)
-    print new_filepath
-    print existing_file
+    print(new_filepath
+    print(existing_file
     nt.assert_true(new_filepath.endswith("_5.yaml"))    # There are four other of these param test files
 
 
