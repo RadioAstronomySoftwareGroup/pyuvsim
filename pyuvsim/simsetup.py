@@ -56,7 +56,9 @@ def check_file_exists_and_increment(filepath):
 def parse_layout_csv(layout_csv):
     """ Interpret the layout csv file """
 
-    header = open(layout_csv, 'r').readline()
+    with open(layout_csv, 'r') as fhandle:
+        header = fhandle.readline()
+
     header = [h.strip() for h in header.split()]
     if six.PY2:
         str_format_code = 'a'

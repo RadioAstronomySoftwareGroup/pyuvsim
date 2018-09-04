@@ -12,7 +12,9 @@ import os
 import yaml
 import shutil
 import copy
+from six.moves import map, range, zip
 import nose.tools as nt
+
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from test_uvsim import create_zenith_source
 
@@ -129,7 +131,8 @@ def check_param_reader(config_num):
     uv_obj, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_filename)
 
     # write_uvfits test:
-    param_dict = yaml.safe_load(open(param_filename, 'r'))
+    with open(param_filename, 'r') as fhandle:
+        param_dict = yaml.safe_load(fhandle)
     expected_ofilepath = pyuvsim.simsetup.write_uvfits(uv_obj, param_dict, return_filename=True, dryrun=True)
     ofilename = 'sim_results.uvfits'
     if config_num == 1:
@@ -145,7 +148,7 @@ def check_param_reader(config_num):
     # This is enabled by the comparison operator in UVTask
     uvtask_list = sorted(uvtask_list)
     expected_uvtask_list = sorted(expected_uvtask_list)
-    for ti in xrange(len(expected_uvtask_list)):
+    for ti in range(len(expected_uvtask_list)):
         print(uvtask_list[ti].baseline.antenna1.beam_id, expected_uvtask_list[ti].baseline.antenna1.beam_id)
         print(uvtask_list[ti].baseline.antenna2.beam_id, expected_uvtask_list[ti].baseline.antenna2.beam_id)
         print(uvtask_list[ti].baseline.antenna1.number, expected_uvtask_list[ti].baseline.antenna1.number)
@@ -216,7 +219,8 @@ def test_point_catalog_reader():
     catfile = os.path.join(SIM_DATA_PATH, 'test_config', 'pointsource_catalog.txt')
     catalog = pyuvsim.simsetup.read_text_catalog(catfile)
 
-    header = open(catfile, 'r').readline()
+    with open(catfile, 'r') as fhandle:
+        header = fhandle.readline()
     header = [h.strip() for h in header.split()]
     dt = np.format_parser(['a10', 'f8', 'f8', 'f8', 'f8'],
                           ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], header)
