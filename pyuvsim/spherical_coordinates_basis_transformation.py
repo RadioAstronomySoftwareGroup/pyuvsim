@@ -6,11 +6,13 @@ def r_hat(theta,phi):
     rhz = np.sin(theta)
     return np.stack((rhx, rhy, rhz))
 
+
 def theta_hat(theta, phi):
     thx = -np.cos(phi) * np.sin(theta)
     thy = -np.sin(phi) * np.sin(theta)
     thz = np.cos(theta)
     return np.stack((thx, thy, thz))
+
 
 def phi_hat(theta, phi):
     phx = -np.sin(phi)
@@ -18,21 +20,21 @@ def phi_hat(theta, phi):
     phz = np.zeros_like(phi)
     return np.stack((phx, phy, phz))
 
+
 def rotation_matrix(axis, angle):
     """
     Rodrigues' rotation matrix formula
     """
-    K = np.array([
-        [0.,-axis[2], axis[1]],
-        [axis[2],0.,-axis[0]],
-        [-axis[1],axis[0],0.]
-    ])
+    Kmatrix = np.array([[0., -axis[2], axis[1]],
+                        [axis[2], 0., -axis[0]],
+                        [-axis[1], axis[0], 0.]])
 
-    I = np.identity(3)
+    Identity = np.identity(3)
 
-    R = I + np.sin(angle) * K + (1. - np.cos(angle)) * np.dot(K,K)
+    Rotation = Identity + np.sin(angle) * Kmatrix + (1. - np.cos(angle)) * np.dot(Kmatrix, Kmatrix)
 
-    return R
+    return Rotation
+
 
 def spherical_coordinates_map(R, theta, phi):
     """
@@ -43,11 +45,12 @@ def spherical_coordinates_map(R, theta, phi):
     q_hat_1 = np.cos(phi) * np.cos(theta)
     q_hat_2 = np.sin(phi) * np.cos(theta)
     q_hat_3 = np.sin(theta)
-    q_hat = np.stack((q_hat_1,q_hat_2,q_hat_3))
-    p_hat = np.einsum('ab...,b...->a...',R ,q_hat)
-    beta = np.arcsin(p_hat[-1,:])
-    alpha = np.arctan2(p_hat[1,:],p_hat[0,:])
-    return (beta,alpha)
+    q_hat = np.stack((q_hat_1, q_hat_2, q_hat_3))
+    p_hat = np.einsum('ab...,b...->a...', R, q_hat)
+    beta = np.arcsin(p_hat[-1])
+    alpha = np.arctan2(p_hat[1], p_hat[0])
+    return (beta, alpha)
+
 
 def spherical_basis_transformation_components(theta, phi, R):
 
