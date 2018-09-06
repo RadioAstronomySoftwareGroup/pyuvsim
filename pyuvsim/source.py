@@ -11,6 +11,7 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
 from .spherical_coordinates_basis_transformation import spherical_basis_transformation_components
 
+
 class Source(object):
     """
     Defines a single point source at a given ICRS ra/dec coordinate, with a
@@ -110,9 +111,9 @@ class Source(object):
             # Calculate the coherency transformation matrix
 
             # unit vectors to be transformed by astropy
-            x_c = np.array([1.,0,0])
-            y_c = np.array([0,1.,0])
-            z_c = np.array([0,0,1.])
+            x_c = np.array([1., 0, 0])
+            y_c = np.array([0, 1., 0])
+            z_c = np.array([0, 0, 1.])
 
             ''' We are using GCRS rather than ICRS to explicitly neglect the effect of aberration, which is a position-dependent
                 effect, and obtain a proper, orthgonal rotation matrix between the RA/Dec and Alt/Az coordinate systems.  It is
@@ -128,7 +129,7 @@ class Source(object):
             axes_altaz.representation = 'cartesian'
 
             # Test that this actually is a rotation matrix (i.e., orthogonal)
-            R = np.array(axes_altaz.cartesian.xyz) # the 3D rotation matrix that defines the mapping (RA,Dec) <--> (Alt,Az)
+            R = np.array(axes_altaz.cartesian.xyz)  # the 3D rotation matrix that defines the mapping (RA,Dec) <--> (Alt,Az)
 
             # This calculation is for a single point on the sphere.  The rotation_matrix below is different for every point
             # on the sphere.
@@ -136,11 +137,10 @@ class Source(object):
             cosX, sinX = spherical_basis_transformation_components(self.dec.rad, self.ra.rad, R)
             rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
 
-            alt_to_za = np.array([[-1.,0], [0,1]]) # ??? Supposedly fixes theta_hat points south for za and north for alt
+            alt_to_za = np.array([[-1., 0], [0, 1]]) # ??? Supposedly fixes theta_hat points south for za and north for alt
             basis_transformation_matrix = np.einsum('ab,bc->ac', alt_to_za, rotation_matrix)
 
-        coherency_local = np.einsum('ab,bc,cd->ad', basis_transformation_matrix.T,
-                                     self.coherency_radec, basis_transformation_matrix)
+        coherency_local = np.einsum('ab,bc,cd->ad', basis_transformation_matrix.T, self.coherency_radec, basis_transformation_matrix)
 
         return coherency_local
 
