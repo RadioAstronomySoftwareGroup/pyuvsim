@@ -12,6 +12,19 @@ from astropy import units
 
 import pyuvsim
 import pyuvsim.tests as simtest
+from pyuvsim.source import Source
+
+
+def test_calc_basis_rotation_matrix():
+    time = Time('2018-01-01 00:00')
+    telescope_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',height=1073.)
+
+    source = Source('Test',Angle(12.*units.hr),Angle(-30.*units.deg),150*units.MHz,[1.,0.,0.,0.])
+
+    basis_rot_matrix = source._calc_basis_rotation_matrix(time, telescope_location)
+
+    # This is not a very strenous test :)
+    assert(np.allclose(np.matmul(basis_rot_matrix, basis_rot_matrix.T),np.eye(3),atol=1.e-5))
 
 
 def test_source_zenith_from_icrs():
