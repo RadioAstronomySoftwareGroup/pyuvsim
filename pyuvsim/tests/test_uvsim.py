@@ -687,7 +687,8 @@ def test_single_offzenith_source_miriad():
 @profile
 def test_yaml_to_tasks():
     #    params = yaml.safe_load(open(longbl_yaml_file))
-    params = yaml.safe_load(open(laptop_size_sim))
+    with open(laptop_size_sim, 'r') as simfile:
+        params = yaml.safe_load(simfile)
     params['config_path'] = SIM_DATA_PATH
     output = pyuvsim.simsetup.initialize_uvdata_from_params(params)
     input_uv, beam_list, beam_dict, beam_ids = \
