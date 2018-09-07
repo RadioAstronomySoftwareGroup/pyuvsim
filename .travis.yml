@@ -28,9 +28,9 @@ install:
   - conda install astropy pyyaml mpi4py memory_profiler line_profiler
   - conda install -c conda-forge pycodestyle coveralls
   - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
-  - python -c "from pyuvdata import version; version.main()"
   - python setup.py install
   - python -c "from pyuvdata import version; version.main()"
+  - conda list
 
 script:
   - nosetests pyuvsim --with-coverage --cover-package=pyuvsim
