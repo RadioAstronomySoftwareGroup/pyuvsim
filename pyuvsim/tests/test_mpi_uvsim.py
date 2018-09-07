@@ -10,6 +10,8 @@ import yaml
 import nose.tools as nt
 from mpi4py import MPI
 
+from astropy import time
+
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
 
@@ -62,8 +64,16 @@ def test_run_param_uvsim():
     uv_new = UVData()
     uv_new.read_uvfits(tempfilename)
     os.remove(tempfilename)
+
+    time_obj = time.Time(uv_new.time_array[0], format='jd')
+    uv_new.unphase_to_drift(use_ant_pos=True)
+    uv_new.phase_to_time(time_obj)
+
     uv_ref = UVData()
     uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
+    uv_ref.unphase_to_drift(use_ant_pos=True)
+    uv_ref.phase_to_time(time_obj)
+
     uv_new.history = uv_ref.history  # History includes irrelevant info for comparison
     nt.assert_equal(uv_new, uv_ref)
 
