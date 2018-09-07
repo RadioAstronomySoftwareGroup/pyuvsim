@@ -256,4 +256,4 @@ def coherency_to_stokes(coherency_matrix):
     return np.array([coherency_matrix[0,0] + coherency_matrix[1,1],
                      coherency_matrix[0,0] - coherency_matrix[1,1],
                      coherency_matrix[0,1] + coherency_matrix[1,0],
-                     (coherency_matrix[0,1] - coherency_matrix[1,0]).imag]).real
+                     -(coherency_matrix[0,1] - coherency_matrix[1,0]).imag]).real
