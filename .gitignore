@@ -106,4 +106,4 @@ venv.bak/
 .mypy_cache/
 
 # exclude project specific files
-pyuvdata/GIT_INFO
+pyuvsim/GIT_INFO
