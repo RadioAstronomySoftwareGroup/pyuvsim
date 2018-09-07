@@ -26,7 +26,7 @@ def set_mpi_excepthook(mpi_comm):
 def start_mpi():
     global comm, rank, Npus
     try:
-    # Avoid accidentally doing MPI_INIT twice
+        # Avoid accidentally doing MPI_INIT twice
         mpi4py.MPI.Init()
     except mpi4py.MPI.Exception:
         pass
