@@ -10,7 +10,7 @@ from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
 from .spherical_coordinates_basis_transformation import spherical_basis_transformation_components
-
+from . import utils
 
 class Source(object):
     """
@@ -77,10 +77,41 @@ class Source(object):
 
         # The coherency is a 2x2 matrix giving electric field correlation in Jy.
         # Multiply by .5 to ensure that Trace sums to I not 2*I
-        self.coherency_radec = .5 * np.array([[self.stokes[0] + self.stokes[1],
-                                               self.stokes[2] - 1j * self.stokes[3]],
-                                              [self.stokes[2] + 1j * self.stokes[3],
-                                               self.stokes[0] - self.stokes[1]]])
+        self.coherency_radec = utils.stokes_to_coherency(stokes)
+
+    def __eq__(self, other):
+        return (np.isclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)
+                and np.isclose(self.dec.deg, other.dec.deg, atol=self.pos_tol)
+                and np.all(self.stokes == other.stokes)
+                and (self.name == other.name)
+                and (self.freq == other.freq))
+
+    # Test that this actually is a rotation matrix (i.e., orthogonal)
+    def _calc_basis_rotation_matrix(self, time, telescope_location):
+        # unit vectors to be transformed by astropy
+        x_c = np.array([1., 0, 0])
+        y_c = np.array([0, 1., 0])
+        z_c = np.array([0, 0, 1.])
+
+        ''' We are using GCRS rather than ICRS to explicitly neglect the effect of aberration, which is a position-dependent
+        effect, and obtain a proper, orthgonal rotation matrix between the RA/Dec and Alt/Az coordinate systems.  It is
+        not clear (to JEA) what the correct thing for the transformation of Stokes parameters is in the presence of
+        aberration '''
+        axes_icrs = SkyCoord(x=x_c, y=y_c, z=z_c,
+                             obstime=time,
+                             location=telescope_location,
+                             frame='gcrs',
+                             representation='cartesian')
+        axes_altaz = axes_icrs.transform_to('altaz')
+        axes_altaz.representation = 'cartesian'
+
+        return np.array(axes_altaz.cartesian.xyz)  # the 3D rotation matrix that defines the mapping (RA,Dec) <--> (Alt,Az)
+
+    # Check np.power(cosX,2)+np.power(sinX,2) = 1
+    def _calc_vector_rotation(self, basis_rotation_matrix):
+        cosX, sinX = spherical_basis_transformation_components(self.dec.rad, self.ra.rad, basis_rotation_matrix)
+
+        return np.array([[cosX, sinX], [-sinX, cosX]])
 
     def coherency_calc(self, time, telescope_location):
         """
@@ -109,33 +140,11 @@ class Source(object):
             basis_transformation_matrix = np.array([[1, 0], [0, 1]])
         else:
             # Calculate the coherency transformation matrix
-
-            # unit vectors to be transformed by astropy
-            x_c = np.array([1., 0, 0])
-            y_c = np.array([0, 1., 0])
-            z_c = np.array([0, 0, 1.])
-
-            ''' We are using GCRS rather than ICRS to explicitly neglect the effect of aberration, which is a position-dependent
-                effect, and obtain a proper, orthgonal rotation matrix between the RA/Dec and Alt/Az coordinate systems.  It is
-                not clear (to JEA) what the correct thing for the transformation of Stokes parameters is in the presence of
-                aberration '''
-            axes_icrs = SkyCoord(x=x_c, y=y_c, z=z_c,
-                                 obstime=time,
-                                 location=telescope_location,
-                                 frame='gcrs',
-                                 equinox=self.epoch,
-                                 representation='cartesian')
-            axes_altaz = axes_icrs.transform_to('altaz')
-            axes_altaz.representation = 'cartesian'
-
-            # Test that this actually is a rotation matrix (i.e., orthogonal)
-            R = np.array(axes_altaz.cartesian.xyz)  # the 3D rotation matrix that defines the mapping (RA,Dec) <--> (Alt,Az)
+            Rotation = self._calc_basis_rotation_matrix(time, telescope_location)
 
             # This calculation is for a single point on the sphere.  The rotation_matrix below is different for every point
             # on the sphere.
-            # Check np.power(cosX,2)+np.power(sinX,2) = 1
-            cosX, sinX = spherical_basis_transformation_components(self.dec.rad, self.ra.rad, R)
-            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
+            rotation_matrix = self._calc_vector_rotation(Rotation)
 
             alt_to_za = np.array([[-1., 0], [0, 1]]) # ??? Supposedly fixes theta_hat points south for za and north for alt
             basis_transformation_matrix = np.einsum('ab,bc->ac', alt_to_za, rotation_matrix)

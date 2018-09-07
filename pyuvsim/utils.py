@@ -4,6 +4,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+import numpy as np
 import time as pytime
 import sys
 import os
@@ -240,3 +241,19 @@ def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_fo
             raise ValueError("Invalid output format. Options are \" uvfits\", \"uvh5\", or \"miriad\"")
     if return_filename:
         return outfile_name
+
+
+def stokes_to_coherency(stokes_vector):
+    ''' Takes vector of 4 Stokes parameters in order [I, Q, U , V] to equivalent coherency matrix '''
+    return .5 * np.array([[stokes_vector[0] + stokes_vector[1],
+                           stokes_vector[2] - 1j * stokes_vector[3]],
+                          [stokes_vector[2] + 1j * stokes_vector[3],
+                           stokes_vector[0] - stokes_vector[1]]])
+
+
+def coherency_to_stokes(coherency_matrix):
+    ''' Takes coherency matrix to vector of 4 Stokes parameter in order [I, Q, U , V] '''
+    return np.array([coherency_matrix[0,0] + coherency_matrix[1,1],
+                     coherency_matrix[0,0] - coherency_matrix[1,1],
+                     coherency_matrix[0,1] + coherency_matrix[1,0],
+                     (coherency_matrix[0,1] - coherency_matrix[1,0]).imag]).real
