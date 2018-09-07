@@ -525,7 +525,7 @@ def test_offzenith_source_multibl_uvfits():
     """
     hera_uv = UVData()
     hera_uv.read_uvfits(longbl_uvfits_file, ant_str='cross')   # consists of a right triangle of baselines with w term
-    hera_uv.unphase_to_drift()
+    hera_uv.unphase_to_drift(use_ant_pos=True)
 
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
