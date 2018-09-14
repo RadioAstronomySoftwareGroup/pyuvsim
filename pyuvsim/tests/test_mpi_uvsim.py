@@ -28,7 +28,6 @@ singlesource_txt = os.path.join(SIM_DATA_PATH, 'single_source.txt')
 
 
 def test_run_uvsim():
-    print('test_run_uvsim')
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
 
@@ -49,7 +48,6 @@ def test_run_uvsim():
 
 
 def test_run_param_uvsim():
-    print('test_run_param_uvsim')
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
     with open(param_filename, 'r') as pfile:
         params_dict = yaml.safe_load(pfile)
@@ -88,7 +86,6 @@ def test_run_param_uvsim():
 
 
 def test_mpi_funcs():
-    print('test_mpi_funcs')
     mpi.start_mpi()
     nt.assert_true(mpi.get_rank() == 0)
     nt.assert_true(mpi.get_Npus() == 1)
