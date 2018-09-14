@@ -7,6 +7,7 @@ from __future__ import absolute_import, division, print_function
 import mpi4py
 import sys
 mpi4py.rc.initialize = False
+from mpi4py import MPI
 
 rank = 0
 Npus = 1
@@ -25,12 +26,10 @@ def set_mpi_excepthook(mpi_comm):
 
 def start_mpi():
     global comm, rank, Npus
-    try:
+    if not MPI.Is_initialized():
         # Avoid accidentally doing MPI_INIT twice
-        mpi4py.MPI.Init()
-    except mpi4py.MPI.Exception:
-        pass
-    comm = mpi4py.MPI.COMM_WORLD
+        MPI.Init()
+    comm = MPI.COMM_WORLD
     Npus = comm.Get_size()
     rank = comm.Get_rank()
     set_mpi_excepthook(comm)
