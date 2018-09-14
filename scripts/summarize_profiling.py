@@ -4,6 +4,8 @@
 
 """Summarize profiling results in a table, given a set of directories"""
 
+from __future__ import absolute_import, division, print_function
+
 import os
 import sys
 import glob

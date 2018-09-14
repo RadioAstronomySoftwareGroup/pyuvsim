@@ -46,6 +46,7 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+pyuvsim/tests/cover
 
 # Translations
 *.mo
@@ -105,4 +106,4 @@ venv.bak/
 .mypy_cache/
 
 # exclude project specific files
-pyuvdata/GIT_INFO
+pyuvsim/GIT_INFO

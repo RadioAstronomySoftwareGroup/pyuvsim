@@ -2,6 +2,8 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
+from __future__ import absolute_import, division, print_function
+
 import os
 import numpy as np
 import nose.tools as nt
@@ -379,7 +381,7 @@ def test_single_offzenith_source_uvfits():
 
     print('Analytic visibility', vis_analytic)
     print('Calculated visibility', visibility)
-    print baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls]
+    print(baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls])
     nt.assert_true(np.allclose(baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4))
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=1e-4))
 
@@ -523,7 +525,7 @@ def test_offzenith_source_multibl_uvfits():
     """
     hera_uv = UVData()
     hera_uv.read_uvfits(longbl_uvfits_file, ant_str='cross')   # consists of a right triangle of baselines with w term
-    hera_uv.unphase_to_drift()
+    hera_uv.unphase_to_drift(use_ant_pos=True)
 
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
@@ -685,7 +687,8 @@ def test_single_offzenith_source_miriad():
 @profile
 def test_yaml_to_tasks():
     #    params = yaml.safe_load(open(longbl_yaml_file))
-    params = yaml.safe_load(open(laptop_size_sim))
+    with open(laptop_size_sim, 'r') as simfile:
+        params = yaml.safe_load(simfile)
     params['config_path'] = SIM_DATA_PATH
     output = pyuvsim.simsetup.initialize_uvdata_from_params(params)
     input_uv, beam_list, beam_dict, beam_ids = \
@@ -867,9 +870,9 @@ def test_mock_catalog():
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
     cat_source = cat[0]
     for k in cat_source.__dict__:
-        print 'Cat: ', k, cat_source.__dict__[k]
-        print 'Test: ', k, test_source.__dict__[k]
-        print '\n'
+        print('Cat: ', k, cat_source.__dict__[k])
+        print('Test: ', k, test_source.__dict__[k])
+        print('\n')
 
     nt.assert_equal(cat_source, test_source)
 

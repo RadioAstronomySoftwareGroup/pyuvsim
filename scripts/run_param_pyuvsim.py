@@ -3,17 +3,21 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-import pyuvsim
+from __future__ import absolute_import, division, print_function
+
 import argparse
 import os
-import numpy as np
 import yaml
+import numpy as np
+from astropy.coordinates import EarthLocation
 from mpi4py import MPI
+
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+
+import pyuvsim
 from pyuvsim import simsetup
-from astropy.coordinates import EarthLocation
 
 
 comm = MPI.COMM_WORLD

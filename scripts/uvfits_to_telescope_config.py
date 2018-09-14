@@ -2,11 +2,15 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
+from __future__ import absolute_import, division, print_function
+
 import argparse
 import os
+
+from pyuvdata import UVData
+
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim.simsetup
-from pyuvdata import UVData
 
 # Read in a uvfits file and automatically generate yaml files.
 # Will assume the same beam_id for all antennas for now.

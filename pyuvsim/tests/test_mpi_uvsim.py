@@ -6,14 +6,15 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import numpy as np
-import nose.tools as nt
-from pyuvdata import UVBeam, UVData
-from pyuvdata.data import DATA_PATH
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-import pyuvsim
 import yaml
+import nose.tools as nt
 from mpi4py import MPI
 
+from pyuvdata import UVBeam, UVData
+from pyuvdata.data import DATA_PATH
+
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+import pyuvsim
 from pyuvsim import mpi
 
 
@@ -60,9 +61,13 @@ def test_run_param_uvsim():
 
     uv_new = UVData()
     uv_new.read_uvfits(tempfilename)
+    uv_new.unphase_to_drift(use_ant_pos=True)
     os.remove(tempfilename)
+
     uv_ref = UVData()
     uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
+    uv_ref.unphase_to_drift(use_ant_pos=True)
+
     uv_new.history = uv_ref.history  # History includes irrelevant info for comparison
     nt.assert_equal(uv_new, uv_ref)
 
@@ -73,6 +78,7 @@ def test_run_param_uvsim():
     pyuvsim.simsetup.write_uvfits(uv_out, params_dict)
     uv_new = UVData()
     uv_new.read_uvfits(tempfilename)
+    uv_new.unphase_to_drift(use_ant_pos=True)
     print(tempfilename)
     os.remove(tempfilename)
     uv_new.history = uv_ref.history  # History includes irrelevant info for comparison

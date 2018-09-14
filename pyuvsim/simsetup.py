@@ -2,11 +2,15 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
+from __future__ import absolute_import, division, print_function
+
 import numpy as np
 import yaml
 import os
 import sys
 import warnings
+import six
+from six.moves import map, range, zip
 import astropy.units as units
 from astropy.time import Time
 from astropy.io.votable import parse
@@ -52,9 +56,15 @@ def check_file_exists_and_increment(filepath):
 def parse_layout_csv(layout_csv):
     """ Interpret the layout csv file """
 
-    header = open(layout_csv, 'r').readline()
+    with open(layout_csv, 'r') as fhandle:
+        header = fhandle.readline()
+
     header = [h.strip() for h in header.split()]
-    dt = np.format_parser(['a10', 'i4', 'i4', 'f8', 'f8', 'f8'],
+    if six.PY2:
+        str_format_code = 'a'
+    else:
+        str_format_code = 'U'
+    dt = np.format_parser([str_format_code + '10', 'i4', 'i4', 'f8', 'f8', 'f8'],
                           ['name', 'number', 'beamid', 'e', 'n', 'u'], header)
 
     return np.genfromtxt(layout_csv, autostrip=True, skip_header=1,
@@ -113,7 +123,7 @@ def read_text_catalog(catalog_csv):
 
     catalog = []
 
-    for si in xrange(catalog_table.size):
+    for si in range(catalog_table.size):
         catalog.append(Source(catalog_table['source_id'][si],
                               Angle(catalog_table['ra_j2000'][si], unit=units.deg),
                               Angle(catalog_table['dec_j2000'][si], unit=units.deg),
@@ -297,7 +307,7 @@ def initialize_uvdata_from_params(obs_params):
     with open(telescope_config_name, 'r') as yf:
         telparam = yaml.safe_load(yf)
         tloc = telparam['telescope_location'][1:-1]  # drop parens
-        tloc = map(float, tloc.split(","))
+        tloc = list(map(float, tloc.split(",")))
         tloc[0] *= np.pi / 180.
         tloc[1] *= np.pi / 180.   # Convert to radians
         telparam['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*tloc)
@@ -477,8 +487,7 @@ def initialize_uvdata_from_params(obs_params):
     if time_params['Ntimes'] != 1:
         assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=1e-4)   # To nearest second
 
-    Nbl = (param_dict['Nants_data'] + 1) * param_dict['Nants_data'] / 2
-
+    Nbl = (param_dict['Nants_data'] + 1) * param_dict['Nants_data'] // 2
     time_arr = np.sort(np.tile(time_arr, Nbl))
     param_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
                                       * time_params['integration_time'])
