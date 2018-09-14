@@ -39,8 +39,7 @@ install:
 script:
   - nosetests pyuvsim --with-coverage --cover-package=pyuvsim
   # unclear why this call needs to be different than in pyuvdata...
-  - pycodestyle  */*.py --ignore=E501,W503 --exclude=pyuvsim/mpi.py
-  - pycodestyle  pyuvsim/mpi.py --ignore=E501,W503,E402
+  - pycodestyle  */*.py --ignore=E501,W503
 
 after_success:
   - coveralls

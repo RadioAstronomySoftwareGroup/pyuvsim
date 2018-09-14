@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import mpi4py
 import sys
-mpi4py.rc.initialize = False
+mpi4py.rc.initialize = False    # noqa
 from mpi4py import MPI
 
 rank = 0
