@@ -102,15 +102,36 @@ def test_visibility_source_below_horizon():
 
     nt.assert_true(np.allclose(visibility, np.array([0, 0, 0, 0])))
 
+
+def test_visibility_source_below_horizon_radec():
     # redo with RA/Dec defined source
     time = Time(2458098.27471265, format='jd')
+
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
     time.location = array_location
+    freq = (150e6 * units.Hz)
 
     source_coord = SkyCoord(ra=Angle('13h20m'), dec=Angle('-30d43m17.5s'),
                             obstime=time, frame='icrs', location=array_location)
 
     source = pyuvsim.Source('src_down', source_coord.ra, source_coord.dec, freq,
                             [1.0, 0, 0, 0])
+
+    antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
+    antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
+
+    baseline = pyuvsim.Baseline(antenna1, antenna2)
+
+    beam = UVBeam()
+    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
 
     task = pyuvsim.UVTask(source, time, freq, baseline, array)
 
@@ -540,17 +561,6 @@ def test_uvdata_init():
     beam_list = [beam]
 
     uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list)
-    # for task in uvtask_list:
-    #    task.time = Time(task.time, format='jd')
-    #    task.freq = task.freq * units.Hz
-
-    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 1.0)
-    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', uvdata_file=1.0)
-    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', uvdata_file='testfile', telescope_config_file='tconfig')
-    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str')
-    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', obs_param_file=1.0)
-    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', telescope_config_file=1.0)
-    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', antenna_location_file=1.0)
 
     uvdata_out = pyuvsim.initialize_uvdata(uvtask_list, 'zenith_source',
                                            uvdata_file=EW_uvfits_file)
@@ -565,6 +575,34 @@ def test_uvdata_init():
     hera_uv.instrument = hera_uv.telescope_name
     nt.assert_equal(hera_uv._antenna_positions, uvdata_out._antenna_positions)
     nt.assert_true(uvdata_out.__eq__(hera_uv, check_extra=False))
+
+
+def test_uvdata_init_errors():
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_file)
+
+    hera_uv.unphase_to_drift(use_ant_pos=True)
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
+
+    beam = UVBeam()
+    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
+                       telescope_name='HERA',
+                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                       model_name='E-field pattern - Rigging height 4.9m',
+                       model_version='1.0')
+
+    beam_list = [beam]
+
+    uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list)
+
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 1.0)
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', uvdata_file=1.0)
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', uvdata_file='testfile', telescope_config_file='tconfig')
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str')
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', obs_param_file=1.0)
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', telescope_config_file=1.0)
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata, uvtask_list, 'source_list_str', antenna_location_file=1.0)
 
 
 def test_gather():
