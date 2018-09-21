@@ -4,9 +4,6 @@
 
 from __future__ import absolute_import, division, print_function
 
-import pyuvsim
-from pyuvdata import UVBeam, UVData
-from astropy.time import Time
 import numpy as np
 import os
 import yaml
@@ -14,9 +11,16 @@ import shutil
 import copy
 from six.moves import map, range, zip
 import nose.tools as nt
+from astropy.time import Time
+from astropy.coordinates import Angle, SkyCoord, EarthLocation
+from astropy import units
 
+
+from pyuvdata import UVBeam, UVData
+
+import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-from test_uvsim import create_zenith_source
+import pyuvsim.tests as simtest
 
 
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfits')
@@ -27,32 +31,61 @@ triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.u
 GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
 
 
-def compare_dictionaries(dic1, dic2):
-    """
-        Recursively compare two dictionaries.
-    """
-    compare = True
-    for k in dic1.keys():
-        if isinstance(dic1[k], dict):
-            compare *= compare_dictionaries(dic1[k], dic2[k])
-        else:
-            if isinstance(dic1[k], float):
-                compare *= np.isclose(dic1[k], dic2[k], atol=1e-5)
-            else:
-                compare *= (dic1[k] == dic2[k])
-    return bool(compare)
-
-
 def test_setup_airy():
+    # what is this line supposed to be checking??
     pyuvsim.initialize_uvdata_from_params(os.path.join(SIM_DATA_PATH,
                                                        'simple_equator_sim_airy.yaml'))
-    nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, os.path.join(SIM_DATA_PATH,
-                                                                                   'simple_equator_sim_airy_broken.yaml'))
+    nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params,
+                     os.path.join(SIM_DATA_PATH, 'simple_equator_sim_airy_broken.yaml'))
 
 
-def test_param_reader():
-    for n in range(5):
-        yield (check_param_reader, n)
+def test_mock_catalog_zenith_source():
+
+    time = Time(2457458.65410, scale='utc', format='jd')
+
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
+    freq = (150e6 * units.Hz)
+
+    source_coord = SkyCoord(alt=Angle(90 * units.deg), az=Angle(0 * units.deg),
+                            obstime=time, frame='altaz', location=array_location)
+    icrs_coord = source_coord.transform_to('icrs')
+
+    ra = icrs_coord.ra
+    dec = icrs_coord.dec
+
+    test_source = pyuvsim.Source('src0', ra, dec, freq, [1, 0, 0, 0])
+
+    cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith')
+    cat_source = cat[0]
+
+    nt.assert_equal(cat_source, test_source)
+
+
+def test_mock_catalog_off_zenith_source():
+
+    src_az = Angle('90.0d')
+    src_alt = Angle('85.0d')
+    src_za = Angle('90.0d') - src_alt
+
+    time = Time(2457458.65410, scale='utc', format='jd')
+
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
+    freq = (150e6 * units.Hz)
+
+    source_coord = SkyCoord(alt=src_alt, az=src_az,
+                            obstime=time, frame='altaz', location=array_location)
+    icrs_coord = source_coord.transform_to('icrs')
+
+    ra = icrs_coord.ra
+    dec = icrs_coord.dec
+    test_source = pyuvsim.Source('src0', ra, dec, freq, [1.0, 0, 0, 0])
+
+    cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
+    cat_source = cat[0]
+
+    nt.assert_equal(cat_source, test_source)
 
 
 def check_param_reader(config_num):
@@ -66,7 +99,7 @@ def check_param_reader(config_num):
     hera_uv.telescope_name = 'HERA'
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources = np.array([create_zenith_source(time, 'zensrc')])
+    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
@@ -148,19 +181,14 @@ def check_param_reader(config_num):
     # This is enabled by the comparison operator in UVTask
     uvtask_list = sorted(uvtask_list)
     expected_uvtask_list = sorted(expected_uvtask_list)
-    for ti in range(len(expected_uvtask_list)):
-        print(uvtask_list[ti].baseline.antenna1.beam_id, expected_uvtask_list[ti].baseline.antenna1.beam_id)
-        print(uvtask_list[ti].baseline.antenna2.beam_id, expected_uvtask_list[ti].baseline.antenna2.beam_id)
-        print(uvtask_list[ti].baseline.antenna1.number, expected_uvtask_list[ti].baseline.antenna1.number)
-        print(uvtask_list[ti].baseline.antenna2.number, expected_uvtask_list[ti].baseline.antenna2.number)
-        print(uvtask_list[ti].baseline.antenna1.name, expected_uvtask_list[ti].baseline.antenna1.name)
-        print(uvtask_list[ti].baseline.antenna2.name, expected_uvtask_list[ti].baseline.antenna2.name)
-        print(uvtask_list[ti].freq - expected_uvtask_list[ti].freq)
-        print(uvtask_list[ti].time - expected_uvtask_list[ti].time)
-        print(uvtask_list[ti].uvdata_index, expected_uvtask_list[ti].uvdata_index)
-        print(uvtask_list[ti].telescope.name, expected_uvtask_list[ti].telescope.name)
-        print('\n')
+
     nt.assert_true(uvtask_list == expected_uvtask_list)
+
+
+# This loops through different config files and tests all of them the same way
+def test_param_reader():
+    for n in range(5):
+        yield (check_param_reader, n)
 
 
 def test_uvfits_to_config():
@@ -210,7 +238,7 @@ def test_uvfits_to_config():
     with open(os.path.join(path, second_param_filename), 'r') as pf:
         param_dict = yaml.safe_load(pf)
 
-    nt.assert_true(compare_dictionaries(param_dict, orig_param_dict))
+    nt.assert_true(simtest.compare_dictionaries(param_dict, orig_param_dict))
 
     shutil.rmtree(opath)
 
