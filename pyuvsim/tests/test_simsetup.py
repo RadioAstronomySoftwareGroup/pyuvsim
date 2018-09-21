@@ -11,12 +11,14 @@ import shutil
 import copy
 from six.moves import map, range, zip
 import nose.tools as nt
+import astropy
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy import units
 
 
 from pyuvdata import UVBeam, UVData
+import pyuvdata.tests as uvtest
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -95,7 +97,8 @@ def check_param_reader(config_num):
 
     param_filename = param_filenames[config_num]
     hera_uv = UVData()
-    hera_uv.read_uvfits(triangle_uvfits_file)
+    uvtest.checkWarnings(hera_uv.read_uvfits, [triangle_uvfits_file],
+                         message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
     hera_uv.telescope_name = 'HERA'
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
@@ -186,6 +189,7 @@ def check_param_reader(config_num):
 
 
 # This loops through different config files and tests all of them the same way
+# note that each config tested shows up as a separate '.' in the nosetests output
 def test_param_reader():
     for n in range(5):
         yield (check_param_reader, n)
@@ -204,7 +208,6 @@ def test_uvfits_to_config():
 
     # Read uvfits file to params.
     uv0 = UVData()
-    # uv0.read_uvfits(EW_uvfits_file)
     uv0.read_uvfits(longbl_uvfits_file)
     path, telescope_config, layout_fname = \
         pyuvsim.simsetup.uvdata_to_telescope_config(uv0, herabeam_default,
@@ -215,7 +218,6 @@ def test_uvfits_to_config():
                                            layout_csv_name=os.path.join(path, layout_fname),
                                            path_out=opath)
     # From parameters, generate a uvdata object.
-
     with open(os.path.join(opath, param_filename), 'r') as pf:
         param_dict = yaml.safe_load(pf)
     param_dict['config_path'] = opath    # Ensure path is present
@@ -266,7 +268,11 @@ def test_point_catalog_reader():
 
 def test_read_gleam():
 
-    sourcelist = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot)
+    # sourcelist = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot)
+    sourcelist = uvtest.checkWarnings(pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
+                                      message=GLEAM_vot, nwarnings=11,
+                                      category=[astropy.io.votable.exceptions.W27]
+                                      + [astropy.io.votable.exceptions.W50] * 10)
 
     nt.assert_equal(len(sourcelist), 50)
 
@@ -277,8 +283,6 @@ def test_file_namer():
     """
     existing_file = param_filenames[0]
     new_filepath = pyuvsim.simsetup.check_file_exists_and_increment(existing_file)
-    print(new_filepath)
-    print(existing_file)
     nt.assert_true(new_filepath.endswith("_5.yaml"))    # There are four other of these param test files
 
 

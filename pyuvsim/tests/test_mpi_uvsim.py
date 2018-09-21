@@ -9,9 +9,11 @@ import numpy as np
 import yaml
 import nose.tools as nt
 from mpi4py import MPI
+import astropy
 
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
+import pyuvdata.tests as uvtest
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
@@ -56,16 +58,19 @@ def test_run_param_uvsim():
     # This test obsparam file has "single_source.txt" as its catalog.
     catalog = os.path.join(SIM_DATA_PATH, params_dict['sources']['catalog'])
     uv_out = pyuvsim.run_uvsim(uv_in, beam_list, catalog_file=catalog, beam_dict=beam_dict)
+
     pyuvsim.simsetup.write_uvfits(uv_out, params_dict)
     tempfilename = params_dict['filing']['outfile_name']
 
     uv_new = UVData()
-    uv_new.read_uvfits(tempfilename)
+    uvtest.checkWarnings(uv_new.read_uvfits, [tempfilename], message='antenna_diameters is not set')
     uv_new.unphase_to_drift(use_ant_pos=True)
     os.remove(tempfilename)
 
     uv_ref = UVData()
-    uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
+    uvtest.checkWarnings(uv_ref.read_uvfits,
+                         [os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits')],
+                         message='antenna_diameters is not set')
     uv_ref.unphase_to_drift(use_ant_pos=True)
 
     uv_new.history = uv_ref.history  # History includes irrelevant info for comparison
@@ -74,12 +79,15 @@ def test_run_param_uvsim():
     # Test votable catalog
     catalog = singlesource_vot
     del uv_out, uv_new
-    uv_out = pyuvsim.run_uvsim(uv_in, beam_list, catalog_file=catalog, beam_dict=beam_dict)
+    uv_out = uvtest.checkWarnings(pyuvsim.run_uvsim, [uv_in, beam_list],
+                                  {'catalog_file': catalog, 'beam_dict': beam_dict},
+                                  message=catalog, nwarnings=10,
+                                  category=astropy.io.votable.exceptions.W50)
     pyuvsim.simsetup.write_uvfits(uv_out, params_dict)
     uv_new = UVData()
-    uv_new.read_uvfits(tempfilename)
+    uvtest.checkWarnings(uv_new.read_uvfits, [tempfilename], message='antenna_diameters is not set')
     uv_new.unphase_to_drift(use_ant_pos=True)
-    print(tempfilename)
+
     os.remove(tempfilename)
     uv_new.history = uv_ref.history  # History includes irrelevant info for comparison
     nt.assert_equal(uv_new, uv_ref)
