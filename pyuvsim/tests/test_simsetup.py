@@ -16,7 +16,6 @@ from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy import units
 
-
 from pyuvdata import UVBeam, UVData
 import pyuvdata.tests as uvtest
 

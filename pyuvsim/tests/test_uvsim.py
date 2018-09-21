@@ -15,6 +15,7 @@ import astropy.constants as const
 from pyuvdata import UVBeam, UVData
 import pyuvdata.utils as uvutils
 from pyuvdata.data import DATA_PATH
+import pyuvdata.tests as uvtest
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
@@ -320,7 +321,9 @@ def test_offzenith_source_multibl_uvfits():
     freq = hera_uv.freq_array[0, 0] * units.Hz
 
     # get antennas positions into ENU
-    antpos, ants = hera_uv.get_ENU_antpos()
+    antpos, ants = uvtest.checkWarnings(hera_uv.get_ENU_antpos,
+                                        message='The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)',
+                                        category=PendingDeprecationWarning)
     antenna1 = pyuvsim.Antenna('ant1', ants[0], np.array(antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna('ant2', ants[1], np.array(antpos[1, :]), 0)
     antenna3 = pyuvsim.Antenna('ant3', ants[2], np.array(antpos[2, :]), 0)
@@ -490,8 +493,8 @@ def test_file_to_tasks():
     telescope = pyuvsim.Telescope(hera_uv.telescope_name, tel_loc, beam_list)
 
     ant_pos = hera_uv.antenna_positions + hera_uv.telescope_location
-    ant_pos_enu = uvutils.ENU_from_ECEF(ant_pos.T,
-                                        *hera_uv.telescope_location_lat_lon_alt).T
+    ant_pos_enu = uvutils.ENU_from_ECEF(ant_pos,
+                                        *hera_uv.telescope_location_lat_lon_alt)
 
     expected_task_list = []
     antenna_names = hera_uv.antenna_names
