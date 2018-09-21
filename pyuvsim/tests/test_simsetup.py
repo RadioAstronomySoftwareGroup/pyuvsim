@@ -23,10 +23,11 @@ import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim.tests as simtest
 
-
-EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfits')
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
-param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(5)]   # Five different test configs
+
+# Five different test configs
+param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(5)]
+
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
@@ -263,6 +264,7 @@ def test_point_catalog_reader():
         nt.assert_true(src.dec.deg in catalog_table['dec_j2000'])
         nt.assert_true(src.stokes[0] in catalog_table['flux_density_I'])
         nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])
+    # shouldn't this also test the values?
 
 
 def test_read_gleam():
