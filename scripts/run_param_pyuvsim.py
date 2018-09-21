@@ -87,8 +87,6 @@ if rank == 0:
             catalog = source_params['catalog']
         else:
             catalog = None
-# mpi.start_mpi()
-#beam_dict = mpi.get_comm().bcast(beam_dict, root=0)
 uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
 
 
