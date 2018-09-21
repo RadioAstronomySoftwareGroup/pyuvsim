@@ -25,10 +25,7 @@ cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
 hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
-# triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
-# longbl_yaml_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.yaml')
-# laptop_size_sim = os.path.join(SIM_DATA_PATH, 'laptop_size_sim.yaml')
 
 
 def test_visibility_single_zenith_source():
