@@ -113,7 +113,8 @@ def read_text_catalog(catalog_csv):
             frequency = reference frequency (for future spectral indexing) [Hz]
         For now, flat spectrum sources.
     """
-    header = open(catalog_csv, 'r').readline()
+    with open(catalog_csv, 'r') as cfile:
+        header = cfile.readline()
     header = [h.strip() for h in header.split() if not h[0] == '[']  # Ignore units in header
     dt = np.format_parser(['a10', 'f8', 'f8', 'f8', 'f8'],
                           ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], header)
