@@ -62,8 +62,8 @@ class Source(object):
                                                self.stokes[0] - self.stokes[1]]])
 
     def __eq__(self, other):
-        return ((self.ra == other.ra)
-                and (self.dec == other.dec)
+        return (np.isclose(self.ra.deg, other.ra.deg)
+                and np.isclose(self.dec.deg, other.dec.deg)
                 and np.all(self.stokes == other.stokes)
                 and (self.name == other.name)
                 and (self.freq == other.freq))

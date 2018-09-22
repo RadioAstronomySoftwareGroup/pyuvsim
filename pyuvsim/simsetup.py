@@ -102,6 +102,16 @@ def read_votable_catalog(gleam_votable):
     return sourcelist
 
 
+def write_catalog_to_file(filename, catalog):
+    """
+    Writes out a catalog to a text file, readable with simsetup.read_catalog_text()
+    """
+    with open(filename, 'w+') as fo:
+        fo.write("SOURCE_ID\tRA_J2000 [deg]\tDec_J2000 [deg]\tFlux [Jy]\tFrequency [Hz]\n")
+        for src in catalog:
+            fo.write("{}\t{:f}\t{:f}\t{:0.2f}\t{:0.2f}\n".format(src.name, src.ra.deg, src.dec.deg, src.stokes[0], src.freq.to("Hz").value))
+
+
 def read_text_catalog(catalog_csv):
     """
         Read in a text file of sources.
@@ -123,7 +133,8 @@ def read_text_catalog(catalog_csv):
                                   dtype=dt.dtype)
 
     catalog = []
-
+    if len(catalog_table.shape) == 0:
+        catalog_table = catalog_table.reshape((1))
     for si in range(catalog_table.size):
         catalog.append(Source(catalog_table['source_id'][si],
                               Angle(catalog_table['ra_j2000'][si], unit=units.deg),
@@ -143,14 +154,13 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
         Keywords:
             * Nsrcs = Number of sources to put at zenith
-            * array_location = EarthLocation object.
+            * array_location = EarthLocation object [Default = HERA site]
             * zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
             * save = Save mock catalog as npz file.
 
         Accepted arrangements:
             * 'triangle' = Three point sources forming a triangle around the zenith
             * 'cross'    = An asymmetric cross
-            * 'horizon'  = A single source on the horizon   ## TODO
             * 'zenith'   = Some number of sources placed at the zenith.
             * 'off-zenith' = A single source off zenith
             * 'long-line' = Horizon to horizon line of point sources

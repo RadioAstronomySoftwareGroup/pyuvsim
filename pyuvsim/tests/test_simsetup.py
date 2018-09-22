@@ -288,17 +288,34 @@ def test_file_namer():
 
 
 def test_mock_catalogs():
-    time = Time(2457458.1739, scale='utc', format='jd')
-    cat1, mock_kwds1 = pyuvsim.simsetup.create_mock_catalog(time, 'zenith')
-    cat2, mock_kwds2 = pyuvsim.simsetup.create_mock_catalog(time, 'off-zenith')
-    cat3, mock_kwds3 = pyuvsim.simsetup.create_mock_catalog(time, 'cross')
-    cat4, mock_kwds4 = pyuvsim.simsetup.create_mock_catalog(time, 'triangle')
-    cat5, mock_kwds5 = pyuvsim.simsetup.create_mock_catalog(time, 'long-line')
-    cat6, mock_kwds6 = pyuvsim.simsetup.create_mock_catalog(time, 'hera_text')
+    time = Time(2458098.27471265, scale='utc', format='jd')
 
-    nt.assert_true(len(cat1) == 1)
-    nt.assert_true(len(cat2) == 1)
-    nt.assert_true(len(cat3) == 4)
-    nt.assert_true(len(cat4) == 3)
-    nt.assert_true(len(cat5) == 10)
-    nt.assert_true(len(cat6) == 43)
+    arrangements = ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']
+
+    cats = {}
+    for arr in arrangements:
+        cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, arr)
+        cats[arr] = cat
+
+    # For each mock catalog, verify the Ra/Dec source positions against a text catalog.
+
+    text_catalogs = {'cross': 'mock_cross_2458098.27471.txt',
+                     'hera_text': 'mock_hera_text_2458098.27471.txt',
+                     'long-line': 'mock_long-line_2458098.27471.txt',
+                     'off-zenith': 'mock_off-zenith_2458098.27471.txt',
+                     'triangle': 'mock_triangle_2458098.27471.txt',
+                     'zenith': 'mock_zenith_2458098.27471.txt'}
+
+    for arr in arrangements:
+        radec_catalog = pyuvsim.simsetup.read_text_catalog(os.path.join(SIM_DATA_PATH, 'test_catalogs', text_catalogs[arr]))
+        nt.assert_true(np.all(radec_catalog == cats[arr]))
+
+
+def test_catalog_file_writer():
+    time = Time(2458098.27471265, scale='utc', format='jd')
+    mock_zenith, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, 'zenith')
+    fname = 'temp_cat.txt'
+    pyuvsim.simsetup.write_catalog_to_file(fname, mock_zenith)
+    mock_zenith_loop = pyuvsim.simsetup.read_text_catalog(fname)
+    nt.assert_true(np.all(mock_zenith_loop == mock_zenith))
+    os.remove(fname)
