@@ -252,7 +252,7 @@ def test_point_catalog_reader():
     with open(catfile, 'r') as fhandle:
         header = fhandle.readline()
     header = [h.strip() for h in header.split()]
-    dt = np.format_parser(['a10', 'f8', 'f8', 'f8', 'f8'],
+    dt = np.format_parser(['U10', 'f8', 'f8', 'f8', 'f8'],
                           ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], header)
 
     catalog_table = np.genfromtxt(catfile, autostrip=True, skip_header=1,

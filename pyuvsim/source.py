@@ -19,7 +19,7 @@ class Source(object):
     coherency_radec = None
     az_za = None
 
-    def __init__(self, name, ra, dec, freq, stokes):
+    def __init__(self, name, ra, dec, freq, stokes, pos_tol=np.finfo(float).eps):
         """
         Initialize from source catalog
 
@@ -33,6 +33,8 @@ class Source(object):
                 4 element vector giving the source [I, Q, U, V]
             freq: astropy quantity
                 frequency of source catalog value
+            pos_tol: float, defaults to minimum float in numpy
+                position tolerance in degrees
         """
         if not isinstance(ra, Angle):
             raise ValueError('ra must be an astropy Angle object. '
@@ -51,6 +53,7 @@ class Source(object):
         self.stokes = stokes
         self.ra = ra
         self.dec = dec
+        self.pos_tol = pos_tol
 
         self.skycoord = SkyCoord(self.ra, self.dec, frame='icrs')
 
@@ -62,8 +65,8 @@ class Source(object):
                                                self.stokes[0] - self.stokes[1]]])
 
     def __eq__(self, other):
-        return (np.isclose(self.ra.deg, other.ra.deg)
-                and np.isclose(self.dec.deg, other.dec.deg)
+        return (np.isclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)
+                and np.isclose(self.dec.deg, other.dec.deg, atol=self.pos_tol)
                 and np.all(self.stokes == other.stokes)
                 and (self.name == other.name)
                 and (self.freq == other.freq))
