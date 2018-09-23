@@ -92,7 +92,7 @@ def test_mock_catalog_off_zenith_source():
 
 def check_param_reader(config_num):
     """
-        tests initialize_uvdata_from_params
+        Part of test_param_reader
     """
 
     param_filename = param_filenames[config_num]
@@ -191,6 +191,12 @@ def check_param_reader(config_num):
 # This loops through different config files and tests all of them the same way
 # note that each config tested shows up as a separate '.' in the nosetests output
 def test_param_reader():
+    """
+    Tests initialize_uvdata_from_params for five different parameter files.
+        Each file has a different arrangement of parameters that should yield the same uvdata object, so this
+        checks that the various configurations all work consistently, and that if insufficient information is
+        provided that the function errors appropriately.
+    """
     for n in range(5):
         yield (check_param_reader, n)
 
