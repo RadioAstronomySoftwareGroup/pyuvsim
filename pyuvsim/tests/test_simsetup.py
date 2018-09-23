@@ -33,14 +33,6 @@ triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.u
 GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
 
 
-def test_setup_airy():
-    # what is this line supposed to be checking??
-    pyuvsim.initialize_uvdata_from_params(os.path.join(SIM_DATA_PATH,
-                                                       'simple_equator_sim_airy.yaml'))
-    nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params,
-                     os.path.join(SIM_DATA_PATH, 'simple_equator_sim_airy_broken.yaml'))
-
-
 def test_mock_catalog_zenith_source():
 
     time = Time(2457458.65410, scale='utc', format='jd')
