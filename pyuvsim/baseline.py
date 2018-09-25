@@ -8,6 +8,11 @@ import numpy as np
 
 
 class Baseline(object):
+    """
+    Defines a single pair of Antenna objects, the means for calculating their
+    uvw coordinates, and comparing them
+
+    """
     def __init__(self, antenna1, antenna2):
         self.antenna1 = antenna1
         self.antenna2 = antenna2
