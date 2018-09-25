@@ -32,7 +32,7 @@ __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_list', 'run_uvsim', 'initialize
 
 class UVTask(object):
     # holds all the information necessary to calculate a single src, t, f, bl, array
-    # need the array because we need an array location for mapping to locat az/za
+    # need the array because we need an array location for mapping to local alt/az
 
     def __init__(self, source, time, freq, baseline, telescope):
         self.time = time
@@ -96,16 +96,16 @@ class UVEngine(object):
         source = self.task.source
         # coherency is a 2x2 matrix
         # [ |Ex|^2, Ex* Ey, Ey* Ex |Ey|^2 ]
-        # where x and y vectors along the local za/az axes.
+        # where x and y vectors along the local alt/az axes.
 
         # Apparent coherency gives the direction and polarization dependent baseline response to a source.
         beam1_jones = baseline.antenna1.get_beam_jones(self.task.telescope,
-                                                       source.az_za_calc(self.task.time,
-                                                                         self.task.telescope.location),
+                                                       source.alt_az_calc(self.task.time,
+                                                                          self.task.telescope.location),
                                                        self.task.freq)
         beam2_jones = baseline.antenna2.get_beam_jones(self.task.telescope,
-                                                       source.az_za_calc(self.task.time,
-                                                                         self.task.telescope.location),
+                                                       source.alt_az_calc(self.task.time,
+                                                                          self.task.telescope.location),
                                                        self.task.freq)
         this_apparent_coherency = np.dot(beam1_jones,
                                          source.coherency_calc(self.task.time,

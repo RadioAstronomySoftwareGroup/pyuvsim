@@ -28,7 +28,7 @@ class AnalyticBeam(object):
 
     @profile
     def interp(self, az_array, za_array, freq_array):
-        # (Naxes_vec, Nspws, Nfeeds or Npols, freq_array.size, az_array.size)
+        # The azimuth here has the UVBeam convention: North of East(East=0, North=90)
 
         if self.type == 'uniform':
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)

@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import time as pytime
 import sys
+import numpy as np
 from astropy import _erfa as erfa
 from astropy.coordinates import Angle
 from astropy.time import Time
@@ -75,3 +76,55 @@ def cirs_to_tee_ra(cirs_ra, time):
     gast = time.sidereal_time('apparent', longitude=0)
     tee_ra = cirs_ra + (gast - theta_earth)
     return tee_ra
+
+
+def altaz_to_zenithangle_azimuth(altitude, azimuth):
+    """
+    Convert from astropy altaz convention to UVBeam az/za convention.
+
+    Args:
+        altitude: in radians
+        azimuth: in radians in astropy convention: East of North (N=0, E=90 degrees)
+
+    Returns:
+        zenith_angle in radians
+        azimuth in radians in uvbeam convention: North of East(East=0, North=90 degrees)
+    """
+    zenith_angle = np.pi / 2 - np.array(altitude)
+    new_azimuth = np.pi / 2 - np.array(azimuth)
+
+    if new_azimuth.size > 1:
+        wh_neg = np.where(new_azimuth < 0)
+        if wh_neg[0].size > 0:
+            new_azimuth[wh_neg] = new_azimuth + np.pi * 2
+    else:
+        if new_azimuth < 0:
+            new_azimuth = new_azimuth + np.pi * 2
+
+    return zenith_angle, new_azimuth
+
+
+def zenithangle_azimuth_to_altaz(zenith_angle, azimuth):
+    """
+    Convert from astropy altaz convention to UVBeam az/za convention.
+
+    Args:
+        zenith_angle: in radians
+        azimuth: in radians in uvbeam convention: North of East(East=0, North=90)
+
+    Returns:
+        altitude in radians
+        azimuth in radians in astropy convention: East of North (N=0, E=90 degrees)
+    """
+    altitude = np.pi / 2 - np.array(zenith_angle)
+    new_azimuth = np.pi / 2 - np.array(azimuth)
+
+    if new_azimuth.size > 1:
+        wh_neg = np.where(new_azimuth < 0)
+        if wh_neg[0].size > 0:
+            new_azimuth[wh_neg] = new_azimuth + np.pi * 2
+    else:
+        if new_azimuth < 0:
+            new_azimuth = new_azimuth + np.pi * 2
+
+    return altitude, new_azimuth

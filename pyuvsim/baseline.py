@@ -12,7 +12,7 @@ class Baseline(object):
         self.antenna1 = antenna1
         self.antenna2 = antenna2
         self.enu = antenna2.pos_enu - antenna1.pos_enu
-        # we're using the local az/za frame so uvw is just enu
+        # we're using the local alt/az frame so uvw is just enu
         self.uvw = self.enu
 
     def __eq__(self, other):

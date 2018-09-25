@@ -7,6 +7,8 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import astropy.units as units
 
+from . import utils as simutils
+
 
 class Antenna(object):
     @profile
@@ -19,13 +21,16 @@ class Antenna(object):
         self.beam_id = beam_id
 
     @profile
-    def get_beam_jones(self, array, source_az_za, frequency):
+    def get_beam_jones(self, array, source_alt_az, frequency):
         # get_direction_jones needs to be defined on UVBeam
-        # 2x2 array of Efield vectors in Az/ZA
+        # 2x2 array of Efield vectors in alt/az
         # return array.beam_list[self.beam_id].get_direction_jones(source_lmn, frequency)
 
-        source_az = np.array([source_az_za[0]])
-        source_za = np.array([source_az_za[1]])
+        # convert to UVBeam az/za convention
+        source_za, source_az = simutils.altaz_to_zenithangle_azimuth(source_alt_az[0], source_alt_az[1])
+        source_za = np.array([source_za])
+        source_az = np.array([source_az])
+
         freq = np.array([frequency.to('Hz').value])
 
         if array.beam_list[self.beam_id].data_normalization != 'peak':

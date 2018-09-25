@@ -74,9 +74,8 @@ def test_visibility_source_below_horizon():
     freq = (150e6 * units.Hz)
 
     src_alt = Angle('-40d')
-    src_za = Angle('90.0d') - src_alt
 
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
+    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     source = source_arr[0]
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
@@ -194,7 +193,6 @@ def test_redundant_baselines():
     hera_uv.unphase_to_drift()
 
     src_alt = Angle('85.0d')
-    src_za = Angle('90.0d') - src_alt
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     array_location = EarthLocation.from_geocentric(hera_uv.telescope_location[0],
@@ -215,7 +213,7 @@ def test_redundant_baselines():
     # setup the things that don't come from pyuvdata:
     # make a source off zenith
     time.location = array_location
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
+    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     source = source_arr[0]
 
     beam = UVBeam()
@@ -276,8 +274,17 @@ def test_single_offzenith_source_uvfits():
     # make a source off zenith
     time.location = array_location
     # create_mock_catalog uses azimuth of 90
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
+    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     source = source_arr[0]
+
+    src_alt_az = source.alt_az_calc(time, array_location)
+    nt.assert_true(np.allclose(src_alt_az[0], src_alt.rad))
+    nt.assert_true(np.allclose(src_alt_az[1], src_az.rad))
+
+    src_lmn = source.pos_lmn(time, array_location)
+    nt.assert_true(np.allclose(src_lmn[0], src_l))
+    nt.assert_true(np.allclose(src_lmn[1], src_m))
+    nt.assert_true(np.allclose(src_lmn[2], src_n))
 
     beam = UVBeam()
     beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
@@ -312,6 +319,9 @@ def test_single_offzenith_source_uvfits():
     vis_analytic = np.array([vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[0, 1], vis_analytic[1, 0]])
 
     nt.assert_true(np.allclose(baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4))
+
+    print(vis_analytic)
+    print(visibility)
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=1e-4))
 
 
@@ -350,7 +360,7 @@ def test_offzenith_source_multibl_uvfits():
     # make a source off zenith
     time.location = array_location
     # create_mock_catalog uses azimuth of 90
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
+    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     source = source_arr[0]
 
     # beam = UVBeam()
