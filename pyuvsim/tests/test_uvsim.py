@@ -355,7 +355,7 @@ def test_offzenith_source_multibl_uvfits():
 
     beam_list = [beam]
 
-    baselines = [pyuvsim.Baseline(antenna2, antenna1),
+    baselines = [pyuvsim.Baselinel(antenna2, antenna1),
                  pyuvsim.Baseline(antenna3, antenna1),
                  pyuvsim.Baseline(antenna3, antenna2)]
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
