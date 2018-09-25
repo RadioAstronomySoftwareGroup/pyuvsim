@@ -14,6 +14,7 @@ A comprehensive simulation package for radio interferometers in python.
 
    usage
    parameter_files
+   classes
 
 
 
