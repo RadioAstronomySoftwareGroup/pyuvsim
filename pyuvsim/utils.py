@@ -253,7 +253,7 @@ def stokes_to_coherency(stokes_vector):
 
 def coherency_to_stokes(coherency_matrix):
     ''' Takes coherency matrix to vector of 4 Stokes parameter in order [I, Q, U , V] '''
-    return np.array([coherency_matrix[0,0] + coherency_matrix[1,1],
-                     coherency_matrix[0,0] - coherency_matrix[1,1],
-                     coherency_matrix[0,1] + coherency_matrix[1,0],
-                     -(coherency_matrix[0,1] - coherency_matrix[1,0]).imag]).real
+    return np.array([coherency_matrix[0, 0] + coherency_matrix[1, 1],
+                     coherency_matrix[0, 0] - coherency_matrix[1, 1],
+                     coherency_matrix[0, 1] + coherency_matrix[1, 0],
+                     -(coherency_matrix[0, 1] - coherency_matrix[1, 0]).imag]).real

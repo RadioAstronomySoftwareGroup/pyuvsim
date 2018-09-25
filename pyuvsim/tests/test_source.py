@@ -7,33 +7,36 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import nose.tools as nt
 from astropy.time import Time
-from astropy.coordinates import Angle, SkyCoord, EarthLocation
+from astropy.coordinates import Angle, EarthLocation
 from astropy import units
 
 import pyuvsim
 import pyuvsim.tests as simtest
 from pyuvsim.source import Source
 
+
 def dummy_source(time, telescope_location):
 
-    return Source('Test',Angle(12.*units.hr),Angle(-30.*units.deg),150*units.MHz,[1.,0.,0.,0.])
+    return Source('Test', Angle(12. * units.hr), Angle(-30. * units.deg), 150 * units.MHz, [1., 0., 0., 0.])
+
 
 def test_calc_basis_rotation_matrix():
 
     time = Time('2018-01-01 00:00')
-    telescope_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',height=1073.)
+    telescope_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
 
     source = dummy_source(time, telescope_location)
 
     basis_rot_matrix = source._calc_basis_rotation_matrix(time, telescope_location)
 
     # This is not a very strenous test :)
-    assert(np.allclose(np.matmul(basis_rot_matrix, basis_rot_matrix.T),np.eye(3),atol=1.e-5))
+    assert(np.allclose(np.matmul(basis_rot_matrix, basis_rot_matrix.T), np.eye(3), atol=1.e-5))
+
 
 def test_calc_vector_rotation():
 
     time = Time('2018-01-01 00:00')
-    telescope_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',height=1073.)
+    telescope_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
 
     source = dummy_source(time, telescope_location)
 
@@ -41,7 +44,7 @@ def test_calc_vector_rotation():
 
     vector_rotation = source._calc_vector_rotation(basis_rot_matrix)
 
-    assert(np.isclose(np.linalg.det(vector_rotation),1,atol=1.e-5))
+    assert(np.isclose(np.linalg.det(vector_rotation), 1, atol=1.e-5))
 
 
 def test_source_zenith_from_icrs():

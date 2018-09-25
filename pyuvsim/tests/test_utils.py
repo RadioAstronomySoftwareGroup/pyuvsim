@@ -21,17 +21,18 @@ import pyuvsim.tests as simtest
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 
 
+
 def test_stokes_to_coherency():
 
-    I = 4.5
-    Q = -0.3
-    U = 1.2
-    V = -0.15
-    stokes = np.array([I, Q, U, V])
+    stokesI = 4.5
+    stokesQ = -0.3
+    stokesU = 1.2
+    stokesV = -0.15
+    stokes = np.array([stokesI, stokesQ, stokesU, stokesV])
     coherency = simutils.stokes_to_coherency(stokes)
     back_to_stokes = simutils.coherency_to_stokes(coherency)
 
-    np.testing.assert_allclose(stokes, back_to_stokes)#, atol=1.e-5)
+    np.testing.assert_allclose(stokes, back_to_stokes)  # , atol=1.e-5)
 
 
 def test_tee_ra_loop():

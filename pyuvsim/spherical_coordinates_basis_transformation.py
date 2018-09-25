@@ -1,6 +1,13 @@
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2018 Radio Astronomy Software Group
+# Licensed under the 3-clause BSD License
+
+from __future__ import absolute_import, division, print_function
+
 import numpy as np
 
-def r_hat(theta,phi):
+
+def r_hat(theta, phi):
     rhx = np.cos(phi) * np.cos(theta)
     rhy = np.sin(phi) * np.cos(theta)
     rhz = np.sin(theta)
@@ -54,7 +61,7 @@ def spherical_coordinates_map(R, theta, phi):
 
 def spherical_basis_transformation_components(theta, phi, R):
 
-    if np.allclose(R, np.eye(3)) == True:
+    if np.allclose(R, np.eye(3)) is True:
         cosX = np.ones_like(theta)
         sinX = np.zeros_like(theta)
 

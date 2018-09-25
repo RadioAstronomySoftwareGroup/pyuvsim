@@ -12,6 +12,7 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from .spherical_coordinates_basis_transformation import spherical_basis_transformation_components
 from . import utils
 
+
 class Source(object):
     """
     Defines a single point source at a given ICRS ra/dec coordinate, with a
@@ -146,7 +147,7 @@ class Source(object):
             # on the sphere.
             rotation_matrix = self._calc_vector_rotation(Rotation)
 
-            alt_to_za = np.array([[-1., 0], [0, 1]]) # ??? Supposedly fixes theta_hat points south for za and north for alt
+            alt_to_za = np.array([[-1., 0], [0, 1]])  # ??? Supposedly fixes theta_hat points south for za and north for alt
             basis_transformation_matrix = np.einsum('ab,bc->ac', alt_to_za, rotation_matrix)
 
         coherency_local = np.einsum('ab,bc,cd->ad', basis_transformation_matrix.T, self.coherency_radec, basis_transformation_matrix)
