@@ -94,11 +94,11 @@ def altaz_to_zenithangle_azimuth(altitude, azimuth):
     new_azimuth = np.pi / 2 - np.array(azimuth)
 
     if new_azimuth.size > 1:
-        wh_neg = np.where(new_azimuth < 0)
+        wh_neg = np.where(new_azimuth < -1e-9)
         if wh_neg[0].size > 0:
             new_azimuth[wh_neg] = new_azimuth + np.pi * 2
     else:
-        if new_azimuth < 0:
+        if new_azimuth < -1e-9:
             new_azimuth = new_azimuth + np.pi * 2
 
     return zenith_angle, new_azimuth
@@ -120,8 +120,8 @@ def zenithangle_azimuth_to_altaz(zenith_angle, azimuth):
     new_azimuth = np.pi / 2 - np.array(azimuth)
 
     if new_azimuth.size > 1:
-        wh_neg = np.where(new_azimuth < 0)
-        if wh_neg[0].size > 0:
+        wh_neg = np.where(new_azimuth < -1e-9)
+        if wh_neg[0].size > -1e-9:
             new_azimuth[wh_neg] = new_azimuth + np.pi * 2
     else:
         if new_azimuth < 0:

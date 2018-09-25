@@ -279,13 +279,13 @@ def test_single_offzenith_source_uvfits():
     source = source_arr[0]
 
     src_alt_az = source.alt_az_calc(time, array_location)
-    nt.assert_true(np.allclose(src_alt_az[0], src_alt.rad))
-    nt.assert_true(np.allclose(src_alt_az[1], src_az.rad))
+    nt.assert_true(np.isclose(src_alt_az[0], src_alt.rad))
+    nt.assert_true(np.isclose(src_alt_az[1], src_az.rad))
 
     src_lmn = source.pos_lmn(time, array_location)
-    nt.assert_true(np.allclose(src_lmn[0], src_l))
-    nt.assert_true(np.allclose(src_lmn[1], src_m))
-    nt.assert_true(np.allclose(src_lmn[2], src_n))
+    nt.assert_true(np.isclose(src_lmn[0], src_l))
+    nt.assert_true(np.isclose(src_lmn[1], src_m))
+    nt.assert_true(np.isclose(src_lmn[2], src_n))
 
     beam = UVBeam()
     beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
@@ -308,6 +308,11 @@ def test_single_offzenith_source_uvfits():
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
     beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_alt.rad, src_az.rad)
+    beam_za2, beam_az2 = simutils.altaz_to_zenithangle_azimuth(src_alt_az[0], src_alt_az[1])
+
+    nt.assert_true(np.isclose(beam_za, beam_za2))
+    nt.assert_true(np.isclose(beam_az, beam_az2))
+
     interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([beam_az]),
                                                          za_array=np.array([beam_za]),
                                                          freq_array=np.array([freq.to('Hz').value]))
@@ -316,6 +321,12 @@ def test_single_offzenith_source_uvfits():
     jones[1, 1] = interpolated_beam[0, 0, 1, 0, 0]
     jones[1, 0] = interpolated_beam[1, 0, 1, 0, 0]
     jones[0, 1] = interpolated_beam[0, 0, 0, 0, 0]
+
+    beam_jones = antenna1.get_beam_jones(array, src_alt_az, freq)
+    print(beam_jones)
+    print(jones)
+    print(beam_jones - jones)
+    nt.assert_true(np.allclose(beam_jones, jones))
 
     uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
 
