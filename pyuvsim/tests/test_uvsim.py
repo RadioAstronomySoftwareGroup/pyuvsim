@@ -17,9 +17,10 @@ import pyuvdata.utils as uvutils
 from pyuvdata.data import DATA_PATH
 import pyuvdata.tests as uvtest
 
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
+import pyuvsim.utils as simutils
 import pyuvsim.tests as simtest
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
@@ -306,7 +307,10 @@ def test_single_offzenith_source_uvfits():
     # analytically calculate visibility
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
-    interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]), freq_array=np.array([freq.to('Hz').value]))
+    beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_alt.rad, src_az.rad)
+    interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([beam_az]),
+                                                         za_array=np.array([beam_za]),
+                                                         freq_array=np.array([freq.to('Hz').value]))
     jones = np.zeros((2, 2), dtype=np.complex64)
     jones[0, 0] = interpolated_beam[1, 0, 0, 0, 0]
     jones[1, 1] = interpolated_beam[0, 0, 1, 0, 0]
@@ -322,6 +326,7 @@ def test_single_offzenith_source_uvfits():
 
     print(vis_analytic)
     print(visibility)
+    print(vis_analytic - visibility)
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=1e-4))
 
 
