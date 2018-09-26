@@ -90,13 +90,18 @@ def altaz_to_zenithangle_azimuth(altitude, azimuth):
         zenith_angle in radians
         azimuth in radians in uvbeam convention: North of East(East=0, North=90 degrees)
     """
-    zenith_angle = np.pi / 2 - np.array(altitude)
-    new_azimuth = np.pi / 2 - np.array(azimuth)
+    input_alt = np.array(altitude)
+    input_az = np.array(azimuth)
+    if input_alt.size != input_az.size:
+        raise ValueError('number of altitude and azimuth values must match.')
+
+    zenith_angle = np.pi / 2 - input_alt
+    new_azimuth = np.pi / 2 - input_az
 
     if new_azimuth.size > 1:
         wh_neg = np.where(new_azimuth < -1e-9)
         if wh_neg[0].size > 0:
-            new_azimuth[wh_neg] = new_azimuth + np.pi * 2
+            new_azimuth[wh_neg] = new_azimuth[wh_neg] + np.pi * 2
     else:
         if new_azimuth < -1e-9:
             new_azimuth = new_azimuth + np.pi * 2
@@ -116,15 +121,20 @@ def zenithangle_azimuth_to_altaz(zenith_angle, azimuth):
         altitude in radians
         azimuth in radians in astropy convention: East of North (N=0, E=90 degrees)
     """
-    altitude = np.pi / 2 - np.array(zenith_angle)
-    new_azimuth = np.pi / 2 - np.array(azimuth)
+    input_za = np.array(zenith_angle)
+    input_az = np.array(azimuth)
+    if input_za.size != input_az.size:
+        raise ValueError('number of zenith_angle and azimuth values must match.')
+
+    altitude = np.pi / 2 - input_za
+    new_azimuth = np.pi / 2 - input_az
 
     if new_azimuth.size > 1:
         wh_neg = np.where(new_azimuth < -1e-9)
         if wh_neg[0].size > -1e-9:
-            new_azimuth[wh_neg] = new_azimuth + np.pi * 2
+            new_azimuth[wh_neg] = new_azimuth[wh_neg] + np.pi * 2
     else:
-        if new_azimuth < 0:
+        if new_azimuth < -1e-9:
             new_azimuth = new_azimuth + np.pi * 2
 
     return altitude, new_azimuth
