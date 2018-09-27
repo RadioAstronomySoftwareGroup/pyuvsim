@@ -84,11 +84,11 @@ def altaz_to_zenithangle_azimuth(altitude, azimuth):
 
     Args:
         altitude: in radians
-        azimuth: in radians in astropy convention: East of North (N=0, E=90 degrees)
+        azimuth: in radians in astropy convention: East of North (N=0, E=pi/2)
 
     Returns:
         zenith_angle in radians
-        azimuth in radians in uvbeam convention: North of East(East=0, North=90 degrees)
+        azimuth in radians in uvbeam convention: North of East(East=0, North=pi/2)
     """
     input_alt = np.array(altitude)
     input_az = np.array(azimuth)
@@ -115,11 +115,11 @@ def zenithangle_azimuth_to_altaz(zenith_angle, azimuth):
 
     Args:
         zenith_angle: in radians
-        azimuth: in radians in uvbeam convention: North of East(East=0, North=90)
+        azimuth: in radians in uvbeam convention: North of East(East=0, North=pi/2)
 
     Returns:
         altitude in radians
-        azimuth in radians in astropy convention: East of North (N=0, E=90 degrees)
+        azimuth in radians in astropy convention: East of North (N=0, E=pi/2)
     """
     input_za = np.array(zenith_angle)
     input_az = np.array(azimuth)
