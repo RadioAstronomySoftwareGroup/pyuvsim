@@ -219,12 +219,12 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
             spacing = length / (Nsrcs - 1)
             max_alt = 90. - spacing / 2
             alts = np.linspace(min_alt, max_alt, Nsrcs / 2)
-            alts = np.append(alts, np.flip(alts))
+            alts = np.append(alts, np.flip(alts, axis=0))
             azs = np.append(np.zeros(Nsrcs // 2, dtype=float) + 180.,
                             np.zeros(Nsrcs // 2, dtype=float))
         else:
             alts = np.linspace(min_alt, 90, (Nsrcs + 1) // 2)
-            alts = np.append(alts, np.flip(alts[1:]))
+            alts = np.append(alts, np.flip(alts[1:], axis=0))
             azs = np.append(np.zeros((Nsrcs + 1) // 2, dtype=float) + 180.,
                             np.zeros((Nsrcs - 1) // 2, dtype=float))
 

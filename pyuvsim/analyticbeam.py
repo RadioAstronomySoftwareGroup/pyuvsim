@@ -53,23 +53,7 @@ class AnalyticBeam(object):
                 if az/za_arrays are not passed), shape: (Naxes_vec, Ncomponents_vec,
                 Npixels/(Naxis1, Naxis2) or az_array.size if az/za_arrays are passed)
         """
-        # (Naxes_vec, Nspws, Nfeeds or Npols, freq_array.size, az_array.size)
 
-        Mirrors the interp function of UVBeam objects.
-        Args:
-            az_array: az values to interpolate to in radians (same length as za_array)
-                The azimuth here has the UVBeam convention: North of East(East=0, North=pi/2)
-            za_array: za values to interpolate to in radians (same length as az_array)
-            freq_array: frequency values to interpolate to
-
-        Returns:
-            an array of interpolated values, shape: (Naxes_vec, Nspws, Nfeeds or Npols,
-                Nfreqs or freq_array.size if freq_array is passed,
-                Npixels/(Naxis1, Naxis2) or az_array.size if az/za_arrays are passed)
-            an array of interpolated basis vectors (or self.basis_vector_array
-                if az/za_arrays are not passed), shape: (Naxes_vec, Ncomponents_vec,
-                Npixels/(Naxis1, Naxis2) or az_array.size if az/za_arrays are passed)
-        """
         if self.type == 'uniform':
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
             interp_data[1, 0, 0, :, :] = 1

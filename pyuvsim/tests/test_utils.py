@@ -10,6 +10,8 @@ import nose.tools as nt
 from astropy.time import Time
 from astropy.coordinates import Angle
 
+from pyuvsim import utils as simutils
+
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
