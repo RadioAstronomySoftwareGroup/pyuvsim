@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import nose.tools as nt
 from astropy.time import Time
-from astropy.coordinates import Angle, EarthLocation
+from astropy.coordinates import Angle, EarthLocation, SkyCoord
 from astropy import units
 
 import pyuvsim
