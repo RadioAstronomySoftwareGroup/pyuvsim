@@ -22,7 +22,7 @@ import pyuvdata.utils as uvutils
 from .source import Source
 from .analyticbeam import AnalyticBeam
 from .mpi import get_rank
-from .utils import check_file_exists_and_increment 
+from .utils import check_file_exists_and_increment
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 
@@ -667,7 +667,7 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
 def write_uvfits(uv_obj, param_dict, return_filename=False, dryrun=False):
     """
     Parse output file information from parameters and write uvfits to file.
-    
+
     Args:
         uv_obj: UVData object to write out.
         param_dict: parameter dictionary defining output path, filename, and

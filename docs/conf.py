@@ -42,7 +42,7 @@ release = u''
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-#    'sphinx.ext.napoleon',
+    #    'sphinx.ext.napoleon',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
@@ -166,23 +166,13 @@ texinfo_documents = [
 ]
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 def build_custom_docs(app):
     sys.path.append(os.getcwd())
     import make_index
     make_index.write_index_rst(readme_file=readme_file, write_file=index_file)
 
 # -- Extension configuration -------------------------------------------------
+
+
 def setup(app):
     app.connect('builder-inited', build_custom_docs)

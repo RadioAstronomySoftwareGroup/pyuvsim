@@ -51,7 +51,7 @@ def write_index_rst(readme_file=None, write_file=None):
             '   usage\n'
             '   parameter_files\n'
             '   classes\n')
-    
+
     out.replace(u"\u2018", "'").replace(u"\u2019", "'").replace(u"\xa0", " ")
 
     if write_file is None:

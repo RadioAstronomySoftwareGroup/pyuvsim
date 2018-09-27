@@ -38,7 +38,7 @@ class AnalyticBeam(object):
     def interp(self, az_array, za_array, freq_array):
         """
         Evaluate the primary beam at given az, za locations (in radians).
-	(similar to UVBeam.interp)
+        (similar to UVBeam.interp)
 
         Args:
             az_array: az values to evaluate (same length as za_array)
