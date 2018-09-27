@@ -15,6 +15,7 @@ from astropy import units
 from pyuvdata import UVData
 
 import pyuvsim
+import pyuvsim.utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
@@ -38,8 +39,12 @@ def test_uniform_beam():
         src_coord = SkyCoord(ra=src.ra, dec=src.dec, frame='icrs', obstime=time,
                              location=array_location)
         src_coord_altaz = src_coord.transform_to('altaz')
-        az_vals.append(src_coord_altaz.az.to('rad').value)
-        za_vals.append((Angle('90d') - src_coord_altaz.alt).to('rad').value)
+
+        beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_coord_altaz.alt.to('rad').value,
+                                                                 src_coord_altaz.az.to('rad').value)
+        az_vals.append(beam_az)
+        za_vals.append(beam_za)
+
         if len(freq_vals) > 0:
             if src.freq.to('Hz').value != freq_vals[0]:
                 freq_vals.append(src.freq.to('Hz').value)
@@ -77,8 +82,12 @@ def test_airy_beam():
         src_coord = SkyCoord(ra=src.ra, dec=src.dec, frame='icrs', obstime=time,
                              location=array_location)
         src_coord_altaz = src_coord.transform_to('altaz')
-        az_vals.append(src_coord_altaz.az.to('rad').value)
-        za_vals.append((Angle('90d') - src_coord_altaz.alt).to('rad').value)
+
+        beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_coord_altaz.alt.to('rad').value,
+                                                                 src_coord_altaz.az.to('rad').value)
+        az_vals.append(beam_az)
+        za_vals.append(beam_za)
+
         if len(freq_vals) > 0:
             if src.freq.to('Hz').value != freq_vals[0]:
                 freq_vals.append(src.freq.to('Hz').value)
@@ -126,8 +135,12 @@ def test_gaussian_beam():
         src_coord = SkyCoord(ra=src.ra, dec=src.dec, frame='icrs', obstime=time,
                              location=array_location)
         src_coord_altaz = src_coord.transform_to('altaz')
-        az_vals.append(src_coord_altaz.az.to('rad').value)
-        za_vals.append((Angle('90d') - src_coord_altaz.alt).to('rad').value)
+
+        beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_coord_altaz.alt.to('rad').value,
+                                                                 src_coord_altaz.az.to('rad').value)
+        az_vals.append(beam_az)
+        za_vals.append(beam_za)
+
         if len(freq_vals) > 0:
             if src.freq.to('Hz').value != freq_vals[0]:
                 freq_vals.append(src.freq.to('Hz').value)
@@ -172,7 +185,7 @@ def test_gaussbeam_values():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
 
     catalog, mock_keywords = pyuvsim.create_mock_catalog(time=time, arrangement='long-line', Nsrcs=41,
-                                                         max_za=10., array_location=array_location)
+                                                         min_alt=80., array_location=array_location)
 
     beam = pyuvsim.AnalyticBeam('gaussian', sigma=sigma)
     array = pyuvsim.Telescope('telescope_name', array_location, [beam])
@@ -183,16 +196,17 @@ def test_gaussbeam_values():
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
     coherencies = []
-    zenith_angles = []
+    altitudes = []
     for src in catalog:
         task = pyuvsim.UVTask(src, time, freq, baseline, array)
         engine = pyuvsim.UVEngine(task)
         engine.apply_beam()
-        zenith_angles.append(task.source.az_za[1])   # In radians.
+        altitudes.append(task.source.alt_az[0])   # In radians.
         coherencies.append(np.real(engine.apparent_coherency[0, 0]).astype(float))  # All four components should be identical
 
     coherencies = np.array(coherencies)
-    zenith_angles = np.array(zenith_angles)
+    zenith_angles, _ = simutils.altaz_to_zenithangle_azimuth(altitudes,
+                                                             np.zeros_like(np.array(altitudes)))
 
     # Confirm the coherency values (ie., brightnesses) match the beam values.
 

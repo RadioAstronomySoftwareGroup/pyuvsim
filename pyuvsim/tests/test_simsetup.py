@@ -60,7 +60,6 @@ def test_mock_catalog_off_zenith_source():
 
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
-    src_za = Angle('90.0d') - src_alt
 
     time = Time(2457458.65410, scale='utc', format='jd')
 
@@ -76,7 +75,7 @@ def test_mock_catalog_off_zenith_source():
     dec = icrs_coord.dec
     test_source = pyuvsim.Source('src0', ra, dec, freq, [1.0, 0, 0, 0])
 
-    cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
+    cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     cat_source = cat[0]
 
     nt.assert_equal(cat_source, test_source)
@@ -305,7 +304,9 @@ def test_mock_catalogs():
                      'zenith': 'mock_zenith_2458098.27471.txt'}
 
     for arr in arrangements:
-        radec_catalog = pyuvsim.simsetup.read_text_catalog(os.path.join(SIM_DATA_PATH, 'test_catalogs', text_catalogs[arr]))
+        radec_catalog = pyuvsim.simsetup.read_text_catalog(os.path.join(SIM_DATA_PATH,
+                                                           'test_catalogs', text_catalogs[arr]))
+        print(arr)
         nt.assert_true(np.all(radec_catalog == cats[arr]))
 
 

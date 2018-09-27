@@ -146,7 +146,7 @@ def read_text_catalog(catalog_csv):
 
 
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
-                        zen_ang=None, save=False, max_za=-1.0):
+                        alt=None, save=False, min_alt=None):
     """
         Create a mock catalog with test sources at zenith.
 
@@ -155,7 +155,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         Keywords:
             * Nsrcs = Number of sources to put at zenith
             * array_location = EarthLocation object [Default = HERA site]
-            * zen_ang = For off-zenith and triangle arrangements, how far from zenith to place sources. (deg)
+            * alt = For off-zenith and triangle arrangements, altitude to place sources. (deg)
             * save = Save mock catalog as npz file.
 
         Accepted arrangements:
@@ -183,20 +183,20 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
                      'array_location': repr((array_location.lat.deg, array_location.lon.deg, array_location.height.value))}
 
     if arrangement == 'off-zenith':
-        if zen_ang is None:
-            zen_ang = 5.0  # Degrees
-        mock_keywords['zen_ang'] = zen_ang
+        if alt is None:
+            alt = 85.0  # Degrees
+        mock_keywords['alt'] = alt
         Nsrcs = 1
-        alts = [90. - zen_ang]
+        alts = [alt]
         azs = [90.]   # 0 = North pole, 90. = East pole
         fluxes = [1.0]
 
     if arrangement == 'triangle':
         Nsrcs = 3
-        if zen_ang is None:
-            zen_ang = 3.0
-        mock_keywords['zen_ang'] = zen_ang
-        alts = [90. - zen_ang, 90. - zen_ang, 90. - zen_ang]
+        if alt is None:
+            alt = 87.0  # Degrees
+        mock_keywords['alt'] = alt
+        alts = [alt, alt, alt]
         azs = [0., 120., 240.]
         fluxes = [1.0, 1.0, 1.0]
 
@@ -219,17 +219,25 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     if arrangement == 'long-line':
         if Nsrcs is None:
             Nsrcs = 10
-        if max_za < 0:
-            max_za = 85
+        if min_alt is None:
+            min_alt = 5
         mock_keywords['Nsrcs'] = Nsrcs
-        mock_keywords['zen_ang'] = zen_ang
+        mock_keywords['alt'] = alt
         fluxes = np.ones(Nsrcs, dtype=float)
-        zas = np.linspace(-max_za, max_za, Nsrcs)
-        alts = 90. - zas
-        azs = np.zeros(Nsrcs, dtype=float)
-        inds = np.where(alts > 90.0)
-        azs[inds] = 180.
-        alts[inds] = 90. + zas[inds]
+
+        if Nsrcs % 2 == 0:
+            length = 180 - min_alt * 2
+            spacing = length / (Nsrcs - 1)
+            max_alt = 90. - spacing / 2
+            alts = np.linspace(min_alt, max_alt, Nsrcs / 2)
+            alts = np.append(alts, np.flip(alts))
+            azs = np.append(np.zeros(Nsrcs // 2, dtype=float) + 180.,
+                            np.zeros(Nsrcs // 2, dtype=float))
+        else:
+            alts = np.linspace(min_alt, 90, (Nsrcs + 1) // 2)
+            alts = np.append(alts, np.flip(alts[1:]))
+            azs = np.append(np.zeros((Nsrcs + 1) // 2, dtype=float) + 180.,
+                            np.zeros((Nsrcs - 1) // 2, dtype=float))
 
     if arrangement == 'hera_text':
 
@@ -250,8 +258,8 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
                         5.385, 3.606, 2.828, 2.236, 2.236, 2.828, 3.606, 6.325])
 
         alts = 90. - zas
-        Nsrcs = zas.size
-        fluxes = np.ones_like(azs)
+        Nsrcs = alts.size
+        fluxes = np.ones_like(alts)
 
     catalog = []
 

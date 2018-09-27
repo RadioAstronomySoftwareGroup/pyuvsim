@@ -17,7 +17,7 @@ class Source(object):
     ra = None
     dec = None
     coherency_radec = None
-    az_za = None
+    alt_az = None
 
     def __init__(self, name, ra, dec, freq, stokes, pos_tol=np.finfo(float).eps):
         """
@@ -74,18 +74,18 @@ class Source(object):
     @profile
     def coherency_calc(self, time, telescope_location):
         """
-        Calculate the local coherency in az/za basis for this source at a time & location.
+        Calculate the local coherency in alt/az basis for this source at a time & location.
 
         The coherency is a 2x2 matrix giving electric field correlation in Jy.
         It's specified on the object as a coherency in the ra/dec basis,
-        but must be rotated into local az/za.
+        but must be rotated into local alt/az.
 
         Args:
             time: astropy Time object
             telescope_location: astropy EarthLocation object
 
         Returns:
-            local coherency in az/za basis
+            local coherency in alt/az basis
         """
         if not isinstance(time, Time):
             raise ValueError('time must be an astropy Time object. '
@@ -119,16 +119,16 @@ class Source(object):
         return coherency_local
 
     @profile
-    def az_za_calc(self, time, telescope_location):
+    def alt_az_calc(self, time, telescope_location):
         """
-        calculate the azimuth & zenith angle for this source at a time & location
+        calculate the altitude & azimuth for this source at a time & location
 
         Args:
             time: astropy Time object
             telescope_location: astropy EarthLocation object
 
         Returns:
-            (azimuth, zenith_angle) in radians
+            (altitude, azimuth) in radians
         """
         if not isinstance(time, Time):
             raise ValueError('time must be an astropy Time object. '
@@ -140,9 +140,9 @@ class Source(object):
 
         source_altaz = self.skycoord.transform_to(AltAz(obstime=time, location=telescope_location))
 
-        az_za = (source_altaz.az.rad, source_altaz.zen.rad)
-        self.az_za = az_za
-        return az_za
+        alt_az = (source_altaz.alt.rad, source_altaz.az.rad)
+        self.alt_az = alt_az
+        return alt_az
 
     @profile
     def pos_lmn(self, time, telescope_location):
@@ -157,14 +157,15 @@ class Source(object):
             (l, m, n) direction cosine values
         """
         # calculate direction cosines of source at current time and array location
-        if self.az_za is None:
-            self.az_za_calc(time, telescope_location)
+        if self.alt_az is None:
+            self.alt_az_calc(time, telescope_location)
 
         # Need a horizon mask, for now using pi/2
-        if self.az_za[1] > (np.pi / 2.):
+        if self.alt_az[0] < 0:
             return None
 
-        pos_l = np.sin(self.az_za[0]) * np.sin(self.az_za[1])
-        pos_m = np.cos(self.az_za[0]) * np.sin(self.az_za[1])
-        pos_n = np.cos(self.az_za[1])
+        pos_l = np.sin(self.alt_az[1]) * np.cos(self.alt_az[0])
+        pos_m = np.cos(self.alt_az[1]) * np.cos(self.alt_az[0])
+        pos_n = np.sin(self.alt_az[0])
+
         return (pos_l, pos_m, pos_n)

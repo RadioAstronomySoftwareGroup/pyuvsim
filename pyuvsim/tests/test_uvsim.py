@@ -17,9 +17,10 @@ import pyuvdata.utils as uvutils
 from pyuvdata.data import DATA_PATH
 import pyuvdata.tests as uvtest
 
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
+import pyuvsim.utils as simutils
 import pyuvsim.tests as simtest
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
@@ -74,9 +75,8 @@ def test_visibility_source_below_horizon():
     freq = (150e6 * units.Hz)
 
     src_alt = Angle('-40d')
-    src_za = Angle('90.0d') - src_alt
 
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
+    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     source = source_arr[0]
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
@@ -194,7 +194,6 @@ def test_redundant_baselines():
     hera_uv.unphase_to_drift()
 
     src_alt = Angle('85.0d')
-    src_za = Angle('90.0d') - src_alt
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     array_location = EarthLocation.from_geocentric(hera_uv.telescope_location[0],
@@ -215,7 +214,7 @@ def test_redundant_baselines():
     # setup the things that don't come from pyuvdata:
     # make a source off zenith
     time.location = array_location
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
+    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     source = source_arr[0]
 
     beam = UVBeam()
@@ -276,8 +275,17 @@ def test_single_offzenith_source_uvfits():
     # make a source off zenith
     time.location = array_location
     # create_mock_catalog uses azimuth of 90
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
+    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     source = source_arr[0]
+
+    src_alt_az = source.alt_az_calc(time, array_location)
+    nt.assert_true(np.isclose(src_alt_az[0], src_alt.rad))
+    nt.assert_true(np.isclose(src_alt_az[1], src_az.rad))
+
+    src_lmn = source.pos_lmn(time, array_location)
+    nt.assert_true(np.isclose(src_lmn[0], src_l))
+    nt.assert_true(np.isclose(src_lmn[1], src_m))
+    nt.assert_true(np.isclose(src_lmn[2], src_n))
 
     beam = UVBeam()
     beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
@@ -299,12 +307,26 @@ def test_single_offzenith_source_uvfits():
     # analytically calculate visibility
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
-    interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]), freq_array=np.array([freq.to('Hz').value]))
+    beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_alt.rad, src_az.rad)
+    beam_za2, beam_az2 = simutils.altaz_to_zenithangle_azimuth(src_alt_az[0], src_alt_az[1])
+
+    nt.assert_true(np.isclose(beam_za, beam_za2))
+    nt.assert_true(np.isclose(beam_az, beam_az2))
+
+    interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([beam_az]),
+                                                         za_array=np.array([beam_za]),
+                                                         freq_array=np.array([freq.to('Hz').value]))
     jones = np.zeros((2, 2), dtype=np.complex64)
     jones[0, 0] = interpolated_beam[1, 0, 0, 0, 0]
     jones[1, 1] = interpolated_beam[0, 0, 1, 0, 0]
     jones[1, 0] = interpolated_beam[1, 0, 1, 0, 0]
     jones[0, 1] = interpolated_beam[0, 0, 0, 0, 0]
+
+    beam_jones = antenna1.get_beam_jones(array, src_alt_az, freq)
+    print(beam_jones)
+    print(jones)
+    print(beam_jones - jones)
+    nt.assert_true(np.allclose(beam_jones, jones))
 
     uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
 
@@ -312,6 +334,10 @@ def test_single_offzenith_source_uvfits():
     vis_analytic = np.array([vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[0, 1], vis_analytic[1, 0]])
 
     nt.assert_true(np.allclose(baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4))
+
+    print(vis_analytic)
+    print(visibility)
+    print(vis_analytic - visibility)
     nt.assert_true(np.allclose(visibility, vis_analytic, atol=1e-4))
 
 
@@ -350,7 +376,7 @@ def test_offzenith_source_multibl_uvfits():
     # make a source off zenith
     time.location = array_location
     # create_mock_catalog uses azimuth of 90
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
+    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     source = source_arr[0]
 
     # beam = UVBeam()
