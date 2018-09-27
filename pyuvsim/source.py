@@ -138,7 +138,7 @@ class Source(object):
                              'value was: {al}'.format(al=telescope_location))
 
         if np.sum(np.abs(self.stokes[1:])) == 0:
-            basis_transformation_matrix = np.array([[1, 0], [0, 1]])
+            rotation_matrix = np.array([[1, 0], [0, 1]])
         else:
             # Calculate the coherency transformation matrix
             Rotation = self._calc_basis_rotation_matrix(time, telescope_location)
@@ -147,10 +147,8 @@ class Source(object):
             # on the sphere.
             rotation_matrix = self._calc_vector_rotation(Rotation)
 
-            alt_to_za = np.array([[-1., 0], [0, 1]])  # ??? Supposedly fixes theta_hat points south for za and north for alt
-            basis_transformation_matrix = np.einsum('ab,bc->ac', alt_to_za, rotation_matrix)
-
-        coherency_local = np.einsum('ab,bc,cd->ad', basis_transformation_matrix.T, self.coherency_radec, basis_transformation_matrix)
+        coherency_local = np.einsum('ab,bc,cd->ad', rotation_matrix.T,
+                                    self.coherency_radec, rotation_matrix)
 
         return coherency_local
 
