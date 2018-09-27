@@ -1,0 +1,2 @@
+SOURCE_ID	RA_J2000 [deg]	Dec_J2000 [deg]	Flux [Jy]	Frequency [Hz]
+src0	19.792170	-30.811302	1.00	150000000.00

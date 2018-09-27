@@ -4,9 +4,6 @@
 
 from __future__ import absolute_import, division, print_function
 
-import pyuvsim
-from pyuvdata import UVBeam, UVData
-from astropy.time import Time
 import numpy as np
 import os
 import yaml
@@ -14,59 +11,90 @@ import shutil
 import copy
 from six.moves import map, range, zip
 import nose.tools as nt
+import astropy
+from astropy.time import Time
+from astropy.coordinates import Angle, SkyCoord, EarthLocation
+from astropy import units
 
+from pyuvdata import UVBeam, UVData
+import pyuvdata.tests as uvtest
+
+import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-from test_uvsim import create_zenith_source
+import pyuvsim.tests as simtest
 
-
-EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfits')
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
-param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(5)]   # Five different test configs
+
+# Five different test configs
+param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(5)]
+
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
 
 
-def compare_dictionaries(dic1, dic2):
-    """
-        Recursively compare two dictionaries.
-    """
-    compare = True
-    for k in dic1.keys():
-        if isinstance(dic1[k], dict):
-            compare *= compare_dictionaries(dic1[k], dic2[k])
-        else:
-            if isinstance(dic1[k], float):
-                compare *= np.isclose(dic1[k], dic2[k], atol=1e-5)
-            else:
-                compare *= (dic1[k] == dic2[k])
-    return bool(compare)
+def test_mock_catalog_zenith_source():
+
+    time = Time(2457458.65410, scale='utc', format='jd')
+
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
+    freq = (150e6 * units.Hz)
+
+    source_coord = SkyCoord(alt=Angle(90 * units.deg), az=Angle(0 * units.deg),
+                            obstime=time, frame='altaz', location=array_location)
+    icrs_coord = source_coord.transform_to('icrs')
+
+    ra = icrs_coord.ra
+    dec = icrs_coord.dec
+
+    test_source = pyuvsim.Source('src0', ra, dec, freq, [1, 0, 0, 0])
+
+    cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith')
+    cat_source = cat[0]
+
+    nt.assert_equal(cat_source, test_source)
 
 
-def test_setup_airy():
-    pyuvsim.initialize_uvdata_from_params(os.path.join(SIM_DATA_PATH,
-                                                       'simple_equator_sim_airy.yaml'))
-    nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, os.path.join(SIM_DATA_PATH,
-                                                                                   'simple_equator_sim_airy_broken.yaml'))
+def test_mock_catalog_off_zenith_source():
 
+    src_az = Angle('90.0d')
+    src_alt = Angle('85.0d')
+    src_za = Angle('90.0d') - src_alt
 
-def test_param_reader():
-    for n in range(5):
-        yield (check_param_reader, n)
+    time = Time(2457458.65410, scale='utc', format='jd')
+
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
+    freq = (150e6 * units.Hz)
+
+    source_coord = SkyCoord(alt=src_alt, az=src_az,
+                            obstime=time, frame='altaz', location=array_location)
+    icrs_coord = source_coord.transform_to('icrs')
+
+    ra = icrs_coord.ra
+    dec = icrs_coord.dec
+    test_source = pyuvsim.Source('src0', ra, dec, freq, [1.0, 0, 0, 0])
+
+    cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', zen_ang=src_za.deg)
+    cat_source = cat[0]
+
+    nt.assert_equal(cat_source, test_source)
 
 
 def check_param_reader(config_num):
     """
-        tests initialize_uvdata_from_params
+        Part of test_param_reader
     """
 
     param_filename = param_filenames[config_num]
     hera_uv = UVData()
-    hera_uv.read_uvfits(triangle_uvfits_file)
+    uvtest.checkWarnings(hera_uv.read_uvfits, [triangle_uvfits_file],
+                         message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
     hera_uv.telescope_name = 'HERA'
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources = np.array([create_zenith_source(time, 'zensrc')])
+    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
@@ -148,19 +176,21 @@ def check_param_reader(config_num):
     # This is enabled by the comparison operator in UVTask
     uvtask_list = sorted(uvtask_list)
     expected_uvtask_list = sorted(expected_uvtask_list)
-    for ti in range(len(expected_uvtask_list)):
-        print(uvtask_list[ti].baseline.antenna1.beam_id, expected_uvtask_list[ti].baseline.antenna1.beam_id)
-        print(uvtask_list[ti].baseline.antenna2.beam_id, expected_uvtask_list[ti].baseline.antenna2.beam_id)
-        print(uvtask_list[ti].baseline.antenna1.number, expected_uvtask_list[ti].baseline.antenna1.number)
-        print(uvtask_list[ti].baseline.antenna2.number, expected_uvtask_list[ti].baseline.antenna2.number)
-        print(uvtask_list[ti].baseline.antenna1.name, expected_uvtask_list[ti].baseline.antenna1.name)
-        print(uvtask_list[ti].baseline.antenna2.name, expected_uvtask_list[ti].baseline.antenna2.name)
-        print(uvtask_list[ti].freq - expected_uvtask_list[ti].freq)
-        print(uvtask_list[ti].time - expected_uvtask_list[ti].time)
-        print(uvtask_list[ti].uvdata_index, expected_uvtask_list[ti].uvdata_index)
-        print(uvtask_list[ti].telescope.name, expected_uvtask_list[ti].telescope.name)
-        print('\n')
+
     nt.assert_true(uvtask_list == expected_uvtask_list)
+
+
+# This loops through different config files and tests all of them the same way
+# note that each config tested shows up as a separate '.' in the nosetests output
+def test_param_reader():
+    """
+    Tests initialize_uvdata_from_params for five different parameter files.
+        Each file has a different arrangement of parameters that should yield the same uvdata object, so this
+        checks that the various configurations all work consistently, and that if insufficient information is
+        provided that the function errors appropriately.
+    """
+    for n in range(5):
+        yield (check_param_reader, n)
 
 
 def test_uvfits_to_config():
@@ -176,7 +206,6 @@ def test_uvfits_to_config():
 
     # Read uvfits file to params.
     uv0 = UVData()
-    # uv0.read_uvfits(EW_uvfits_file)
     uv0.read_uvfits(longbl_uvfits_file)
     path, telescope_config, layout_fname = \
         pyuvsim.simsetup.uvdata_to_telescope_config(uv0, herabeam_default,
@@ -187,7 +216,6 @@ def test_uvfits_to_config():
                                            layout_csv_name=os.path.join(path, layout_fname),
                                            path_out=opath)
     # From parameters, generate a uvdata object.
-
     with open(os.path.join(opath, param_filename), 'r') as pf:
         param_dict = yaml.safe_load(pf)
     param_dict['config_path'] = opath    # Ensure path is present
@@ -210,7 +238,7 @@ def test_uvfits_to_config():
     with open(os.path.join(path, second_param_filename), 'r') as pf:
         param_dict = yaml.safe_load(pf)
 
-    nt.assert_true(compare_dictionaries(param_dict, orig_param_dict))
+    nt.assert_true(simtest.compare_dictionaries(param_dict, orig_param_dict))
 
     shutil.rmtree(opath)
 
@@ -222,7 +250,7 @@ def test_point_catalog_reader():
     with open(catfile, 'r') as fhandle:
         header = fhandle.readline()
     header = [h.strip() for h in header.split()]
-    dt = np.format_parser(['a10', 'f8', 'f8', 'f8', 'f8'],
+    dt = np.format_parser(['U10', 'f8', 'f8', 'f8', 'f8'],
                           ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], header)
 
     catalog_table = np.genfromtxt(catfile, autostrip=True, skip_header=1,
@@ -234,11 +262,16 @@ def test_point_catalog_reader():
         nt.assert_true(src.dec.deg in catalog_table['dec_j2000'])
         nt.assert_true(src.stokes[0] in catalog_table['flux_density_I'])
         nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])
+    # shouldn't this also test the values?
 
 
 def test_read_gleam():
 
-    sourcelist = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot)
+    # sourcelist = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot)
+    sourcelist = uvtest.checkWarnings(pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
+                                      message=GLEAM_vot, nwarnings=11,
+                                      category=[astropy.io.votable.exceptions.W27]
+                                      + [astropy.io.votable.exceptions.W50] * 10)
 
     nt.assert_equal(len(sourcelist), 50)
 
@@ -249,23 +282,38 @@ def test_file_namer():
     """
     existing_file = param_filenames[0]
     new_filepath = pyuvsim.simsetup.check_file_exists_and_increment(existing_file)
-    print(new_filepath)
-    print(existing_file)
     nt.assert_true(new_filepath.endswith("_5.yaml"))    # There are four other of these param test files
 
 
 def test_mock_catalogs():
-    time = Time(2457458.1739, scale='utc', format='jd')
-    cat1, mock_kwds1 = pyuvsim.simsetup.create_mock_catalog(time, 'zenith')
-    cat2, mock_kwds2 = pyuvsim.simsetup.create_mock_catalog(time, 'off-zenith')
-    cat3, mock_kwds3 = pyuvsim.simsetup.create_mock_catalog(time, 'cross')
-    cat4, mock_kwds4 = pyuvsim.simsetup.create_mock_catalog(time, 'triangle')
-    cat5, mock_kwds5 = pyuvsim.simsetup.create_mock_catalog(time, 'long-line')
-    cat6, mock_kwds6 = pyuvsim.simsetup.create_mock_catalog(time, 'hera_text')
+    time = Time(2458098.27471265, scale='utc', format='jd')
 
-    nt.assert_true(len(cat1) == 1)
-    nt.assert_true(len(cat2) == 1)
-    nt.assert_true(len(cat3) == 4)
-    nt.assert_true(len(cat4) == 3)
-    nt.assert_true(len(cat5) == 10)
-    nt.assert_true(len(cat6) == 43)
+    arrangements = ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']
+
+    cats = {}
+    for arr in arrangements:
+        cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, arr)
+        cats[arr] = cat
+
+    # For each mock catalog, verify the Ra/Dec source positions against a text catalog.
+
+    text_catalogs = {'cross': 'mock_cross_2458098.27471.txt',
+                     'hera_text': 'mock_hera_text_2458098.27471.txt',
+                     'long-line': 'mock_long-line_2458098.27471.txt',
+                     'off-zenith': 'mock_off-zenith_2458098.27471.txt',
+                     'triangle': 'mock_triangle_2458098.27471.txt',
+                     'zenith': 'mock_zenith_2458098.27471.txt'}
+
+    for arr in arrangements:
+        radec_catalog = pyuvsim.simsetup.read_text_catalog(os.path.join(SIM_DATA_PATH, 'test_catalogs', text_catalogs[arr]))
+        nt.assert_true(np.all(radec_catalog == cats[arr]))
+
+
+def test_catalog_file_writer():
+    time = Time(2458098.27471265, scale='utc', format='jd')
+    mock_zenith, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, 'zenith')
+    fname = 'temp_cat.txt'
+    pyuvsim.simsetup.write_catalog_to_file(fname, mock_zenith)
+    mock_zenith_loop = pyuvsim.simsetup.read_text_catalog(fname)
+    nt.assert_true(np.all(mock_zenith_loop == mock_zenith))
+    os.remove(fname)
