@@ -41,9 +41,11 @@ class AnalyticBeam(object):
         (similar to UVBeam.interp)
 
         Args:
-            az_array: az values to evaluate (same length as za_array)
-            za_array: za values to evaluate (same length as az_array)
-            freq_array: frequency values
+            az_array: az values to evaluate at in radians (same length as za_array)
+                The azimuth here has the UVBeam convention: North of East(East=0, North=pi/2)
+            za_array: za values to evaluate at in radians (same length as az_array)
+            freq_array: frequency values to evaluate at
+
 
         Returns:
             an array of beam values, shape: (Naxes_vec, Nspws, Nfeeds or Npols,
