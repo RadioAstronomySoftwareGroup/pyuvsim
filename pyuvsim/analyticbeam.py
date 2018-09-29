@@ -9,6 +9,14 @@ from scipy.special import spherical_jn as jn
 
 
 class AnalyticBeam(object):
+    """
+    Defines an object with similar functionality to pyuvdata.UVBeam, which
+    directly calculates jones matrices at given azimuths and zenith angles
+    from analytic functions.
+
+    Supports uniform (unit response in all directions), gaussian, and Airy
+    function beam types.
+    """
 
     supported_types = ['uniform', 'gaussian', 'airy']
 
@@ -29,23 +37,25 @@ class AnalyticBeam(object):
     @profile
     def interp(self, az_array, za_array, freq_array):
         """
-        Interpolate beam to given az, za locations (in radians).
+        Evaluate the primary beam at given az, za locations (in radians).
+        (similar to UVBeam.interp)
 
-        Mirrors the interp function of UVBeam objects.
         Args:
-            az_array: az values to interpolate to in radians (same length as za_array)
+            az_array: az values to evaluate at in radians (same length as za_array)
                 The azimuth here has the UVBeam convention: North of East(East=0, North=pi/2)
-            za_array: za values to interpolate to in radians (same length as az_array)
-            freq_array: frequency values to interpolate to
+            za_array: za values to evaluate at in radians (same length as az_array)
+            freq_array: frequency values to evaluate at
+
 
         Returns:
-            an array of interpolated values, shape: (Naxes_vec, Nspws, Nfeeds or Npols,
+            an array of beam values, shape: (Naxes_vec, Nspws, Nfeeds or Npols,
                 Nfreqs or freq_array.size if freq_array is passed,
                 Npixels/(Naxis1, Naxis2) or az_array.size if az/za_arrays are passed)
             an array of interpolated basis vectors (or self.basis_vector_array
                 if az/za_arrays are not passed), shape: (Naxes_vec, Ncomponents_vec,
                 Npixels/(Naxis1, Naxis2) or az_array.size if az/za_arrays are passed)
         """
+
         if self.type == 'uniform':
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
             interp_data[1, 0, 0, :, :] = 1

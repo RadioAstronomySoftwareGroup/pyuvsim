@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import time as pytime
 import sys
+import os
 import numpy as np
 from astropy import _erfa as erfa
 from astropy.coordinates import Angle
@@ -27,8 +28,7 @@ def get_version_string():
 
 class progsteps:
     """
-        Similar to progress bar. Prints a percentage of completion.
-        For when running in batch and progress bar doesn't work well.
+        Similar to a progress bar, this prints a percentage of task completion.
     """
 
     def __init__(self, maxval=None):
@@ -45,7 +45,7 @@ class progsteps:
         if count % self.step == 0:
             print("{:0.2f}% completed. {:0.3f} minutes elapsed \n".format(
                   (count / self.maxval) * 100., (pytime.time() - self.t0) / 60.))
-            sys.stdout.flush()
+        sys.stdout.flush()
 
     def finish(self):
         self.update(self.maxval)
@@ -138,3 +138,32 @@ def zenithangle_azimuth_to_altaz(zenith_angle, azimuth):
             new_azimuth = new_azimuth + np.pi * 2
 
     return altitude, new_azimuth
+
+
+def strip_extension(filepath):
+    """ Remove extension from file. """
+    if '.' not in filepath:
+        return filepath, ''
+    file_list = filepath.split('.')
+    return ".".join(file_list[:-1]), '.' + file_list[-1]
+
+
+def check_file_exists_and_increment(filepath):
+    """
+        Given filepath (path + filename), check if it exists. If so, add a _1
+        at the end, if that exists add a _2, and so on.
+    """
+    if os.path.exists(filepath):
+        filepath, ext = strip_extension(filepath)
+        if not filepath.endswith("_0"):
+            filepath += "_0" + ext
+        else:
+            filepath += ext
+    else:
+        return filepath
+    n = 1
+    while os.path.exists(filepath):
+        filepath, ext = strip_extension(filepath)
+        filepath = filepath[:-2] + "_" + str(n) + ext
+        n += 1
+    return filepath

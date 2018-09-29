@@ -275,15 +275,6 @@ def test_read_gleam():
     nt.assert_equal(len(sourcelist), 50)
 
 
-def test_file_namer():
-    """
-    File name incrementer utility
-    """
-    existing_file = param_filenames[0]
-    new_filepath = pyuvsim.simsetup.check_file_exists_and_increment(existing_file)
-    nt.assert_true(new_filepath.endswith("_5.yaml"))    # There are four other of these param test files
-
-
 def test_mock_catalogs():
     time = Time(2458098.27471265, scale='utc', format='jd')
 

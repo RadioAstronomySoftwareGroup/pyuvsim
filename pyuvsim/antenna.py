@@ -11,6 +11,13 @@ from . import utils as simutils
 
 
 class Antenna(object):
+    """
+    Defines an object that can return a Jones matrix and has a specified
+    location, name, and number.
+
+    One of these defined for each antenna in the array.
+    """
+
     @profile
     def __init__(self, name, number, enu_position, beam_id):
         self.name = name
@@ -22,9 +29,21 @@ class Antenna(object):
 
     @profile
     def get_beam_jones(self, array, source_alt_az, frequency):
+        """
+        2x2 array of Efield vectors in Az/Alt
+
+        Args:
+            array: az values to evaluate (same length as za_array)
+            source_az_za: Tuple or list (azimuth, zenith angle) in radians
+            frequency: (float) frequency in Hz
+
+        Returns:
+            jones_matrix: A 2x2 float array. The first axis is feed, the
+                          second axis is vector component on the sky in az/za.
+
+        """
         # get_direction_jones needs to be defined on UVBeam
         # 2x2 array of Efield vectors in alt/az
-        # return array.beam_list[self.beam_id].get_direction_jones(source_lmn, frequency)
 
         # convert to UVBeam az/za convention
         source_za, source_az = simutils.altaz_to_zenithangle_azimuth(source_alt_az[0], source_alt_az[1])

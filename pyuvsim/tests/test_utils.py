@@ -5,11 +5,18 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+import os
 import nose.tools as nt
 from astropy.time import Time
 from astropy.coordinates import Angle
 
-import pyuvsim.utils as simutils
+from pyuvsim import utils as simutils
+
+import pyuvsim
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+
+# Five different test configs
+param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(5)]
 
 
 def test_tee_ra_loop():
@@ -85,3 +92,12 @@ def test_za_az_to_altaz():
 def test_altaz_za_az_errors():
     nt.assert_raises(ValueError, simutils.altaz_to_zenithangle_azimuth, 0, [0, np.pi / 2])
     nt.assert_raises(ValueError, simutils.zenithangle_azimuth_to_altaz, 0, [0, np.pi / 2])
+
+
+def test_file_namer():
+    """
+    File name incrementer utility
+    """
+    existing_file = param_filenames[0]
+    new_filepath = pyuvsim.utils.check_file_exists_and_increment(existing_file)
+    nt.assert_true(new_filepath.endswith("_5.yaml"))    # There are four other of these param test files

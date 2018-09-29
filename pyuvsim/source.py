@@ -11,6 +11,13 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
 
 class Source(object):
+    """
+    Defines a single point source at a given ICRS ra/dec coordinate, with a
+    flux density defined by stokes parameters.
+
+    Used to calculate local coherency matrix for source brightness in AltAz
+    frame at a specified time.
+    """
     name = None
     freq = None
     stokes = None
@@ -63,13 +70,6 @@ class Source(object):
                                                self.stokes[2] - 1j * self.stokes[3]],
                                               [self.stokes[2] + 1j * self.stokes[3],
                                                self.stokes[0] - self.stokes[1]]])
-
-    def __eq__(self, other):
-        return (np.isclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)
-                and np.isclose(self.dec.deg, other.dec.deg, atol=self.pos_tol)
-                and np.all(self.stokes == other.stokes)
-                and (self.name == other.name)
-                and (self.freq == other.freq))
 
     @profile
     def coherency_calc(self, time, telescope_location):
@@ -169,3 +169,10 @@ class Source(object):
         pos_n = np.sin(self.alt_az[0])
 
         return (pos_l, pos_m, pos_n)
+
+    def __eq__(self, other):
+        return (np.isclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)
+                and np.isclose(self.dec.deg, other.dec.deg, atol=self.pos_tol)
+                and np.all(self.stokes == other.stokes)
+                and (self.name == other.name)
+                and (self.freq == other.freq))

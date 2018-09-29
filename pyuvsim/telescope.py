@@ -8,6 +8,11 @@ import numpy as np
 
 
 class Telescope(object):
+    """
+    Defines the location and name of the observing site, and holds the list
+    of beam objects used by the array.
+    """
+
     def __init__(self, telescope_name, telescope_location, beam_list):
         # telescope location (EarthLocation object)
         self.location = telescope_location

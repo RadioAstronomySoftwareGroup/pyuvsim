@@ -25,6 +25,10 @@ def set_mpi_excepthook(mpi_comm):
 
 
 def start_mpi():
+    """
+    Check if MPI has already been initialized. If so, just set the comm,
+    Npus, and rank variables.
+    """
     global comm, rank, Npus
     if not MPI.Is_initialized():
         # Avoid accidentally doing MPI_INIT twice

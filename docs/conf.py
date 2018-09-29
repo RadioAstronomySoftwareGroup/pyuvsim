@@ -12,9 +12,11 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../pyuvsim/'))
+readme_file = os.path.join(os.path.abspath('../'), 'README.md')
+index_file = os.path.join(os.path.abspath('../docs'), 'index.rst')
 
 
 # -- Project information -----------------------------------------------------
@@ -40,6 +42,7 @@ release = u''
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    #    'sphinx.ext.napoleon',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
@@ -77,8 +80,12 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
-html_theme = 'alabaster'
+# html_theme = 'alabaster
+html_theme = "default"
+html_theme_options = {
+    "rightsidebar": "false",
+    "relbarbgcolor": "black"
+}
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -159,4 +166,13 @@ texinfo_documents = [
 ]
 
 
+def build_custom_docs(app):
+    sys.path.append(os.getcwd())
+    import make_index
+    make_index.write_index_rst(readme_file=readme_file, write_file=index_file)
+
 # -- Extension configuration -------------------------------------------------
+
+
+def setup(app):
+    app.connect('builder-inited', build_custom_docs)

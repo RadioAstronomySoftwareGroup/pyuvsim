@@ -22,35 +22,8 @@ import pyuvdata.utils as uvutils
 from .source import Source
 from .analyticbeam import AnalyticBeam
 from .mpi import get_rank
+from .utils import check_file_exists_and_increment
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-
-
-def strip_extension(filepath):
-    if '.' not in filepath:
-        return filepath, ''
-    file_list = filepath.split('.')
-    return ".".join(file_list[:-1]), '.' + file_list[-1]
-
-
-def check_file_exists_and_increment(filepath):
-    """
-        Given filepath (path + filename), check if it exists. If so, add a _1
-        at the end, if that exists add a _2, and so on.
-    """
-    if os.path.exists(filepath):
-        filepath, ext = strip_extension(filepath)
-        if not filepath.endswith("_0"):
-            filepath += "_0" + ext
-        else:
-            filepath += ext
-    else:
-        return filepath
-    n = 1
-    while os.path.exists(filepath):
-        filepath, ext = strip_extension(filepath)
-        filepath = filepath[:-2] + "_" + str(n) + ext
-        n += 1
-    return filepath
 
 
 def parse_layout_csv(layout_csv):
@@ -73,10 +46,15 @@ def parse_layout_csv(layout_csv):
 
 def read_votable_catalog(gleam_votable):
     """
-    Creates a list of pyuvsim source objects from the GLEAM votable catalog.
-    Despite the semi-standard votable format, there are enough differences that every catalog probably
-    needs its own function.
-    List of tested catalogs: GLEAM EGC catalog, version 2
+    Creates a list of pyuvsim source objects from a votable catalog.
+
+    Args:
+        gleam_votable: Path to votable catalog file.
+
+    Returns:
+        List of pyuvsim.Source objects
+
+    Tested on: GLEAM EGC catalog, version 2
     """
     class Found(Exception):
         pass
@@ -105,6 +83,10 @@ def read_votable_catalog(gleam_votable):
 def write_catalog_to_file(filename, catalog):
     """
     Writes out a catalog to a text file, readable with simsetup.read_catalog_text()
+
+    Args:
+        filename: Path to output file (string)
+        catalog: List of pyuvsim.Source objects
     """
     with open(filename, 'w+') as fo:
         fo.write("SOURCE_ID\tRA_J2000 [deg]\tDec_J2000 [deg]\tFlux [Jy]\tFrequency [Hz]\n")
@@ -115,13 +97,14 @@ def write_catalog_to_file(filename, catalog):
 def read_text_catalog(catalog_csv):
     """
         Read in a text file of sources.
-        Columns:
-            Source_ID = source id
+
+        Expected Columns:
+            Source_ID = source id as a string of maximum 10 characters
             ra_j2000  = right ascension at J2000 epoch, in decimal degrees
             dec_j2000 = declination at J2000 epoch, in decimal degrees
             flux_density_I = Stokes I flux density in Janskies
             frequency = reference frequency (for future spectral indexing) [Hz]
-        For now, flat spectrum sources.
+                        For now, all sources are flat spectrum.
     """
     with open(catalog_csv, 'r') as cfile:
         header = cfile.readline()
@@ -148,24 +131,30 @@ def read_text_catalog(catalog_csv):
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
                         alt=None, save=False, min_alt=None):
     """
-        Create a mock catalog with test sources at zenith.
+        Create a mock catalog. Sources are defined in an AltAz frame at the given time,
+        then returned in ICRS ra/dec coordinates.
 
-        arrangement = Choose test point source pattern (default = 1 source at zenith)
+        Args:
+            time: Julian date (float) or astropy Time object
 
         Keywords:
-            * Nsrcs = Number of sources to put at zenith
-            * array_location = EarthLocation object [Default = HERA site]
-            * alt = For off-zenith and triangle arrangements, altitude to place sources. (deg)
-            * save = Save mock catalog as npz file.
+            arrangement = Point source pattern (default = 1 source at zenith)
+            Nsrcs = Number of sources to put at zenith
+            array_location = EarthLocation object [Default = HERA site]
+            alt = For off-zenith and triangle arrangements, altitude to place sources. (deg)
+            save = Save mock catalog as npz file.
 
         Accepted arrangements:
-            * 'triangle' = Three point sources forming a triangle around the zenith
-            * 'cross'    = An asymmetric cross
-            * 'zenith'   = Some number of sources placed at the zenith.
-            * 'off-zenith' = A single source off zenith
-            * 'long-line' = Horizon to horizon line of point sources
-            * 'hera_text' = Spell out HERA around the zenith
+            'triangle' = Three point sources forming a triangle around the zenith
+            'cross'    = An asymmetric cross
+            'zenith'   = Some number of sources placed at the zenith.
+            'off-zenith' = A single source off zenith
+            'long-line' = Horizon to horizon line of point sources
+            'hera_text' = Spell out HERA around the zenith
 
+        Returns:
+            catalog: List of pyuvsim.Source objects
+            mock_kwds: (dictionary) The keywords defining this source catalog
     """
 
     if not isinstance(time, Time):
@@ -230,12 +219,12 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
             spacing = length / (Nsrcs - 1)
             max_alt = 90. - spacing / 2
             alts = np.linspace(min_alt, max_alt, Nsrcs / 2)
-            alts = np.append(alts, np.flip(alts))
+            alts = np.append(alts, np.flip(alts, axis=0))
             azs = np.append(np.zeros(Nsrcs // 2, dtype=float) + 180.,
                             np.zeros(Nsrcs // 2, dtype=float))
         else:
             alts = np.linspace(min_alt, 90, (Nsrcs + 1) // 2)
-            alts = np.append(alts, np.flip(alts[1:]))
+            alts = np.append(alts, np.flip(alts[1:], axis=0))
             azs = np.append(np.zeros((Nsrcs + 1) // 2, dtype=float) + 180.,
                             np.zeros((Nsrcs - 1) // 2, dtype=float))
 
@@ -283,9 +272,15 @@ def initialize_uvdata_from_params(obs_params):
     """
         Construct a uvdata object from parameters in a valid yaml file.
 
-        Arguments:
+        Sufficient information must be provided by the parameters to define time and frequency arrays
+        and verify the channel widths and time steps. This will error if insufficient or incompatible
+        parameters are defined.
+
+        The parameter dictionary may contain any valid UVData attributes as well.
+
+        Args:
             obs_params: Either an obs_param file name or a dictionary of parameters read in.
-                Any uvdata parameters may be passed in through here.
+                        Any uvdata parameters may be passed in through here.
         Returns:
             uv_obj, beam_list, beam_dict, beam_ids
     """
@@ -544,7 +539,7 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
     """
         From a uvfits file, generate telescope parameters files.
         Output config files are written to the current directory, unless keep_path is set.
-        Arguments:
+        Args:
             uvdata_in (UVData): object to process
             path_out (str): Target directory for the config file.
             beam_filepath (str): Path to a beamfits file.
@@ -612,7 +607,8 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
                           layout_csv_name='', catalog='mock', path_out='.'):
     """
     Extract simulation configuration settings from uvfits.
-    Arguments:
+
+    Args:
         uvdata_in (UVData) : uvdata object.
 
     Keywords:
@@ -621,10 +617,6 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
         layout_csv_name (str, optional) : Name of layout csv file. Defaults to blank string.
         catalog (str, optional): Path to catalog file, defaults to 'mock'.
         path_out (str, optional) : Where to put config files.
-
-    Returns:
-        Nothing
-
     """
 
     if param_filename is None:
@@ -674,9 +666,23 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
 
 def write_uvfits(uv_obj, param_dict, return_filename=False, dryrun=False):
     """
-        Parse output file information from parameters and write uvfits to file.
+    Parse output file information from parameters and write uvfits to file.
+
+    Args:
+        uv_obj: UVData object to write out.
+        param_dict: parameter dictionary defining output path, filename, and
+                    whether or not to clobber.
+    Keywords:
+        return_filename: (Default false) Return the file path
+        dryrun: (Default false) Don't write to file.
+
+    Returns:
+        File path, if return_filename is True
+
+
     """
-    param_dict = param_dict['filing']
+    if 'filing' in param_dict.keys():
+        param_dict = param_dict['filing']
     if 'outdir' not in param_dict:
         param_dict['outdir'] = '.'
     if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
