@@ -44,9 +44,14 @@ class UVTask(object):
         self.visibility_vector = None
         self.uvdata_index = None        # Where to add the visibility in the uvdata object.
 
+        if isinstance(self.time, float):
+            self.time = Time(self.time, format='jd')
+        if isinstance(self.freq, float):
+            self.freq = self.freq * units.Hz
+
     def __eq__(self, other):
-        return (np.isclose(self.time, other.time, atol=1e-4)
-                and np.isclose(self.freq, other.freq, atol=1e-4)
+        return (np.isclose(self.time.jd, other.time.jd, atol=1e-4)
+                and np.isclose(self.freq.value, other.freq.value, atol=1e-4)
                 and (self.source == other.source)
                 and (self.baseline == other.baseline)
                 and (self.visibility_vector == other.visibility_vector)
@@ -80,15 +85,12 @@ class UVTask(object):
 
 class UVEngine(object):
 
-    def __init__(self, task):   # task_array  = list of tuples (source,time,freq,uvw)
-        # self.rank
+    def __init__(self, task=None):   # task_array  = list of tuples (source,time,freq,uvw)
+        if task is not None:
+            self.set_task(task)
+
+    def set_task(self, task):
         self.task = task
-        # Time and freq are scattered as floats.
-        # Convert them to astropy Quantities
-        if isinstance(self.task.time, float):
-            self.task.time = Time(self.task.time, format='jd')
-        if isinstance(self.task.freq, float):
-            self.task.freq = self.task.freq * units.Hz
 
     @profile
     def apply_beam(self):
@@ -101,11 +103,11 @@ class UVEngine(object):
 
         # Apparent coherency gives the direction and polarization dependent baseline response to a source.
         beam1_jones = baseline.antenna1.get_beam_jones(self.task.telescope,
-                                                       source.alt_az_calc(self.task.time,
+                                                       source.get_alt_az(self.task.time,
                                                                           self.task.telescope.location),
                                                        self.task.freq)
         beam2_jones = baseline.antenna2.get_beam_jones(self.task.telescope,
-                                                       source.alt_az_calc(self.task.time,
+                                                       source.get_alt_az(self.task.time,
                                                                           self.task.telescope.location),
                                                        self.task.freq)
         this_apparent_coherency = np.dot(beam1_jones,
@@ -176,6 +178,9 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
                           EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
                           beam_list)
 
+    freq_array = input_uv.freq_array * units.Hz
+    time_array = Time(input_uv.time_array, scale='utc', format='jd')
+
     task_indices = np.array(np.unravel_index(task_ids, (Ntimes, Nsrcs, Nfreqs, Nbls))).T
 
     for (time_i, src_i, freq_i, bl_i) in task_indices:
@@ -190,13 +195,13 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
             baselines[bl_i] = Baseline(antennas[index1], antennas[index2])
 
         source = catalog[src_i]
-        time = input_uv.time_array[blti]
+        time = time_array[blti]
         bl = baselines[bl_i]
-        freq = input_uv.freq_array[0, freq_i]  # 0 = spw axis
+        freq = freq_array[0, freq_i]  # 0 = spw axis
 
         # Recalculate source position if source or time has changed
         if (prev_src_ind != src_i) or (prev_time_ind != time_i):
-            source.alt_az_calc(Time(input_uv.time_array[blti], scale='utc', format='jd'), telescope.location)
+            source.alt_az_calc(time_array[blti], telescope.location)
 
         task = UVTask(source, time, freq, bl, telescope)
         task.uvdata_index = (blti, 0, freq_i)    # 0 = spectral window index
@@ -419,8 +424,9 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         sys.stdout.flush()
         pbar = simutils.progsteps(maxval=tot)
 
+    engine = UVEngine()
     for count, task in enumerate(local_task_iter):
-        engine = UVEngine(task)
+        engine.set_task(task)
         if task.uvdata_index not in summed_task_dict.keys():
             summed_task_dict[task.uvdata_index] = task
         if summed_task_dict[task.uvdata_index].visibility_vector is None:

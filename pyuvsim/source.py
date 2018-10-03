@@ -61,6 +61,7 @@ class Source(object):
         self.ra = ra
         self.dec = dec
         self.pos_tol = pos_tol
+        self.time = None
 
         self.skycoord = SkyCoord(self.ra, self.dec, frame='icrs')
 
@@ -141,8 +142,17 @@ class Source(object):
         source_altaz = self.skycoord.transform_to(AltAz(obstime=time, location=telescope_location))
 
         alt_az = (source_altaz.alt.rad, source_altaz.az.rad)
+        self.time = time
         self.alt_az = alt_az
+
         return alt_az
+
+    def get_alt_az(self, time, telescope_location):
+        """ Reuse alt_az if already calculated """
+        if (self.alt_az is None) or (not time == self.time):
+            self.alt_az_calc(time, telescope_location)
+        else:
+            return self.alt_az
 
     @profile
     def pos_lmn(self, time, telescope_location):
