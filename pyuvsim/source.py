@@ -150,7 +150,7 @@ class Source(object):
     def get_alt_az(self, time, telescope_location):
         """ Reuse alt_az if already calculated """
         if (self.alt_az is None) or (not time == self.time):
-            self.alt_az_calc(time, telescope_location)
+            return self.alt_az_calc(time, telescope_location)
         else:
             return self.alt_az
 

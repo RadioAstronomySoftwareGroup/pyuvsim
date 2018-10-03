@@ -104,11 +104,11 @@ class UVEngine(object):
         # Apparent coherency gives the direction and polarization dependent baseline response to a source.
         beam1_jones = baseline.antenna1.get_beam_jones(self.task.telescope,
                                                        source.get_alt_az(self.task.time,
-                                                                          self.task.telescope.location),
+                                                                         self.task.telescope.location),
                                                        self.task.freq)
         beam2_jones = baseline.antenna2.get_beam_jones(self.task.telescope,
                                                        source.get_alt_az(self.task.time,
-                                                                          self.task.telescope.location),
+                                                                         self.task.telescope.location),
                                                        self.task.freq)
         this_apparent_coherency = np.dot(beam1_jones,
                                          source.coherency_calc(self.task.time,
