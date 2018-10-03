@@ -455,14 +455,7 @@ def test_file_to_tasks():
     uvtask_list = list(pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict))
 
     tel_loc = EarthLocation.from_geocentric(*hera_uv.telescope_location, unit='m')
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
 
-    beam_list = [beam]
     telescope = pyuvsim.Telescope(hera_uv.telescope_name, tel_loc, beam_list)
 
     ant_pos = hera_uv.antenna_positions + hera_uv.telescope_location
@@ -501,8 +494,9 @@ def test_file_to_tasks():
 def test_uvdata_init():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
+    hera_uv.unphase_to_drift(use_ant_pos=True)
     uvdata_out = pyuvsim.init_uvdata_out(hera_uv, 'zenith_source',
-                                           uvdata_file=EW_uvfits_file)
+                                         uvdata_file=EW_uvfits_file)
 
     hera_uv.data_array = np.zeros_like(hera_uv.data_array, dtype=np.complex)
     hera_uv.flag_array = np.zeros_like(hera_uv.data_array, dtype=bool)
@@ -555,6 +549,8 @@ def test_gather():
 
     uvtask_list = list(pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict))
 
+    uv_out = pyuvsim.init_uvdata_out(hera_uv, 'zenith_source',
+                                     uvdata_file=EW_uvfits_file)
     for task in uvtask_list:
         engine = pyuvsim.UVEngine(task)
         task.visibility_vector = engine.make_visibility()

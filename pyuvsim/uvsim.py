@@ -135,6 +135,7 @@ class UVEngine(object):
         vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
         return np.array(vis_vector)
 
+
 @profile
 def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     """
@@ -191,7 +192,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         source = catalog[src_i]
         time = input_uv.time_array[blti]
         bl = baselines[bl_i]
-        freq = input_uv.freq_array[0,freq_i]   #0 = spw axis
+        freq = input_uv.freq_array[0, freq_i]  # 0 = spw axis
 
         # Recalculate source position if source or time has changed
         if (prev_src_ind != src_i) or (prev_time_ind != time_i):
@@ -281,11 +282,15 @@ def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
         # Note: currently only support a constant spacing of times
         uv_obj.integration_time = (np.ones_like(uv_obj.time_array, dtype=np.float64))
 
+    # add pyuvdata version info
+    history += uv_obj.pyuvdata_version_str
+
     # Clear existing data, if any
     uv_obj.data_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=np.complex)
     uv_obj.flag_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=bool)
     uv_obj.nsample_array = np.ones_like(uv_obj.data_array, dtype=float)
     uv_obj.history = history
+    uv_obj.set_drift()
 
     uv_obj.extra_keywords = {}
     uv_obj.check()
@@ -379,10 +384,10 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
             uvdata_file_pass = uvdata_file
 
         uv_container = init_uvdata_out(input_uv, source_list_name,
-                                         uvdata_file=uvdata_file_pass,
-                                         obs_param_file=obs_param_file,
-                                         telescope_config_file=telescope_config_file,
-                                         antenna_location_file=antenna_location_file)
+                                       uvdata_file=uvdata_file_pass,
+                                       obs_param_file=obs_param_file,
+                                       telescope_config_file=telescope_config_file,
+                                       antenna_location_file=antenna_location_file)
 
     comm = mpi.get_comm()
     Npus = mpi.get_Npus()
@@ -399,7 +404,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     catalog = comm.bcast(catalog, root=0)
 
     stride = Ntasks // Npus
-    if (rank+1)*stride >= Ntasks:
+    if (rank + 1) * stride >= Ntasks:
         task_ids = np.arange(rank * stride, Ntasks)
     else:
         task_ids = np.arange(rank * stride, (rank + 1) * stride)
