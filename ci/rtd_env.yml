@@ -6,4 +6,5 @@ dependencies:
   - scipy
   - astropy
   - mpi4py
+  - conda-forge::pyuvdata
   - conda-forge::pypandoc
