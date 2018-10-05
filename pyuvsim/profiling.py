@@ -20,7 +20,7 @@ try:
     from line_profiler import LineProfiler
 except ImportError:
     warnings.warn("Need the line_profiler module to do profiling.")
-    LineProfiler = lambda x: None
+    LineProfiler = lambda: None
 
 PY3 = sys.version_info[0] == 3
 
