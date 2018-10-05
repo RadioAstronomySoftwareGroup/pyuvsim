@@ -18,7 +18,7 @@ import warnings
 
 try:
     from line_profiler import LineProfiler
-except ImportError:
+except ImportError:   # pragma: no cover
     warnings.warn("Need the line_profiler module to do profiling.")
 
     def LineProfiler():
