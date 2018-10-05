@@ -11,10 +11,16 @@ throughout the code will do line profiling on all instance methods.
 
 from __future__ import absolute_import, division, print_function
 
-from line_profiler import LineProfiler
 import inspect
 import sys
 import atexit
+import warnings
+
+try:
+    from line_profiler import LineProfiler
+except ImportError:
+    warnings.warn("Need the line_profiler module to do profiling.")
+    LineProfiler = lambda x: None
 
 PY3 = sys.version_info[0] == 3
 
@@ -25,11 +31,11 @@ else:
 
 prof = LineProfiler()
 
-
 def set_profiler():
     """ If profiling is requested, then assign it to the builtins """
-    builtins.__dict__['profile'] = prof
-    atexit.register(prof.print_stats)
+    if prof is not None:
+        builtins.__dict__['profile'] = prof
+        atexit.register(prof.print_stats)
 
 
 # By default, the profile decorator has no effect.
