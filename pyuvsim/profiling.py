@@ -20,7 +20,9 @@ try:
     from line_profiler import LineProfiler
 except ImportError:
     warnings.warn("Need the line_profiler module to do profiling.")
-    LineProfiler = lambda: None
+
+    def LineProfiler():
+        return None
 
 PY3 = sys.version_info[0] == 3
 
@@ -30,6 +32,7 @@ else:
     import __builtin__ as builtins
 
 prof = LineProfiler()
+
 
 def set_profiler():
     """ If profiling is requested, then assign it to the builtins """
