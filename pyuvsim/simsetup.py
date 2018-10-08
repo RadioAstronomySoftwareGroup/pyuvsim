@@ -210,11 +210,11 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         if Nsrcs is None:
             Nsrcs = 1
         if min_alt is None:
-            min_alt = 30    #Degrees
+            min_alt = 30  # Degrees
         mock_keywords['Nsrcs'] = Nsrcs
         alts = np.random.uniform(90. - min_alt, 90, Nsrcs)
-        azs = np.random.uniform(0, 2*np.pi, Nsrcs)
-        fluxes = np.ones(Nsrcs, dtype=float) 
+        azs = np.random.uniform(0, 2 * np.pi, Nsrcs)
+        fluxes = np.ones(Nsrcs, dtype=float)
 
     if arrangement == 'long-line':
         if Nsrcs is None:

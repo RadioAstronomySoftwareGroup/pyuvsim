@@ -12,6 +12,7 @@ import yaml
 import os
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim import simsetup
 from astropy.coordinates import EarthLocation
 from pyuvsim import mpi
@@ -19,7 +20,7 @@ from pyuvsim import mpi
 parser = argparse.ArgumentParser(description=("A command-line script "
                                               "to execute a pyuvsim simulation for profiling purposes."))
 
-paramsfile = 'profiling_params.yaml'
+paramsfile = os.path.join(SIM_DATA_PATH, 'profiling_params.yaml')
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
 
@@ -34,8 +35,7 @@ args = parser.parse_args()
 with open(paramsfile, 'r') as pfile:
     params = yaml.safe_load(pfile)
 
-params['config_path'] = '.'
-
+params['config_path'] = os.path.dirname(paramsfile)
 
 beam_list = None
 beam_dict = None

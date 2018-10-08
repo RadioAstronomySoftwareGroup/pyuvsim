@@ -25,7 +25,7 @@ time = '48:00:00'
 sids_out = open('slurm_ids.out', 'w')
 sids_out.write('Nsrcs, Ntimes, Nfreqs, Nbls, beam, slurm_id\n')
 
-for n in Ncores[:1]:
+for n in Ncores:
     for i in range(Nconfigs):
         cmd = ['sbatch', '-n ' + str(n), '--cpus-per-task=1', '--mem=' + mem, '--time=' + time,
                'batch_profile_job.sh',
