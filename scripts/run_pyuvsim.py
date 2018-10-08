@@ -33,9 +33,8 @@ parser.add_argument('file_in', metavar='<FILE>', type=str, nargs='+')
 parser.add_argument('--outdir', type=str, default='./')
 parser.add_argument('--Nsrcs', type=int, default=None)
 parser.add_argument('--mock_arrangement', type=str, default='zenith')
-parser.add_argument('--max_za', type=float, default=-1.0, help='Maximum zenith angle for mock arrangements')
+parser.add_argument('--min_alt', type=float, default=99.0, help='Maximum zenith angle for mock arrangements')
 parser.add_argument('--save_catalog', action='store_true', default=False, help='Save catalog')
-# parser.add_argument('--overwrite', action='store_true')
 
 
 args = parser.parse_args()
@@ -63,7 +62,7 @@ for filename in args.file_in:
 
     mock_keywords = {}
     mock_keywords['save'] = args.save_catalog
-    mock_keywords['max_za'] = args.save_catalog
+    mock_keywords['min_alt'] = args.save_catalog
     mock_keywords['arrangement'] = args.mock_arrangement
 
     uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list,

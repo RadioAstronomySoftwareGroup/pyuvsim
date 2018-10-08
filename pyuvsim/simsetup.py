@@ -151,6 +151,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
             'off-zenith' = A single source off zenith
             'long-line' = Horizon to horizon line of point sources
             'hera_text' = Spell out HERA around the zenith
+            'random' = Randomly distributed point sources near zenith
 
         Returns:
             catalog: List of pyuvsim.Source objects
@@ -165,7 +166,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
                                        height=1073.)
     freq = (150e6 * units.Hz)
 
-    if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']:
+    if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text', 'random']:
         raise KeyError("Invalid mock catalog arrangement: " + str(arrangement))
 
     mock_keywords = {'time': time.jd, 'arrangement': arrangement,
@@ -204,6 +205,16 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         fluxes = np.ones(Nsrcs) * 1 / Nsrcs
         # Divide total Stokes I intensity among all sources
         # Test file has Stokes I = 1 Jy
+
+    if arrangement == 'random':
+        if Nsrcs is None:
+            Nsrcs = 1
+        if min_alt is None:
+            min_alt = 30    #Degrees
+        mock_keywords['Nsrcs'] = Nsrcs
+        alts = np.random.uniform(90. - min_alt, 90, Nsrcs)
+        azs = np.random.uniform(0, 2*np.pi, Nsrcs)
+        fluxes = np.ones(Nsrcs, dtype=float) 
 
     if arrangement == 'long-line':
         if Nsrcs is None:

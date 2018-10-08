@@ -19,37 +19,31 @@ Nconfigs = Nsrcs.size
 
 Ncores = [8, 16, 32, 64]
 
-mem='40G'
-#time='48:00:00'
-time='00:02:00'
+mem = '40G'
+time = '48:00:00'
+# time='00:02:00'
 
 sids_out = open('slurm_ids.out', 'r+')
 sids_out.write('Nsrcs, Ntimes, Nfreqs, Nbls, beam, slurm_id\n')
 
-Nconfigs = 5
-
 for n in Ncores[:1]:
     for i in range(Nconfigs):
-        cmd = ['sbatch', '-n '+str(n), '--cpus-per-task=1', '--mem='+mem, '--time='+time,
+        cmd = ['sbatch', '-n ' + str(n), '--cpus-per-task=1', '--mem=' + mem, '--time=' + time,
                '-J pyuvsim_profile',
                'batch_profile_job.sh',
-                str(Nsrcs[i]),
-                str(Ntimes[i]),
-                str(Nfreqs[i]),
-                str(Nbls[i]),
-                str(beam[i])]
+               str(Nsrcs[i]),
+               str(Ntimes[i]),
+               str(Nfreqs[i]),
+               str(Nbls[i]),
+               str(beam[i])]
         print " ".join(cmd)
         results = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         print results
         slurm_id = results.strip().split(' ')[-1]
         parms = [
-                str(Nsrcs[i]),
-                str(Ntimes[i]),
-                str(Nfreqs[i]),
-                str(Nbls[i]),
-                str(beam[i])]
+            str(Nsrcs[i]),
+            str(Ntimes[i]),
+            str(Nfreqs[i]),
+            str(Nbls[i]),
+            str(beam[i])]
         sids_out.write(','.join(parms) + ',' + slurm_id + '\n')
-
-        
-         
-

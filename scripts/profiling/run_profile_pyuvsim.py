@@ -43,40 +43,40 @@ input_uv = UVData()
 mock_keywords = None
 catalog = None
 
-min_alt=70  # Degrees
+min_alt = 70  # Degrees
 
 mpi.start_mpi()
 rank = mpi.get_rank()
 
 if rank == 0:
 
-        params['freq']['Nfreqs'] = args.Nfreqs
-        params['time']['Ntimes'] = args.Ntimes
+    params['freq']['Nfreqs'] = args.Nfreqs
+    params['time']['Ntimes'] = args.Ntimes
 
-        input_uv, beam_list, beam_dict, beam_ids = simsetup.initialize_uvdata_from_params(params)
+    input_uv, beam_list, beam_dict, beam_ids = simsetup.initialize_uvdata_from_params(params)
 
-        #Baseline selection:
-        input_uv.baseline_array = np.repeat(input_uv.baseline_array[:args.Nbls], args.Ntimes)
-        input_uv.ant_1_array = np.repeat(input_uv.ant_1_array[:args.Nbls], args.Ntimes)
-        input_uv.ant_2_array = np.repeat(input_uv.ant_2_array[:args.Nbls], args.Ntimes)
+    # Baseline selection:
+    input_uv.baseline_array = np.repeat(input_uv.baseline_array[:args.Nbls], args.Ntimes)
+    input_uv.ant_1_array = np.repeat(input_uv.ant_1_array[:args.Nbls], args.Ntimes)
+    input_uv.ant_2_array = np.repeat(input_uv.ant_2_array[:args.Nbls], args.Ntimes)
 
-        #Time selection:
-        inds = np.array([ np.arange(args.Nbls) + i*input_uv.Nbls for i in range(args.Ntimes) ]).flatten()
-        input_uv.time_array = input_uv.time_array[inds]
-        input_uv.Nbls = args.Nbls
-        input_uv.Nblts = args.Nbls * args.Ntimes
+    # Time selection:
+    inds = np.array([np.arange(args.Nbls) + i * input_uv.Nbls for i in range(args.Ntimes)]).flatten()
+    input_uv.time_array = input_uv.time_array[inds]
+    input_uv.Nbls = args.Nbls
+    input_uv.Nblts = args.Nbls * args.Ntimes
 
-        # Beam selection:
-        # Default is uniform
-        if args.beam == 'hera':
-            beam = UVBeam()
-            beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
-                               telescope_name='HERA',
-                               feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                               model_name='E-field pattern - Rigging height 4.9m',
-                               model_version='1.0')
-            beam_list = [beam]
-        
-        mock_keywords = {'arrangement': 'random', 'Nsrcs': args.Nsrcs, 'min_alt': min_alt}
+    # Beam selection:
+    # Default is uniform
+    if args.beam == 'hera':
+        beam = UVBeam()
+        beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
+                           telescope_name='HERA',
+                           feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+                           model_name='E-field pattern - Rigging height 4.9m',
+                           model_version='1.0')
+        beam_list = [beam]
+
+    mock_keywords = {'arrangement': 'random', 'Nsrcs': args.Nsrcs, 'min_alt': min_alt}
 
 uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
