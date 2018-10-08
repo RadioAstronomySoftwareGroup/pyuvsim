@@ -3,7 +3,7 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-#SBATCH -J pyuvsim
+#SBATCH -J pyuvsim_profile
 #SBATCH --array=0-0
 
 echo JOBID ${SLURM_ARRAY_JOB_ID}
@@ -27,7 +27,7 @@ nfreqs=$3
 nbls=$4
 beam=$5
 
-dir1=$branch'_profiling/sim_'$nsrcs'src_'$nfreqs'freq_'$ntimes'time_'$nbls'bls_'$beam'beam_'$nnodes'nodes_'$ntasks'_cpus'
+dir1=$branch'_profiling/sim_'$nsrcs'src_'$nfreqs'freq_'$ntimes'time_'$nbls'bls_'$beam'beam_'$nnodes'nodes_'$ntasks'cpus'
 
 if [ ! -d "$dir1" ]; then
     mkdir -p $dir1
