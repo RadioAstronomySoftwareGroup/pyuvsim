@@ -208,7 +208,6 @@ def test_uvfits_to_config():
     uv0.read_uvfits(longbl_uvfits_file)
     path, telescope_config, layout_fname = \
         pyuvsim.simsetup.uvdata_to_telescope_config(uv0, herabeam_default,
-                                                    telescope_config_name=telescope_config,
                                                     path_out=opath, return_names=True)
     pyuvsim.simsetup.uvdata_to_config_file(uv0, param_filename=param_filename,
                                            telescope_config_name=os.path.join(path, telescope_config),
@@ -294,11 +293,23 @@ def test_mock_catalogs():
                      'triangle': 'mock_triangle_2458098.27471.txt',
                      'zenith': 'mock_zenith_2458098.27471.txt'}
 
+    nt.assert_raises(KeyError, pyuvsim.simsetup.create_mock_catalog, time, 'invalid_catalog_name')
+
     for arr in arrangements:
         radec_catalog = pyuvsim.simsetup.read_text_catalog(os.path.join(SIM_DATA_PATH,
-                                                           'test_catalogs', text_catalogs[arr]))
-        print(arr)
+                                                                        'test_catalogs', text_catalogs[arr]))
         nt.assert_true(np.all(radec_catalog == cats[arr]))
+
+    cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, 'random', save=True)
+    loc = eval(mock_kwds['array_location'])
+    loc = EarthLocation.from_geodetic(loc[1], loc[0], loc[2])    # Lon, Lat, alt
+    fname = 'mock_catalog_random.npz'
+    alts_reload = np.load(fname)['alts']
+    for i, src in enumerate(cat):
+        alt, az = src.alt_az_calc(time, loc)
+        nt.assert_true(np.degrees(alt) > 30.)
+        nt.assert_true(np.isclose(alts_reload[i], np.degrees(alt)))
+    os.remove(fname)
 
 
 def test_catalog_file_writer():

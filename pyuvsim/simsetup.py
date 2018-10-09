@@ -212,7 +212,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         if min_alt is None:
             min_alt = 30  # Degrees
         mock_keywords['Nsrcs'] = Nsrcs
-        alts = np.random.uniform(90. - min_alt, 90, Nsrcs)
+        alts = np.random.uniform(min_alt, 90, Nsrcs)
         azs = np.random.uniform(0, 2 * np.pi, Nsrcs)
         fluxes = np.ones(Nsrcs, dtype=float)
 
@@ -632,6 +632,7 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
 
     if param_filename is None:
         param_filename = check_file_exists_and_increment(os.path.join(path_out, 'obsparam.yaml'))
+        param_filename = os.path.basename(param_filename)
 
     freq_array = uvdata_in.freq_array[0, :].tolist()
     time_array = uvdata_in.time_array.tolist()
