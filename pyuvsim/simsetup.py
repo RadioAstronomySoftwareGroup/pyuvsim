@@ -129,7 +129,7 @@ def read_text_catalog(catalog_csv):
 
 
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
-                        alt=None, save=False, min_alt=None):
+                        alt=None, save=False, min_alt=None, rseed=None):
     """
         Create a mock catalog. Sources are defined in an AltAz frame at the given time,
         then returned in ICRS ra/dec coordinates.
@@ -143,6 +143,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
             array_location = EarthLocation object [Default = HERA site]
             alt = For off-zenith and triangle arrangements, altitude to place sources. (deg)
             save = Save mock catalog as npz file.
+            rseed = If using the random configuration, pass in a RandomState seed (int).
 
         Accepted arrangements:
             'triangle' = Three point sources forming a triangle around the zenith
@@ -212,6 +213,8 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         if min_alt is None:
             min_alt = 30  # Degrees
         mock_keywords['Nsrcs'] = Nsrcs
+        np.random.seed(seed=rseed)
+        mock_keywords['rseed'] = np.random.get_state()[1][0]
         alts = np.random.uniform(min_alt, 90, Nsrcs)
         azs = np.random.uniform(0, 2 * np.pi, Nsrcs)
         fluxes = np.ones(Nsrcs, dtype=float)
@@ -446,12 +449,6 @@ def initialize_uvdata_from_params(obs_params):
     # Parse time structure
     time_params = param_dict['time']
 
-    optional_time_params = ['time_format', 'snapshot_length_hours']
-
-    for k in optional_time_params:
-        if k in time_params:
-            param_dict[k] = time_params[k]
-
     time_keywords = ['start_time', 'end_time', 'Ntimes', 'integration_time',
                      'duration_hours', 'duration_days']
     st, et, nt, it, dh, dd = [tk in time_params for tk in time_keywords]
@@ -487,9 +484,6 @@ def initialize_uvdata_from_params(obs_params):
                              "must be specified: " + kws_used)
         time_params['integration_time'] = (time_params['duration']
                                            / float(time_params['Ntimes']))
-        if 'snapshot_length_hours' in time_params:
-            warnings.warn('Warning: Setting integration time from Ntimes for snapshots. '
-                          'This may not be well-defined.')
 
     inttime_days = time_params['integration_time'] * 1 / (24. * 3600.)
     inttime_days = np.trunc(inttime_days * 24 * 3600) / (24. * 3600.)

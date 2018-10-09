@@ -109,7 +109,21 @@ def check_param_reader(config_num):
     if config_num == 0:
         with open(param_filename, 'r') as pfile:
             params_bad = yaml.safe_load(pfile)
+
+        # Missing config file info
+        params_bad['config_path'] = os.path.join(SIM_DATA_PATH, 'nonexistent_directory', 'nonexistent_file')
+        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
+        params_bad['telescope']['array_layout'] = 'nonexistent_file'
+        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+        params_bad['telescope']['telescope_config_name'] = 'nonexistent_file'
+        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+
+        # Missing beam keywords
+        with open(param_filename, 'r') as pfile:
+            params_bad = yaml.safe_load(pfile)
+        params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
+
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nosigma.yaml')
         nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, params_bad)
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml')
@@ -120,6 +134,16 @@ def check_param_reader(config_num):
         # Errors on frequency configuration
         with open(param_filename, 'r') as pfile:
             params_bad = yaml.safe_load(pfile)
+        params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
+        # Define channel_width but not Nfreqs
+        bak_nfreq = params_bad['freq']['Nfreqs']
+        bak_sfreq = params_bad['freq']['start_freq']
+        del params_bad['freq']['Nfreqs']
+        del params_bad['freq']['start_freq']
+        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+        params_bad['freq']['Nfreqs'] = bak_nfreq
+        params_bad['freq']['start_freq'] = bak_sfreq
+
         # Define freq_arr but not channel_width
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
         params_bad['freq']['freq_array'] = np.array([1e8])
@@ -148,6 +172,7 @@ def check_param_reader(config_num):
 
         # Don't define Ntimes or integration_time
         del params_bad['time']['Ntimes']
+        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
         del params_bad['time']['integration_time']
         nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
 
@@ -197,7 +222,7 @@ def test_uvfits_to_config():
         Loopback test of reading parameters from uvfits file, generating uvfits file, and reading in again.
     """
     opath = 'uvfits_yaml_temp'
-    param_filename = 'test_config.yaml'
+    param_filename = 'obsparam.yaml'
     second_param_filename = 'test2_config.yaml'
     telescope_config = 'test_telescope_config.yaml'
     if not os.path.exists(opath):
@@ -209,7 +234,8 @@ def test_uvfits_to_config():
     path, telescope_config, layout_fname = \
         pyuvsim.simsetup.uvdata_to_telescope_config(uv0, herabeam_default,
                                                     path_out=opath, return_names=True)
-    pyuvsim.simsetup.uvdata_to_config_file(uv0, param_filename=param_filename,
+    uv0.integration_time[-1] += 2  # Test case of non-uniform integration times
+    pyuvsim.simsetup.uvdata_to_config_file(uv0,
                                            telescope_config_name=os.path.join(path, telescope_config),
                                            layout_csv_name=os.path.join(path, layout_fname),
                                            path_out=opath)
