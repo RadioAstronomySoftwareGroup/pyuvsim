@@ -1,4 +1,7 @@
 #!/bin/env python
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2018 Radio Astronomy Software Group
+# Licensed under the 3-clause BSD License
 
 # Run profiling jobs for multiple configurations
 # and with different numbers of cores.
@@ -6,6 +9,7 @@
 import numpy as np
 import subprocess
 
+from __future__ import absolute_import, division, print_function
 
 Nsrcs = [5, 10, 20]
 Ntimes = [1, 5, 10]
@@ -34,9 +38,9 @@ for n in Ncores:
                str(Nfreqs[i]),
                str(Nbls[i]),
                str(beam[i])]
-        print " ".join(cmd)
+        print(" ".join(cmd))
         results = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        print results
+        print(results)
         slurm_id = results.strip().split(' ')[-1]
         parms = [
             str(Nsrcs[i]),
