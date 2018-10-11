@@ -303,11 +303,12 @@ def test_read_gleam():
 def test_mock_catalogs():
     time = Time(2458098.27471265, scale='utc', format='jd')
 
-    arrangements = ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text']
+    arrangements = ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'random', 'hera_text']
 
     cats = {}
     for arr in arrangements:
-        cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, arr)
+        # rseed is only used by the "random" mock catalog
+        cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, arr, rseed=2458098)
         cats[arr] = cat
 
     # For each mock catalog, verify the Ra/Dec source positions against a text catalog.
@@ -317,8 +318,8 @@ def test_mock_catalogs():
                      'long-line': 'mock_long-line_2458098.27471.txt',
                      'off-zenith': 'mock_off-zenith_2458098.27471.txt',
                      'triangle': 'mock_triangle_2458098.27471.txt',
+                     'random': 'mock_random_2458098.27471.txt',
                      'zenith': 'mock_zenith_2458098.27471.txt'}
-
     nt.assert_raises(KeyError, pyuvsim.simsetup.create_mock_catalog, time, 'invalid_catalog_name')
 
     for arr in arrangements:
