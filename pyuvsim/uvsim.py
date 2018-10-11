@@ -477,11 +477,12 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         sys.stdout.flush()
 
     # UVBeam objects don't survive the scatter with prop_fget() working. This fixes it on each rank.
-    for i, bm in enumerate(local_task_list[0].telescope.beam_list):
-        if isinstance(bm, UVBeam):
-            uvb = UVBeam()
-            uvb = bm
-            local_task_list[0].telescope.beam_list[i] = bm
+    if not len(local_task_list) == 0:
+        for i, bm in enumerate(local_task_list[0].telescope.beam_list):
+            if isinstance(bm, UVBeam):
+                uvb = UVBeam()
+                uvb = bm
+                local_task_list[0].telescope.beam_list[i] = bm
 
     summed_task_dict = {}
 

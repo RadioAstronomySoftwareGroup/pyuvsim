@@ -14,13 +14,10 @@ from __future__ import absolute_import, division, print_function
 import inspect
 import sys
 import atexit
-import warnings
 
 try:
     from line_profiler import LineProfiler
 except ImportError:   # pragma: no cover
-    warnings.warn("Need the line_profiler module to do profiling.")
-
     def LineProfiler():
         return None
 
