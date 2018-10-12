@@ -1,8 +1,9 @@
 # pyuvsim
-PYUVsim is a comprehensive simulation package for radio interferometers in python.
+
 [![Build Status](https://travis-ci.org/RadioAstronomySoftwareGroup/pyuvsim.svg?branch=master)](https://travis-ci.org/RadioAstronomySoftwareGroup/pyuvsim)
 [![Coverage Status](https://coveralls.io/repos/github/RadioAstronomySoftwareGroup/pyuvsim/badge.svg?branch=master)](https://coveralls.io/github/RadioAstronomySoftwareGroup/pyuvsim?branch=master)
 
+PYUVsim is a comprehensive simulation package for radio interferometers in python.
 
 A number of analysis tools are available to simulate the output of a radio interferometer (CASA, OSCAR, FHD, PRISim, et al), however each makes numerical approximations to enable speed ups.  The PYUVsim goal is to provide a simulated instrument output which emphasizes accuracy and extensibility.
 
