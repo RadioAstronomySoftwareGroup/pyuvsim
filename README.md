@@ -14,6 +14,9 @@ The two primary pyuvsim goals are interferometer simulation accuracy at the leve
  3. Comparison with external simulations.
  4. Design for scalability across many cpus.
 
+# Documentation
+Documentation on how to run simulations and developer API documentation is hosted on [ReadTheDocs](https://pyuvsim.readthedocs.io).
+
  # Installation
  * Bleeding edge: `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`
  * pip: `pip install pyuvsim`
