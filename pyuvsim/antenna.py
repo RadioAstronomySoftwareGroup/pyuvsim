@@ -58,7 +58,8 @@ class Antenna(object):
         interp_data, interp_basis_vector = \
             array.beam_list[self.beam_id].interp(az_array=source_az,
                                                  za_array=source_za,
-                                                 freq_array=freq)
+                                                 freq_array=freq,
+                                                 reuse_spline=True)
 
         # interp_data has shape: (Naxes_vec, Nspws, Nfeeds, 1 (freq), 1 (source position))
         jones_matrix = np.zeros((2, 2), dtype=np.complex)
