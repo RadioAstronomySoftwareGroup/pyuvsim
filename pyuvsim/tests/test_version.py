@@ -15,13 +15,46 @@ from six import StringIO
 import subprocess
 import json
 import pyuvsim
+from pyuvsim.data import DATA_PATH
+
+
+def test_get_gitinfo_file():
+    pyuvsim_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
+    git_file = os.path.join(pyuvsim_dir, 'GIT_INFO')
+    if not os.path.exists(git_file):
+        # write a file to read in
+        temp_git_file = os.path.join(DATA_PATH, 'GIT_INFO')
+        version_info = pyuvsim.version.construct_version_info()
+        data = [version_info['git_origin'], version_info['git_origin'],
+                version_info['git_origin'], version_info['git_origin']]
+        with open(temp_git_file, 'w') as outfile:
+            json.dump(data, outfile)
+        git_file = temp_git_file
+
+    with open(git_file) as data_file:
+        data = [pyuvsim.version._unicode_to_str(x) for x in json.loads(data_file.read().strip())]
+        git_origin = data[0]
+        git_hash = data[1]
+        git_description = data[2]
+        git_branch = data[3]
+
+    test_file_info = {'git_origin': git_origin, 'git_hash': git_hash,
+                      'git_description': git_description, 'git_branch': git_branch}
+
+    if 'temp_git_file' in locals():
+        file_info = pyuvsim.version._get_gitinfo_file(git_file=temp_git_file)
+        os.remove(temp_git_file)
+    else:
+        file_info = pyuvsim.version._get_gitinfo_file()
+
+    nt.assert_equal(file_info, test_file_info)
 
 
 def test_construct_version_info():
     # this test is a bit silly because it uses the nearly the same code as the original,
     # but it will detect accidental changes that could cause problems.
     # It does test that the __version__ attribute is set on pyuvsim.
-    # I can't figure out how to test the except clause in construct_version_info.
 
     # this line is modified from the main implementation since we're in pyuvsim/tests/
     pyuvsim_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
