@@ -14,12 +14,14 @@ import numpy as np
 from numpy.lib.recfunctions import append_fields
 import subprocess
 from matplotlib.mlab import rec2csv
+import subprocess
 
 slurmids = []
 Nall = []  # Each entry is a list of Nbl, Ntimes, Nchan, Nsrcs
 
-fname = 'slurm_ids.out'
-with open(fname, 'r') as fhandle:
+fname = sys.argv[1]
+
+with open(fname, 'a+') as fhandle:
     header = fhandle.readline()
 
 header = [h.strip().upper() for h in header.split(',')]
