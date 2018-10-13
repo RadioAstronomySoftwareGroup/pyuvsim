@@ -137,11 +137,19 @@ class UVEngine(object):
 
 @profile
 def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
-    """Create task list from pyuvdata compatible input file.
+    """
+    Create task list from pyuvdata compatible input file.
 
-    Returns: List of task parameters to be send to UVEngines
-    List has task parameters defined in UVTask object
-    This function extracts time, freq, Antenna1, Antenna2
+    Args:
+        input_uv (UVData): UVData object to use
+        sources: array of Source objects
+        beam_list: (list of UVBeam or AnalyticBeam objects
+        beam_dict (dict, optional): dict mapping antenna number to beam index in beam_list
+
+    Returns:
+        List of task parameters to be send to UVEngines with the task
+        parameters defined in UVTask objectself.
+        This function extracts time, freq, Antenna1, Antenna2.
     """
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
@@ -389,8 +397,6 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     Arguments:
         input_uv: An input UVData object, containing baseline/time/frequency information.
         beam_list: A list of UVBeam and/or AnalyticBeam objects
-
-    Keywords:
         beam_dict: Dictionary of {antenna_name : beam_ID}, where beam_id is an index in
                    the beam_list. This assigns beams to antennas.
                    Default: All antennas get the 0th beam in the beam_list.

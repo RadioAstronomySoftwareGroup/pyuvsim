@@ -26,7 +26,7 @@ from .utils import check_file_exists_and_increment
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 
-def parse_layout_csv(layout_csv):
+def _parse_layout_csv(layout_csv):
     """ Interpret the layout csv file """
 
     with open(layout_csv, 'r') as fhandle:
@@ -96,15 +96,19 @@ def write_catalog_to_file(filename, catalog):
 
 def read_text_catalog(catalog_csv):
     """
-        Read in a text file of sources.
+    Read in a text file of sources.
 
-        Expected Columns:
-            Source_ID = source id as a string of maximum 10 characters
-            ra_j2000  = right ascension at J2000 epoch, in decimal degrees
-            dec_j2000 = declination at J2000 epoch, in decimal degrees
-            flux_density_I = Stokes I flux density in Janskies
-            frequency = reference frequency (for future spectral indexing) [Hz]
-                        For now, all sources are flat spectrum.
+    Args:
+    catalog_csv: csv file with the following expected columns:
+        |  Source_ID: source id as a string of maximum 10 characters
+        |  ra_j2000: right ascension at J2000 epoch, in decimal degrees
+        |  dec_j2000: declination at J2000 epoch, in decimal degrees
+        |  flux_density_I: Stokes I flux density in Janskys
+        |  frequency: reference frequency (for future spectral indexing) [Hz]
+            For now, all sources are flat spectrum.
+
+    Returns:
+        List of pyuvsim.Source objects
     """
     with open(catalog_csv, 'r') as cfile:
         header = cfile.readline()
@@ -131,32 +135,31 @@ def read_text_catalog(catalog_csv):
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
                         alt=None, save=False, min_alt=None, rseed=None):
     """
-        Create a mock catalog. Sources are defined in an AltAz frame at the given time,
-        then returned in ICRS ra/dec coordinates.
+    Create a mock catalog.
 
-        Args:
-            time: Julian date (float) or astropy Time object
+    Sources are defined in an AltAz frame at the given time, then returned in
+    ICRS ra/dec coordinates.
 
-        Keywords:
-            arrangement = Point source pattern (default = 1 source at zenith)
-            Nsrcs = Number of sources to put at zenith
-            array_location = EarthLocation object [Default = HERA site]
-            alt = For off-zenith and triangle arrangements, altitude to place sources. (deg)
-            save = Save mock catalog as npz file.
-            rseed = If using the random configuration, pass in a RandomState seed (int).
+    Args:
+        time (float or astropy Time object): Julian date
+        arrangement (str): Point source pattern (default = 1 source at zenith).
+            Accepted arrangements:
+                |  `triangle`:  Three point sources forming a triangle around the zenith
+                |  `cross`: An asymmetric cross
+                |  `zenith`: Some number of sources placed at the zenith.
+                |  `off-zenith`:  A single source off zenith
+                |  `long-line`:  Horizon to horizon line of point sources
+                |  `hera_text`:  Spell out HERA around the zenith
+                |  `random`:  Randomly distributed point sources near zenith
+        Nsrcs (int):  Number of sources to put at zenith
+        array_location (EarthLocation object): [Default = HERA site]
+        alt (float): For off-zenith and triangle arrangements, altitude to place sources. (deg)
+        save (bool): Save mock catalog as npz file.
+        rseed (int): If using the random configuration, pass in a RandomState seed.
 
-        Accepted arrangements:
-            'triangle' = Three point sources forming a triangle around the zenith
-            'cross'    = An asymmetric cross
-            'zenith'   = Some number of sources placed at the zenith.
-            'off-zenith' = A single source off zenith
-            'long-line' = Horizon to horizon line of point sources
-            'hera_text' = Spell out HERA around the zenith
-            'random' = Randomly distributed point sources near zenith
-
-        Returns:
-            catalog: List of pyuvsim.Source objects
-            mock_kwds: (dictionary) The keywords defining this source catalog
+    Returns:
+        catalog: List of pyuvsim.Source objects
+        mock_kwds: (dictionary) The keywords defining this source catalog
     """
 
     if not isinstance(time, Time):
@@ -284,19 +287,19 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 @profile
 def initialize_uvdata_from_params(obs_params):
     """
-        Construct a uvdata object from parameters in a valid yaml file.
+    Construct a uvdata object from parameters in a valid yaml file.
 
-        Sufficient information must be provided by the parameters to define time and frequency arrays
-        and verify the channel widths and time steps. This will error if insufficient or incompatible
-        parameters are defined.
+    Sufficient information must be provided by the parameters to define time and frequency arrays
+    and verify the channel widths and time steps. This will error if insufficient or incompatible
+    parameters are defined.
 
-        The parameter dictionary may contain any valid UVData attributes as well.
+    The parameter dictionary may contain any valid UVData attributes as well.
 
-        Args:
-            obs_params: Either an obs_param file name or a dictionary of parameters read in.
-                        Any uvdata parameters may be passed in through here.
-        Returns:
-            uv_obj, beam_list, beam_dict, beam_ids
+    Args:
+        obs_params: Either an obs_param file name or a dictionary of parameters read in.
+                    Any uvdata parameters may be passed in through here.
+    Returns:
+        uv_obj, beam_list, beam_dict, beam_ids
     """
 
     if isinstance(obs_params, str):
@@ -330,7 +333,7 @@ def initialize_uvdata_from_params(obs_params):
 
     param_dict['extra_keywords'] = extra_keywords
 
-    ant_layout = parse_layout_csv(layout_csv)
+    ant_layout = _parse_layout_csv(layout_csv)
 
     with open(telescope_config_name, 'r') as yf:
         telparam = yaml.safe_load(yf)
@@ -542,21 +545,22 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
                                telescope_config_name=None,
                                return_names=False, path_out='.'):
     """
-        From a uvfits file, generate telescope parameters files.
-        Output config files are written to the current directory, unless keep_path is set.
-        Args:
-            uvdata_in (UVData): object to process
-            path_out (str): Target directory for the config file.
-            beam_filepath (str): Path to a beamfits file.
-        Keywords:
-            layout_csv_name (str, optional): The name for the antenna positions
-                csv file (Default <telescope_name>_layout.csv)
-            telescope_config_name: The name for the telescope config file
-                (Default teleconfig_#number.yaml)
-            return_names: Return the file names for loopback tests.
-        Returns:
-            if return_names, returns tuple (path, telescope_config_name, layout_csv_name)
+    From a uvfits file, generate telescope parameters files.
 
+    Output config files are written to the current directory, unless keep_path is set.
+
+    Args:
+        uvdata_in (UVData): object to process
+        path_out (str): Target directory for the config file.
+        beam_filepath (str): Path to a beamfits file.
+        layout_csv_name (str, optional): The name for the antenna positions
+            csv file (Default <telescope_name>_layout.csv)
+        telescope_config_name (str, optional): The name for the telescope config file
+            (Default teleconfig_#number.yaml)
+        return_names (bool, optional): Return the file names for loopback tests.
+
+    Returns:
+        if return_names, returns tuple (path, telescope_config_name, layout_csv_name)
     """
 
     if telescope_config_name is None:
@@ -614,14 +618,14 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
     Extract simulation configuration settings from uvfits.
 
     Args:
-        uvdata_in (UVData) : uvdata object.
+        uvdata_in (UVData): uvdata object.
 
     Keywords:
-        param_filename (str, optional) : output param file name, defaults to obsparam_#.yaml.
-        telescope_config_name (str, optional) : Name of yaml file file. Defaults to blank string.
-        layout_csv_name (str, optional) : Name of layout csv file. Defaults to blank string.
+        param_filename (str, optional): output param file name, defaults to obsparam_#.yaml.
+        telescope_config_name (str, optional): Name of yaml file file. Defaults to blank string.
+        layout_csv_name (str, optional): Name of layout csv file. Defaults to blank string.
         catalog (str, optional): Path to catalog file, defaults to 'mock'.
-        path_out (str, optional) : Where to put config files.
+        path_out (str, optional): Where to put config files.
     """
 
     if param_filename is None:
@@ -678,14 +682,11 @@ def write_uvfits(uv_obj, param_dict, return_filename=False, dryrun=False):
         uv_obj: UVData object to write out.
         param_dict: parameter dictionary defining output path, filename, and
                     whether or not to clobber.
-    Keywords:
         return_filename: (Default false) Return the file path
         dryrun: (Default false) Don't write to file.
 
     Returns:
         File path, if return_filename is True
-
-
     """
     if 'filing' in param_dict.keys():
         param_dict = param_dict['filing']

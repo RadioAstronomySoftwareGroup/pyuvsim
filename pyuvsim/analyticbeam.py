@@ -10,8 +10,9 @@ from scipy.special import spherical_jn as jn
 
 class AnalyticBeam(object):
     """
-    Defines an object with similar functionality to pyuvdata.UVBeam, which
-    directly calculates jones matrices at given azimuths and zenith angles
+    Defines an object with similar functionality to pyuvdata.UVBeam
+
+    Directly calculates jones matrices at given azimuths and zenith angles
     from analytic functions.
 
     Supports uniform (unit response in all directions), gaussian, and Airy
@@ -38,6 +39,7 @@ class AnalyticBeam(object):
     def interp(self, az_array, za_array, freq_array):
         """
         Evaluate the primary beam at given az, za locations (in radians).
+
         (similar to UVBeam.interp)
 
         Args:
@@ -46,9 +48,8 @@ class AnalyticBeam(object):
             za_array: za values to evaluate at in radians (same length as az_array)
             freq_array: frequency values to evaluate at
 
-
         Returns:
-            an array of beam values, shape: (Naxes_vec, Nspws, Nfeeds or Npols,
+            an array of beam values, shape (Naxes_vec, Nspws, Nfeeds or Npols,
                 Nfreqs or freq_array.size if freq_array is passed,
                 Npixels/(Naxis1, Naxis2) or az_array.size if az/za_arrays are passed)
             an array of interpolated basis vectors (or self.basis_vector_array
