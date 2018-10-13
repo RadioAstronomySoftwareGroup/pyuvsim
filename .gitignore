@@ -99,6 +99,11 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
+# Sphinx documentation
+docs/.build/
+docs/_build/
+docs/index.rst
+
 # mkdocs documentation
 /site
 

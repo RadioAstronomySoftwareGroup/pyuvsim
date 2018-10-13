@@ -7,19 +7,19 @@ Primary Beams
 Simulations may be run using pyuvdata UVBeam objects or AnalyticBeam objects.
 
 
-.. automodule:: pyuvsim.analyticbeam
+.. autoclass:: pyuvsim.AnalyticBeam
     :members:
 
 Antenna objects
 --------------
 
-.. automodule:: pyuvsim.antenna
+.. autoclass:: pyuvsim.Antenna
     :members:
 
 Profiling
 ---------
 
-Developers will want to use line profiling tools to track down bottlenecks and 
+Developers will want to use line profiling tools to track down bottlenecks and
 find room for performance improvements. These tools better allow profilers to
 operate within the MPI environment.
 
@@ -37,7 +37,7 @@ Simulations are run from .yaml files with specified keywords. See :ref:`usage`.
 Sources
 -------
 
-.. automodule:: pyuvsim.source
+.. autoclass:: pyuvsim.Source
     :members:
 
 Telescopes
@@ -45,7 +45,7 @@ Telescopes
 
 Shared properties of all antennas, such as array center location and primary beam objects.
 
-.. automodule:: pyuvsim.telescope
+.. autoclass:: pyuvsim.Telescope
     :members:
 
 UV Simulation functions

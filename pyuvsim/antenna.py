@@ -38,9 +38,8 @@ class Antenna(object):
             frequency: (float) frequency in Hz
 
         Returns:
-            jones_matrix: A 2x2 float array. The first axis is feed, the
+            jones_matrix, A 2x2 float array. The first axis is feed, the
                           second axis is vector component on the sky in az/za.
-
         """
         # get_direction_jones needs to be defined on UVBeam
         # 2x2 array of Efield vectors in alt/az

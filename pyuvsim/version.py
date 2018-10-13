@@ -15,8 +15,7 @@ pyuvsim_dir = os.path.dirname(os.path.realpath(__file__))
 
 
 def _get_git_output(args, capture_stderr=False):
-    """Get output from Git, ensuring that it is of the ``str`` type,
-    not bytes."""
+    """Get output from Git, ensuring that it is of the ``str`` type, not bytes."""
 
     argv = ['git', '-C', pyuvsim_dir] + args
     if capture_stderr:
@@ -75,7 +74,7 @@ def construct_version_info():
     except subprocess.CalledProcessError:  # pragma: no cover
         try:
             # Check if a GIT_INFO file was created when installing package
-            version_info.upate(_get_gitinfo_file())
+            version_info.update(_get_gitinfo_file())
         except (IOError, OSError):
             pass
 

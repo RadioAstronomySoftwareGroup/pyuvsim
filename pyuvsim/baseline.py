@@ -11,7 +11,6 @@ class Baseline(object):
     """
     Defines a single pair of Antenna objects, the means for calculating their
     uvw coordinates, and comparing them
-
     """
 
     def __init__(self, antenna1, antenna2):
