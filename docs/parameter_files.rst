@@ -4,11 +4,11 @@ Parameter and configuration Files
 
 When running simulations from yaml and csv files, there are four configuration files that must be used.
 
-The outermost parameter file is the `obsparam_*.yaml`, which is parsed by ``initialize_uvdata_from_params`` into a uvdata object, a source list, a beam dictionary, and a beam list.
+The outermost parameter file is the `obsparam_*.yaml`, which is parsed by ``initialize_uvdata_from_params`` into a UVdata object, a source list, a beam dictionary, and a beam list.
 
 The antenna layout and telescope config yaml files determine the full properties of the array, including location, beam models, layout, and naming.
 
-The catalog text files give point source lists 
+The catalog text files give point source lists. 
 
 
 These files contain overall simulation parameters.
@@ -99,9 +99,9 @@ Telescope Configuration
     .. literalinclude:: ../pyuvsim/data/test_config/28m_triangle_10time_10chan.yaml
         :end-before: 3
 
-    This yaml file provides the telescope name, location in lat/lon/alt degrees, and the `beam dictionary`.
+    This yaml file provides the telescope name, location in latitude/longitude/altitude in degrees/degrees/meters (respectively), and the `beam dictionary`.
 
-    The beam dictionary, along with the beam IDs in the layout file, allow one to specify different beam models be used for different antennas. The ``beam_paths`` section of the telescope param file pairs each beam ID present in the layout with either the path to a beamfits file or a keyword specifying an existing analytic beam. Right now, only uniform and gaussian beams are supported. If the gaussian beam is used, the ``sigma`` keyword must also be given, which specifies the beam width in radians. (see documentation of the AnalyticBeam class for details).
+    The beam dictionary, along with the beam IDs in the layout file, allow one to specify different beam models be used for different antennas. The telescope configuration yaml file lists beam models to be used along with a "Beam ID". The corresponding Beam IDs in the layout file then tells pyuvsim which beam model to assign to each antenna.
 
 Sources
 ^^^^^^^
@@ -113,8 +113,8 @@ Sources
         :end-before: 3
    
     The columns are:
-        * ``SOURCE_ID`` : Identifying code for the source
-        * ``RA_J2000`` : Right ascension of source at J2000 epoch, in decimal hours.
+        * ``SOURCE_ID`` : Identifier for the source
+        * ``RA_J2000`` : Right ascension of source at J2000 epoch, in decimal degrees.
         * ``DEC_J2000`` : Declination of source at J2000 epoch, in decimal degrees.
         * ``FLUX``: Source stokes I brightness in Janskies.  (Currently only point sources are supported).
         * ``Frequency``: A reference frequency for the given flux. This will be used for spectral modeling. 
