@@ -37,17 +37,17 @@ with open(paramsfile, 'r') as pfile:
 
 params['config_path'] = os.path.dirname(paramsfile)
 
-beam_list = None
-beam_dict = None
-input_uv = UVData()
-mock_keywords = None
-catalog = None
-
 min_alt = 70  # Degrees
 
 mpi.start_mpi()
 rank = mpi.get_rank()
 
+beam_list = None
+beam_dict = None
+input_uv = UVData()
+mock_keywords = None
+catalog = 'mock'
+print(catalog)
 if rank == 0:
 
     params['freq']['Nfreqs'] = args.Nfreqs

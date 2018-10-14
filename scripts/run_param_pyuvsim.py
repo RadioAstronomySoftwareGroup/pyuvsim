@@ -74,21 +74,18 @@ if rank == 0:
         print("Nfreqs: ", input_uv.Nfreqs)
         print("Ntimes: ", input_uv.Ntimes)
         source_params = params['sources']
-        if source_params['catalog'] == 'mock':
+        if 'catalog' in source_params:
+            catalog = source_params['catalog']
+        else:
+            catalog = None
+        if catalog == 'mock':
             mock_keywords = {'time': input_uv.time_array[0], 'arrangement': source_params['mock_arrangement'],
                              'array_location': EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')}
             extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'max_za']
             for k in extra_mock_kwds:
                 if k in source_params.keys():
                     mock_keywords[k] = source_params[k]
-            catalog = 'mock'
-
-        if 'catalog' in source_params:
-            catalog = source_params['catalog']
-        else:
-            catalog = None
 uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
-
 
 if rank == 0:
     simsetup.write_uvfits(uvdata_out, params)

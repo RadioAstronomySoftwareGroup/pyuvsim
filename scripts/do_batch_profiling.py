@@ -34,7 +34,6 @@ fname = check_file_exists_and_increment(git_branch + '_slurm_ids.out')
 
 sids_out = open(fname, 'w')
 sids_out.write('Nsrcs, Ntimes, Nfreqs, Nbls, beam, slurm_id\n')
-# TODO Replace this with a task array job? (a little neater...)
 for n in Ncores:
     for i in range(Nconfigs):
         cmd = ['sbatch', '-n ' + str(n), '--cpus-per-task=1', '--mem=' + mem, '--time=' + time,

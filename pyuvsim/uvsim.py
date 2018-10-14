@@ -279,7 +279,7 @@ def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
     if uv_obj.Nfreqs == 1:
         uv_obj.channel_width = 1.  # Hz
     else:
-        uv_obj.channel_width = np.diff(freqs)[0]
+        uv_obj.channel_width = np.diff(uv_obj.freq_array[0])[0]
     uv_obj.set_uvws_from_antenna_positions()
     if uv_obj.Ntimes == 1:
         uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
@@ -343,6 +343,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         raise TypeError("input_uv must be UVData object")
     # The Head node will initialize our simulation
     # Read input file and make uvtask list
+    catalog
     if rank == 0:
         print('Nblts:', input_uv.Nblts)
         print('Nfreqs:', input_uv.Nfreqs)
@@ -445,6 +446,15 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     # Source are summed over but only have 1 name
     # Some source may be correct
     summed_local_task_list = list(summed_task_dict.values())
+    # Tasks contain attributes that are not pickle-able.
+    # Remove everything except uvdata_index and visibility_vector
+    for task in summed_local_task_list:
+        del task.time
+        del task.freq
+        del task.source
+        del task.baseline
+        del task.telescope
+        
     # gather all the finished local tasks into a list of list of len NPUs
     # gather is a blocking communication, have to wait for all PUs
     full_tasklist = comm.gather(summed_local_task_list, root=0)
