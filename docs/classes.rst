@@ -11,7 +11,7 @@ Simulations may be run using pyuvdata UVBeam objects or AnalyticBeam objects.
     :members:
 
 Antenna objects
---------------
+---------------
 
 .. autoclass:: pyuvsim.Antenna
     :members:
