@@ -7,60 +7,59 @@ PYUVsim is a comprehensive simulation package for radio interferometers in pytho
 
 A number of analysis tools are available to simulate the output of a radio interferometer (CASA, OSCAR, FHD, PRISim, et al), however each makes numerical approximations to enable speed ups.  The PYUVsim goal is to provide a simulated instrument output which emphasizes accuracy and extensibility.
 
- # Motivation and Approach
+# Motivation and Approach
 The two primary pyuvsim goals are interferometer simulation accuracy at the level of precision necessary for 21cm cosmology science. Key elements of this approach include:
- 1. High level of test coverage including accuracy (design goal is 97%).
- 2. Include analytic tests in unittests.
- 3. Comparison with external simulations.
- 4. Design for scalability across many cpus.
+1. High level of test coverage including accuracy (design goal is 97%).
+2. Include analytic tests in unittests.
+3. Comparison with external simulations.
+4. Design for scalability across many cpus.
 
-# Documentation
-Documentation on how to run simulations and developer API documentation is hosted on [ReadTheDocs](https://pyuvsim.readthedocs.io).
+# Installation
+* Bleeding edge: `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`
+* pip: `pip install pyuvsim`
+* PYUVSim is mainly intended to run on clusters running the linux operating system
 
- # Installation
- * Bleeding edge: `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`
- * pip: `pip install pyuvsim`
- * PYUVSim is mainly intended to run on clusters running the linux operating system
+## Dependencies
+* `numpy`, `astropy`, `scipy`, `mpi4py`, `pyyaml`, `six`, `pyuvdata`
+* optionally `line_profiler` if you want to do profiling (support for profiling is built in)
 
- ## Dependencies
-  * `numpy`, `astropy`, `scipy`, `mpi4py`, `pyyaml`, `six`, `pyuvdata`
-  * optionally `line_profiler` if you want to do profiling (support for profiling is built in)
-
- # Inputs
+# Inputs
 
 A simulation requires sets of times, frequencies, source positions and brightnesses, antenna positions, and direction-dependent primary beam responses. PYUVsim specifies times, frequencies, and array configuration via a UVData object (from the pyuvdata package), source positions and brightnesses via Source objects, and primary beams either through UVBeam or AnalyticBeam objects.
- * All sources are treated as point sources, with flux specified in Stokes parameters and position in right ascension / declination in the International Celestial Reference Frame (equivalently, in J2000 epoch).
- * Primary beams are specified as full electric field components, and are interpolated in angle and frequency. This allows for an exact Jones matrix to be constructed for each desired source position.
- * Multiple beam models may be used throughout the array, allowing for more complex instrument responses to be modeled.
+* All sources are treated as point sources, with flux specified in Stokes parameters and position in right ascension / declination in the International Celestial Reference Frame (equivalently, in J2000 epoch).
+* Primary beams are specified as full electric field components, and are interpolated in angle and frequency. This allows for an exact Jones matrix to be constructed for each desired source position.
+* Multiple beam models may be used throughout the array, allowing for more complex instrument responses to be modeled.
 
 These input objects may be made from a data file or from a set of `yaml` configuration files. See [Running a simulation](https://pyuvsim.readthedocs.io/en/latest/usage.html).
 
- # Quick start guide
- Example "obsparam" configuration files may be found in the `reference_simulations` directory.
+# Quick start guide
+Example "obsparam" configuration files may be found in the `reference_simulations` directory.
 1. Install from github or pip.
 2. Run off of a parameter file with 20 MPI ranks:
 ```
-    mpirun -n 20 python run_param_pyuvsim.py -p reference_simulations/obsparam_1.1.yaml
+mpirun -n 20 python run_param_pyuvsim.py -p reference_simulations/obsparam_1.1.yaml
 ```
 3. Run with profiling. There is the option to use the `line_profiler` module to assess line-by-line memory and time usage.
 Profiling results are only reported for the rank 0 process if run within MPI.
 ```
-    mpirun -n 20 kernprof -l -v run_param_pyuvsim.py -p reference_simulations/obsparam_1.1.yaml > profiling_results.out
+mpirun -n 20 kernprof -l -v run_param_pyuvsim.py -p reference_simulations/obsparam_1.1.yaml > profiling_results.out
 ```
 
+# Documentation
+Documentation on how to run simulations and developer API documentation is hosted on [ReadTheDocs](https://pyuvsim.readthedocs.io).
 
- # How to contribute
- Contributions to this package to add new features or address any of the
- issues in the [issue log](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/issues) are very welcome.
- Please submit improvements as pull requests against the repo after verifying that
- the existing tests pass and any new code is well covered by unit tests.
+# How to contribute
+Contributions to this package to add new features or address any of the
+issues in the [issue log](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/issues) are very welcome.
+Please submit improvements as pull requests against the repo after verifying that
+the existing tests pass and any new code is well covered by unit tests.
 
- Bug reports or feature requests are also very welcome, please add them to the
- issue log after verifying that the issue does not already exist.
- Comments on existing issues are also welcome.
+Bug reports or feature requests are also very welcome, please add them to the
+issue log after verifying that the issue does not already exist.
+Comments on existing issues are also welcome.
 
- # Versioning Approach
+# Versioning Approach
 We use a `generation.major.minor` format.
- * generation - certified comparisons with other simulations
- * major - substantial package changes released on a sub-yearly cycle
- * minor - fixes that shouldn't change any outputs
+* generation - certified comparisons with other simulations
+* major - substantial package changes released on a sub-yearly cycle
+* minor - fixes that shouldn't change any outputs
