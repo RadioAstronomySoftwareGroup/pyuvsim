@@ -92,12 +92,10 @@ Telescope Configuration
     Example array layout:
 
     .. literalinclude:: ../pyuvsim/data/test_config/triangle_bl_layout.csv
-        :end-before: 3
 
     Columns here provide, in order from left to right, the antenna name, antenna number, a beam ID number, and the antenna positions relative to the array center in eastings/northings/up-ings in meters. The layout file has a corresponding telescope metadata file, shown below:
 
     .. literalinclude:: ../pyuvsim/data/test_config/28m_triangle_10time_10chan.yaml
-        :end-before: 3
 
     This yaml file provides the telescope name, location in latitude/longitude/altitude in degrees/degrees/meters (respectively), and the `beam dictionary`.
 
