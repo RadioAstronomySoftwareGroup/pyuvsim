@@ -36,7 +36,6 @@ if params is None:
 
 input_uv = UVData()
 
-Nbeams = 0
 beam_list = None
 beam_dict = None
 input_uv = UVData()
@@ -62,7 +61,6 @@ if rank == 0:
                 beam_list.append(bf)
 
         beam_list = (np.array(beam_list)[beam_ids]).tolist()
-        Nbeams = len(beam_list)
         outfile_name = os.path.join(params['outdir'], params['outfile_prefix'] + "_" + os.path.basename(filename))
         outfile_name = outfile_name + ".uvfits"
 
@@ -70,7 +68,6 @@ if rank == 0:
         # Not running off a uvfits.
         print("Simulating from parameters")
         input_uv, beam_list, beam_dict, beam_ids = simsetup.initialize_uvdata_from_params(params)
-        Nbeams = len(beam_list)
         print("Nfreqs: ", input_uv.Nfreqs)
         print("Ntimes: ", input_uv.Ntimes)
         source_params = params['sources']

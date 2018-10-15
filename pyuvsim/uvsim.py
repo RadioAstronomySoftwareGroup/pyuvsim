@@ -141,12 +141,21 @@ class UVEngine(object):
 @profile
 def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     """
-        Generate local tasks, reusing quantities where possible.
+    Generate local tasks, reusing quantities where possible.
+
+    Args:
+        task_ids (numpy.ndarray of ints): Task index in the full flattened meshgrid of parameters.
+        input_uv (UVData): UVData object to use
+        sources: array of Source objects
+        beam_list: (list of UVBeam or AnalyticBeam objects
+        beam_dict (dict, optional): dict mapping antenna number to beam index in beam_list
+
+    Yields:
+        Iterable of task objects to be done on current rank. 
     """
+
     # Loops, outer to inner: times, sources, frequencies, baselines
     # The task_ids refer to tasks on the flattened meshgrid.
-
-    # There will always be relatively few antennas, so just build the full list.
 
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
@@ -154,6 +163,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     if not isinstance(catalog, np.ndarray):
         raise TypeError("sources must be a numpy array")
 
+    # There will always be relatively few antennas, so just build the full list.
     antenna_names = input_uv.antenna_names
     antennas = []
     antpos_enu, antnums = input_uv.get_ENU_antpos()
