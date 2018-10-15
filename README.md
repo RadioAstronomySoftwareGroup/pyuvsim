@@ -9,6 +9,7 @@ A number of analysis tools are available to simulate the output of a radio inter
 
 # Motivation and Approach
 The two primary pyuvsim goals are interferometer simulation accuracy at the level of precision necessary for 21cm cosmology science. Key elements of this approach include:
+
 1. High level of test coverage including accuracy (design goal is 97%).
 2. Include analytic tests in unittests.
 3. Comparison with external simulations.
@@ -34,6 +35,7 @@ These input objects may be made from a data file or from a set of `yaml` configu
 
 # Quick start guide
 Example "obsparam" configuration files may be found in the `reference_simulations` directory.
+
 1. Install from github or pip.
 2. Run off of a parameter file with 20 MPI ranks:
 ```
