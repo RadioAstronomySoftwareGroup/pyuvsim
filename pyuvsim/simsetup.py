@@ -349,35 +349,25 @@ def initialize_uvdata_from_params(obs_params):
     beam_ids = ant_layout['beamid']
     beam_list = []
     beam_dict = {}
+
     for beamID in np.unique(beam_ids):
         beam_model = telparam['beam_paths'][beamID]
         which_ants = antnames[np.where(beam_ids == beamID)]
         for a in which_ants:
             beam_dict[a] = beamID
-        uvb = UVBeam()
-        if beam_model in ['gaussian', 'uniform', 'airy']:
-            # Identify analytic beams
-            if beam_model == 'gaussian':
-                if 'sigma' not in telparam:
-                    raise KeyError("Missing sigma for gaussian beam.")
-                beam = AnalyticBeam('gaussian', sigma=telparam['sigma'])
-            elif beam_model == 'airy':
-                if 'diameter' not in telparam:
-                    raise KeyError("Missing diameter for airy beam")
-                beam = AnalyticBeam('airy', diameter=telparam['diameter'])
-            else:
-                beam = AnalyticBeam('uniform')
-            beam_list.append(beam)
-            continue
-        if not os.path.exists(beam_model):
-            filename = beam_model
-            path = os.path.join(SIM_DATA_PATH, filename)
-            if not os.path.exists(path):
-                raise OSError("Could not find beam file " + filename)
-        else:
-            path = beam_model   # beam_model = path to beamfits
-        uvb.read_beamfits(path)
-        beam_list.append(uvb)
+        if beam_model == 'gaussian':
+            try:
+                sigma = telparam['sigma']
+                beam_model = beam_model + '_' + str(sigma)
+            except KeyError:
+                raise KeyError("Missing sigma for gaussian beam.")
+        if beam_model == 'airy':
+            try:
+                diam = telparam['diameter']
+                beam_model = beam_model + '_' + str(diam)
+            except KeyError:
+                raise KeyError("Missing diameter for airy beam.")
+        beam_list.append(beam_model)
 
     param_dict['Nants_data'] = antnames.size
     param_dict['Nants_telescope'] = antnames.size
@@ -672,6 +662,31 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
 
     with open(os.path.join(path_out, param_filename), 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)
+
+
+def beam_string_to_object(beam_model):
+    """
+        Make a beam object given an identifying string.
+    """
+    # Identify analytic beams
+    if beam_model.startswith('gaussian'):
+        sigma = float(beam_model.split("_")[1])
+        return AnalyticBeam('gaussian', sigma=sigma)
+    elif beam_model.startswith('airy'):
+        diameter = float(beam_model.split("_")[1])
+        return AnalyticBeam('airy', sigma=diameter)
+    elif beam_model.startswith('uniform'):
+        return AnalyticBeam('uniform')
+    if not os.path.exists(beam_model):
+        filename = beam_model
+        path = os.path.join(SIM_DATA_PATH, filename)
+        if not os.path.exists(path):
+            raise OSError("Could not find file " + filename)
+    else:
+        path = beam_model   # beam_model = path to beamfits
+    uvb = UVBeam()
+    uvb.read_beamfits(path)
+    return uvb
 
 
 def write_uvfits(uv_obj, param_dict, return_filename=False, dryrun=False):

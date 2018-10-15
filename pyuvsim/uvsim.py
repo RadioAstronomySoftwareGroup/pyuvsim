@@ -324,7 +324,9 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
 
     Arguments:
         input_uv: An input UVData object, containing baseline/time/frequency information.
-        beam_list: A list of UVBeam and/or AnalyticBeam objects
+        beam_list: A list of UVBeam and/or AnalyticBeam identifier strings.
+
+    Keywords:
         beam_dict: Dictionary of {antenna_name : beam_ID}, where beam_id is an index in
                    the beam_list. This assigns beams to antennas.
                    Default: All antennas get the 0th beam in the beam_list.
@@ -343,7 +345,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         raise TypeError("input_uv must be UVData object")
     # The Head node will initialize our simulation
     # Read input file and make uvtask list
-    catalog
+    catalog=None
     if rank == 0:
         print('Nblts:', input_uv.Nblts)
         print('Nfreqs:', input_uv.Nfreqs)
@@ -400,6 +402,9 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
 
     catalog = comm.bcast(catalog, root=0)
     input_uv = comm.bcast(input_uv, root=0)
+    beam_list = comm.bcast(beam_list, root=0)
+    beam_dict = comm.bcast(beam_dict, root=0)
+
     Nblts = input_uv.Nblts
     Nbls = input_uv.Nbls
     Ntimes = input_uv.Ntimes
@@ -407,7 +412,6 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     Nsrcs = len(catalog)
 
     Ntasks = Nblts * Nfreqs * Nsrcs
-    catalog = comm.bcast(catalog, root=0)
 
     stride = Ntasks // Npus
     if (rank + 1) * stride >= Ntasks:
@@ -415,7 +419,10 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     else:
         task_ids = np.arange(rank * stride, (rank + 1) * stride)
 
-    local_task_iter = uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict)
+    # Construct beam objects from strings 
+    beam_models = [ simsetup.beam_string_to_object(bm) for bm in beam_list ]
+
+    local_task_iter = uvdata_to_task_iter(task_ids, input_uv, catalog, beam_models, beam_dict)
 
     summed_task_dict = {}
 
@@ -454,7 +461,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         del task.source
         del task.baseline
         del task.telescope
-        
+
     # gather all the finished local tasks into a list of list of len NPUs
     # gather is a blocking communication, have to wait for all PUs
     full_tasklist = comm.gather(summed_local_task_list, root=0)
