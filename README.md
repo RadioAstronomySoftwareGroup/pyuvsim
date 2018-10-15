@@ -65,4 +65,4 @@ Comments on existing issues are also welcome.
 We use a `generation.major.minor` format.
 * generation - certified comparisons with other simulations
 * major - substantial package changes released on a sub-yearly cycle
-* minor - fixes that shouldn't change any outputs
+* minor - fixes that should not change any outputs
