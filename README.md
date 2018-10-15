@@ -16,7 +16,7 @@ The two primary pyuvsim goals are interferometer simulation accuracy at the leve
 
 # Installation
 * Bleeding edge: `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`
-* pip: `pip install pyuvsim`
+<!---* pip: `pip install pyuvsim`-->
 * PYUVSim is mainly intended to run on clusters running the linux operating system
 
 ## Dependencies
