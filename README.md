@@ -27,6 +27,7 @@ The two primary pyuvsim goals are interferometer simulation accuracy at the leve
 # Inputs
 
 A simulation requires sets of times, frequencies, source positions and brightnesses, antenna positions, and direction-dependent primary beam responses. PYUVsim specifies times, frequencies, and array configuration via a UVData object (from the pyuvdata package), source positions and brightnesses via Source objects, and primary beams either through UVBeam or AnalyticBeam objects.
+
 * All sources are treated as point sources, with flux specified in Stokes parameters and position in right ascension / declination in the International Celestial Reference Frame (equivalently, in J2000 epoch).
 * Primary beams are specified as full electric field components, and are interpolated in angle and frequency. This allows for an exact Jones matrix to be constructed for each desired source position.
 * Multiple beam models may be used throughout the array, allowing for more complex instrument responses to be modeled.
@@ -34,7 +35,7 @@ A simulation requires sets of times, frequencies, source positions and brightnes
 These input objects may be made from a data file or from a set of `yaml` configuration files. See [Running a simulation](https://pyuvsim.readthedocs.io/en/latest/usage.html).
 
 # Quick start guide
-Example "obsparam" configuration files may be found in the `reference_simulations` directory.
+Example `obsparam` configuration files may be found in the `reference_simulations` directory.
 
 1. Install from github or pip.
 2. Run off of a parameter file with 20 MPI ranks:
