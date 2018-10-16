@@ -97,13 +97,13 @@ Telescope Configuration
 
     .. literalinclude:: example_configs/bl_lite_mixed.yaml
 
-    This yaml file provides the telescope name, location in latitude/longitude/altitude in degrees/degrees/meters (respectively), and the `beam dictionary`.
+    This yaml file provides the telescope name, location in latitude/longitude/altitude in degrees/degrees/meters (respectively), and the `beam dictionary`. In this case, beam_id == 0 is the UVBeam file written out to hera.uvbeam, and beam_id == 1 is an Airy beam with diameter 14m. The dictionary only needs to be as long as the number of unique beams used in the array, while the layout file specifies which antennas will use which beam type. This allows for a mixture of beams to be used, as in this example.
 
-    The beam dictionary, along with the beam IDs in the layout file, allow one to specify different beam models be used for different antennas. The telescope configuration yaml file lists beam models to be used along with a "Beam ID". The corresponding Beam IDs in the layout file then tells pyuvsim which beam model to assign to each antenna. The configuration above produces the layout shown in the image above, with beam type indicated by the color of the dish. Note that, at this time, if a mixture of analytic beams (airy, uniform, or gaussian) are used, only one value of sigma or diameter may be used for the whole array.
+    The figure below shows the array created by these configurations, with beam type indicated by color.
 
     .. image:: baseline_lite.png
-	:width: 600
-	:alt: Graphical depiction of the example antenna layout.
+	    :width: 600
+	    :alt: Graphical depiction of the example antenna layout.
 
 Sources
 ^^^^^^^
