@@ -89,17 +89,21 @@ Telescope Configuration
 
     Under the telescope section, the keywords ``array_layout`` and ``telescope_config_name`` give paths to, respectively, the array layout text file and the telescope metadata configuration yaml file. If the full path is not specified, pyuvsim will look in the same directory as the obsparam file.
 
-    Example array layout:
+    Example array layout with four antennas:
 
-    .. literalinclude:: ../pyuvsim/data/test_config/triangle_bl_layout.csv
+    .. literalinclude:: example_configs/baseline_lite.csv
 
     Columns here provide, in order from left to right, the antenna name, antenna number, a beam ID number, and the antenna positions relative to the array center in eastings/northings/up-ings in meters. The layout file has a corresponding telescope metadata file, shown below:
 
-    .. literalinclude:: ../pyuvsim/data/test_config/28m_triangle_10time_10chan.yaml
+    .. literalinclude:: example_configs/bl_lite_mixed.yaml
 
     This yaml file provides the telescope name, location in latitude/longitude/altitude in degrees/degrees/meters (respectively), and the `beam dictionary`.
 
-    The beam dictionary, along with the beam IDs in the layout file, allow one to specify different beam models be used for different antennas. The telescope configuration yaml file lists beam models to be used along with a "Beam ID". The corresponding Beam IDs in the layout file then tells pyuvsim which beam model to assign to each antenna.
+    The beam dictionary, along with the beam IDs in the layout file, allow one to specify different beam models be used for different antennas. The telescope configuration yaml file lists beam models to be used along with a "Beam ID". The corresponding Beam IDs in the layout file then tells pyuvsim which beam model to assign to each antenna. The configuration above produces the layout shown in the image above, with beam type indicated by the color of the dish. Note that, at this time, if a mixture of analytic beams (airy, uniform, or gaussian) are used, only one value of sigma or diameter may be used for the whole array.
+
+    .. image:: baseline_lite.png
+	:width: 600
+	:alt: Graphical depiction of the example antenna layout.
 
 Sources
 ^^^^^^^
