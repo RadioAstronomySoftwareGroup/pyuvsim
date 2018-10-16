@@ -168,16 +168,17 @@ def uvdata_to_task_list(input_uv, sources, beam_list, beam_dict=None):
 
     times = input_uv.time_array
 
-    antpos_ENU, _ = input_uv.get_ENU_antpos()
+    antpos_ENU, _ = input_uv.get_ENU_antpos(center=False)
 
     antenna_names = input_uv.antenna_names
+    antenna_numbers = input_uv.antenna_numbers
     antennas = []
     for num, antname in enumerate(antenna_names):
         if beam_dict is None:
             beam_id = 0
         else:
             beam_id = beam_dict[antname]
-        antennas.append(Antenna(antname, num, antpos_ENU[num], beam_id))
+        antennas.append(Antenna(antname, antenna_numbers[num], antpos_ENU[num], beam_id))
 
     baselines = []
     print('Generating Baselines')

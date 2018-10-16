@@ -246,7 +246,6 @@ def test_uvfits_to_config():
 
     orig_param_dict = copy.deepcopy(param_dict)   # The parameter dictionary gets modified in the function below.
     uv1, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
-
     # Generate parameters from new uvfits and compare with old.
     path, telescope_config, layout_fname = \
         pyuvsim.simsetup.uvdata_to_telescope_config(uv1, herabeam_default,
