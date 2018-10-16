@@ -203,7 +203,7 @@ def test_redundant_baselines():
     freq = hera_uv.freq_array[0, 0] * units.Hz
 
     # get antennas positions into ENU
-    antpos, _ = hera_uv.get_ENU_antpos()
+    antpos, _ = hera_uv.get_ENU_antpos(center=False)
 
     en_shift = [5., 5., 0]
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
@@ -266,7 +266,7 @@ def test_single_offzenith_source_uvfits():
     freq = hera_uv.freq_array[0, 0] * units.Hz
 
     # get antennas positions into ENU
-    antpos, _ = hera_uv.get_ENU_antpos()
+    antpos, _ = hera_uv.get_ENU_antpos(center=False)
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
@@ -521,8 +521,12 @@ def test_uvdata_init():
                        'Based on UVData file: ' + EW_uvfits_file + '. Npus = 1.'
                        + hera_uv.pyuvdata_version_str)
     hera_uv.instrument = hera_uv.telescope_name
-    nt.assert_equal(hera_uv._antenna_positions, uvdata_out._antenna_positions)
+    nt.assert_true(np.allclose(hera_uv.antenna_positions, uvdata_out.antenna_positions))
     nt.assert_true(uvdata_out.__eq__(hera_uv, check_extra=False))
+
+
+if __name__ == '__main__':
+    test_uvdata_init()
 
 
 def test_uvdata_init_errors():
