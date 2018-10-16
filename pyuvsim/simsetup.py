@@ -355,18 +355,26 @@ def initialize_uvdata_from_params(obs_params):
         which_ants = antnames[np.where(beam_ids == beamID)]
         for a in which_ants:
             beam_dict[a] = beamID
-        if beam_model == 'gaussian':
-            try:
-                sigma = telparam['sigma']
-                beam_model = beam_model + '_' + str(sigma)
-            except KeyError:
-                raise KeyError("Missing sigma for gaussian beam.")
-        if beam_model == 'airy':
-            try:
-                diam = telparam['diameter']
-                beam_model = beam_model + '_' + str(diam)
-            except KeyError:
-                raise KeyError("Missing diameter for airy beam.")
+        if beam_model in AnalyticBeam.supported_types:
+            if beam_model == 'gaussian':
+                try:
+                    sigma = telparam['sigma']
+                    beam_model = beam_model + '_' + str(sigma)
+                except KeyError:
+                    raise KeyError("Missing sigma for gaussian beam.")
+            if beam_model == 'airy':
+                try:
+                    diam = telparam['diameter']
+                    beam_model = beam_model + '_' + str(diam)
+                except KeyError:
+                    raise KeyError("Missing diameter for airy beam.")
+        else:
+            # If not analytic, it's a beamfits file path.
+            if not os.path.exists(beam_model):
+                path = os.path.join(SIM_DATA_PATH, beam_model)
+                beam_model = path
+                if not os.path.exists(path):
+                    raise OSError("Could not find file " + beam_model)
         beam_list.append(beam_model)
 
     param_dict['Nants_data'] = antnames.size
@@ -674,14 +682,9 @@ def beam_string_to_object(beam_model):
         return AnalyticBeam('gaussian', sigma=sigma)
     elif beam_model.startswith('airy'):
         diameter = float(beam_model.split("_")[1])
-        return AnalyticBeam('airy', sigma=diameter)
+        return AnalyticBeam('airy', diameter=diameter)
     elif beam_model.startswith('uniform'):
         return AnalyticBeam('uniform')
-    if not os.path.exists(beam_model):
-        filename = beam_model
-        path = os.path.join(SIM_DATA_PATH, filename)
-        if not os.path.exists(path):
-            raise OSError("Could not find file " + filename)
     else:
         path = beam_model   # beam_model = path to beamfits
     uvb = UVBeam()

@@ -182,6 +182,8 @@ def check_param_reader(config_num):
 
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_filename)
+    for i, bm in enumerate(new_beam_list):
+        new_beam_list[i] = pyuvsim.simsetup.beam_string_to_object(bm)
 
     # write_uvfits test:
     with open(param_filename, 'r') as fhandle:
