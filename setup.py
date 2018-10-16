@@ -5,7 +5,6 @@
 from setuptools import setup
 import glob
 import os
-from os import listdir
 import io
 import json
 from pyuvsim import version
@@ -23,7 +22,7 @@ setup_args = {
     'author': 'Radio Astronomy Software Group',
     'url': 'https://github.com/RadioAstronomySoftwareGroup/pyuvsim',
     'license': 'BSD',
-    'description': 'A radio interferometer simulator',
+    'description': 'A comprehensive simulation package for radio interferometers in python',
     'long_description': readme,
     'long_description_content_type': 'text/markdown',
     'package_dir': {'pyuvsim': 'pyuvsim'},
@@ -37,6 +36,7 @@ setup_args = {
                     'Intended Audience :: Science/Research',
                     'License :: OSI Approved :: BSD License',
                     'Programming Language :: Python :: 2.7',
+                    'Programming Language :: Python :: 3.6',
                     'Topic :: Scientific/Engineering :: Astronomy'],
     'keywords': 'radio astronomy interferometry'
 }
