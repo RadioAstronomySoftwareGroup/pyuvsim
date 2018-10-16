@@ -525,10 +525,6 @@ def test_uvdata_init():
     nt.assert_true(uvdata_out.__eq__(hera_uv, check_extra=False))
 
 
-if __name__ == '__main__':
-    test_uvdata_init()
-
-
 def test_uvdata_init_errors():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
