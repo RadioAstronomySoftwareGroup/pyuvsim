@@ -121,7 +121,7 @@ Sources
         * ``FLUX``: Source stokes I brightness in Janskies.  (Currently only point sources are supported).
         * ``Frequency``: A reference frequency for the given flux. This will be used for spectral modeling. 
     
-    Alternatively, you can specify a ``mock`` and provide the ``mock_arrangement`` keyword to specify which mock catalog to generate. Available options are shown in the ``create_mock_catalog`` doctstring:
+    Alternatively, you can specify a ``mock`` and provide the ``mock_arrangement`` keyword to specify which mock catalog to generate. Available options are shown in the ``create_mock_catalog`` docstring:
 
     .. module:: pyuvsim
 
