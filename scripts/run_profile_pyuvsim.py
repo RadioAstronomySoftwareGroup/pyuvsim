@@ -62,7 +62,7 @@ if rank == 0:
     input_uv.antenna_names = ants_new.astype(str)  # Antnames/numbers are going to be messed up by the baseline selection. Unimportant.
     Nants = ants_new.size
     beam_dict = dict(zip(input_uv.antenna_names, np.zeros(Nants, dtype=int)))  # For now, all use the same beam model
-    input_uv.antenna_positions = input_uv.antenna_positions[:Nants,:]
+    input_uv.antenna_positions = input_uv.antenna_positions[:Nants, :]
     input_uv.Nants_data = Nants
     input_uv.Nants_telescope = Nants
 

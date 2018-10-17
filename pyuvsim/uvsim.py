@@ -152,7 +152,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         beam_dict (dict, optional): dict mapping antenna number to beam index in beam_list
 
     Yields:
-        Iterable of task objects to be done on current rank. 
+        Iterable of task objects to be done on current rank.
     """
 
     # Loops, outer to inner: times, sources, frequencies, baselines
