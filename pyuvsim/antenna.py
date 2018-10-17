@@ -28,7 +28,7 @@ class Antenna(object):
         self.beam_id = beam_id
 
     @profile
-    def get_beam_jones(self, array, source_alt_az, frequency):
+    def get_beam_jones(self, array, source_alt_az, frequency, reuse_spline=True):
         """
         2x2 array of Efield vectors in Az/Alt
 
@@ -36,6 +36,7 @@ class Antenna(object):
             array: az values to evaluate (same length as za_array)
             source_az_za: Tuple or list (azimuth, zenith angle) in radians
             frequency: (float) frequency in Hz
+            reuse_spline: (bool) Reuse interpolation fits in beam objects.
 
         Returns:
             jones_matrix, A 2x2 float array. The first axis is feed, the
@@ -59,7 +60,7 @@ class Antenna(object):
             array.beam_list[self.beam_id].interp(az_array=source_az,
                                                  za_array=source_za,
                                                  freq_array=freq,
-                                                 reuse_spline=True)
+                                                 reuse_spline=reuse_spline)
 
         # interp_data has shape: (Naxes_vec, Nspws, Nfeeds, 1 (freq), 1 (source position))
         jones_matrix = np.zeros((2, 2), dtype=np.complex)

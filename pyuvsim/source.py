@@ -144,7 +144,6 @@ class Source(object):
         alt_az = (source_altaz.alt.rad, source_altaz.az.rad)
         self.time = time
         self.alt_az = alt_az
-
         return alt_az
 
     def get_alt_az(self, time, telescope_location):
@@ -167,8 +166,8 @@ class Source(object):
             (l, m, n) direction cosine values
         """
         # calculate direction cosines of source at current time and array location
-        if self.alt_az is None:
-            self.alt_az_calc(time, telescope_location)
+        # Will only do the calculation if time has changed
+        self.alt_az_calc(time, telescope_location)
 
         # Need a horizon mask, for now using pi/2
         if self.alt_az[0] < 0:

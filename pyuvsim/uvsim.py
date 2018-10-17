@@ -85,7 +85,8 @@ class UVTask(object):
 
 class UVEngine(object):
 
-    def __init__(self, task=None):   # task_array  = list of tuples (source,time,freq,uvw)
+    def __init__(self, task=None, reuse_spline=True):
+        self.reuse_spline = reuse_spline  # Reuse spline fits in beam interpolation
         if task is not None:
             self.set_task(task)
 
@@ -105,11 +106,11 @@ class UVEngine(object):
         beam1_jones = baseline.antenna1.get_beam_jones(self.task.telescope,
                                                        source.get_alt_az(self.task.time,
                                                                          self.task.telescope.location),
-                                                       self.task.freq)
+                                                       self.task.freq, reuse_spline=self.reuse_spline)
         beam2_jones = baseline.antenna2.get_beam_jones(self.task.telescope,
                                                        source.get_alt_az(self.task.time,
                                                                          self.task.telescope.location),
-                                                       self.task.freq)
+                                                       self.task.freq, reuse_spline=self.reuse_spline)
         this_apparent_coherency = np.dot(beam1_jones,
                                          source.coherency_calc(self.task.time,
                                                                self.task.telescope.location))
@@ -208,10 +209,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         time = time_array[blti]
         bl = baselines[bl_i]
         freq = freq_array[0, freq_i]  # 0 = spw axis
-
-        # Recalculate source position if source or time has changed
-        if (prev_src_ind != src_i) or (prev_time_ind != time_i):
-            source.alt_az_calc(time_array[blti], telescope.location)
 
         task = UVTask(source, time, freq, bl, telescope)
         task.uvdata_index = (blti, 0, freq_i)    # 0 = spectral window index
@@ -355,7 +352,7 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         raise TypeError("input_uv must be UVData object")
     # The Head node will initialize our simulation
     # Read input file and make uvtask list
-    catalog=None
+    catalog = None
     if rank == 0:
         print('Nblts:', input_uv.Nblts)
         print('Nfreqs:', input_uv.Nfreqs)
@@ -429,8 +426,8 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     else:
         task_ids = np.arange(rank * stride, (rank + 1) * stride)
 
-    # Construct beam objects from strings 
-    beam_models = [ simsetup.beam_string_to_object(bm) for bm in beam_list ]
+    # Construct beam objects from strings
+    beam_models = [simsetup.beam_string_to_object(bm) for bm in beam_list]
 
     local_task_iter = uvdata_to_task_iter(task_ids, input_uv, catalog, beam_models, beam_dict)
 
