@@ -420,14 +420,12 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
 
     Ntasks = Nblts * Nfreqs * Nsrcs
 
-    stride = Ntasks // Npus
-    if (rank + 1) * stride >= Ntasks:
-        task_ids = np.arange(rank * stride, Ntasks)
-    else:
-        task_ids = np.arange(rank * stride, (rank + 1) * stride)
+    task_ids = np.array_split(range(Ntasks), Npus)[rank]
 
     # Construct beam objects from strings
     beam_models = [simsetup.beam_string_to_object(bm) for bm in beam_list]
+
+    Ntasks_local = task_ids.size
 
     local_task_iter = uvdata_to_task_iter(task_ids, input_uv, catalog, beam_models, beam_dict)
 
@@ -472,9 +470,11 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     # gather all the finished local tasks into a list of list of len NPUs
     # gather is a blocking communication, have to wait for all PUs
     full_tasklist = comm.gather(summed_local_task_list, root=0)
-
+    localtasks_count = comm.gather(Ntasks_local, root=0)
     # Concatenate the list of lists into a flat list of tasks
     if rank == 0:
+        localtasks_count = np.sum(localtasks_count)
+        print(Ntasks, localtasks_count)
         uvtask_list = sum(full_tasklist, [])
         uvdata_out = serial_gather(uvtask_list, uv_container)
 
