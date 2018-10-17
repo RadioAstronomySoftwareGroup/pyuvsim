@@ -12,7 +12,7 @@ The catalog text files give point source lists.
 
 
 These files contain overall simulation parameters.
-Passed into ````run_param_pyuvsim.py````
+Passed into ``run_param_pyuvsim.py``
 
 .. code-block:: yaml
     :caption: Example obsparam yaml file
@@ -97,7 +97,7 @@ Telescope Configuration
 
     .. literalinclude:: example_configs/bl_lite_mixed.yaml
 
-    This yaml file provides the telescope name, location in latitude/longitude/altitude in degrees/degrees/meters (respectively), and the `beam dictionary`. In this case, beam_id == 0 is the UVBeam file written out to hera.uvbeam, and beam_id == 1 is an Airy beam with diameter 14m. The dictionary only needs to be as long as the number of unique beams used in the array, while the layout file specifies which antennas will use which beam type. This allows for a mixture of beams to be used, as in this example.
+    This yaml file provides the telescope name, location in latitude/longitude/altitude in degrees/degrees/meters (respectively), and the `beam dictionary`. In this case, beam_id == 0 is the UVBeam file written out to hera.uvbeam, and beam_id == 1 is an Airy beam with diameter 16m. The dictionary only needs to be as long as the number of unique beams used in the array, while the layout file specifies which antennas will use which beam type. This allows for a mixture of beams to be used, as in this example.
 
     The figure below shows the array created by these configurations, with beam type indicated by color.
 
