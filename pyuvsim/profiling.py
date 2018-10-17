@@ -11,6 +11,7 @@ throughout the code will do line profiling on all instance methods.
 
 from __future__ import absolute_import, division, print_function
 
+from .mpi import start_mpi, get_rank
 import inspect
 import sys
 import atexit
@@ -33,9 +34,11 @@ prof = LineProfiler()
 
 def set_profiler():
     """ If profiling is requested, then assign it to the builtins """
+    start_mpi()
     if prof is not None:
         builtins.__dict__['profile'] = prof
-        atexit.register(prof.print_stats)
+        if get_rank() == 0:
+            atexit.register(prof.print_stats)
 
 
 # By default, the profile decorator has no effect.
