@@ -11,8 +11,9 @@ throughout the code will do line profiling on all instance methods.
 
 from __future__ import absolute_import, division, print_function
 
+import pyuvsim as _pyuvsim
 from .mpi import start_mpi, get_rank
-import inspect
+from inspect import isclass, isfunction
 import sys
 import atexit
 
@@ -31,14 +32,17 @@ else:
 
 prof = LineProfiler()
 
+default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params', 'uvdata_to_telescope_config', 'uvdata_to_config_file', 'coherency_calc', 'alt_az_calc', 'apply_beam', 'make_visibility', 'uvdata_to_task_list', 'initialize_uvdata', 'run_uvsim']
 
-def set_profiler():
-    """ If profiling is requested, then assign it to the builtins """
-    start_mpi()
+def set_profiler(func_list=default_profile_funcs):
     if prof is not None:
-        builtins.__dict__['profile'] = prof
-        if get_rank() == 0:
-            atexit.register(prof.print_stats)
+    for mod_it in _pyuvsim.__dict__.values():
+        if isclass(mod_it):
+            for item in mod_it.__dict__.values()
+                if isfunction(item) and item in func_list:
+                    prof.add_function(item)
+
+        atexit.register(prof.print_stats)
 
 
 # By default, the profile decorator has no effect.
