@@ -519,6 +519,13 @@ def initialize_uvdata_from_params(obs_params):
     # The syntax below allows for other valid uvdata keywords to be passed
     #  without explicitly setting them here.
 
+    if 'object_name' not in param_dict:
+        print(param_dict['telescope_location'])
+        tloc = EarthLocation.from_geocentric(*param_dict['telescope_location'], unit='m')
+        time = Time(time_arr[0], scale='utc', format='jd')
+        src, _ = create_mock_catalog(time, arrangement='zenith', array_location=tloc)
+        src = src[0]
+        param_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(param_dict['sources']['catalog'], src.ra.deg, src.dec.deg)
     uv_obj = UVData()
     for k in param_dict:
         if hasattr(uv_obj, k):

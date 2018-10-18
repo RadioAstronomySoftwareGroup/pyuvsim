@@ -147,7 +147,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     Args:
         task_ids (numpy.ndarray of ints): Task index in the full flattened meshgrid of parameters.
         input_uv (UVData): UVData object to use
-        sources: array of Source objects
+        catalog: array of Source objects
         beam_list: (list of UVBeam or AnalyticBeam objects
         beam_dict (dict, optional): dict mapping antenna number to beam index in beam_list
 
@@ -192,6 +192,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd')
 
+    # Shape indicates slowest to fastest index. (time is slowest, baselines is fastest).
     task_indices = np.array(np.unravel_index(task_ids, (Ntimes, Nsrcs, Nfreqs, Nbls))).T
 
     for (time_i, src_i, freq_i, bl_i) in task_indices:
@@ -276,7 +277,6 @@ def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
 
     uv_obj = copy.deepcopy(uv_in)
 
-    uv_obj.object_name = 'zenith'
     uv_obj.set_drift()
     uv_obj.vis_units = 'Jy'
     uv_obj.polarization_array = np.array([-5, -6, -7, -8])
@@ -292,8 +292,8 @@ def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
         uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
     else:
         # Note: currently only support a constant spacing of times
-        uv_obj.integration_time = (np.ones_like(uv_obj.time_array, dtype=np.float64))
-
+        uv_obj.integration_time = (np.ones_like(uv_obj.time_array, dtype=np.float64)
+                                   * np.diff(np.unique(uv_obj.time_array))[0])
     # add pyuvdata version info
     history += uv_obj.pyuvdata_version_str
 
@@ -302,7 +302,6 @@ def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
     uv_obj.flag_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=bool)
     uv_obj.nsample_array = np.ones_like(uv_obj.data_array, dtype=float)
     uv_obj.history = history
-    uv_obj.set_drift()
 
     uv_obj.extra_keywords = {}
     uv_obj.check()

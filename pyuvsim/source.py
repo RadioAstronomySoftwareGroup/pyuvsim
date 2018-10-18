@@ -167,15 +167,15 @@ class Source(object):
         """
         # calculate direction cosines of source at current time and array location
         # Will only do the calculation if time has changed
-        self.alt_az_calc(time, telescope_location)
+        alt_az = self.get_alt_az(time, telescope_location)
 
         # Need a horizon mask, for now using pi/2
-        if self.alt_az[0] < 0:
+        if alt_az[0] < 0:
             return None
 
-        pos_l = np.sin(self.alt_az[1]) * np.cos(self.alt_az[0])
-        pos_m = np.cos(self.alt_az[1]) * np.cos(self.alt_az[0])
-        pos_n = np.sin(self.alt_az[0])
+        pos_l = np.sin(alt_az[1]) * np.cos(alt_az[0])
+        pos_m = np.cos(alt_az[1]) * np.cos(alt_az[0])
+        pos_n = np.sin(alt_az[0])
 
         return (pos_l, pos_m, pos_n)
 
