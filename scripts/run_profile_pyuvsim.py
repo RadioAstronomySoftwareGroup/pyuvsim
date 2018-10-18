@@ -81,7 +81,10 @@ if rank == 0:
                            feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
                            model_name='E-field pattern - Rigging height 4.9m',
                            model_version='1.0')
-        beam_list = [beam]
+        beamfile = 'temp_hera_beam.uvbeam'
+        if not os.path.exists(beamfile):
+            beam.write_beamfits(beamfile)
+        beam_list = [beamfile]
 
     mock_keywords = {'arrangement': 'random', 'Nsrcs': args.Nsrcs, 'min_alt': min_alt}
 
