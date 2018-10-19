@@ -30,7 +30,7 @@ else:
 
 prof = LineProfiler()
 
-default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params', 'uvdata_to_telescope_config', 'uvdata_to_config_file', 'coherency_calc', 'alt_az_calc', 'apply_beam', 'make_visibility', 'uvdata_to_task_list', 'initialize_uvdata', 'run_uvsim']
+default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params', 'coherency_calc', 'alt_az_calc', 'apply_beam', 'make_visibility', 'uvdata_to_task_list', 'initialize_uvdata', 'run_uvsim']
 
 
 def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_profile.out', dump_raw=False):
@@ -63,12 +63,12 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
 
     builtins.__dict__['time_profiler'] = prof       # So it can accessed by tests
     # Write out profiling report to file.
-        if get_rank() == rank:
-            ofile = file(outfile_name, 'w')
-            atexit.register(ofile.close)
-            atexit.register(prof.print_stats, stream=ofile)
-            if dump_raw:
-                outfile_raw_name = outfile_name+".lprof"
-                atexit.register(prof.dump_stats, outfile_raw_name)
+    if get_rank() == rank:
+        ofile = file(outfile_name, 'w')
+        atexit.register(ofile.close)
+        atexit.register(prof.print_stats, stream=ofile)
+        if dump_raw:
+            outfile_raw_name = outfile_name + ".lprof"
+            atexit.register(prof.dump_stats, outfile_raw_name)
 
-            prof.enable_by_count()
+        prof.enable_by_count()
