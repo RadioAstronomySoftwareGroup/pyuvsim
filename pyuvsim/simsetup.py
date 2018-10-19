@@ -520,7 +520,6 @@ def initialize_uvdata_from_params(obs_params):
     #  without explicitly setting them here.
 
     if 'object_name' not in param_dict:
-        print(param_dict['telescope_location'])
         tloc = EarthLocation.from_geocentric(*param_dict['telescope_location'], unit='m')
         time = Time(time_arr[0], scale='utc', format='jd')
         src, _ = create_mock_catalog(time, arrangement='zenith', array_location=tloc)

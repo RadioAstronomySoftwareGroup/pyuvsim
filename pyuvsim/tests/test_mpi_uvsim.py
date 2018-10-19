@@ -73,9 +73,7 @@ def test_run_param_uvsim():
     os.remove(tempfilename)
 
     uv_ref = UVData()
-    uvtest.checkWarnings(uv_ref.read_uvfits,
-                         [os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits')],
-                         message='antenna_diameters is not set')
+    uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
     uv_ref.unphase_to_drift(use_ant_pos=True)
 
     uv_new.history = uv_ref.history  # History includes irrelevant info for comparison
@@ -104,9 +102,7 @@ def test_run_param_uvsim_votable_catalog():
     os.remove(tempfilename)
 
     uv_ref = UVData()
-    uvtest.checkWarnings(uv_ref.read_uvfits,
-                         [os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits')],
-                         message='antenna_diameters is not set')
+    uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
     uv_ref.unphase_to_drift(use_ant_pos=True)
 
     uv_new.history = uv_ref.history  # History includes irrelevant info for comparison
