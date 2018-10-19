@@ -5,7 +5,11 @@
 from __future__ import absolute_import, division, print_function
 
 import pyuvsim
-
+try:
+    from line_profiler import LineProfiler
+except ImportError:
+    LineProfiler=False
 
 def test_profiling():
-    pyuvsim.profiling.set_profiler()
+    if LineProfiler:
+        pyuvsim.profiling.set_profiler()

@@ -72,7 +72,6 @@ class Source(object):
                                               [self.stokes[2] + 1j * self.stokes[3],
                                                self.stokes[0] - self.stokes[1]]])
 
-    @profile
     def coherency_calc(self, time, telescope_location):
         """
         Calculate the local coherency in alt/az basis for this source at a time & location.
@@ -119,7 +118,6 @@ class Source(object):
 
         return coherency_local
 
-    @profile
     def alt_az_calc(self, time, telescope_location):
         """
         calculate the altitude & azimuth for this source at a time & location
@@ -153,7 +151,6 @@ class Source(object):
         else:
             return self.alt_az
 
-    @profile
     def pos_lmn(self, time, telescope_location):
         """
         calculate the direction cosines of this source at a time & location

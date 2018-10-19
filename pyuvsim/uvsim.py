@@ -93,7 +93,6 @@ class UVEngine(object):
     def set_task(self, task):
         self.task = task
 
-    @profile
     def apply_beam(self):
         """ Get apparent coherency from jones matrices and source coherency. """
         baseline = self.task.baseline
@@ -119,7 +118,6 @@ class UVEngine(object):
 
         self.apparent_coherency = this_apparent_coherency
 
-    @profile
     def make_visibility(self):
         """ Visibility contribution from a single source """
         assert(isinstance(self.task.freq, Quantity))
@@ -139,7 +137,6 @@ class UVEngine(object):
         return np.array(vis_vector)
 
 
-@profile
 def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     """
     Generate local tasks, reusing quantities where possible.
@@ -221,10 +218,16 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         yield task
 
 
+<<<<<<< HEAD
 @profile
 def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
                     obs_param_file=None, telescope_config_file=None,
                     antenna_location_file=None):
+=======
+def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
+                      obs_param_file=None, telescope_config_file=None,
+                      antenna_location_file=None):
+>>>>>>> fb704ed... Remove profile decorators and allow function selection by name
     """
     Initialize an empty uvdata object to fill with simulated data.
     Args:
@@ -320,7 +323,6 @@ def serial_gather(uvtask_list, uv_out):
     return uv_out
 
 
-@profile
 def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
               mock_keywords=None,
               uvdata_file=None, obs_param_file=None,

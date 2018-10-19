@@ -21,7 +21,6 @@ class AnalyticBeam(object):
 
     supported_types = ['uniform', 'gaussian', 'airy']
 
-    @profile
     def __init__(self, type, sigma=None, diameter=None):
         if type in self.supported_types:
             self.type = type
@@ -35,7 +34,6 @@ class AnalyticBeam(object):
     def peak_normalize(self):
         pass
 
-    @profile
     def interp(self, az_array, za_array, freq_array, reuse_spline=None):
         """
         Evaluate the primary beam at given az, za locations (in radians).
