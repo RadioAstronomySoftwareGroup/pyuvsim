@@ -218,16 +218,9 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         yield task
 
 
-<<<<<<< HEAD
-@profile
 def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
                     obs_param_file=None, telescope_config_file=None,
                     antenna_location_file=None):
-=======
-def initialize_uvdata(uvtask_list, source_list_name, uvdata_file=None,
-                      obs_param_file=None, telescope_config_file=None,
-                      antenna_location_file=None):
->>>>>>> fb704ed... Remove profile decorators and allow function selection by name
     """
     Initialize an empty uvdata object to fill with simulated data.
     Args:
