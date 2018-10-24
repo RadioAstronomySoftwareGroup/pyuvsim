@@ -63,6 +63,14 @@ Comments on existing issues are also welcome.
 
 # Versioning Approach
 We use a `generation.major.minor` format.
-* generation - certified comparisons with other simulations
-* major - substantial package changes released on a sub-yearly cycle
-* minor - fixes that should not change any outputs
+ * Generation - Release combining multiple new physical effects and or major computational improvements. 
+ Testing: Backed by unittests, internal model validation, and significant external comparison.
+ * Major - Adds new physical effect or major computational improvement. Small number of improvements with each release. 
+ Testing: Backed by unittests, internal model validation and limited external comparison.
+ * Minor - Bug fixes and small improvements not expected to change physical model. 
+ Testing: Backed by Unittests
+ 
+## Some helpful definitions
+ Physical effects - things like polarization effects, noise, ionospheric modeling, or nonterrestrial observing positions.
+ Major computational improvement -  Support for new catalog types (e.g, diffuse maps), new analysis tools, changes to parallelization scheme
+ Small improvements - Better documentation or example code, outer framework redesign.
