@@ -7,7 +7,6 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 import yaml
-import cPickle as pkl
 import numpy as np
 import nose.tools as nt
 import atexit
@@ -23,8 +22,10 @@ PY3 = sys.version_info[0] == 3
 
 if PY3:
     import builtins
+    import _pickle as pkl
 else:
     import __builtin__ as builtins
+    import cPickle as pkl
 
 testprof_fname = 'test_time_profile.out'
 
