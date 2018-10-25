@@ -10,12 +10,13 @@ import argparse
 import numpy as np
 import yaml
 import os
+import psutil
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim import simsetup
 from astropy.coordinates import EarthLocation
-from pyuvsim import mpi
+from pyuvsim import mpi, profiling
 
 parser = argparse.ArgumentParser(description=("A command-line script "
                                               "to execute a pyuvsim simulation for profiling purposes."))
@@ -29,6 +30,9 @@ parser.add_argument('--Ntimes', dest='Ntimes', type=int, default=1)
 parser.add_argument('--Nfreqs', dest='Nfreqs', type=int, default=1)
 parser.add_argument('--Nbls', dest='Nbls', type=int, default=1)
 parser.add_argument('--beam', dest='beam', type=str, default='uniform')
+parser.add_argument('--prof_out', dest='prof_out', type=str, default='time_profile.out')
+parser.add_argument('--mem_out', dest='mem_out', type=str, default='memory_usage.out')
+
 
 args = parser.parse_args()
 
@@ -48,6 +52,8 @@ input_uv = UVData()
 mock_keywords = None
 catalog = 'mock'
 if rank == 0:
+
+    profiling.set_profiler(outfile_name=args.prof_out)
 
     params['freq']['Nfreqs'] = args.Nfreqs
     params['time']['Ntimes'] = args.Ntimes
@@ -89,3 +95,8 @@ if rank == 0:
     mock_keywords = {'arrangement': 'random', 'Nsrcs': args.Nsrcs, 'min_alt': min_alt}
 
 uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
+
+p = psutil.Process(os.getpid())
+memory_usage_GB = process.memory_info.rss/1e9  # GB
+with open(args.mem_out, 'w') as memfile:
+    memfile.write(memory_usage_GB)
