@@ -97,6 +97,15 @@ if rank == 0:
 uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
 
 p = psutil.Process(os.getpid())
-memory_usage_GB = process.memory_info.rss/1e9  # GB
-with open(args.mem_out, 'w') as memfile:
-    memfile.write(memory_usage_GB)
+memory_usage_GB = p.memory_info().rss / 1e9  # GB
+mpi.comm.Barrier()
+
+memory_usage_GB = mpi.comm.gather(memory_usage_GB, root=0)
+
+if rank == 0:
+    memory_usage_GB = np.min(memory_usage_GB)
+    p = psutil.Process(os.getpid())
+    memory_usage_GB = p.memory_info().rss / 1e9  # GB
+    print('Mem_usage: ' + str(memory_usage_GB))
+    with open(args.mem_out, 'w') as memfile:
+        memfile.write(str(memory_usage_GB))

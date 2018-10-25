@@ -29,7 +29,8 @@ mem = '40G'
 time = '48:00:00'
 
 for n in Ncores:
-    cmd = ['./batch_profile_job.sh', Nsrcs, Ntimes, Nfreqs, Nbls, beam]
+    cmd = ['sbatch', '-n ' + str(n), '--cpus-per-task=1', '--mem=' + mem, '--time=' + time,
+           'batch_profile_job.sh', Nsrcs, Ntimes, Nfreqs, Nbls, beam]
     print(" ".join(cmd))
     results = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
     print(results)
