@@ -53,18 +53,18 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
     # Add module functions to profiler.
     for mod_it in _pyuvsim.__dict__.values():
         if isfunction(mod_it):
-            if mod_it.func_name in func_list:
+            if mod_it.__name__ in func_list:
                 prof.add_function(mod_it)
         if isclass(mod_it):
             for item in mod_it.__dict__.values():
                 if isfunction(item):
-                    if item.func_name in func_list:
+                    if item.__name__ in func_list:
                         prof.add_function(item)
 
     builtins.__dict__['time_profiler'] = prof       # So it can accessed by tests
     # Write out profiling report to file.
     if get_rank() == rank:
-        ofile = file(outfile_name, 'w')
+        ofile = open(outfile_name, 'w')
         atexit.register(ofile.close)
         atexit.register(prof.print_stats, stream=ofile)
         if dump_raw:

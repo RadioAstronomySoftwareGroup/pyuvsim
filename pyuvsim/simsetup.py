@@ -582,7 +582,6 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
     beam_ids = np.zeros_like(e).astype(int)
     col_width = max([len(name) for name in uvdata_in.antenna_names])
     header = ("{:" + str(col_width) + "} {:8} {:8} {:10} {:10} {:10}\n").format("Name", "Number", "BeamID", "E", "N", "U")
-
     with open(os.path.join(path_out, layout_csv_name), 'w') as lfile:
         lfile.write(header + '\n')
         for i in range(beam_ids.size):
