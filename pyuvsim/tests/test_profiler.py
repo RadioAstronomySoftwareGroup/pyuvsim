@@ -9,7 +9,6 @@ import sys
 import yaml
 import numpy as np
 import nose.tools as nt
-import atexit
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -27,7 +26,7 @@ else:
     import __builtin__ as builtins
     import cPickle as pkl
 
-testprof_fname = 'test_time_profile.out'
+testprof_fname = '/dev/null'
 
 
 def test_profiling():
@@ -48,4 +47,3 @@ def test_profiling():
         func_names = [k[2] for k in lstats.timings.keys()]
         nt.assert_equal(np.unique(func_names).tolist(), sorted(pyuvsim.profiling.default_profile_funcs))
         # To clean up later. Profiling data isn't written to file until exit.
-        atexit.register(os.remove, testprof_fname)
