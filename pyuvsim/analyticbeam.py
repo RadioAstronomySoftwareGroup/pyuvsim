@@ -36,7 +36,7 @@ class AnalyticBeam(object):
         pass
 
     @profile
-    def interp(self, az_array, za_array, freq_array):
+    def interp(self, az_array, za_array, freq_array, reuse_spline=None):
         """
         Evaluate the primary beam at given az, za locations (in radians).
 
@@ -47,6 +47,7 @@ class AnalyticBeam(object):
                 The azimuth here has the UVBeam convention: North of East(East=0, North=pi/2)
             za_array: za values to evaluate at in radians (same length as az_array)
             freq_array: frequency values to evaluate at
+            reuse_spline: Does nothing for analytic beams. Here for compatibility with UVBeam.
 
         Returns:
             an array of beam values, shape (Naxes_vec, Nspws, Nfeeds or Npols,

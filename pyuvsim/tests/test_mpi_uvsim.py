@@ -40,13 +40,17 @@ def test_run_uvsim():
                        model_name='E-field pattern - Rigging height 4.9m',
                        model_version='1.0')
 
-    beam_list = [beam]
+    beam.write_beamfits("temp.uvbeam")
+    beamfile = os.path.join(os.getcwd(), "temp.uvbeam")
+
+    beam_list = [beamfile]
     mock_keywords = {"Nsrcs": 3}
     uv_out = pyuvsim.run_uvsim(hera_uv, beam_list, catalog_file=None, mock_keywords=mock_keywords,
                                uvdata_file=EW_uvfits_file)
     rank = mpi.get_rank()
     if rank == 0:
         nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))
+    os.remove(beamfile)
 
 
 def test_run_param_uvsim():
@@ -54,7 +58,8 @@ def test_run_param_uvsim():
     with open(param_filename, 'r') as pfile:
         params_dict = yaml.safe_load(pfile)
     uv_in, beam_list, beam_dict, beam_ids = pyuvsim.simsetup.initialize_uvdata_from_params(param_filename)
-    beam_list[0] = pyuvsim.analyticbeam.AnalyticBeam('uniform')  # Replace the one that's a HERA beam
+    beam_list[0] = 'uniform'  # Replace the one that's a HERA beam
+
     # This test obsparam file has "single_source.txt" as its catalog.
     catalog = os.path.join(SIM_DATA_PATH, params_dict['sources']['catalog'])
     uv_out = pyuvsim.run_uvsim(uv_in, beam_list, catalog_file=catalog, beam_dict=beam_dict)
@@ -68,9 +73,7 @@ def test_run_param_uvsim():
     os.remove(tempfilename)
 
     uv_ref = UVData()
-    uvtest.checkWarnings(uv_ref.read_uvfits,
-                         [os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits')],
-                         message='antenna_diameters is not set')
+    uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
     uv_ref.unphase_to_drift(use_ant_pos=True)
 
     uv_new.history = uv_ref.history  # History includes irrelevant info for comparison
@@ -82,7 +85,7 @@ def test_run_param_uvsim_votable_catalog():
     with open(param_filename, 'r') as pfile:
         params_dict = yaml.safe_load(pfile)
     uv_in, beam_list, beam_dict, beam_ids = pyuvsim.simsetup.initialize_uvdata_from_params(param_filename)
-    beam_list[0] = pyuvsim.analyticbeam.AnalyticBeam('uniform')  # Replace the one that's a HERA beam
+    beam_list[0] = 'uniform'  # Replace the one that's a HERA beam
 
     catalog = singlesource_vot
     uv_out = uvtest.checkWarnings(pyuvsim.run_uvsim, [uv_in, beam_list],
@@ -99,9 +102,7 @@ def test_run_param_uvsim_votable_catalog():
     os.remove(tempfilename)
 
     uv_ref = UVData()
-    uvtest.checkWarnings(uv_ref.read_uvfits,
-                         [os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits')],
-                         message='antenna_diameters is not set')
+    uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
     uv_ref.unphase_to_drift(use_ant_pos=True)
 
     uv_new.history = uv_ref.history  # History includes irrelevant info for comparison

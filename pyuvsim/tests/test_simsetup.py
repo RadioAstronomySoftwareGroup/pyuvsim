@@ -103,7 +103,8 @@ def check_param_reader(config_num):
     beam_list = [beam0, beam1, beam2, beam3]
 
     beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2, 'ANT4': 3}
-    expected_uvtask_list = pyuvsim.uvdata_to_task_list(hera_uv, sources, beam_list, beam_dict=beam_dict)
+    Ntasks = hera_uv.Nblts * hera_uv.Nfreqs * len(sources)
+    expected_uvtask_list = list(pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources, beam_list, beam_dict=beam_dict))
 
     # Check error conditions:
     if config_num == 0:
@@ -181,6 +182,8 @@ def check_param_reader(config_num):
 
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_filename)
+    for i, bm in enumerate(new_beam_list):
+        new_beam_list[i] = pyuvsim.simsetup.beam_string_to_object(bm)
 
     # write_uvfits test:
     with open(param_filename, 'r') as fhandle:
@@ -195,7 +198,8 @@ def check_param_reader(config_num):
         ofilename = os.path.join('.', ofilename)
     nt.assert_equal(ofilename, expected_ofilepath)
 
-    uvtask_list = pyuvsim.uvdata_to_task_list(uv_obj, sources, new_beam_list, beam_dict=new_beam_dict)
+    Ntasks = uv_obj.Nblts * uv_obj.Nfreqs * len(sources)
+    uvtask_list = list(pyuvsim.uvdata_to_task_iter(range(Ntasks), uv_obj, sources, new_beam_list, beam_dict=new_beam_dict))
     # Tasks are not ordered in UVTask lists, so need to sort them.
     # This is enabled by the comparison operator in UVTask
     uvtask_list = sorted(uvtask_list)

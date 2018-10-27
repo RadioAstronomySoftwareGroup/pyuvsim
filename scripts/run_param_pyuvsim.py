@@ -36,7 +36,6 @@ if params is None:
 
 input_uv = UVData()
 
-Nbeams = 0
 beam_list = None
 beam_dict = None
 input_uv = UVData()
@@ -62,7 +61,6 @@ if rank == 0:
                 beam_list.append(bf)
 
         beam_list = (np.array(beam_list)[beam_ids]).tolist()
-        Nbeams = len(beam_list)
         outfile_name = os.path.join(params['outdir'], params['outfile_prefix'] + "_" + os.path.basename(filename))
         outfile_name = outfile_name + ".uvfits"
 
@@ -70,25 +68,21 @@ if rank == 0:
         # Not running off a uvfits.
         print("Simulating from parameters")
         input_uv, beam_list, beam_dict, beam_ids = simsetup.initialize_uvdata_from_params(params)
-        Nbeams = len(beam_list)
         print("Nfreqs: ", input_uv.Nfreqs)
         print("Ntimes: ", input_uv.Ntimes)
         source_params = params['sources']
-        if source_params['catalog'] == 'mock':
+        if 'catalog' in source_params:
+            catalog = source_params['catalog']
+        else:
+            catalog = None
+        if catalog == 'mock':
             mock_keywords = {'time': input_uv.time_array[0], 'arrangement': source_params['mock_arrangement'],
                              'array_location': EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')}
             extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'max_za']
             for k in extra_mock_kwds:
                 if k in source_params.keys():
                     mock_keywords[k] = source_params[k]
-            catalog = 'mock'
-
-        if 'catalog' in source_params:
-            catalog = source_params['catalog']
-        else:
-            catalog = None
 uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
-
 
 if rank == 0:
     simsetup.write_uvfits(uvdata_out, params)

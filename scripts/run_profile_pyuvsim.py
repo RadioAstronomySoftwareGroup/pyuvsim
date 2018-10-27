@@ -37,17 +37,16 @@ with open(paramsfile, 'r') as pfile:
 
 params['config_path'] = os.path.dirname(paramsfile)
 
-beam_list = None
-beam_dict = None
-input_uv = UVData()
-mock_keywords = None
-catalog = None
-
 min_alt = 70  # Degrees
 
 mpi.start_mpi()
 rank = mpi.get_rank()
 
+beam_list = None
+beam_dict = None
+input_uv = UVData()
+mock_keywords = None
+catalog = 'mock'
 if rank == 0:
 
     params['freq']['Nfreqs'] = args.Nfreqs
@@ -57,8 +56,15 @@ if rank == 0:
 
     # Baseline selection:
     input_uv.baseline_array = np.repeat(input_uv.baseline_array[:args.Nbls], args.Ntimes)
-    input_uv.ant_1_array = np.repeat(input_uv.ant_1_array[:args.Nbls], args.Ntimes)
-    input_uv.ant_2_array = np.repeat(input_uv.ant_2_array[:args.Nbls], args.Ntimes)
+    input_uv.ant_1_array, input_uv.ant_2_array = input_uv.baseline_to_antnums(input_uv.baseline_array)
+    ants_new = np.unique(input_uv.ant_1_array.tolist() + input_uv.ant_2_array.tolist())
+    input_uv.antenna_numbers = ants_new
+    input_uv.antenna_names = ants_new.astype(str)  # Antnames/numbers are going to be messed up by the baseline selection. Unimportant.
+    Nants = ants_new.size
+    beam_dict = dict(zip(input_uv.antenna_names, np.zeros(Nants, dtype=int)))  # For now, all use the same beam model
+    input_uv.antenna_positions = input_uv.antenna_positions[:Nants, :]
+    input_uv.Nants_data = Nants
+    input_uv.Nants_telescope = Nants
 
     # Time selection:
     inds = np.array([np.arange(args.Nbls) + i * input_uv.Nbls for i in range(args.Ntimes)]).flatten()
@@ -75,7 +81,10 @@ if rank == 0:
                            feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
                            model_name='E-field pattern - Rigging height 4.9m',
                            model_version='1.0')
-        beam_list = [beam]
+        beamfile = 'temp_hera_beam.uvbeam'
+        if not os.path.exists(beamfile):
+            beam.write_beamfits(beamfile)
+        beam_list = [beamfile]
 
     mock_keywords = {'arrangement': 'random', 'Nsrcs': args.Nsrcs, 'min_alt': min_alt}
 

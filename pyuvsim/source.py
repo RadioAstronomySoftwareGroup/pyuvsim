@@ -61,6 +61,7 @@ class Source(object):
         self.ra = ra
         self.dec = dec
         self.pos_tol = pos_tol
+        self.time = None
 
         self.skycoord = SkyCoord(self.ra, self.dec, frame='icrs')
 
@@ -141,8 +142,16 @@ class Source(object):
         source_altaz = self.skycoord.transform_to(AltAz(obstime=time, location=telescope_location))
 
         alt_az = (source_altaz.alt.rad, source_altaz.az.rad)
+        self.time = time
         self.alt_az = alt_az
         return alt_az
+
+    def get_alt_az(self, time, telescope_location):
+        """ Reuse alt_az if already calculated """
+        if (self.alt_az is None) or (not time == self.time):
+            return self.alt_az_calc(time, telescope_location)
+        else:
+            return self.alt_az
 
     @profile
     def pos_lmn(self, time, telescope_location):
@@ -157,16 +166,16 @@ class Source(object):
             (l, m, n) direction cosine values
         """
         # calculate direction cosines of source at current time and array location
-        if self.alt_az is None:
-            self.alt_az_calc(time, telescope_location)
+        # Will only do the calculation if time has changed
+        alt_az = self.get_alt_az(time, telescope_location)
 
         # Need a horizon mask, for now using pi/2
-        if self.alt_az[0] < 0:
+        if alt_az[0] < 0:
             return None
 
-        pos_l = np.sin(self.alt_az[1]) * np.cos(self.alt_az[0])
-        pos_m = np.cos(self.alt_az[1]) * np.cos(self.alt_az[0])
-        pos_n = np.sin(self.alt_az[0])
+        pos_l = np.sin(alt_az[1]) * np.cos(alt_az[0])
+        pos_m = np.cos(alt_az[1]) * np.cos(alt_az[0])
+        pos_n = np.sin(alt_az[0])
 
         return (pos_l, pos_m, pos_n)
 
