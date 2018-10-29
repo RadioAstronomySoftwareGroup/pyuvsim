@@ -42,8 +42,8 @@ def test_profiling():
 
         # The profiler is in the builtins as time_profiler. Check results.
         lstats = time_profiler.get_stats()
+        del builtins.__dict__['time_profiler']  # Remove from builtins
 
         nt.assert_false(len(lstats.timings) == 0)
         func_names = [k[2] for k in lstats.timings.keys()]
         nt.assert_equal(np.unique(func_names).tolist(), sorted(pyuvsim.profiling.default_profile_funcs))
-        # To clean up later. Profiling data isn't written to file until exit.
