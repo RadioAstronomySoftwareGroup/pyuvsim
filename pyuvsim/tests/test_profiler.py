@@ -36,7 +36,7 @@ def test_profiling():
         with open(param_filename, 'r') as pfile:
             params_dict = yaml.safe_load(pfile)
         uv_in, beam_list, beam_dict, beam_ids = pyuvsim.simsetup.initialize_uvdata_from_params(param_filename)
-        beam_list[0] = pyuvsim.analyticbeam.AnalyticBeam('uniform')  # Replace the one that's a HERA beam
+        beam_list[0] = 'uniform'  # Replace the one that's a HERA beam
         catalog = os.path.join(SIM_DATA_PATH, params_dict['sources']['catalog'])
         uv_out = pyuvsim.run_uvsim(uv_in, beam_list, catalog_file=catalog, beam_dict=beam_dict)
 
