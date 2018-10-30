@@ -26,15 +26,15 @@ print("rank = ", rank, "PID", os.getpid())
 time = Time('2018-03-01 00:00:00', scale='utc')
 array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
-#pfile = '../data/5km_triangle_2time_1chan.yaml'
-#pfile = '../data/5km_triangle_10time_1chan.yaml'
-#pfile = '../data/5km_triangle_1time_1chan_6ant.yaml'
+# pfile = '../data/5km_triangle_2time_1chan.yaml'
+# pfile = '../data/5km_triangle_10time_1chan.yaml'
+# pfile = '../data/5km_triangle_1time_1chan_6ant.yaml'
 pfile = '../data/laptop_size_sim.yaml'
 params = yaml.safe_load(open(pfile))
 print(pfile)
 input_uv, beam_list, beam_ids = simsetup.initialize_uvdata_from_params(params)
 # for a range of Nsrcs measure ram usage
-#Ns = np.array([1,10,100])
+# Ns = np.array([1,10,100])
 Ns = [10]
 process = psutil.Process(os.getpid())
 for Nsrcs in Ns:
