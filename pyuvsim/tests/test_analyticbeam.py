@@ -212,3 +212,18 @@ def test_gaussbeam_values():
 
     beam_values = np.exp(-(zenith_angles)**2 / (2 * beam.sigma**2))
     nt.assert_true(np.all(beam_values**2 == coherencies))
+
+
+def test_beamerrs():
+    """
+    Error cases.
+    """
+    nt.assert_raises(ValueError, pyuvsim.AnalyticBeam, 'unsupported_type')
+    beam = pyuvsim.AnalyticBeam('gaussian')
+    az, za = np.random.uniform(0.0, np.pi, (2, 5))
+    freq_arr = np.linspace(1e8, 1.5e8, 10)
+    nt.assert_raises(ValueError, beam.interp, az, za, freq_arr)
+    beam.type = 'airy'
+    nt.assert_raises(ValueError, beam.interp, az, za, freq_arr)
+    beam.type = 'noninterpretable'
+    nt.assert_raises(ValueError, beam.interp, az, za, freq_arr)

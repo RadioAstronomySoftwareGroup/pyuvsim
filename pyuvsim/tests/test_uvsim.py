@@ -456,6 +456,28 @@ def test_file_to_tasks():
 
     uvtask_list = list(pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict))
 
+    tlist = copy.deepcopy(uvtask_list)
+
+    # Test task comparisons
+    tlist.sort()
+    nt.assert_true(np.all([tlist[i + 1] > tlist[i] for i in range(Ntasks - 1)]))
+    nt.assert_true(np.all([tlist[i + 1] >= tlist[i] for i in range(Ntasks - 1)]))
+    task0 = copy.deepcopy(tlist[0])
+    task1 = copy.deepcopy(tlist[1])
+    uvind0 = copy.copy(task0.uvdata_index)
+    uvind1 = copy.copy(task1.uvdata_index)
+    task0.baseline = task1.baseline
+    task0.uvdata_index = (0, 0, 0)
+    task1.uvdata_index = (1, 0, 0)
+    nt.assert_true(task1 > task0)
+    nt.assert_true(task1 >= task0)
+
+    task0.uvdata_index = (0, 0, 0)
+    task1.uvdata_index = (0, 0, 1)
+    nt.assert_true(task1 > task0)
+    nt.assert_true(task1 >= task0)
+    nt.assert_true(task0 <= task1)
+
     tel_loc = EarthLocation.from_geocentric(*hera_uv.telescope_location, unit='m')
 
     telescope = pyuvsim.Telescope(hera_uv.telescope_name, tel_loc, beam_list)
@@ -495,17 +517,17 @@ def test_file_to_tasks():
 
 def test_uvdata_init():
     hera_uv = UVData()
-    hera_uv.read_uvfits(EW_uvfits_file)
+    hera_uv.read_uvfits(EW_uvfits_10time10chan)
     hera_uv.unphase_to_drift(use_ant_pos=True)
     uvdata_out = pyuvsim.init_uvdata_out(hera_uv, 'zenith_source',
-                                         uvdata_file=EW_uvfits_file)
+                                         uvdata_file=EW_uvfits_10time10chan)
 
     hera_uv.data_array = np.zeros_like(hera_uv.data_array, dtype=np.complex)
     hera_uv.flag_array = np.zeros_like(hera_uv.data_array, dtype=bool)
     hera_uv.nsample_array = np.ones_like(hera_uv.data_array)
     hera_uv.history = (pyuvsim.get_version_string()
                        + 'Sources from source list: zenith_source. '
-                       'Based on UVData file: ' + EW_uvfits_file + '. Npus = 1.'
+                       'Based on UVData file: ' + EW_uvfits_10time10chan + '. Npus = 1.'
                        + hera_uv.pyuvdata_version_str)
     hera_uv.instrument = hera_uv.telescope_name
     nt.assert_true(np.allclose(hera_uv.antenna_positions, uvdata_out.antenna_positions))
@@ -523,6 +545,9 @@ def test_uvdata_init_errors():
     nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file=1.0)
     nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', telescope_config_file=1.0)
     nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', antenna_location_file=1.0)
+    nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string')
+    nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string', telescope_config_file='string')
+    nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string', telescope_config_file=1.0)
 
 
 def test_gather():
@@ -547,7 +572,7 @@ def test_gather():
     Nsrcs = len(sources)
 
     Ntasks = Nblts * Nfreqs * Nsrcs
-    beam_dict = None
+    beam_dict = dict(zip(hera_uv.antenna_names, [0] * hera_uv.Nants_data))
 
     uvtask_list = list(pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict))
 
@@ -590,6 +615,12 @@ def test_local_task_gen():
     # Copy sources and beams so we don't accidentally reuse quantities.
     uvtask_list = list(pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict))
     uvtask_iter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, copy.deepcopy(sources), copy.deepcopy(beam_list), beam_dict)
+
+    # Check error conditions
+    uv_iter0 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), 'not_uvdata', sources, beam_list, beam_dict)
+    nt.assert_raises(TypeError, uv_iter0.next)
+    uv_iter1 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, 'not_ndarray', beam_list, beam_dict)
+    nt.assert_raises(TypeError, uv_iter1.next)
 
     engine0 = pyuvsim.UVEngine(reuse_spline=False)
     for tki, task0 in enumerate(uvtask_iter):

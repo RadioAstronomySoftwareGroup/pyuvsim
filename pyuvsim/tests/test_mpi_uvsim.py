@@ -45,6 +45,7 @@ def test_run_uvsim():
 
     beam_list = [beamfile]
     mock_keywords = {"Nsrcs": 3}
+    nt.assert_raises(TypeError, pyuvsim.run_uvsim, 'not_uvdata', beam_list)
     uv_out = pyuvsim.run_uvsim(hera_uv, beam_list, catalog_file=None, mock_keywords=mock_keywords,
                                uvdata_file=EW_uvfits_file)
     rank = mpi.get_rank()

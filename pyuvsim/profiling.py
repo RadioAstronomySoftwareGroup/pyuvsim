@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function
 from .mpi import start_mpi, get_rank
 from inspect import isclass, isfunction
 import atexit
+import six
 
 import pyuvsim as _pyuvsim
 
@@ -40,7 +41,7 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
     start_mpi()
     global prof
     prof = LineProfiler()
-    if prof is None:
+    if prof is None:   # pragma: no cover
         raise ImportError("line_profiler module required to use profiling tools.")
 
     # Add module functions to profiler.
@@ -53,7 +54,7 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
             for item in mod_it.__dict__.values():
                 if isfunction(item):
                     if item.__name__ in func_list:
-                        print("\t"+str(item))
+                        print("\t" + str(item))
                         prof.add_function(item)
 
     # Write out profiling report to file.
@@ -63,6 +64,8 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
         atexit.register(prof.print_stats, stream=ofile)
         if dump_raw:
             outfile_raw_name = outfile_name + ".lprof"
+            if isinstance(dump_raw, six.string_types):
+                outfile_raw_name = dump_raw
             atexit.register(prof.dump_stats, outfile_raw_name)
 
         prof.enable_by_count()
