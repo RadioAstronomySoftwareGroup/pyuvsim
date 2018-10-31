@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function
 
 from .mpi import start_mpi, get_rank
 from inspect import isclass, isfunction
-import sys
 import atexit
 
 import pyuvsim as _pyuvsim
@@ -21,14 +20,6 @@ except ImportError:   # pragma: no cover
     def LineProfiler():
         return None
 
-PY3 = sys.version_info[0] == 3
-
-if PY3:
-    import builtins
-else:
-    import __builtin__ as builtins
-
-prof = LineProfiler()
 
 default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params', 'coherency_calc', 'alt_az_calc', 'apply_beam', 'make_visibility', 'uvdata_to_task_iter', 'init_uvdata_out', 'run_uvsim']
 
@@ -47,21 +38,24 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
         dump_raw: Write out a pickled LineStats object to <outfile_name>.lprof (Default False)
     """
     start_mpi()
-    if prof is None:   # pragma: no cover
+    global prof
+    prof = LineProfiler()
+    if prof is None:
         raise ImportError("line_profiler module required to use profiling tools.")
 
     # Add module functions to profiler.
     for mod_it in _pyuvsim.__dict__.values():
         if isfunction(mod_it):
             if mod_it.__name__ in func_list:
+                print(mod_it.__name__)
                 prof.add_function(mod_it)
         if isclass(mod_it):
             for item in mod_it.__dict__.values():
                 if isfunction(item):
                     if item.__name__ in func_list:
+                        print("\t"+str(item))
                         prof.add_function(item)
 
-    builtins.__dict__['time_profiler'] = prof       # So it can accessed by tests
     # Write out profiling report to file.
     if get_rank() == rank:
         ofile = open(outfile_name, 'w')
@@ -72,3 +66,7 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
             atexit.register(prof.dump_stats, outfile_raw_name)
 
         prof.enable_by_count()
+
+
+def get_profiler():
+    return prof
