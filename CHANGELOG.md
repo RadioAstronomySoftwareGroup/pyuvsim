@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- New batch scripts for profiling jobs on a SLURM-managed cluster, and plotting the results.
+
+### Changed
+- Line profiling may be done by running `pyuvsim.profiling.set_profiler`.
+- Which functions to profile is set by listing them by name, instead of by function decorators.
+- Improved test coverage
+
 
 ## [0.2.0] - 2018-10-26
 
