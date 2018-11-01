@@ -93,7 +93,6 @@ class UVEngine(object):
     def set_task(self, task):
         self.task = task
 
-    @profile
     def apply_beam(self):
         """ Get apparent coherency from jones matrices and source coherency. """
         baseline = self.task.baseline
@@ -119,7 +118,6 @@ class UVEngine(object):
 
         self.apparent_coherency = this_apparent_coherency
 
-    @profile
     def make_visibility(self):
         """ Visibility contribution from a single source """
         assert(isinstance(self.task.freq, Quantity))
@@ -139,7 +137,6 @@ class UVEngine(object):
         return np.array(vis_vector)
 
 
-@profile
 def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     """
     Generate local tasks, reusing quantities where possible.
@@ -157,7 +154,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
 
     # Loops, outer to inner: times, sources, frequencies, baselines
     # The task_ids refer to tasks on the flattened meshgrid.
-
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
 
@@ -221,7 +217,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         yield task
 
 
-@profile
 def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
                     obs_param_file=None, telescope_config_file=None,
                     antenna_location_file=None):
@@ -293,7 +288,7 @@ def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
     else:
         # Note: currently only support a constant spacing of times
         uv_obj.integration_time = (np.ones_like(uv_obj.time_array, dtype=np.float64)
-                                   * np.diff(np.unique(uv_obj.time_array))[0])
+                                   * np.diff(np.unique(uv_obj.time_array))[0] * (24. * 60**2))  # Seconds
     # add pyuvdata version info
     history += uv_obj.pyuvdata_version_str
 
@@ -320,7 +315,6 @@ def serial_gather(uvtask_list, uv_out):
     return uv_out
 
 
-@profile
 def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
               mock_keywords=None,
               uvdata_file=None, obs_param_file=None,
@@ -363,15 +357,12 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
                 mock_keywords = {}
 
             if 'array_location' not in mock_keywords:
+                warnings.warn("Warning: No array_location given for mock catalog. Defaulting to HERA site")
                 array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
                 mock_keywords['array_location'] = array_loc
             if 'time' not in mock_keywords:
-                mock_keywords['time'] = input_uv.time_array[0]
-
-            if "array_location" not in mock_keywords:
-                warnings.warn("Warning: No array_location given for mock catalog. Defaulting to HERA site")
-            if 'time' not in mock_keywords:
                 warnings.warn("Warning: No julian date given for mock catalog. Defaulting to first of input_UV object")
+                mock_keywords['time'] = input_uv.time_array[0]
 
             time = mock_keywords.pop('time')
 

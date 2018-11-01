@@ -284,7 +284,6 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     return catalog, mock_keywords
 
 
-@profile
 def initialize_uvdata_from_params(obs_params):
     """
     Construct a uvdata object from parameters in a valid yaml file.
@@ -544,7 +543,6 @@ def initialize_uvdata_from_params(obs_params):
     return uv_obj, beam_list, beam_dict, beam_ids
 
 
-@profile
 def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
                                telescope_config_name=None,
                                return_names=False, path_out='.'):
@@ -584,7 +582,6 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
     beam_ids = np.zeros_like(e).astype(int)
     col_width = max([len(name) for name in uvdata_in.antenna_names])
     header = ("{:" + str(col_width) + "} {:8} {:8} {:10} {:10} {:10}\n").format("Name", "Number", "BeamID", "E", "N", "U")
-
     with open(os.path.join(path_out, layout_csv_name), 'w') as lfile:
         lfile.write(header + '\n')
         for i in range(beam_ids.size):
@@ -615,7 +612,6 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
         return path_out, telescope_config_name, layout_csv_name
 
 
-@profile
 def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name='',
                           layout_csv_name='', catalog='mock', path_out='.'):
     """

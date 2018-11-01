@@ -18,7 +18,6 @@ class Antenna(object):
     One of these defined for each antenna in the array.
     """
 
-    @profile
     def __init__(self, name, number, enu_position, beam_id):
         self.name = name
         self.number = number
@@ -27,7 +26,6 @@ class Antenna(object):
         # index of beam for this antenna from array.beam_list
         self.beam_id = beam_id
 
-    @profile
     def get_beam_jones(self, array, source_alt_az, frequency, reuse_spline=True):
         """
         2x2 array of Efield vectors in Az/Alt

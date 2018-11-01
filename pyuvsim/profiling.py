@@ -4,17 +4,16 @@
 
 """
 Use the line profiler when requested.
-
-If the set_profiler method is called, the profile decorators
-throughout the code will do line profiling on all instance methods.
 """
 
 from __future__ import absolute_import, division, print_function
 
 from .mpi import start_mpi, get_rank
-import inspect
-import sys
+from inspect import isclass, isfunction
 import atexit
+import six
+
+import pyuvsim as _pyuvsim
 
 try:
     from line_profiler import LineProfiler
@@ -22,27 +21,55 @@ except ImportError:   # pragma: no cover
     def LineProfiler():
         return None
 
-PY3 = sys.version_info[0] == 3
 
-if PY3:
-    import builtins
-else:
-    import __builtin__ as builtins
-
-prof = LineProfiler()
+default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params', 'coherency_calc', 'alt_az_calc', 'apply_beam', 'make_visibility', 'uvdata_to_task_iter', 'init_uvdata_out', 'run_uvsim']
 
 
-def set_profiler():
-    """ If profiling is requested, then assign it to the builtins """
+def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_profile.out', dump_raw=False):
+    """
+    Applies a line profiler to the listed functions, wherever they appear in pyuvsim.
+
+    Places a LineProfiler object in the builtins list, and registers its dumping/printing functions to run
+    at the end.
+
+    Args:
+        func_list: list of function names (strings). Defaults to the list above.
+        rank: (int) Which rank process should write out to file? (only one rank at a time will). Default 0
+        outfile_name: Filename for printing profiling results.
+        dump_raw: Write out a pickled LineStats object to <outfile_name>.lprof (Default False)
+    """
     start_mpi()
-    if prof is not None:
-        builtins.__dict__['profile'] = prof
-        if get_rank() == 0:
-            atexit.register(prof.print_stats)
+    global prof
+    prof = LineProfiler()
+    if prof is None:   # pragma: no cover
+        raise ImportError("line_profiler module required to use profiling tools.")
+
+    # Add module functions to profiler.
+    for mod_it in _pyuvsim.__dict__.values():
+        if isfunction(mod_it):
+            if mod_it.__name__ in func_list:
+                print(mod_it.__name__)
+                prof.add_function(mod_it)
+        if isclass(mod_it):
+            for item in mod_it.__dict__.values():
+                if isfunction(item):
+                    if item.__name__ in func_list:
+                        print("\t" + str(item))
+                        prof.add_function(item)
+
+    # Write out profiling report to file.
+    if get_rank() == rank:
+        ofile = open(outfile_name, 'w')
+        atexit.register(ofile.close)
+        atexit.register(prof.print_stats, stream=ofile)
+        if dump_raw:
+            outfile_raw_name = outfile_name + ".lprof"
+            if isinstance(dump_raw, six.string_types):
+                outfile_raw_name = dump_raw
+            atexit.register(prof.dump_stats, outfile_raw_name)
+
+        prof.enable_by_count()
 
 
-# By default, the profile decorator has no effect.
-if 'profile' not in builtins.__dict__:
-    builtins.__dict__['profile'] = lambda f: f
-else:
-    set_profiler()  # Will activate if run with kernprof
+def get_profiler():
+    return prof

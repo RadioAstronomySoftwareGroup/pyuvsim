@@ -14,28 +14,54 @@ nnodes=${SLURM_JOB_NUM_NODES}
 task=${SLURM_ARRAY_TASK_ID}
 jobid=${SLURM_ARRAY_JOB_ID}
 
-if [ "$#" -ne 5 ]; then
-    echo 'Usage: sbatch batch_pyuvsim.sh <Nsrcs> <Ntimes> <Nfreqs> <Nbls> <beam>'
-    exit
-fi
-
 branch=`git branch | grep \* | cut -d ' ' -f2`
 
-nsrcs=$1
-ntimes=$2
-nfreqs=$3
-nbls=$4
-beam=$5
+_IFS=$IFS
+IFS=','
+read -r -a Nsrcs <<< "$1"
+read -r -a Ntimes <<< "$2"
+read -r -a Nfreqs <<< "$3"
+read -r -a Nbls <<< "$4"
+read -r -a beams <<< "$5"
+IFS=$_IFS
 
-dir1=$branch'_profiling/sim_'$nsrcs'src_'$nfreqs'freq_'$ntimes'time_'$nbls'bls_'$beam'beam_'$nnodes'nodes_'$ntasks'cpus'
+echo ${Ntimes[@]}
 
+dir1=$branch'_profiling/sim_'$nnodes'nodes_'$ntasks'cpus'
+#
 if [ ! -d "$dir1" ]; then
     mkdir -p $dir1
 fi
 
-if [ "$task" -eq '0' ]; then
-    srun --mpi=pmi2 kernprof -l -v run_profile_pyuvsim.py --Nsrcs $nsrcs --Ntimes $ntimes --Nfreqs $nfreqs --Nbls $nbls --beam $beam > $dir1/time_profile.out
+slids_out="prof_data_"$branch".out"
+if [ ! -f $slids_out ]; then
+   echo 'JobID,Start,MaxRSS (GB),NNodes,NProcs,Nbls,Ntimes,Nchan,Nsrc,Beam,Ntasks,Runtime_Seconds' > $slids_out
+#   echo 'Npus, Nnodes, Nsrcs, Ntimes, Nfreqs, Nbls, beam, MaxMemGB, ElapsedSec' > $slids_out
 fi
+
+for nsrcs in "${Nsrcs[@]}"; do
+    for ntimes in "${Ntimes[@]}"; do
+        for nfreqs in "${Nfreqs[@]}"; do
+            for nbls in "${Nbls[@]}"; do
+                for beam in "${beams[@]}"; do
+                    START=$(date +%s)   # Timing
+                    start_str=$(date)
+                    #python run_profile_pyuvsim.py --Nsrcs $nsrcs --Ntimes $ntimes --Nfreqs $nfreqs --Nbls $nbls --beam $beam \
+                    #            --prof_out $dir1/time_profile.out --mem_out $dir1/memory_usage.out
+                    srun --mpi=pmi2 python run_profile_pyuvsim.py --Nsrcs $nsrcs --Ntimes $ntimes --Nfreqs $nfreqs --Nbls $nbls --beam $beam \
+                                --prof_out $dir1/time_profile.out --mem_out $dir1/memory_usage.out
+                    END=$(date +%s)
+                    DIFF=$(( $END - $START ))
+                    mem_used=$(<$dir1'/memory_usage.out')
+                    ntasks=$(( $nsrcs * $ntimes * $nfreqs * nbls ))
+                    echo $jobid','$start_str','$mem_used", "$nnodes','$ntasks', '$nsrcs', '$ntimes', '$nfreqs', '$nbls', '$beam','$ntasks','$DIFF >> $slids_out
+                done
+            done
+        done
+    done
+done
+
+rm $dir1'/memory_usage.out'
 
 ## Try to clean up the scripts directory
 ofilename='slurm-'$jobid'_'$task'.out'
