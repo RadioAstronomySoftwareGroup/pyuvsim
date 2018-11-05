@@ -526,7 +526,9 @@ def initialize_uvdata_from_params(obs_params):
         param_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(param_dict['sources']['catalog'], src.ra.deg, src.dec.deg)
     uv_obj = UVData()
     for k in param_dict:
-        if hasattr(uv_obj, k):
+        # use the __iter__ function on UVData to get list of UVParameters on UVData
+        param_name = [getattr(uv_obj, param).name for param in uv_obj]
+        if k in param_name:
             setattr(uv_obj, k, param_dict[k])
 
     bls = np.array([uv_obj.antnums_to_baseline(uv_obj.antenna_numbers[j], uv_obj.antenna_numbers[i])
@@ -539,6 +541,35 @@ def initialize_uvdata_from_params(obs_params):
 
     uv_obj.ant_1_array, uv_obj.ant_2_array = \
         uv_obj.baseline_to_antnums(uv_obj.baseline_array)
+
+    # add other required metadata to allow select on metadata to work
+    uv_obj.polarization_array = np.array([-5, -6, -7, -8])
+    uv_obj.set_lsts_from_time_array()
+    uv_obj.set_uvws_from_antenna_positions()
+    uv_obj.history = ''  # this will get overwritten in uvsim.init_uvdata_out
+
+    # down select baselines (or anything that can be passed to pyuvdata's select method)
+    # Note: cannot down select polarizations (including via ant_str or bls keywords)
+    if 'select' in param_dict:
+        select_params = param_dict['select']
+        if 'polarizations' in select_params:
+            raise ValueError('Can not down select on polarizations -- pyuvsim '
+                             'computes all polarizations')
+        if 'bls' in select_params:
+            bls = select_params['bls']
+            if any([len(item) == 3 for item in bls]):
+                raise ValueError('Only length 2 tuples allowed in bls: can not '
+                                 'down select on polarizations -- pyuvsim '
+                                 'computes all polarizations')
+        if 'ant_str' in select_params:
+            bls, polarizations = uv_obj.parse_ants(select_params['ant_str'])
+            if polarizations is not None:
+                raise ValueError('polarizations can not be specified in ant_str: '
+                                 'can not down select on polarizations -- pyuvsim '
+                                 'computes all polarizations')
+
+        select_params['metadata_only'] = True
+        uv_obj.select(**select_params)
 
     return uv_obj, beam_list, beam_dict, beam_ids
 

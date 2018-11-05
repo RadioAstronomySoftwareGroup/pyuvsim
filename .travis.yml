@@ -31,7 +31,7 @@ install:
   - source activate test-environment
   - conda install astropy pyyaml mpi4py line_profiler
   - conda install -c conda-forge pycodestyle coveralls
-  - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
+  - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git@select_metadata
   - python setup.py install
   - python -c "from pyuvdata import version; version.main()"
   - conda list
