@@ -274,6 +274,7 @@ def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
 
     uv_obj.set_drift()
     uv_obj.vis_units = 'Jy'
+    uv_obj.polarization_array = np.array([-5, -6, -7, -8])
     uv_obj.instrument = uv_obj.telescope_name
     uv_obj.set_lsts_from_time_array()
     uv_obj.spw_array = np.array([0])
@@ -281,6 +282,7 @@ def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
         uv_obj.channel_width = 1.  # Hz
     else:
         uv_obj.channel_width = np.diff(uv_obj.freq_array[0])[0]
+    uv_obj.set_uvws_from_antenna_positions()
     if uv_obj.Ntimes == 1:
         uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
     else:

@@ -542,11 +542,12 @@ def initialize_uvdata_from_params(obs_params):
     uv_obj.ant_1_array, uv_obj.ant_2_array = \
         uv_obj.baseline_to_antnums(uv_obj.baseline_array)
 
-    # add other required metadata to allow select on metadata to work
+    # add other required metadata to allow select to work without errors
+    # these will all be overwritten in uvsim.init_uvdata_out, so it's ok to hardcode them here
     uv_obj.polarization_array = np.array([-5, -6, -7, -8])
     uv_obj.set_lsts_from_time_array()
     uv_obj.set_uvws_from_antenna_positions()
-    uv_obj.history = ''  # this will get overwritten in uvsim.init_uvdata_out
+    uv_obj.history = ''
 
     # down select baselines (or anything that can be passed to pyuvdata's select method)
     # Note: cannot down select polarizations (including via ant_str or bls keywords)
