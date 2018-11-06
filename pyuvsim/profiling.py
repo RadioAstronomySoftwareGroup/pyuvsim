@@ -48,13 +48,11 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
     for mod_it in _pyuvsim.__dict__.values():
         if isfunction(mod_it):
             if mod_it.__name__ in func_list:
-                print(mod_it.__name__)
                 prof.add_function(mod_it)
         if isclass(mod_it):
             for item in mod_it.__dict__.values():
                 if isfunction(item):
                     if item.__name__ in func_list:
-                        print("\t" + str(item))
                         prof.add_function(item)
 
     # Write out profiling report to file.
