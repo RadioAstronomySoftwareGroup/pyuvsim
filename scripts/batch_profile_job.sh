@@ -5,11 +5,13 @@
 
 #SBATCH -J pyuvsim_profile
 #SBATCH --array=0-0
+# #SBATCH -q jpober-condo
+# #SBATCH -A jpober-condo
 
 echo JOBID ${SLURM_ARRAY_JOB_ID}
 echo TASKID ${SLURM_ARRAY_TASK_ID}
 
-ntasks=${SLURM_NTASKS}
+ncpus=${SLURM_NTASKS}
 nnodes=${SLURM_JOB_NUM_NODES}
 task=${SLURM_ARRAY_TASK_ID}
 jobid=${SLURM_ARRAY_JOB_ID}
@@ -27,7 +29,7 @@ IFS=$_IFS
 
 echo ${Ntimes[@]}
 
-dir1=$branch'_profiling/sim_'$nnodes'nodes_'$ntasks'cpus'
+dir1=$branch'_profiling/sim_'$nnodes'nodes_'$ncpus'cpus'
 #
 if [ ! -d "$dir1" ]; then
     mkdir -p $dir1
@@ -39,25 +41,37 @@ if [ ! -f $slids_out ]; then
 #   echo 'Npus, Nnodes, Nsrcs, Ntimes, Nfreqs, Nbls, beam, MaxMemGB, ElapsedSec' > $slids_out
 fi
 
-for nsrcs in "${Nsrcs[@]}"; do
+function do_run {
+    nsrcs=$1
+    ntimes=$2
+    nfreqs=$3
+    nbls=$4
+    beam=$5
+
+    START=$(date +%s)   # Timing
+    start_str=$(date)
+    srun --kill-on-bad-exit --mpi=pmi2 python run_profile_pyuvsim.py --Nsrcs $nsrcs --Ntimes $ntimes --Nfreqs $nfreqs --Nbls $nbls --beam $beam \
+                --prof_out $dir1/time_profile.out --mem_out $dir1/memory_usage.out
+    END=$(date +%s)
+    DIFF=$(( $END - $START ))
+    mem_used=$(<$dir1'/memory_usage.out')
+    ntasks=$(( $nsrcs * $ntimes * $nfreqs * nbls ))
+    echo $jobid','$start_str','$mem_used", "$nnodes','$ncpus', '$nsrcs', '$ntimes', '$nfreqs', '$nbls', '$beam','$ntasks','$DIFF >> $slids_out
+
+}
+
+for beam in "${beams[@]}"; do
+    for nsrcs in "${Nsrcs[@]}"; do
+        do_run $nsrcs 1 1 1 $beam 
+    done
     for ntimes in "${Ntimes[@]}"; do
-        for nfreqs in "${Nfreqs[@]}"; do
-            for nbls in "${Nbls[@]}"; do
-                for beam in "${beams[@]}"; do
-                    START=$(date +%s)   # Timing
-                    start_str=$(date)
-                    #python run_profile_pyuvsim.py --Nsrcs $nsrcs --Ntimes $ntimes --Nfreqs $nfreqs --Nbls $nbls --beam $beam \
-                    #            --prof_out $dir1/time_profile.out --mem_out $dir1/memory_usage.out
-                    srun --mpi=pmi2 python run_profile_pyuvsim.py --Nsrcs $nsrcs --Ntimes $ntimes --Nfreqs $nfreqs --Nbls $nbls --beam $beam \
-                                --prof_out $dir1/time_profile.out --mem_out $dir1/memory_usage.out
-                    END=$(date +%s)
-                    DIFF=$(( $END - $START ))
-                    mem_used=$(<$dir1'/memory_usage.out')
-                    ntasks=$(( $nsrcs * $ntimes * $nfreqs * nbls ))
-                    echo $jobid','$start_str','$mem_used", "$nnodes','$ntasks', '$nsrcs', '$ntimes', '$nfreqs', '$nbls', '$beam','$ntasks','$DIFF >> $slids_out
-                done
-            done
-        done
+        do_run 1 $ntimes 1 1 $beam 
+    done
+    for nfreqs in "${Nfreqs[@]}"; do
+        do_run 1 1 $nfreqs 1 $beam
+    done
+    for nbls in "${Nbls[@]}"; do
+        do_run 1 1 1 $nbls $beam
     done
 done
 
