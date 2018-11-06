@@ -8,7 +8,7 @@ The outermost parameter file is the `obsparam_*.yaml`, which is parsed by ``init
 
 The antenna layout and telescope config yaml files determine the full properties of the array, including location, beam models, layout, and naming.
 
-The catalog text files give point source lists. 
+The catalog text files give point source lists.
 
 
 These files contain overall simulation parameters.
@@ -25,7 +25,7 @@ Passed into ``run_param_pyuvsim.py``
       channel_width: 80000.0    # Frequency channel width
       end_freq: 100800000.0     # Start and end frequencies (Hz)
       start_freq: 100000000.0
-      freq_array : [1.0000e+08,   1.0008e+08,   1.0016e+08, 1.0024e+08, 
+      freq_array : [1.0000e+08,   1.0008e+08,   1.0016e+08, 1.0024e+08,
           1.0032e+08,   1.0040e+08,   1.0048e+08, 1.0056e+08,
           1.0064e+08, 1.0072e+08]
       bandwidth: 800000.0
@@ -39,8 +39,12 @@ Passed into ``run_param_pyuvsim.py``
       Ntimes: 10        # Number of times.
       integration_time: 11.0  # Time step size  (seconds)
       start_time: 2457458.1738949567    # Start and end times (Julian date)
-      end_time: 2457458.175168105  
+      end_time: 2457458.175168105
       duration_hours: 0.0276
+    select: # any keyword parameters that UVData.select can accept, except polarizations
+      bls: [(1, 2), (3, 4), (5, 6)]
+      ant_str: 'cross'
+      antenna_nums: [1, 7, 9, 15]
 
 **Note** The example above is shown with all allowed keywords, but many of these are redundant. This will be further explained below.
 
@@ -49,41 +53,41 @@ Time and frequency
 ^^^^^^^^^^^^^^^^^^
 
     Time and frequency structure may be defined with different combinations of keywords to suit the user's purposes. The user must specify sufficient information for the frequency and time arrays to be defined.
-    
+
     Minimum frequency requirements:
         specify bandwidth via one of the following combinations:
             * (``start_freq``, ``end_freq``)
             * (``channel_width``, ``Nfreqs``)
             * (``bandwidth``)
-    
+
         specify channel width via:
             * (``bandwidth``, ``Nfreqs``)
             * (``channel width``)
-    
+
         specify a reference frequency via:
             * (``start_freq``)
             * (``end_freq``)
-    
+
     As long as one of the sets from each category above is met by the supplied keywords, the frequency array will be successfully built.
     Likewise for the time array:
-    
+
     Minimum time requirements:
         Total time:
             * (``start_time``, ``end_time``)
             * (``integration_time``, ``Ntimes``)
             * (``duration_hours``) or (``duration_days``)
-    
+
         Time step:
             * (``duration_hours`` or ``duration_days``, ``Ntimes``)
             * (``integration_time``)
-    
+
         Reference time:
             * (``start_time``)
             * (``end_time``)
-    
+
     You can also just give an explicit ``time_array`` or ``freq_array``.
 
-    
+
 Telescope Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -108,23 +112,25 @@ Telescope Configuration
 Sources
 ^^^^^^^
     Specify the path to a text catalog file via ``catalog``.
-    
+
     An example catalog file:
 
     .. literalinclude:: ../pyuvsim/data/mock_catalog_heratext_2458098.27471265.txt
         :end-before: 3
-   
+
     The columns are:
         * ``SOURCE_ID`` : Identifier for the source
         * ``RA_J2000`` : Right ascension of source at J2000 epoch, in decimal degrees.
         * ``DEC_J2000`` : Declination of source at J2000 epoch, in decimal degrees.
         * ``FLUX``: Source stokes I brightness in Janskies.  (Currently only point sources are supported).
-        * ``Frequency``: A reference frequency for the given flux. This will be used for spectral modeling. 
-    
+        * ``Frequency``: A reference frequency for the given flux. This will be used for spectral modeling.
+
     Alternatively, you can specify a ``mock`` and provide the ``mock_arrangement`` keyword to specify which mock catalog to generate. Available options are shown in the ``create_mock_catalog`` docstring:
 
     .. module:: pyuvsim
 
     .. autofunction:: create_mock_catalog
 
-
+Select
+^^^^^^
+    Specify keywords to select which baselines to simulate. The selection is done by UVData.select, so it can accept any keyword that function accepts, except ones that affect polarization because pyuvsim computes all polarizations.

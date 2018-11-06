@@ -221,6 +221,71 @@ def test_param_reader():
         yield (check_param_reader, n)
 
 
+def test_param_select_cross():
+    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
+
+    with open(param_filename, 'r') as pfile:
+        param_dict = yaml.safe_load(pfile)
+
+    param_dict['config_path'] = os.path.dirname(param_filename)
+
+    uv_obj_full, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
+
+    # test only keeping cross pols
+    param_dict['select'] = {'ant_str': 'cross'}
+
+    uv_obj_cross, new_beam_list, new_beam_dict, beam_ids = \
+        pyuvsim.initialize_uvdata_from_params(param_dict)
+
+    uv_obj_cross2 = uv_obj_full.select(ant_str='cross', inplace=False, metadata_only=True)
+
+    nt.assert_equal(uv_obj_cross, uv_obj_cross2)
+
+
+def test_param_select_bls():
+    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
+
+    with open(param_filename, 'r') as pfile:
+        param_dict = yaml.safe_load(pfile)
+
+    param_dict['config_path'] = os.path.dirname(param_filename)
+
+    uv_obj_full, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
+
+    # test only keeping certain baselines
+    param_dict['select'] = {'bls': [(40, 41), (42, 43), (44, 45)]}
+
+    uv_obj_bls, new_beam_list, new_beam_dict, beam_ids = \
+        pyuvsim.initialize_uvdata_from_params(param_dict)
+
+    uv_obj_bls2 = uv_obj_full.select(bls=[(40, 41), (42, 43), (44, 45)], inplace=False, metadata_only=True)
+
+    nt.assert_equal(uv_obj_bls, uv_obj_bls2)
+
+
+def test_param_select_errors():
+    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
+
+    with open(param_filename, 'r') as pfile:
+        param_dict = yaml.safe_load(pfile)
+
+    param_dict['config_path'] = os.path.dirname(param_filename)
+
+    uv_obj_full, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
+
+    param_dict_pol = copy.deepcopy(param_dict)
+    param_dict_pol['select'] = {'polarizations': [-8]}
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, param_dict_pol)
+
+    param_dict_antstr_pol = copy.deepcopy(param_dict)
+    param_dict_antstr_pol['select'] = {'ant_str': '41x_42y,42y_43y'}
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, param_dict_antstr_pol)
+
+    param_dict_bls_pol = copy.deepcopy(param_dict)
+    param_dict_bls_pol['select'] = {'bls': [(0, 1, 'xx'), (2, 3, 'yy')]}
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, param_dict_bls_pol)
+
+
 def test_uvfits_to_config():
     """
         Loopback test of reading parameters from uvfits file, generating uvfits file, and reading in again.
