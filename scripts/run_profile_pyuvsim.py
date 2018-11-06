@@ -83,15 +83,7 @@ if rank == 0:
     # Default is uniform
     if args.beam == 'hera':
         beam = UVBeam()
-#        beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
-#                           telescope_name='HERA',
-#                           feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-#                           model_name='E-field pattern - Rigging height 4.9m',
-#                           model_version='1.0')
-#        beamfile = 'temp_hera_beam.uvbeam'
         beamfile = '/users/alanman/data/alanman/NickFagnoniBeams/HERA_NicCST_fullfreq.uvbeam'
-#        if not os.path.exists(beamfile):
-#            beam.write_beamfits(beamfile)
         beam_list = [beamfile]
 
     mock_keywords = {'arrangement': 'random', 'Nsrcs': args.Nsrcs, 'min_alt': min_alt}
@@ -105,8 +97,6 @@ memory_usage_GB = mpi.comm.gather(memory_usage_GB, root=0)
 
 if rank == 0:
     memory_usage_GB = np.min(memory_usage_GB)
-#    p = psutil.Process(os.getpid())
-#    memory_usage_GB = p.memory_info().rss / 1e9  # GB
     print('Mem_usage: ' + str(memory_usage_GB))
     with open(args.mem_out, 'w') as memfile:
         memfile.write(str(memory_usage_GB))
