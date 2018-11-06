@@ -464,7 +464,6 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     # Concatenate the list of lists into a flat list of tasks
     if rank == 0:
         localtasks_count = np.sum(localtasks_count)
-        print(Ntasks, localtasks_count)
         uvtask_list = sum(full_tasklist, [])
         uvdata_out = serial_gather(uvtask_list, uv_container)
 
