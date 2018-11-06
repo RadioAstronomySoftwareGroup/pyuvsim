@@ -10,7 +10,7 @@ import argparse
 import numpy as np
 import yaml
 import os
-import psutil
+import resource
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -57,6 +57,7 @@ if rank == 0:
 
     params['freq']['Nfreqs'] = args.Nfreqs
     params['time']['Ntimes'] = args.Ntimes
+    params['sources'] = {'catalog': 'mock'}
 
     input_uv, beam_list, beam_dict, beam_ids = simsetup.initialize_uvdata_from_params(params)
 
@@ -82,30 +83,30 @@ if rank == 0:
     # Default is uniform
     if args.beam == 'hera':
         beam = UVBeam()
-        beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
-                           telescope_name='HERA',
-                           feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                           model_name='E-field pattern - Rigging height 4.9m',
-                           model_version='1.0')
-        beamfile = 'temp_hera_beam.uvbeam'
-        if not os.path.exists(beamfile):
-            beam.write_beamfits(beamfile)
+#        beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
+#                           telescope_name='HERA',
+#                           feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+#                           model_name='E-field pattern - Rigging height 4.9m',
+#                           model_version='1.0')
+#        beamfile = 'temp_hera_beam.uvbeam'
+        beamfile = '/users/alanman/data/alanman/NickFagnoniBeams/HERA_NicCST_fullfreq.uvbeam'
+#        if not os.path.exists(beamfile):
+#            beam.write_beamfits(beamfile)
         beam_list = [beamfile]
 
     mock_keywords = {'arrangement': 'random', 'Nsrcs': args.Nsrcs, 'min_alt': min_alt}
 
 uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
 
-p = psutil.Process(os.getpid())
-memory_usage_GB = p.memory_info().rss / 1e9  # GB
+memory_usage_GB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1e6
 mpi.comm.Barrier()
 
 memory_usage_GB = mpi.comm.gather(memory_usage_GB, root=0)
 
 if rank == 0:
     memory_usage_GB = np.min(memory_usage_GB)
-    p = psutil.Process(os.getpid())
-    memory_usage_GB = p.memory_info().rss / 1e9  # GB
+#    p = psutil.Process(os.getpid())
+#    memory_usage_GB = p.memory_info().rss / 1e9  # GB
     print('Mem_usage: ' + str(memory_usage_GB))
     with open(args.mem_out, 'w') as memfile:
         memfile.write(str(memory_usage_GB))
