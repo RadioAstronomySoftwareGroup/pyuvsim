@@ -152,7 +152,6 @@ class Source(object):
 
         return coherency_local
 
-
     def alt_az_calc(self, time, telescope_location):
         """
         calculate the altitude & azimuth for this source at a time & location
