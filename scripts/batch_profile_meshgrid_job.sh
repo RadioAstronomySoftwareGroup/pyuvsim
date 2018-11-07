@@ -51,7 +51,7 @@ for nsrcs in "${Nsrcs[@]}"; do
                     #python run_profile_pyuvsim.py --Nsrcs $nsrcs --Ntimes $ntimes --Nfreqs $nfreqs --Nbls $nbls --beam $beam \
                     #            --prof_out $dir1/time_profile.out --mem_out $dir1/memory_usage.out
                     srun --mpi=pmi2 python run_profile_pyuvsim.py --Nsrcs $nsrcs --Ntimes $ntimes --Nfreqs $nfreqs --Nbls $nbls --beam $beam \
-                                --prof_out $dir1/time_profile.out --mem_out $dir1/memory_usage.out
+                                --prof_out $dir1"/time_profile_"$nsrcs"src_"$ntimes"t_"$nfreqs"f_"$nbls"bl_"$beam".out"--mem_out $dir1/memory_usage.out
                     END=$(date +%s)
                     DIFF=$(( $END - $START ))
                     mem_used=$(<$dir1'/memory_usage.out')
