@@ -90,7 +90,7 @@ if rank == 0:
 
 uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
 
-memory_usage_GB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1e6
+memory_usage_GB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
 mpi.comm.Barrier()
 
 memory_usage_GB = mpi.comm.gather(memory_usage_GB, root=0)
