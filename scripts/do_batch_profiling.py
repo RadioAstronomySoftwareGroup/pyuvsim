@@ -11,19 +11,19 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import subprocess
 
-#Nsrcs = [5, 10, 20, 30]
-#Ntimes = [1, 5, 10, 15]
-#Nfreqs = [1, 5, 10, 15]
-#Nbls = [10, 20, 50]
-#beam = ['hera', 'uniform']
+# Nsrcs = [5, 10, 20, 30]
+# Ntimes = [1, 5, 10, 15]
+# Nfreqs = [1, 5, 10, 15]
+# Nbls = [10, 20, 50]
+# beam = ['hera', 'uniform']
 
-Nsrcs = np.logspace(2,4,20).astype(int).tolist()
-Ntimes = np.linspace(1,99,20).astype(int).tolist()
+Nsrcs = np.logspace(2, 4, 20).astype(int).tolist()
+Ntimes = np.linspace(1, 99, 20).astype(int).tolist()
 Nfreqs = [1]
 Nbls = np.logspace(2, np.log10(3000), 20).astype(int).tolist()
 beam = ['uniform', 'hera']
 
-meshgrid=False
+meshgrid = False
 
 Ncores = [8, 16, 32, 64, 128]
 
