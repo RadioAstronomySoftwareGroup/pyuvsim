@@ -9,6 +9,7 @@ import os
 import sys
 import copy
 import six
+import yaml
 from six.moves import map, range, zip
 import warnings
 import astropy.constants as const
@@ -315,8 +316,7 @@ def serial_gather(uvtask_list, uv_out):
     return uv_out
 
 
-def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
-              mock_keywords=None,
+def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_list_name=None,
               uvdata_file=None, obs_param_file=None,
               telescope_config_file=None, antenna_location_file=None):
     """
@@ -330,54 +330,21 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         beam_dict: Dictionary of {antenna_name : beam_ID}, where beam_id is an index in
                    the beam_list. This assigns beams to antennas.
                    Default: All antennas get the 0th beam in the beam_list.
-        catalog_file: Catalog file name.
-                   Default: Create a mock catalog
-        mock_keywords: Settings for a mock catalog (see keywords of create_mock_catalog)
+        catalog: array of sources
         uvdata_file: Name of input UVData file if running from a file.
         obs_param_file: Parameter filename if running from config files.
         telescope_config_file: Telescope configuration file if running from config files.
         antenna_location_file: antenna_location file if running from config files.
     """
 
-    mpi.start_mpi()
     rank = mpi.get_rank()
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
     # The Head node will initialize our simulation
     # Read input file and make uvtask list
-    catalog = None
     if rank == 0:
         print('Nblts:', input_uv.Nblts)
         print('Nfreqs:', input_uv.Nfreqs)
-
-        if catalog_file is None or catalog_file == 'mock':
-            # time, arrangement, array_location, save, Nsrcs, max_za
-
-            if mock_keywords is None:
-                mock_keywords = {}
-
-            if 'array_location' not in mock_keywords:
-                warnings.warn("Warning: No array_location given for mock catalog. Defaulting to HERA site")
-                array_loc = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
-                mock_keywords['array_location'] = array_loc
-            if 'time' not in mock_keywords:
-                warnings.warn("Warning: No julian date given for mock catalog. Defaulting to first of input_UV object")
-                mock_keywords['time'] = input_uv.time_array[0]
-
-            time = mock_keywords.pop('time')
-
-            catalog, mock_keywords = simsetup.create_mock_catalog(time, **mock_keywords)
-
-            mock_keyvals = [str(key) + str(val) for key, val in six.iteritems(mock_keywords)]
-            source_list_name = 'mock_' + "_".join(mock_keyvals)
-        elif isinstance(catalog_file, str):
-            source_list_name = catalog_file
-            if catalog_file.endswith("txt"):
-                catalog = simsetup.read_text_catalog(catalog_file)
-            elif catalog_file.endswith('vot'):
-                catalog = simsetup.read_votable_catalog(catalog_file)
-
-        catalog = np.array(catalog)
         print('Nsrcs:', len(catalog))
 
         if 'obs_param_file' in input_uv.extra_keywords:
@@ -397,10 +364,8 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
     comm = mpi.get_comm()
     Npus = mpi.get_Npus()
 
-    catalog = comm.bcast(catalog, root=0)
-    input_uv = comm.bcast(input_uv, root=0)
-    beam_list = comm.bcast(beam_list, root=0)
-    beam_dict = comm.bcast(beam_dict, root=0)
+    # Ensure all ranks have finished setup.
+    comm.Barrier()
 
     Nblts = input_uv.Nblts
     Nbls = input_uv.Nbls
@@ -468,3 +433,29 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog_file=None,
         uvdata_out = serial_gather(uvtask_list, uv_container)
 
         return uvdata_out
+
+
+def run_param_uvsim(params):
+    """
+    Run a simulation off of a parameter yaml file.
+
+    Args:
+        params string: Path to a parameter yaml file.
+
+    Returns:
+        uv_out (UVData): Finished simulation results.
+    """
+
+    mpi.start_mpi()
+    rank = mpi.get_rank()
+    comm = mpi.get_comm()
+
+    input_uv, beam_list, beam_dict, beam_ids = simsetup.initialize_uvdata_from_params(params)
+    catalog, source_list_name = simsetup.initialize_catalog_from_params(params, input_uv)
+
+    uv_out = run_uvsim(input_uv, beam_list, beam_dict=beam_dict, catalog=catalog, source_list_name=source_list_name)
+    if rank == 0:
+        with open(params, 'r') as pfile:
+            param_dict = yaml.safe_load(pfile)
+        simsetup.write_uvfits(uv_out, param_dict)
+    comm.Barrier()
