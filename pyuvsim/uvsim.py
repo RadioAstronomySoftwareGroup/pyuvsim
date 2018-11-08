@@ -435,12 +435,13 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_list_nam
         return uvdata_out
 
 
-def run_param_uvsim(params):
+def run_param_uvsim(params, return_uv=False):
     """
     Run a simulation off of a parameter yaml file.
 
     Args:
-        params string: Path to a parameter yaml file.
+        params (string): Path to a parameter yaml file.
+        return_uv (bool): If true, do not write results to file (default False) and return uv_out
 
     Returns:
         uv_out (UVData): Finished simulation results.
@@ -454,8 +455,11 @@ def run_param_uvsim(params):
     catalog, source_list_name = simsetup.initialize_catalog_from_params(params, input_uv)
 
     uv_out = run_uvsim(input_uv, beam_list, beam_dict=beam_dict, catalog=catalog, source_list_name=source_list_name)
+
     if rank == 0:
         with open(params, 'r') as pfile:
             param_dict = yaml.safe_load(pfile)
-        simsetup.write_uvfits(uv_out, param_dict)
+        simsetup.write_uvfits(uv_out, param_dict, dryrun=return_uv)
+    if return_uv:
+        return uv_out
     comm.Barrier()

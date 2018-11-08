@@ -339,12 +339,14 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
 
         mock_keyvals = [str(key) + str(val) for key, val in six.iteritems(mock_keywords)]
         source_list_name = 'mock_' + "_".join(mock_keyvals)
-    elif isinstance(catalog_file, str):
-        source_list_name = catalog_file
-        if catalog_file.endswith("txt"):
-            catalog = read_text_catalog(catalog_file)
-        elif catalog_file.endswith('vot'):
-            catalog = read_votable_catalog(catalog_file)
+    elif isinstance(catalog, str):
+        source_list_name = os.path.basename(catalog)
+        if not os.path.isfile(catalog):
+            catalog = os.path.join(param_dict['config_path'], catalog)
+        if catalog.endswith("txt"):
+            catalog = read_text_catalog(catalog)
+        elif catalog.endswith('vot'):
+            catalog = read_votable_catalog(catalog)
 
     return np.array(catalog), source_list_name
 
@@ -589,7 +591,8 @@ def initialize_uvdata_from_params(obs_params):
         time = Time(time_arr[0], scale='utc', format='jd')
         src, _ = create_mock_catalog(time, arrangement='zenith', array_location=tloc)
         src = src[0]
-        param_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(param_dict['sources']['catalog'], src.ra.deg, src.dec.deg)
+        source_file_name = os.path.basename(param_dict['sources']['catalog'])
+        param_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(source_file_name, src.ra.deg, src.dec.deg)
     uv_obj = UVData()
     for k in param_dict:
         # use the __iter__ function on UVData to get list of UVParameters on UVData
