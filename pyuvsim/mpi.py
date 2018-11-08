@@ -38,6 +38,11 @@ def start_mpi():
     rank = comm.Get_rank()
     set_mpi_excepthook(comm)
 
+    if not rank == 0:
+        # For non-root ranks, do not print to stdout.
+        global stdout
+        sys.stdout = open('/dev/null', 'w')
+
 
 def get_rank():
     return rank
