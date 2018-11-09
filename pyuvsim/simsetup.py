@@ -296,6 +296,8 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         catalog: array of Source objects.
         source_list_name: (str) Catalog identifier for metadata.
     """
+    if input_uv is not None and not isinstance(input_uv, UVData):
+        raise TypeError("input_uv must be UVData object")
 
     if isinstance(obs_params, str):
         with open(obs_params, 'r') as pfile:
@@ -318,7 +320,8 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
                 if k == 'array_location':
                     # String -- lat, lon, alt in degrees
                     latlonalt = [float(s.strip()) for s in source_params[k].split(',')]
-                    mock_keywords[k] = EarthLocation.from_geodetic(*latlonalt)
+                    lat, lon, alt = latlonalt
+                    mock_keywords[k] = EarthLocation.from_geodetic(lon, lat, alt)
                 else:
                     mock_keywords[k] = source_params[k]
 
@@ -330,13 +333,15 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
             else:
                 warnings.warn("No array_location specified. Defaulting to the HERA site.")
         if 'time' not in mock_keywords:
-            warnings.warn("Warning: No julian date given for mock catalog. Defaulting to first time step.")
-            mock_keywords['time'] = input_uv.time_array[0]
+            if input_uv is not None:
+                mock_keywords['time'] = input_uv.time_array[0]
+                warnings.warn("Warning: No julian date given for mock catalog. Defaulting to first time step.")
+            else:
+                raise ValueError("input_uv must be supplied if using mock catalog without specified julian date")
 
         time = mock_keywords.pop('time')
 
         catalog, mock_keywords = create_mock_catalog(time, **mock_keywords)
-
         mock_keyvals = [str(key) + str(val) for key, val in six.iteritems(mock_keywords)]
         source_list_name = 'mock_' + "_".join(mock_keyvals)
     elif isinstance(catalog, str):

@@ -17,7 +17,7 @@ comm = None
 def set_mpi_excepthook(mpi_comm):
     """Kill the whole job on an uncaught python exception"""
 
-    def mpi_excepthook(exctype, value, traceback):
+    def mpi_excepthook(exctype, value, traceback):      # pragma: no cover
         sys.__excepthook__(exctype, value, traceback)
         mpi_comm.Abort(1)
 
@@ -38,8 +38,9 @@ def start_mpi():
     rank = comm.Get_rank()
     set_mpi_excepthook(comm)
 
-    if not rank == 0:
+    if not rank == 0:       # pragma: no cover
         # For non-root ranks, do not print to stdout.
+        # (Uncovered until we have multi-rank tests)
         global stdout
         sys.stdout = open('/dev/null', 'w')
 
