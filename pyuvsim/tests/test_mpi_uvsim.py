@@ -76,12 +76,11 @@ def test_run_param_uvsim():
     uv_new_txt.unphase_to_drift(use_ant_pos=True)
     os.remove(tempfilename)
 
-
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
 
     uvtest.checkWarnings(pyuvsim.uvsim.run_param_uvsim, [param_filename],
-                                  nwarnings=10,
-                                  category=astropy.io.votable.exceptions.W50)
+                         nwarnings=10,
+                         category=astropy.io.votable.exceptions.W50)
 
     uv_new_vot = UVData()
     uvtest.checkWarnings(uv_new_vot.read_uvfits, [tempfilename], message='antenna_diameters is not set')
