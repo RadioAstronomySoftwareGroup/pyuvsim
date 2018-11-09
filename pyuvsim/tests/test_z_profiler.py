@@ -24,12 +24,7 @@ def test_profiler():
     if LineProfiler:
         pyuvsim.profiling.set_profiler(outfile_name=testprof_fname, dump_raw='/dev/null')
         param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
-        with open(param_filename, 'r') as pfile:
-            params_dict = yaml.safe_load(pfile)
-        uv_in, beam_list, beam_dict, beam_ids = pyuvsim.simsetup.initialize_uvdata_from_params(param_filename)
-        beam_list[0] = 'uniform'  # Replace the one that's a HERA beam
-        catalog = os.path.join(SIM_DATA_PATH, params_dict['sources']['catalog'])
-        uv_out = pyuvsim.run_uvsim(uv_in, beam_list, catalog_file=catalog, beam_dict=beam_dict)
+        uv_out = pyuvsim.uvsim.run_param_uvsim(param_filename, return_uv=True)
 
         time_profiler = pyuvsim.profiling.get_profiler()
         nt.assert_true(isinstance(time_profiler, LineProfiler))

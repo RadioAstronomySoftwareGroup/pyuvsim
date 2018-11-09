@@ -317,7 +317,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
             if k in source_params.keys():
                 if k == 'array_location':
                     # String -- lat, lon, alt in degrees
-                    latlonalt = [ float(s.strip()) for s in source_params[k].split(',') ]
+                    latlonalt = [float(s.strip()) for s in source_params[k].split(',')]
                     mock_keywords[k] = EarthLocation.from_geodetic(*latlonalt)
                 else:
                     mock_keywords[k] = source_params[k]
@@ -349,7 +349,6 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
             catalog = read_votable_catalog(catalog)
 
     return np.array(catalog), source_list_name
-
 
 
 def initialize_uvdata_from_params(obs_params):
