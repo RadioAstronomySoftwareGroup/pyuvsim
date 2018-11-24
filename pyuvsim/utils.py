@@ -40,11 +40,17 @@ class progsteps:
         if step < 1.0:
             step = 1
         self.step = step
+        self.curval = -1
 
     def update(self, count):
         if count % self.step == 0:
-            print("{:0.2f}% completed. {:0.3f} minutes elapsed \n".format(
-                  (count / self.maxval) * 100., (pytime.time() - self.t0) / 60.))
+            doprint=False
+            if not self.curval == count:
+                doprint=True
+                self.curval = count
+            if doprint:
+                print("{:0.2f}% completed. {:0.3f} minutes elapsed \n".format(
+                      (count / self.maxval) * 100., (pytime.time() - self.t0) / 60.))
         sys.stdout.flush()
 
     def finish(self):
