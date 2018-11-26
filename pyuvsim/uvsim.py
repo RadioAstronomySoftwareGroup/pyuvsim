@@ -218,7 +218,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         yield task
 
 
-def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
+def init_uvdata_out(uv_in, source_list_name,
                     obs_param_file=None, telescope_config_file=None,
                     antenna_location_file=None):
     """
@@ -226,8 +226,6 @@ def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
     Args:
         uv_in: The input uvdata object.
         source_list_name: Name of source list file or mock catalog.
-        uvdata_file: Name of input UVData file or None if initializing from
-            config files.
         obs_param_file: Name of observation parameter config file or None if
             initializing from a UVData file.
         telescope_config_file: Name of telescope config file or None if
@@ -238,36 +236,20 @@ def init_uvdata_out(uv_in, source_list_name, uvdata_file=None,
     if not isinstance(source_list_name, str):
         raise ValueError('source_list_name must be a string')
 
-    if uvdata_file is not None:
-        if not isinstance(uvdata_file, str):
-            raise ValueError('uvdata_file must be a string')
-        if (obs_param_file is not None or telescope_config_file is not None
-                or antenna_location_file is not None):
-            raise ValueError('If initializing from a uvdata_file, none of '
-                             'obs_param_file, telescope_config_file or '
-                             'antenna_location_file can be set.')
-    elif (obs_param_file is None or telescope_config_file is None
-            or antenna_location_file is None):
-        if not isinstance(obs_param_file, str):
-            raise ValueError('obs_param_file must be a string')
-        if not isinstance(telescope_config_file, str):
-            raise ValueError('telescope_config_file must be a string')
-        if not isinstance(antenna_location_file, str):
-            raise ValueError('antenna_location_file must be a string')
-        raise ValueError('If not initializing from a uvdata_file, all of '
-                         'obs_param_file, telescope_config_file or '
-                         'antenna_location_file must be set.')
+    if not isinstance(obs_param_file, str):
+        raise ValueError('obs_param_file must be a string')
+    if not isinstance(telescope_config_file, str):
+        raise ValueError('telescope_config_file must be a string')
+    if not isinstance(antenna_location_file, str):
+        raise ValueError('antenna_location_file must be a string')
 
     # Version string to add to history
     history = simutils.get_version_string()
 
     history += ' Sources from source list: ' + source_list_name + '.'
 
-    if uvdata_file is not None:
-        history += ' Based on UVData file: ' + uvdata_file + '.'
-    else:
-        history += (' Based on config files: ' + obs_param_file + ', '
-                    + telescope_config_file + ', ' + antenna_location_file)
+    history += (' Based on config files: ' + obs_param_file + ', '
+                + telescope_config_file + ', ' + antenna_location_file)
 
     history += ' Npus = ' + str(mpi.Npus) + '.'
 
@@ -331,7 +313,6 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_list_nam
                    the beam_list. This assigns beams to antennas.
                    Default: All antennas get the 0th beam in the beam_list.
         catalog: array of sources
-        uvdata_file: Name of input UVData file if running from a file.
         obs_param_file: Parameter filename if running from config files.
         telescope_config_file: Telescope configuration file if running from config files.
         antenna_location_file: antenna_location file if running from config files.
@@ -356,7 +337,6 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_list_nam
             uvdata_file_pass = uvdata_file
 
         uv_container = init_uvdata_out(input_uv, source_list_name,
-                                       uvdata_file=uvdata_file_pass,
                                        obs_param_file=obs_param_file,
                                        telescope_config_file=telescope_config_file,
                                        antenna_location_file=antenna_location_file)
@@ -451,8 +431,20 @@ def run_param_uvsim(params, return_uv=False):
     rank = mpi.get_rank()
     comm = mpi.get_comm()
 
-    input_uv, beam_list, beam_dict, beam_ids = simsetup.initialize_uvdata_from_params(params)
-    catalog, source_list_name = simsetup.initialize_catalog_from_params(params, input_uv)
+    input_uv = UVData()
+    beam_list = None
+    beam_dict = None
+    catalog = None
+    source_list_name = None
+
+    if rank == 0:
+        input_uv, beam_list, beam_dict, beam_ids = simsetup.initialize_uvdata_from_params(params)
+        catalog, source_list_name = simsetup.initialize_catalog_from_params(params, input_uv)
+
+    input_uv = comm.bcast(input_uv, root=0)
+    beam_list = comm.bcast(beam_list, root=0)
+    beam_dict = comm.bcast(beam_dict, root=0)
+    catalog = comm.bcast(catalog, root=0)
 
     uv_out = run_uvsim(input_uv, beam_list, beam_dict=beam_dict, catalog=catalog, source_list_name=source_list_name)
 
