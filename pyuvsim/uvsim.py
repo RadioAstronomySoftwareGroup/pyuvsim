@@ -122,11 +122,12 @@ class UVEngine(object):
     def make_visibility(self):
         """ Visibility contribution from a single source """
         assert(isinstance(self.task.freq, Quantity))
-        self.apply_beam()
 
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.location)
         if pos_lmn is None:
             return np.array([0., 0., 0., 0.], dtype=np.complex128)
+
+        self.apply_beam()
 
         # need to convert uvws from meters to wavelengths
         uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
