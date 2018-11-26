@@ -190,9 +190,8 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     time_array = Time(input_uv.time_array, scale='utc', format='jd')
 
     # Shape indicates slowest to fastest index. (time is slowest, baselines is fastest).
-    task_indices = np.array(np.unravel_index(task_ids, (Ntimes, Nsrcs, Nfreqs, Nbls))).T
-
-    for (time_i, src_i, freq_i, bl_i) in task_indices:
+    for task_index in task_ids:
+        time_i, src_i, freq_i, bl_i = np.unravel_index(task_index, (Ntimes, Nsrcs, Nfreqs, Nbls))
         blti = bl_i + time_i * Nbls   # baseline is the fast axis
 
         # We reuse a lot of baseline info, so make the baseline list on the first go and reuse.
@@ -355,12 +354,24 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
 
     Ntasks = Nblts * Nfreqs * Nsrcs
 
-    task_ids = np.array_split(range(Ntasks), Npus)[rank]
+    Neach_section, extras = divmod(Ntasks, Npus)
+    if rank < extras:
+        length = Neach_section + 1
+        st = rank*(length)
+        en = st + length
+    else:
+        length = Neach_section
+        st = extras*(Neach_section+1) + (rank-extras)*length
+        en = st + length
+    if six.PY2:
+        task_ids = xrange(st, en)
+    else:
+        task_ids = range(st, en)
 
     # Construct beam objects from strings
     beam_models = [simsetup.beam_string_to_object(bm) for bm in beam_list]
 
-    Ntasks_local = task_ids.size
+    Ntasks_local = (en - st)
 
     local_task_iter = uvdata_to_task_iter(task_ids, input_uv, catalog, beam_models, beam_dict)
 
