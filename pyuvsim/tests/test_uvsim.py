@@ -520,14 +520,18 @@ def test_uvdata_init():
     hera_uv.read_uvfits(EW_uvfits_10time10chan)
     hera_uv.unphase_to_drift(use_ant_pos=True)
     uvdata_out = pyuvsim.init_uvdata_out(hera_uv, 'zenith_source',
-                                         uvdata_file=EW_uvfits_10time10chan)
+                                         obs_param_file='', telescope_config_file='', antenna_location_file='')
 
     hera_uv.data_array = np.zeros_like(hera_uv.data_array, dtype=np.complex)
     hera_uv.flag_array = np.zeros_like(hera_uv.data_array, dtype=bool)
     hera_uv.nsample_array = np.ones_like(hera_uv.data_array)
+    obs_param_file = ''
+    telescope_config_file = ''
+    antenna_location_file = ''
     hera_uv.history = (pyuvsim.get_version_string()
                        + 'Sources from source list: zenith_source. '
-                       'Based on UVData file: ' + EW_uvfits_10time10chan + '. Npus = 1.'
+                       + ' Based on config files: ' + obs_param_file + ', '
+                       + telescope_config_file + ', ' + antenna_location_file + ' Npus = 1.'
                        + hera_uv.pyuvdata_version_str)
     hera_uv.instrument = hera_uv.telescope_name
     nt.assert_true(np.allclose(hera_uv.antenna_positions, uvdata_out.antenna_positions))
@@ -539,8 +543,6 @@ def test_uvdata_init_errors():
     hera_uv.read_uvfits(EW_uvfits_file)
 
     nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 1.0)
-    nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', uvdata_file=1.0)
-    nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', uvdata_file='testfile', telescope_config_file='tconfig')
     nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str')
     nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file=1.0)
     nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', telescope_config_file=1.0)
@@ -577,7 +579,7 @@ def test_gather():
     uvtask_list = list(pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict))
 
     uv_out = pyuvsim.init_uvdata_out(hera_uv, 'zenith_source',
-                                     uvdata_file=EW_uvfits_file)
+                                     obs_param_file='', telescope_config_file='', antenna_location_file='')
     for task in uvtask_list:
         engine = pyuvsim.UVEngine(task)
         task.visibility_vector = engine.make_visibility()

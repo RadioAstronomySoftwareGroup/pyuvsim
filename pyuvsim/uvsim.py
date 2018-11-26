@@ -299,7 +299,7 @@ def serial_gather(uvtask_list, uv_out):
 
 
 def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_list_name=None,
-              uvdata_file=None, obs_param_file=None,
+              obs_param_file=None,
               telescope_config_file=None, antenna_location_file=None):
     """
     Run uvsim
@@ -332,9 +332,10 @@ def run_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_list_nam
             obs_param_file = input_uv.extra_keywords['obs_param_file']
             telescope_config_file = input_uv.extra_keywords['telescope_config_file']
             antenna_location_file = input_uv.extra_keywords['antenna_location_file']
-            uvdata_file_pass = None
         else:
-            uvdata_file_pass = uvdata_file
+            obs_param_file = ''
+            telescope_config_file = ''
+            antenna_location_file = ''
 
         uv_container = init_uvdata_out(input_uv, source_list_name,
                                        obs_param_file=obs_param_file,
