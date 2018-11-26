@@ -5,9 +5,10 @@
 
 from __future__ import absolute_import, division, print_function
 
-import pyuvsim
 import argparse
 import os
+
+import pyuvsim
 
 parser = argparse.ArgumentParser(description=("A command-line script "
                                               "to execute a pyuvsim simulation from a parameter file."))
