@@ -380,6 +380,14 @@ def test_point_catalog_reader():
         nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])
     # shouldn't this also test the values?
 
+def test_riseset_times():
+    # Using astroplan to find rise/set times in jd within the time range of a simulation
+
+    hera_uv = UVData()
+    uvtest.checkWarnings(hera_uv.read_uvfits, [triangle_uvfits_file],
+                         message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
+    sourcelist = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot, input_uv=hera_uv)
+
 
 def test_read_gleam():
 

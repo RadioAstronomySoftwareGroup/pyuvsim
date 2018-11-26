@@ -15,6 +15,7 @@ import astropy.units as units
 from astropy.time import Time
 from astropy.io.votable import parse
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
+from astroplan import Observer, FixedTarget
 
 from pyuvdata import UVBeam, UVData
 import pyuvdata.utils as uvutils
@@ -44,7 +45,7 @@ def _parse_layout_csv(layout_csv):
                          dtype=dt.dtype)
 
 
-def read_votable_catalog(gleam_votable, min_flux=None):
+def read_votable_catalog(gleam_votable, input_uv=None, min_flux=None):
     """
     Creates a list of pyuvsim source objects from a votable catalog.
 
@@ -71,14 +72,37 @@ def read_votable_catalog(gleam_votable, min_flux=None):
 
     data = table.array
     sourcelist = []
+    observer = None
+    if input_uv is not None:
+        location = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
+        observer = Observer(location)
+        time_array = np.unique(input_uv.time_array)     # Julian date
+        Ndays = np.unique(np.floor(time_array)).size    # Number of days in the array
+        step = len(time_array)//Ndays
+        ref_times = Time(time_array[step/2::step])
+
     for entry in data:
         if min_flux:
             if (min_flux > entry['Fintwide']):
                 continue
-        source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
-                        Angle(entry['DEJ2000'], unit=units.deg),
+        ra = Angle(entry['RAJ2000'], units.deg)
+        dec = Angle(entry['DEJ2000'], units.deg)
+
+        source = Source(entry['GLEAM'], ra,
+                        dec,
                         freq=(200e6 * units.Hz),
                         stokes=np.array([entry['Fintwide'], 0., 0., 0.]))
+
+        if observer is not None:
+            # Set rise/set times. This is a pair of lists giving julian dates within the time_array
+            # corresponding with when the source rises and sets.
+            # Choose Ndays times as references then pick the nearest rise/set time for each.
+            target = FixedTarget(SkyCoord(ra=ra, dec=dec))
+            rise_times = observer.target_rise_time(ref_times, target, which='previous').jd
+            set_times = observer.target_set_time(ref_times, target, which='next').jd
+            source.set_times = set_times
+            source.rise_times = set_times
+
         sourcelist.append(source)
     return sourcelist
 
@@ -295,6 +319,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
     Args:
         obs_params: Either an obsparam file name or a dictionary of parameters.
         input_uv: (UVData object) Needed to know location and time for mock catalog
+                  and for horizon cuts
 
     Returns:
         catalog: array of Source objects.
@@ -310,6 +335,15 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         param_dict['config_path'] = os.path.dirname(obs_params)
     else:
         param_dict = obs_params
+
+    if 'select' in param_dict:
+        select_params = param_dict['select']
+    else:
+        select_params = {}
+
+    catalog_params = {}
+    if 'min_flux' in select_params:
+        catalog_params['min_flux'] = float(select_params['min_flux'])
 
     source_params = param_dict['sources']
     if 'catalog' in source_params:
@@ -353,9 +387,9 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         if not os.path.isfile(catalog):
             catalog = os.path.join(param_dict['config_path'], catalog)
         if catalog.endswith("txt"):
-            catalog = read_text_catalog(catalog)
+            catalog = read_text_catalog(catalog, input_uv=input_uv, **catalog_params)
         elif catalog.endswith('vot'):
-            catalog = read_votable_catalog(catalog)
+            catalog = read_votable_catalog(catalog, input_uv=input_uv, **catalog_params)
 
     return np.array(catalog), source_list_name
 

@@ -208,11 +208,11 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         if not prev_time_ind == time_i:
             lst = time.sidereal_time('apparent')
         source = catalog[src_i]
-        local_hour_angle = lst - source.ra
-        if np.abs(local_hour_angle.rad) > np.radians(95):
-            continue
-        if np.abs((source.dec - telescope.location.lat).rad) > np.radians(95.):
-            continue
+#        local_hour_angle = lst - source.ra
+#        if np.abs(local_hour_angle.rad) > np.radians(95):
+#            continue
+#        if np.abs((source.dec - telescope.location.lat).rad) > np.radians(95.):
+#            continue
         bl = baselines[bl_i]
         freq = freq_array[0, freq_i]  # 0 = spw axis
 
