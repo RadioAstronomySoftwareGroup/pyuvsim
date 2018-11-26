@@ -225,6 +225,7 @@ def init_uvdata_out(uv_in, source_list_name,
     Initialize an empty uvdata object to fill with simulated data.
     Args:
         uv_in: The input uvdata object.
+               This is usually an incomplete object, containing only metadata.
         source_list_name: Name of source list file or mock catalog.
         obs_param_file: Name of observation parameter config file
         telescope_config_file: Name of telescope config file
@@ -310,7 +311,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
                    the beam_list. This assigns beams to antennas.
                    Default: All antennas get the 0th beam in the beam_list.
         source_list_name: Catalog identifier string for file metadata. Only required on rank 0
-        catalog: array of sources
+        catalog: array of source.Source objects
         obs_param_file: Parameter filename if running from config files.
         telescope_config_file: Telescope configuration file if running from config files.
         antenna_location_file: antenna_location file if running from config files.
