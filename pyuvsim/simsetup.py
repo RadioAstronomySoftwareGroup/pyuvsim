@@ -154,6 +154,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         Nsrcs (int):  Number of sources to put at zenith
         array_location (EarthLocation object): [Default = HERA site]
         alt (float): For off-zenith and triangle arrangements, altitude to place sources. (deg)
+        min_alt (float): For random and long-line arrangements, minimum altitude at which to place sources. (deg)
         save (bool): Save mock catalog as npz file.
         rseed (int): If using the random configuration, pass in a RandomState seed.
 
