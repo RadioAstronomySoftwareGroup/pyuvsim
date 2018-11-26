@@ -187,7 +187,8 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
                           beam_list)
 
     freq_array = input_uv.freq_array * units.Hz
-    time_array = Time(input_uv.time_array, scale='utc', format='jd')
+    time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
+    current_lst = None
 
     # Shape indicates slowest to fastest index. (time is slowest, baselines is fastest).
     for task_index in task_ids:
@@ -202,8 +203,15 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
             index2 = np.where(input_uv.antenna_numbers == antnum2)[0][0]
             baselines[bl_i] = Baseline(antennas[index1], antennas[index2])
 
-        source = catalog[src_i]
         time = time_array[blti]
+        if not prev_time_ind == time_i:
+            lst = time.sidereal_time('apparent')
+        source = catalog[src_i]
+        local_hour_angle = lst - source.ra
+        if np.abs(local_hour_angle.rad) > np.radians(95):
+            continue
+        if np.abs((source.dec - telescope.location.lat).rad) > np.radians(95.):
+            continue
         bl = baselines[bl_i]
         freq = freq_array[0, freq_i]  # 0 = spw axis
 
