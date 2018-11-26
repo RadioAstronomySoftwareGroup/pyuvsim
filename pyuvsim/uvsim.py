@@ -366,11 +366,11 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
     Neach_section, extras = divmod(Ntasks, Npus)
     if rank < extras:
         length = Neach_section + 1
-        st = rank*(length)
+        st = rank * (length)
         en = st + length
     else:
         length = Neach_section
-        st = extras*(Neach_section+1) + (rank-extras)*length
+        st = extras * (Neach_section + 1) + (rank - extras) * length
         en = st + length
     if six.PY2:
         task_ids = xrange(st, en)

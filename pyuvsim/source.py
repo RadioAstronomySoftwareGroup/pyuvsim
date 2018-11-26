@@ -166,7 +166,7 @@ class Source(object):
         # Will only do the calculation if time has changed
         alt_az = self.get_alt_az(time, telescope_location)
 
-        # Need a horizon mask, for now using pi/2
+        # Horizon Mask
         if alt_az[0] < 0:
             return None
 

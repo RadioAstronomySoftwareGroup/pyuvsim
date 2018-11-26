@@ -44,9 +44,9 @@ class progsteps:
 
     def update(self, count):
         if count % self.step == 0:
-            doprint=False
+            doprint = False
             if not self.curval == count:
-                doprint=True
+                doprint = True
                 self.curval = count
             if doprint:
                 print("{:0.2f}% completed. {:0.3f} minutes elapsed \n".format(
