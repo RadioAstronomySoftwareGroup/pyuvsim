@@ -29,6 +29,10 @@ singlesource_vot = os.path.join(SIM_DATA_PATH, 'single_source.vot')
 singlesource_txt = os.path.join(SIM_DATA_PATH, 'single_source.txt')
 
 
+def test_mpi_version():
+    nt.assert_true(MPI.VERSION == 3)
+
+
 def test_run_uvsim():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
