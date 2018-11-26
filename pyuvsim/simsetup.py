@@ -44,12 +44,13 @@ def _parse_layout_csv(layout_csv):
                          dtype=dt.dtype)
 
 
-def read_votable_catalog(gleam_votable):
+def read_votable_catalog(gleam_votable, min_flux=None):
     """
     Creates a list of pyuvsim source objects from a votable catalog.
 
     Args:
         gleam_votable: Path to votable catalog file.
+        min_flux: Minimum flux (in Jy) of sources to select (Default: No selection)
 
     Returns:
         List of pyuvsim.Source objects
@@ -69,9 +70,11 @@ def read_votable_catalog(gleam_votable):
         table = tab
 
     data = table.array
-
     sourcelist = []
     for entry in data:
+        if min_flux:
+            if (min_flux > entry['Fintwide']):
+                continue
         source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
                         Angle(entry['DEJ2000'], unit=units.deg),
                         freq=(200e6 * units.Hz),
