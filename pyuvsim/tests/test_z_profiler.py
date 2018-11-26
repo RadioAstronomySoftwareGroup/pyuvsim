@@ -24,7 +24,7 @@ def test_profiler():
     if LineProfiler:
         pyuvsim.profiling.set_profiler(outfile_name=testprof_fname, dump_raw='/dev/null')
         param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
-        uv_out = pyuvsim.uvsim.run_param_uvsim(param_filename, return_uv=True)
+        uv_out = pyuvsim.uvsim.run_uvsim(param_filename, return_uv=True)
 
         time_profiler = pyuvsim.profiling.get_profiler()
         nt.assert_true(isinstance(time_profiler, LineProfiler))

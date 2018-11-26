@@ -296,8 +296,8 @@ def serial_gather(uvtask_list, uv_out):
 
 
 def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_list_name=None,
-              obs_param_file=None,
-              telescope_config_file=None, antenna_location_file=None):
+                     obs_param_file=None,
+                     telescope_config_file=None, antenna_location_file=None):
     """
     Run uvsim from UVData object.
 
