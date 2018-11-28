@@ -204,13 +204,25 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
             baselines[bl_i] = Baseline(antennas[index1], antennas[index2])
 
         source = catalog[src_i]
-        is_up=False
-        for (rise_ind, set_ind) in zip(source.rise_time_inds, source.set_time_inds):
-            if rise_ind < time_i < set_ind:
-                is_up=True
-                break
-        if not is_up:
-            continue
+
+        # THIS PART IS BROKEN
+#        if source.rise_lst:
+#            r_lst = source.rise_lst
+#            s_lst = source.set_lst
+#            now_lst = input_uv.lst_array[blti]
+#
+#            # This convoluted comparison is needed to handle the phase wrap in lst...
+#            dt0 = now_lst - r_lst       # hours since rise time.
+#            if dt0 < 0:
+#                dt0 += 2*np.pi
+#
+#            dt1 = s_lst - r_lst         # hours between rise and set
+#            if dt1 < 0:
+#                dt1 += 2*np.pi
+#
+#            if dt1 < dt0:
+#                continue
+
         time = time_array[blti]
         bl = baselines[bl_i]
         freq = freq_array[0, freq_i]  # 0 = spw axis
@@ -323,7 +335,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
         telescope_config_file: Telescope configuration file if running from config files.
         antenna_location_file: antenna_location file if running from config files.
     """
-
+    mpi.start_mpi()
     rank = mpi.get_rank()
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
@@ -352,7 +364,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
     Npus = mpi.get_Npus()
 
     # Ensure all ranks have finished setup.
-    comm.Barrier()
+    # comm.Barrier()
 
     Nblts = input_uv.Nblts
     Nbls = input_uv.Nbls

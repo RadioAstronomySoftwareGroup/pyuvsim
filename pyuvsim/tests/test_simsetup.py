@@ -31,6 +31,7 @@ param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10ch
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
+manytimes_config = os.path.join(SIM_DATA_PATH, 'test_config', 'param_100times_1.5days_triangle.yaml')
 
 
 def test_mock_catalog_zenith_source():
@@ -380,13 +381,46 @@ def test_point_catalog_reader():
         nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])
     # shouldn't this also test the values?
 
-def test_riseset_times():
-    # Using astroplan to find rise/set times in jd within the time range of a simulation
 
-    hera_uv = UVData()
-    uvtest.checkWarnings(hera_uv.read_uvfits, [triangle_uvfits_file],
-                         message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
-    sourcelist = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot, input_uv=hera_uv)
+def test_horizon_cut():
+    # Check that the coarse horizon cut doesn't remove sources that are actually up.
+    uv_in, beam_list, beam_dict, ant_nums = pyuvsim.simsetup.initialize_uvdata_from_params(manytimes_config)
+    Nsrcs = 20
+    uv_in.select(times=np.unique(uv_in.time_array)[:50], bls=[(0, 1)], metadata_only=True)
+    hera_loc = EarthLocation.from_geocentric(*uv_in.telescope_location, unit='m')
+
+    dt = np.format_parser(['U10', 'f8', 'f8', 'f8', 'f8'],
+                          ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], [])
+
+    catalog_table = np.recarray(Nsrcs, dtype=dt.dtype)
+    catalog_table['source_id'] = ["src{}".format(i) for i in range(Nsrcs)]
+    catalog_table['ra_j2000'] = np.random.uniform(0, 360., Nsrcs)
+    catalog_table['dec_j2000'] = np.random.uniform(-90, 90, Nsrcs)
+    catalog_table['flux_density_I'] = np.ones(Nsrcs)
+    catalog_table['frequency'] = np.ones(Nsrcs) * 200e6
+
+    cut_sourcelist = pyuvsim.simsetup._array_to_sourcelist(catalog_table, lst_array=uv_in.lst_array,
+                                                           latitude_deg=uv_in.telescope_location_lat_lon_alt_degrees[0])
+
+    selected_source_names = [s.name for s in cut_sourcelist]
+
+    full_sourcelist = pyuvsim.simsetup._array_to_sourcelist(catalog_table)  # No cuts
+
+    # For each source in the full sourcelist, calculate the AltAz for all times.
+    # If Alt > 0 at any time, confirm that the source is in the selection.
+
+    time_arr = Time(uv_in.time_array, scale='utc', format='jd')
+    for src in full_sourcelist:
+        alt, az = src.alt_az_calc(time_arr, hera_loc)
+        src.alt_az = None
+        if np.any(alt > 0):
+            nt.assert_true(src.name in selected_source_names)
+
+    # Now check that I get the same visibilities simulating with and without the horizon cut.
+    beam_list = ['uniform']  # Simplify with a single uniform beam model
+    uv_select = pyuvsim.run_uvdata_uvsim(uv_in, beam_list, catalog=cut_sourcelist, source_list_name='random', obs_param_file='', telescope_config_file='', antenna_location_file='')
+    uv_full = pyuvsim.run_uvdata_uvsim(uv_in, beam_list, catalog=full_sourcelist, source_list_name='random', obs_param_file='', telescope_config_file='', antenna_location_file='')
+    nt.assert_equal(uv_full, uv_select)
 
 
 def test_read_gleam():
@@ -424,7 +458,7 @@ def test_mock_catalogs():
 
     for arr in arrangements:
         radec_catalog = pyuvsim.simsetup.read_text_catalog(os.path.join(SIM_DATA_PATH,
-                                                                        'test_catalogs', text_catalogs[arr]))
+                                                                        'test_catalogs', text_catalogs[arr]), )
         nt.assert_true(np.all(radec_catalog == cats[arr]))
 
     cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, 'random', save=True)

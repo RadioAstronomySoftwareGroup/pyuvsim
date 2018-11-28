@@ -26,7 +26,7 @@ class Source(object):
     coherency_radec = None
     alt_az = None
 
-    def __init__(self, name, ra, dec, freq, stokes, pos_tol=np.finfo(float).eps):
+    def __init__(self, name, ra, dec, freq, stokes, rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
         """
         Initialize from source catalog
 
@@ -40,6 +40,10 @@ class Source(object):
                 4 element vector giving the source [I, Q, U, V]
             freq: astropy quantity
                 frequency of source catalog value
+            rise_time_inds: int
+                time array indices at which source rises
+            set_time_inds: int
+                time array indices at which source sets
             pos_tol: float, defaults to minimum float in numpy
                 position tolerance in degrees
         """
@@ -62,6 +66,8 @@ class Source(object):
         self.dec = dec
         self.pos_tol = pos_tol
         self.time = None
+        self.rise_lst = rise_lst
+        self.set_lst = set_lst
 
         self.skycoord = SkyCoord(self.ra, self.dec, frame='icrs')
 
