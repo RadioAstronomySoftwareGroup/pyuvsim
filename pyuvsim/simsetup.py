@@ -70,60 +70,40 @@ def _array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitud
 
     if coarse_horizon_cut:
         lat_rad = np.radians(latitude_deg)
-    try:
-        for (source_id, ra_j2000, dec_j2000, flux_I, freq) in catalog_table:
-            if min_flux:
-                if (flux < min_flux):
-                    continue
-            ra = Angle(ra_j2000, units.deg)
-            dec = Angle(dec_j2000, units.deg)
-            rise_lst = None
-            set_lst = None
-            if coarse_horizon_cut:
-                # The following identifies circumpolar sources and unrising sources.
-                tans = np.tan(lat_rad) * np.tan(dec.rad)
-                if tans < -1:
-                    continue   # Source doesn't rise.
-                circumpolar = tans > 1
+    for (source_id, ra_j2000, dec_j2000, flux_I, freq) in catalog_table:
+        if min_flux:
+            if (flux < min_flux):
+                continue
+        ra = Angle(ra_j2000, units.deg)
+        dec = Angle(dec_j2000, units.deg)
+        rise_lst = None
+        set_lst = None
+        if coarse_horizon_cut:
+            # Identify circumpolar sources and unrising sources.
+            tans = np.tan(lat_rad) * np.tan(dec.rad)
+            if tans < -1:
+                continue   # Source doesn't rise.
+            circumpolar = tans > 1
 
-                if not circumpolar:
-                    rise_lst = ra.rad - np.arccos((-1) * tans)
-                    set_lst = ra.rad + np.arccos((-1) * tans)
-                    rise_lst -= buff
-                    set_lst += buff
+            if not circumpolar:
+                rise_lst = ra.rad - np.arccos((-1) * tans)
+                set_lst = ra.rad + np.arccos((-1) * tans)
+                rise_lst -= buff
+                set_lst += buff
 
-                    # Ensure posiive quantities.
-                    if rise_lst < 0:
-                        rise_lst += 2 * np.pi
-                    if set_lst > 0:
-                        set_lst -= 2 * np.pi
+                if rise_lst < 0:
+                    rise_lst += 2 * np.pi
+                if set_lst > 2 * np.pi:
+                    set_lst -= 2 * np.pi
 
-                # Find rise/set lsts, plus/minus buffer, if they exist.
+        source = Source(source_id, ra,
+                        dec,
+                        freq=freq * units.Hz,
+                        stokes=np.array([flux_I, 0., 0., 0.]),
+                        rise_lst=rise_lst,
+                        set_lst=set_lst)
 
-#                if (dec.rad > dec_max) or (dec.rad < dec_min):
-#                    continue
-#                rise_lst = ra.rad - np.pi/4. - buff
-#                if rise_lst < 0:
-#                    rise_lst += 2*np.pi
-#                set_lst = (ra.rad + np.pi/4. + buff)%(2*np.pi)
-#                print(set_lst)
-#                rise_time_inds = np.argmin(np.abs(rise_lst - lst_array))    # TODO This will only return one. Need local mins
-#                set_time_inds = np.argmin(np.abs(set_lst - lst_array))
-#                if np.all(rise_time_inds >= set_time_inds):           # Source does not rise
-#                        continue
-
-            source = Source(source_id, ra,
-                            dec,
-                            freq=freq * units.Hz,
-                            stokes=np.array([flux_I, 0., 0., 0.]),
-                            rise_lst=rise_lst,
-                            set_lst=set_lst)
-
-            sourcelist.append(source)
-    except KeyboardInterrupt:
-        import IPython
-        IPython.embed()
-#    import IPython; IPython.embed()
+        sourcelist.append(source)
 
     return np.array(sourcelist)
 
@@ -417,20 +397,20 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         select_params = {}
 
     # Parse source selection options
-    catalog_select_keywords = ['min_flux', 'max_flux', 'buff', 'return_unselected']
+    catalog_select_keywords = ['min_flux', 'max_flux', 'buff']
     catalog_params = {}
-    for key in catalog_select_keywords:
-        if key in select_params:
-            if key == 'return_unselected':
-                catalog_params[key] = bool(select_params[key])
-            else:
-                catalog_params[key] = float(select_params[key])
 
     source_params = param_dict['sources']
     if 'catalog' in source_params:
         catalog = source_params['catalog']
     else:
         raise KeyError("No catalog defined.")
+
+    # Put catalog selection cuts in source section.
+    for key in catalog_select_keywords:
+        if key in source_params:
+            catalog_params[key] = float(select_params[key])
+
     if catalog == 'mock':
         mock_keywords = {'arrangement': source_params['mock_arrangement']}
         extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'min_alt', 'array_location']

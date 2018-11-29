@@ -206,22 +206,23 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         source = catalog[src_i]
 
         # THIS PART IS BROKEN
-#        if source.rise_lst:
-#            r_lst = source.rise_lst
-#            s_lst = source.set_lst
-#            now_lst = input_uv.lst_array[blti]
-#
-#            # This convoluted comparison is needed to handle the phase wrap in lst...
-#            dt0 = now_lst - r_lst       # hours since rise time.
-#            if dt0 < 0:
-#                dt0 += 2*np.pi
-#
-#            dt1 = s_lst - r_lst         # hours between rise and set
-#            if dt1 < 0:
-#                dt1 += 2*np.pi
-#
-#            if dt1 < dt0:
-#                continue
+
+        if source.rise_lst:
+            r_lst = source.rise_lst
+            s_lst = source.set_lst
+            now_lst = input_uv.lst_array[blti]
+
+            # This convoluted comparison is needed to handle the phase wrap in lst...
+            dt0 = now_lst - r_lst       # hours since rise time.
+            if dt0 < 0:
+                dt0 += 2 * np.pi
+
+            dt1 = s_lst - r_lst         # hours between rise and set
+            if dt1 < 0:
+                dt1 += 2 * np.pi
+
+            if dt1 < dt0:
+                continue
 
         time = time_array[blti]
         bl = baselines[bl_i]
