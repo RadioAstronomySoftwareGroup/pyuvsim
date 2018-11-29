@@ -72,7 +72,10 @@ def _array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitud
         lat_rad = np.radians(latitude_deg)
     for (source_id, ra_j2000, dec_j2000, flux_I, freq) in catalog_table:
         if min_flux:
-            if (flux < min_flux):
+            if (flux_I < min_flux):
+                continue
+        if max_flux:
+            if (flux_I > max_flux):
                 continue
         ra = Angle(ra_j2000, units.deg)
         dec = Angle(dec_j2000, units.deg)
@@ -391,11 +394,6 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
     else:
         param_dict = obs_params
 
-    if 'select' in param_dict:
-        select_params = param_dict['select']
-    else:
-        select_params = {}
-
     # Parse source selection options
     catalog_select_keywords = ['min_flux', 'max_flux', 'buff']
     catalog_params = {}
@@ -409,7 +407,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
     # Put catalog selection cuts in source section.
     for key in catalog_select_keywords:
         if key in source_params:
-            catalog_params[key] = float(select_params[key])
+            catalog_params[key] = float(source_params[key])
 
     if catalog == 'mock':
         mock_keywords = {'arrangement': source_params['mock_arrangement']}
@@ -722,15 +720,17 @@ def initialize_uvdata_from_params(obs_params):
     uv_obj.set_uvws_from_antenna_positions()
     uv_obj.history = ''
 
+    valid_select_keys = ['antenna_nums', 'antenna_names', 'ant_str', 'bls', 'frequencies', 'freq_chans', 'times', 'polarizations', 'blt_inds']
     # down select baselines (or anything that can be passed to pyuvdata's select method)
     # Note: cannot down select polarizations (including via ant_str or bls keywords)
     if 'select' in param_dict:
-        select_params = param_dict['select']
+        select_params = dict([(k,v) for k,v in param_dict['select'].iteritems() if k in valid_select_keys])
         if 'polarizations' in select_params:
             raise ValueError('Can not down select on polarizations -- pyuvsim '
                              'computes all polarizations')
         if 'bls' in select_params:
-            bls = select_params['bls']
+            bls = eval(select_params['bls'])
+            select_params['bls'] = bls
             if any([len(item) == 3 for item in bls]):
                 raise ValueError('Only length 2 tuples allowed in bls: can not '
                                  'down select on polarizations -- pyuvsim '
