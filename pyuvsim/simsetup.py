@@ -724,13 +724,17 @@ def initialize_uvdata_from_params(obs_params):
     # down select baselines (or anything that can be passed to pyuvdata's select method)
     # Note: cannot down select polarizations (including via ant_str or bls keywords)
     if 'select' in param_dict:
-        select_params = dict([(k,v) for k,v in param_dict['select'].iteritems() if k in valid_select_keys])
+        select_params = dict([(k, v) for k, v in param_dict['select'].iteritems() if k in valid_select_keys])
         if 'polarizations' in select_params:
             raise ValueError('Can not down select on polarizations -- pyuvsim '
                              'computes all polarizations')
         if 'bls' in select_params:
-            bls = eval(select_params['bls'])
-            select_params['bls'] = bls
+            bls = select_params['bls']
+            if isinstance(bls, six.string_types):
+                # If read from file, this should be a string.
+                # Need to figure out how best to handle more complex types in yaml (eg, list of tuples)
+                bls = eval(bls)
+                select_params['bls'] = bls
             if any([len(item) == 3 for item in bls]):
                 raise ValueError('Only length 2 tuples allowed in bls: can not '
                                  'down select on polarizations -- pyuvsim '
