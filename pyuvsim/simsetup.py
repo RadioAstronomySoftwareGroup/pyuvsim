@@ -724,7 +724,7 @@ def initialize_uvdata_from_params(obs_params):
     # down select baselines (or anything that can be passed to pyuvdata's select method)
     # Note: cannot down select polarizations (including via ant_str or bls keywords)
     if 'select' in param_dict:
-        select_params = dict([(k, v) for k, v in param_dict['select'].iteritems() if k in valid_select_keys])
+        select_params = dict([(k, v) for k, v in param_dict['select'].items() if k in valid_select_keys])
         if 'polarizations' in select_params:
             raise ValueError('Can not down select on polarizations -- pyuvsim '
                              'computes all polarizations')

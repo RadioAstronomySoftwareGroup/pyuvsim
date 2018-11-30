@@ -205,8 +205,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
 
         source = catalog[src_i]
 
-        # THIS PART IS BROKEN
-
         if source.rise_lst:
             r_lst = source.rise_lst
             s_lst = source.set_lst
