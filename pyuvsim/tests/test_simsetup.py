@@ -81,6 +81,30 @@ def test_mock_catalog_off_zenith_source():
     nt.assert_equal(cat_source, test_source)
 
 
+def test_catalog_from_params():
+    # Pass in parameter dictionary as dict
+    hera_uv = UVData()
+    uvtest.checkWarnings(hera_uv.read_uvfits, [triangle_uvfits_file],
+                         message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
+
+    source_dict = {}
+
+    nt.assert_raises(KeyError, pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
+    arrloc = '{:.5f},{:.5f},{:.5f}'.format(*hera_uv.telescope_location_lat_lon_alt_degrees)
+    source_dict = {'catalog': 'mock', 'mock_arrangement': 'zenith', 'Nsrcs': 5, 'time': hera_uv.time_array[0]}
+    uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [{'sources': source_dict}],
+                         message="No array_location specified. Defaulting to the HERA site.")
+    catalog_uv, srclistname = pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict}, hera_uv)
+    source_dict['array_location'] = arrloc
+    del source_dict['time']
+    nt.assert_raises(TypeError, pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict}, input_uv='not_uvdata')
+    nt.assert_raises(ValueError, pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
+    catalog_str, srclistname2 = uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [{'sources': source_dict}, hera_uv],
+                                                     message="Warning: No julian date given for mock catalog. Defaulting to first time step.")
+
+    nt.assert_true(np.all(catalog_str == catalog_uv))
+
+
 def check_param_reader(config_num):
     """
         Part of test_param_reader

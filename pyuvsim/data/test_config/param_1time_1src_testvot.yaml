@@ -6,7 +6,7 @@ freq:
   start_freq: 100000000.0
   channel_width: 1000000.0
 sources:
-  catalog: '../single_source.txt'
+  catalog: '../single_source.vot'
 telescope:
   array_layout: 'triangle_bl_layout.csv'
   telescope_config_name: '28m_triangle_10time_10chan.yaml'

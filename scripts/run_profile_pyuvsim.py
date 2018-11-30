@@ -88,7 +88,7 @@ if rank == 0:
 
     mock_keywords = {'arrangement': 'random', 'Nsrcs': args.Nsrcs, 'min_alt': min_alt}
 
-uvdata_out = pyuvsim.uvsim.run_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
+uvdata_out = pyuvsim.uvsim.run_uvdata_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
 
 memory_usage_GB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
 mpi.comm.Barrier()

@@ -284,6 +284,78 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     return catalog, mock_keywords
 
 
+def initialize_catalog_from_params(obs_params, input_uv=None):
+    """
+    Make catalog from parameter file specifications.
+
+    Args:
+        obs_params: Either an obsparam file name or a dictionary of parameters.
+        input_uv: (UVData object) Needed to know location and time for mock catalog
+
+    Returns:
+        catalog: array of Source objects.
+        source_list_name: (str) Catalog identifier for metadata.
+    """
+    if input_uv is not None and not isinstance(input_uv, UVData):
+        raise TypeError("input_uv must be UVData object")
+
+    if isinstance(obs_params, str):
+        with open(obs_params, 'r') as pfile:
+            param_dict = yaml.safe_load(pfile)
+
+        param_dict['config_path'] = os.path.dirname(obs_params)
+    else:
+        param_dict = obs_params
+
+    source_params = param_dict['sources']
+    if 'catalog' in source_params:
+        catalog = source_params['catalog']
+    else:
+        raise KeyError("No catalog defined.")
+    if catalog == 'mock':
+        mock_keywords = {'arrangement': source_params['mock_arrangement']}
+        extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'min_alt', 'array_location']
+        for k in extra_mock_kwds:
+            if k in source_params.keys():
+                if k == 'array_location':
+                    # String -- lat, lon, alt in degrees
+                    latlonalt = [float(s.strip()) for s in source_params[k].split(',')]
+                    lat, lon, alt = latlonalt
+                    mock_keywords[k] = EarthLocation.from_geodetic(lon, lat, alt)
+                else:
+                    mock_keywords[k] = source_params[k]
+
+        # time, arrangement, array_location, save, Nsrcs, min_alt
+
+        if 'array_location' not in mock_keywords:
+            if input_uv is not None:
+                mock_keywords['array_location'] = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
+            else:
+                warnings.warn("No array_location specified. Defaulting to the HERA site.")
+        if 'time' not in mock_keywords:
+            if input_uv is not None:
+                mock_keywords['time'] = input_uv.time_array[0]
+                warnings.warn("Warning: No julian date given for mock catalog. Defaulting to first time step.")
+            else:
+                raise ValueError("input_uv must be supplied if using mock catalog without specified julian date")
+
+        time = mock_keywords.pop('time')
+
+        catalog, mock_keywords = create_mock_catalog(time, **mock_keywords)
+        mock_keyvals = [str(key) + str(val) for key, val in six.iteritems(mock_keywords)]
+        source_list_name = 'mock_' + "_".join(mock_keyvals)
+    elif isinstance(catalog, str):
+        source_list_name = os.path.basename(catalog)
+        if not os.path.isfile(catalog):
+            catalog = os.path.join(param_dict['config_path'], catalog)
+        if catalog.endswith("txt"):
+            catalog = read_text_catalog(catalog)
+        elif catalog.endswith('vot'):
+            catalog = read_votable_catalog(catalog)
+
+    return np.array(catalog), source_list_name
+
+
 def initialize_uvdata_from_params(obs_params):
     """
     Construct a uvdata object from parameters in a valid yaml file.
@@ -523,7 +595,8 @@ def initialize_uvdata_from_params(obs_params):
         time = Time(time_arr[0], scale='utc', format='jd')
         src, _ = create_mock_catalog(time, arrangement='zenith', array_location=tloc)
         src = src[0]
-        param_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(param_dict['sources']['catalog'], src.ra.deg, src.dec.deg)
+        source_file_name = os.path.basename(param_dict['sources']['catalog'])
+        param_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(source_file_name, src.ra.deg, src.dec.deg)
     uv_obj = UVData()
     for k in param_dict:
         # use the __iter__ function on UVData to get list of UVParameters on UVData
