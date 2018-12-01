@@ -45,7 +45,7 @@ def _parse_layout_csv(layout_csv):
                          dtype=dt.dtype)
 
 
-def _array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitude_deg=None, buff=2 * 0.02182, min_flux=None, max_flux=None):
+def _array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitude_deg=None, horizon_buffer=0.04364, min_flux=None, max_flux=None):
     """
     Performs selections on source recarrays from
 
@@ -54,7 +54,10 @@ def _array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitud
         lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
         time_array: Array of (float) julian dates corresponding with lst_array
         latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
-        buff: Angle (in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
+        horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
+                        Sources whose calculated altitude is less than -horizon_buffer are excluded by the catalog read.
+                        Caution! The altitude calculation does not account for precession/nutation of the Earth. A decent buffer is needed to
+                        ensure that the horizon cut doesn't exclude sources near the horizon.
         min_flux: Minimum flux to select [Jy]
         max_flux: Maximum flux to select [Jy]
     """
@@ -70,6 +73,7 @@ def _array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitud
 
     if coarse_horizon_cut:
         lat_rad = np.radians(latitude_deg)
+        buff = horizon_buffer
     for (source_id, ra_j2000, dec_j2000, flux_I, freq) in catalog_table:
         if min_flux:
             if (flux_I < min_flux):
@@ -376,8 +380,6 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         input_uv: (UVData object) Needed to know location and time for mock catalog
                   and for horizon cuts
         min_flux: Minimum flux (in Jy) of sources to select (Default: No selection)
-        buff: If doing coarse horizon cut, an extra angle in radians beyond pi/2 for
-              setting rise/set times. Default is 5 minutes' sky rotation in radians.
 
     Returns:
         catalog: array of Source objects.
@@ -395,7 +397,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         param_dict = obs_params
 
     # Parse source selection options
-    catalog_select_keywords = ['min_flux', 'max_flux', 'buff']
+    catalog_select_keywords = ['min_flux', 'max_flux', 'horizon_buffer']
     catalog_params = {}
 
     source_params = param_dict['sources']
@@ -408,7 +410,6 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
     for key in catalog_select_keywords:
         if key in source_params:
             catalog_params[key] = float(source_params[key])
-
     if catalog == 'mock':
         mock_keywords = {'arrangement': source_params['mock_arrangement']}
         extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'min_alt', 'array_location']
@@ -651,8 +652,8 @@ def initialize_uvdata_from_params(obs_params):
         if not dd:
             raise ValueError("Either duration or integration time "
                              "must be specified: " + kws_used)
-        time_params['integration_time'] = (time_params['duration']
-                                           / float(time_params['Ntimes']))
+        time_params['integration_time'] = (24. * 3600.)*(time_params['duration']
+                                           / float(time_params['Ntimes']))  # In seconds
 
     inttime_days = time_params['integration_time'] * 1 / (24. * 3600.)
     inttime_days = np.trunc(inttime_days * 24 * 3600) / (24. * 3600.)
@@ -732,7 +733,6 @@ def initialize_uvdata_from_params(obs_params):
             bls = select_params['bls']
             if isinstance(bls, six.string_types):
                 # If read from file, this should be a string.
-                # Need to figure out how best to handle more complex types in yaml (eg, list of tuples)
                 bls = eval(bls)
                 select_params['bls'] = bls
             if any([len(item) == 3 for item in bls]):
