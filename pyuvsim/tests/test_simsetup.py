@@ -26,12 +26,13 @@ import pyuvsim.tests as simtest
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 
 # Five different test configs
-param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(5)]
+param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(6)]
 
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
 GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
 manytimes_config = os.path.join(SIM_DATA_PATH, 'test_config', 'param_100times_1.5days_triangle.yaml')
+gleam_param_file = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml')
 
 
 def test_mock_catalog_zenith_source():
@@ -106,6 +107,17 @@ def test_catalog_from_params():
     nt.assert_true(np.all(catalog_str == catalog_uv))
 
 
+def test_flux_cuts():
+    # Check that min/max flux limits in test params work.
+
+    catalog, srclistname = uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [gleam_param_file],
+                                      message=GLEAM_vot, nwarnings=11,
+                                      category=[astropy.io.votable.exceptions.W27]
+                                      + [astropy.io.votable.exceptions.W50] * 10)
+    for src in catalog:
+        nt.assert_true(0.2 < src.stokes[0] < 1.5)
+
+
 def check_param_reader(config_num):
     """
         Part of test_param_reader
@@ -116,6 +128,8 @@ def check_param_reader(config_num):
     uvtest.checkWarnings(hera_uv.read_uvfits, [triangle_uvfits_file],
                          message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
     hera_uv.telescope_name = 'HERA'
+    if config_num == 5:
+       hera_uv.select(bls = [(0,1),(1,2)])
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
@@ -242,7 +256,7 @@ def test_param_reader():
         checks that the various configurations all work consistently, and that if insufficient information is
         provided that the function errors appropriately.
     """
-    for n in range(5):
+    for n in range(6):
         yield (check_param_reader, n)
 
 
@@ -398,6 +412,10 @@ def test_horizon_cut():
     catalog_table['dec_j2000'] = np.random.uniform(-90, 90, Nsrcs)
     catalog_table['flux_density_I'] = np.ones(Nsrcs)
     catalog_table['frequency'] = np.ones(Nsrcs) * 200e6
+
+    uvtest.checkWarnings(pyuvsim.simsetup._array_to_sourcelist, [catalog_table],
+                         {'lst_array':uv_in.lst_array},
+                         message="It looks like you want to do a coarse horizon cut, but you're missing keywords", nwarnings=1)
 
     cut_sourcelist = pyuvsim.simsetup._array_to_sourcelist(catalog_table, lst_array=uv_in.lst_array,
                                                            latitude_deg=uv_in.telescope_location_lat_lon_alt_degrees[0])
