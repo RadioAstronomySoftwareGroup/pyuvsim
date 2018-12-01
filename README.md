@@ -40,12 +40,7 @@ Example `obsparam` configuration files may be found in the `reference_simulation
 1. Install from github or pip.
 2. Run off of a parameter file with 20 MPI ranks:
 ```
-mpirun -n 20 python run_param_pyuvsim.py -p reference_simulations/obsparam_1.1.yaml
-```
-3. Run with profiling. There is the option to use the `line_profiler` module to assess line-by-line memory and time usage.
-Profiling results are only reported for the rank 0 process if run within MPI.
-```
-mpirun -n 20 kernprof -l -v run_param_pyuvsim.py -p reference_simulations/obsparam_1.1.yaml > profiling_results.out
+mpirun -n 20 python run_param_pyuvsim.py reference_simulations/obsparam_1.1.yaml
 ```
 
 # Documentation

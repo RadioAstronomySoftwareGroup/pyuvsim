@@ -417,14 +417,14 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
 
 def run_uvsim(params, return_uv=False):
     """
-    Run a simulation off of a parameter yaml file.
+    Run a simulation off of an obsparam yaml file.
 
     Args:
         params (string): Path to a parameter yaml file.
         return_uv (bool): If true, do not write results to file (default False) and return uv_out
 
     Returns:
-        uv_out (UVData): Finished simulation results.
+        uv_out (UVData): Finished simulation results. (if return_uv is True)
     """
 
     mpi.start_mpi()
