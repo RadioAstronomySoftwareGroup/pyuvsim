@@ -110,8 +110,9 @@ def test_catalog_from_params():
 def test_flux_cuts():
     # Check that min/max flux limits in test params work.
 
+    gleam_path = os.path.join(SIM_DATA_PATH, 'test_config', '..', 'gleam_50srcs.vot')
     catalog, srclistname = uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [gleam_param_file],
-                                      message=GLEAM_vot, nwarnings=11,
+                                      message=gleam_path, nwarnings=11,
                                       category=[astropy.io.votable.exceptions.W27]
                                       + [astropy.io.votable.exceptions.W50] * 10)
     for src in catalog:

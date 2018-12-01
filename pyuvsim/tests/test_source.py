@@ -34,6 +34,10 @@ def test_source_zenith_from_icrs():
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
+    # Check error cases
+    nt.assert_raises(ValueError, pyuvsim.Source, 'icrs_zen', ra.rad, dec.rad, freq.value, [1, 0, 0, 0])
+    nt.assert_raises(ValueError, pyuvsim.Source, 'icrs_zen', ra, dec.rad, freq.value, [1, 0, 0, 0])
+    nt.assert_raises(ValueError, pyuvsim.Source, 'icrs_zen', ra, dec, freq.value, [1, 0, 0, 0])
     zenith_source = pyuvsim.Source('icrs_zen', ra, dec, freq, [1, 0, 0, 0])
 
     zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
