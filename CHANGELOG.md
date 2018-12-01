@@ -3,9 +3,13 @@
 ## [Unreleased]
 
 ### Added
+- Flux cut options with source catalogs
+- Coarse horizon cut for reduced computational load.
+- Selection keys in obsparam files (valid options for UVData.select)
 - New batch scripts for profiling jobs on a SLURM-managed cluster, and plotting the results.
 
 ### Changed
+- Fixed memory overload bug due to local task indices creation step.
 - Moved parameter simulation functions from wrapper to uvsim
 - MPI3 enabled in travis.
 - Line profiling may be done by running `pyuvsim.profiling.set_profiler`.
