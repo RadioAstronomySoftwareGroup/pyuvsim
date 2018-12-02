@@ -112,9 +112,9 @@ def test_flux_cuts():
 
     gleam_path = os.path.join(SIM_DATA_PATH, 'test_config', '..', 'gleam_50srcs.vot')
     catalog, srclistname = uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [gleam_param_file],
-                                      message=gleam_path, nwarnings=11,
-                                      category=[astropy.io.votable.exceptions.W27]
-                                      + [astropy.io.votable.exceptions.W50] * 10)
+                                                message=gleam_path, nwarnings=11,
+                                                category=[astropy.io.votable.exceptions.W27]
+                                                + [astropy.io.votable.exceptions.W50] * 10)
     for src in catalog:
         nt.assert_true(0.2 < src.stokes[0] < 1.5)
 
@@ -130,7 +130,7 @@ def check_param_reader(config_num):
                          message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
     hera_uv.telescope_name = 'HERA'
     if config_num == 5:
-       hera_uv.select(bls = [(0,1),(1,2)])
+        hera_uv.select(bls=[(0, 1), (1, 2)])
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
@@ -415,7 +415,7 @@ def test_horizon_cut():
     catalog_table['frequency'] = np.ones(Nsrcs) * 200e6
 
     uvtest.checkWarnings(pyuvsim.simsetup._array_to_sourcelist, [catalog_table],
-                         {'lst_array':uv_in.lst_array},
+                         {'lst_array': uv_in.lst_array},
                          message="It looks like you want to do a coarse horizon cut, but you're missing keywords", nwarnings=1)
 
     cut_sourcelist = pyuvsim.simsetup._array_to_sourcelist(catalog_table, lst_array=uv_in.lst_array,

@@ -652,8 +652,8 @@ def initialize_uvdata_from_params(obs_params):
         if not dd:
             raise ValueError("Either duration or integration time "
                              "must be specified: " + kws_used)
-        time_params['integration_time'] = (24. * 3600.)*(time_params['duration']
-                                           / float(time_params['Ntimes']))  # In seconds
+        time_params['integration_time'] = (24. * 3600.) * (time_params['duration']
+                                                           / float(time_params['Ntimes']))  # In seconds
 
     inttime_days = time_params['integration_time'] * 1 / (24. * 3600.)
     inttime_days = np.trunc(inttime_days * 24 * 3600) / (24. * 3600.)

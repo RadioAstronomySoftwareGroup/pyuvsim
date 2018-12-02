@@ -1,0 +1,18 @@
+filing:
+  outdir: '.'
+  outfile_name: 'tempfile.uvfits'
+freq:
+  Nfreqs: 1
+  start_freq: 100000000.0
+  channel_width: 1000000.0
+sources:
+  catalog: '../gleam_50srcs.vot'
+  min_flux: 0.2
+  max_flux: 1.50
+telescope:
+  array_layout: 'triangle_bl_layout.csv'
+  telescope_config_name: '28m_triangle_10time_10chan.yaml'
+time:
+  Ntimes: 1
+  integration_time: 11.0
+  start_time: 2457458.1738949567
