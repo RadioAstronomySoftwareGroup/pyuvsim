@@ -100,4 +100,4 @@ def test_file_namer():
     """
     existing_file = param_filenames[0]
     new_filepath = pyuvsim.utils.check_file_exists_and_increment(existing_file)
-    nt.assert_true(new_filepath.endswith("_6.yaml"))    # There are four other of these param test files
+    nt.assert_true(new_filepath.endswith("_6.yaml"))    # There are five other of these param test files
