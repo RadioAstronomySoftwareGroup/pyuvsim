@@ -342,7 +342,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
     # The Head node will initialize our simulation
     # Read input file and make uvtask list
     if rank == 0:
-        print('Nblts:', input_uv.Nblts)
+        print('Nbls:', input_uv.Nbls)
+        print('Ntimes:', input_uv.Ntimes)
         print('Nfreqs:', input_uv.Nfreqs)
         print('Nsrcs:', len(catalog))
 
