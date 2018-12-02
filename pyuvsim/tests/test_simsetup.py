@@ -477,7 +477,7 @@ def test_mock_catalogs():
 
     for arr in arrangements:
         radec_catalog = pyuvsim.simsetup.read_text_catalog(os.path.join(SIM_DATA_PATH,
-                                                                        'test_catalogs', text_catalogs[arr]), )
+                                                                        'test_catalogs', text_catalogs[arr]))
         nt.assert_true(np.all(radec_catalog == cats[arr]))
 
     cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, 'random', save=True)
