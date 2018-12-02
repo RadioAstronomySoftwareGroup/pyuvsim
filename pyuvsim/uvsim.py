@@ -210,12 +210,13 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
             s_lst = source.set_lst
             now_lst = input_uv.lst_array[blti]
 
-            # This convoluted comparison is needed to handle the phase wrap in lst...
-            dt0 = now_lst - r_lst       # hours since rise time.
+            # Compare time since rise to time between rise and set,
+            # properly accounting for phase wrap.
+            dt0 = now_lst - r_lst       # radians since rise time.
             if dt0 < 0:
                 dt0 += 2 * np.pi
 
-            dt1 = s_lst - r_lst         # hours between rise and set
+            dt1 = s_lst - r_lst         # radians between rise and set
             if dt1 < 0:
                 dt1 += 2 * np.pi
 
@@ -376,21 +377,21 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
     Neach_section, extras = divmod(Ntasks, Npus)
     if rank < extras:
         length = Neach_section + 1
-        st = rank * (length)
-        en = st + length
+        start = rank * (length)
+        end = start + length
     else:
         length = Neach_section
-        st = extras * (Neach_section + 1) + (rank - extras) * length
-        en = st + length
+        start = extras * (Neach_section + 1) + (rank - extras) * length
+        end = start + length
     if six.PY2:
-        task_ids = xrange(st, en)
+        task_ids = xrange(start, end)
     else:
-        task_ids = range(st, en)
+        task_ids = range(start, end)
 
     # Construct beam objects from strings
     beam_models = [simsetup.beam_string_to_object(bm) for bm in beam_list]
 
-    Ntasks_local = (en - st)
+    Ntasks_local = (end - start)
 
     local_task_iter = uvdata_to_task_iter(task_ids, input_uv, catalog, beam_models, beam_dict)
 
