@@ -6,9 +6,14 @@
 - New batch scripts for profiling jobs on a SLURM-managed cluster, and plotting the results.
 
 ### Changed
+- Moved parameter simulation functions from wrapper to uvsim
+- MPI3 enabled in travis.
 - Line profiling may be done by running `pyuvsim.profiling.set_profiler`.
 - Which functions to profile is set by listing them by name, instead of by function decorators.
 - Improved test coverage
+
+### Deprecated
+- Simulation directly off of uvfits files.
 
 
 ## [0.2.0] - 2018-10-26
