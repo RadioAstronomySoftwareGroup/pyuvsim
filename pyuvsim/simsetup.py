@@ -45,12 +45,13 @@ def _parse_layout_csv(layout_csv):
                          dtype=dt.dtype)
 
 
-def _array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitude_deg=None, horizon_buffer=0.04364, min_flux=None, max_flux=None):
+def array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitude_deg=None, horizon_buffer=0.04364, min_flux=None, max_flux=None):
     """
-    Performs selections on source recarrays from
+    Generate list of source.Source objects from a recarray, performming flux and horizon selections.
 
     Args:
-        catalog_table: recarray of source catalog information.
+        catalog_table: recarray of source catalog information. Must have columns with names
+                       'source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'
         lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
         time_array: Array of (float) julian dates corresponding with lst_array
         latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
@@ -58,8 +59,8 @@ def _array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitud
                         Sources whose calculated altitude is less than -horizon_buffer are excluded by the catalog read.
                         Caution! The altitude calculation does not account for precession/nutation of the Earth. A decent buffer is needed to
                         ensure that the horizon cut doesn't exclude sources near the horizon.
-        min_flux: Minimum flux to select [Jy]
-        max_flux: Maximum flux to select [Jy]
+        min_flux: Minimum stokes I flux to select [Jy]
+        max_flux: Maximum stokes I flux to select [Jy]
     """
 
     sourcelist = []
@@ -69,7 +70,7 @@ def _array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitud
     coarse_kwds = [lst_array, latitude_deg]
     coarse_horizon_cut = all([k is not None for k in coarse_kwds])
     if (not coarse_horizon_cut) and any([k is not None for k in coarse_kwds]):
-        warnings.warn("It looks like you want to do a coarse horizon cut, but you're missing keywords")
+        warnings.warn("It looks like you want to do a coarse horizon cut, but you're missing keywords!")
 
     if coarse_horizon_cut:
         lat_rad = np.radians(latitude_deg)
@@ -157,7 +158,7 @@ def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}):
     else:
         lst_array = None
         latitude = None
-    sourcelist = _array_to_sourcelist(data, lst_array=lst_array,
+    sourcelist = array_to_sourcelist(data, lst_array=lst_array,
                                       latitude_deg=latitude,
                                       **source_select_kwds)
 
@@ -169,13 +170,15 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}):
     Read in a text file of sources.
 
     Args:
-    catalog_csv: csv file with the following expected columns:
-        |  Source_ID: source id as a string of maximum 10 characters
-        |  ra_j2000: right ascension at J2000 epoch, in decimal degrees
-        |  dec_j2000: declination at J2000 epoch, in decimal degrees
-        |  flux_density_I: Stokes I flux density in Janskys
-        |  frequency: reference frequency (for future spectral indexing) [Hz]
-            For now, all sources are flat spectrum.
+        catalog_csv: csv file with the following expected columns:
+            |  Source_ID: source id as a string of maximum 10 characters
+            |  ra_j2000: right ascension at J2000 epoch, in decimal degrees
+            |  dec_j2000: declination at J2000 epoch, in decimal degrees
+            |  flux_density_I: Stokes I flux density in Janskys
+            |  frequency: reference frequency (for future spectral indexing) [Hz]
+                For now, all sources are flat spectrum.
+        input_uv: The UVData object for the simulation (needed for horizon cuts)
+        source_select_kwds: Keywords for source selection (passed along)
 
     Returns:
         List of pyuvsim.Source objects
@@ -197,7 +200,7 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}):
         lst_array = None
         latitude = None
         time_array = None
-    sourcelist = _array_to_sourcelist(catalog_table, lst_array=lst_array,
+    sourcelist = array_to_sourcelist(catalog_table, lst_array=lst_array,
                                       latitude_deg=latitude,
                                       **source_select_kwds)
 
