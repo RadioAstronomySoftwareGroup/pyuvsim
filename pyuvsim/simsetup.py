@@ -57,8 +57,12 @@ def array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitude
         latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
         horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
                         Sources whose calculated altitude is less than -horizon_buffer are excluded by the catalog read.
-                        Caution! The altitude calculation does not account for precession/nutation of the Earth. A decent buffer is needed to
-                        ensure that the horizon cut doesn't exclude sources near the horizon.
+
+                        Caution! The altitude calculation does not account for precession/nutation of the Earth. The buffer angle
+                        is needed to ensure that the horizon cut doesn't exclude sources near but above the horizon.
+                        Since the cutoff is done using lst, and the lsts are calculated with astropy, the required buffer should
+                        _not_ drift with time since the J2000 epoch. The default buffer has been tested around julian date 2457458.0.
+
         min_flux: Minimum stokes I flux to select [Jy]
         max_flux: Maximum stokes I flux to select [Jy]
     """
@@ -123,7 +127,15 @@ def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}):
     Args:
         gleam_votable: Path to votable catalog file.
         input_uv: The UVData object for the simulation (needed for horizon cuts)
-        source_select_kwds: Keywords for source selection (passed along)
+        source_select_kwds: Dictionary of keywords for source selection
+            Valid options:
+            |  lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
+            |  time_array: Array of (float) julian dates corresponding with lst_array
+            |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
+            |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
+            |                  (See caveats in simsetup.array_to_sourcelist docstring)
+            |  min_flux: Minimum stokes I flux to select [Jy]
+            |  max_flux: Maximum stokes I flux to select [Jy]
 
     Returns:
         List of pyuvsim.Source objects
@@ -178,7 +190,15 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}):
             |  frequency: reference frequency (for future spectral indexing) [Hz]
                 For now, all sources are flat spectrum.
         input_uv: The UVData object for the simulation (needed for horizon cuts)
-        source_select_kwds: Keywords for source selection (passed along)
+        source_select_kwds: Dictionary of keywords for source selection.
+            Valid options:
+            |  lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
+            |  time_array: Array of (float) julian dates corresponding with lst_array
+            |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
+            |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
+            |                  (See caveats in simsetup.array_to_sourcelist docstring)
+            |  min_flux: Minimum stokes I flux to select [Jy]
+            |  max_flux: Maximum stokes I flux to select [Jy]
 
     Returns:
         List of pyuvsim.Source objects
