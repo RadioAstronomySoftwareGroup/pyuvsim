@@ -40,10 +40,12 @@ class Source(object):
                 4 element vector giving the source [I, Q, U, V]
             freq: astropy quantity
                 frequency of source catalog value
-            rise_time_inds: int
-                time array indices at which source rises
-            set_time_inds: int
-                time array indices at which source sets
+            rise_lst: (float)
+                Approximate lst (radians) when the source rises. Set by coarse horizon cut in simsetup.
+                Default is None, meaning the source never rises.
+            set_lst: (float)
+                Approximate lst (radians) when the source sets.
+                Default is None, meaning the source never sets.
             pos_tol: float, defaults to minimum float in numpy
                 position tolerance in degrees
         """

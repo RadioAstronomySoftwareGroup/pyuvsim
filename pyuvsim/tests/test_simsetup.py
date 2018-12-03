@@ -419,7 +419,7 @@ def test_horizon_cut():
                          message="It looks like you want to do a coarse horizon cut, but you're missing keywords", nwarnings=1)
 
     cut_sourcelist = pyuvsim.simsetup.array_to_sourcelist(catalog_table, lst_array=uv_in.lst_array,
-                                                           latitude_deg=uv_in.telescope_location_lat_lon_alt_degrees[0])
+                                                          latitude_deg=uv_in.telescope_location_lat_lon_alt_degrees[0])
 
     selected_source_names = [s.name for s in cut_sourcelist]
 

@@ -159,8 +159,8 @@ def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}):
         lst_array = None
         latitude = None
     sourcelist = array_to_sourcelist(data, lst_array=lst_array,
-                                      latitude_deg=latitude,
-                                      **source_select_kwds)
+                                     latitude_deg=latitude,
+                                     **source_select_kwds)
 
     return sourcelist
 
@@ -201,8 +201,8 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}):
         latitude = None
         time_array = None
     sourcelist = array_to_sourcelist(catalog_table, lst_array=lst_array,
-                                      latitude_deg=latitude,
-                                      **source_select_kwds)
+                                     latitude_deg=latitude,
+                                     **source_select_kwds)
 
     return sourcelist
 
