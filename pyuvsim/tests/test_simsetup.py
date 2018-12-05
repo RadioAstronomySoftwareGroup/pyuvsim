@@ -277,7 +277,11 @@ def test_write_uvdata():
     expected_ofname = pyuvsim.simsetup.write_uvdata(uv, filing_dict, return_filename=True, out_format='miriad')
     nt.assert_equal(ofname, expected_ofname)
     nt.assert_raises(ValueError, pyuvsim.simsetup.write_uvdata, uv, filing_dict, return_filename=True, out_format='')
+    filing_dict['output_format'] = 'uvh5'
+    expected_ofname = pyuvsim.simsetup.write_uvdata(uv, filing_dict, return_filename=True)
+    nt.assert_equal(ofname + '.uvh5', expected_ofname)
 
+    os.remove(ofname + '.uvh5')
     os.remove(ofname + '.uvfits')
     shutil.rmtree(ofname)
 
