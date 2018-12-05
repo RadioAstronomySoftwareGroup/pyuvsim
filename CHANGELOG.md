@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- stdout printing explicitly disabled for non-root ranks
 - Flux cut options with source catalogs
 - Coarse horizon cut for reduced computational load.
 - Selection keys in obsparam files (valid options for UVData.select)
