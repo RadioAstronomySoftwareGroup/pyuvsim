@@ -225,10 +225,10 @@ def check_param_reader(config_num):
     for i, bm in enumerate(new_beam_list):
         new_beam_list[i] = pyuvsim.simsetup.beam_string_to_object(bm)
 
-    # write_uvfits test:
+    # write_uvdata tests with different configs:
     with open(param_filename, 'r') as fhandle:
         param_dict = yaml.safe_load(fhandle)
-    expected_ofilepath = pyuvsim.simsetup.write_uvfits(uv_obj, param_dict, return_filename=True, dryrun=True)
+    expected_ofilepath = pyuvsim.simsetup.write_uvdata(uv_obj, param_dict, return_filename=True, dryrun=True)
     ofilename = 'sim_results.uvfits'
     if config_num == 1:
         if os.path.isdir('tempdir'):
@@ -236,6 +236,7 @@ def check_param_reader(config_num):
         ofilename = os.path.join('.', 'tempdir', ofilename)
     else:
         ofilename = os.path.join('.', ofilename)
+    print(ofilename, expected_ofilepath)
     nt.assert_equal(ofilename, expected_ofilepath)
 
     Ntasks = uv_obj.Nblts * uv_obj.Nfreqs * len(sources)
@@ -259,6 +260,26 @@ def test_param_reader():
     """
     for n in range(6):
         yield (check_param_reader, n)
+
+
+def test_write_uvdata():
+    """ Test function that defines filenames from parameter dict """
+
+    uv = UVData()
+    uvtest.checkWarnings(uv.read_uvfits, [triangle_uvfits_file],
+                         message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
+
+    ofname = 'test_file'
+    filing_dict = {'outfile_name': ofname}
+    expected_ofname = pyuvsim.simsetup.write_uvdata(uv, filing_dict, return_filename=True)
+    ofname = os.path.join('.', ofname)
+    nt.assert_equal(ofname + '.uvfits', expected_ofname)
+    expected_ofname = pyuvsim.simsetup.write_uvdata(uv, filing_dict, return_filename=True, out_format='miriad')
+    nt.assert_equal(ofname, expected_ofname)
+    nt.assert_raises(ValueError, pyuvsim.simsetup.write_uvdata, uv, filing_dict, return_filename=True, out_format='')
+
+    os.remove(ofname + '.uvfits')
+    shutil.rmtree(ofname)
 
 
 def test_param_select_cross():

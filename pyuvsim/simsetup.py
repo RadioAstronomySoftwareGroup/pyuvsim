@@ -926,7 +926,7 @@ def beam_string_to_object(beam_model):
     return uvb
 
 
-def write_uvfits(uv_obj, param_dict, return_filename=False, dryrun=False):
+def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_format='uvfits'):
     """
     Parse output file information from parameters and write uvfits to file.
 
@@ -936,6 +936,7 @@ def write_uvfits(uv_obj, param_dict, return_filename=False, dryrun=False):
                     whether or not to clobber.
         return_filename: (Default false) Return the file path
         dryrun: (Default false) Don't write to file.
+        out_format: (Default uvfits) Write as uvfits/miriad
 
     Returns:
         File path, if return_filename is True
@@ -956,8 +957,6 @@ def write_uvfits(uv_obj, param_dict, return_filename=False, dryrun=False):
     else:
         outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
     print('Outfile path: ', outfile_name)
-    if not outfile_name.endswith(".uvfits"):
-        outfile_name = outfile_name + ".uvfits"
 
     if 'clobber' not in param_dict:
         outfile_name = check_file_exists_and_increment(outfile_name)
@@ -965,7 +964,16 @@ def write_uvfits(uv_obj, param_dict, return_filename=False, dryrun=False):
     if not os.path.exists(param_dict['outdir']):
         os.makedirs(param_dict['outdir'])
 
+    if out_format == 'uvfits':
+        if not outfile_name.endswith(".uvfits"):
+            outfile_name = outfile_name + ".uvfits"
+
     if not dryrun:
-        uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
+        if out_format == 'uvfits':
+            uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
+        elif out_format == 'miriad':
+            uv_obj.write_miriad(outfile_name)
+        else:
+            raise ValueError("Invalid output format. Options are \" uvfits\" or \"miriad\"")
     if return_filename:
         return outfile_name

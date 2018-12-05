@@ -9,6 +9,7 @@
 - New batch scripts for profiling jobs on a SLURM-managed cluster, and plotting the results.
 
 ### Changed
+- Rename write_uvfits to write_uvdata, allowing for miriad output.
 - Fixed memory overload bug due to local task indices creation step.
 - Moved parameter simulation functions from wrapper to uvsim
 - MPI3 enabled in travis.

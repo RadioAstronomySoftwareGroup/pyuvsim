@@ -483,7 +483,7 @@ def run_uvsim(params, return_uv=False):
     if rank == 0:
         with open(params, 'r') as pfile:
             param_dict = yaml.safe_load(pfile)
-        simsetup.write_uvfits(uv_out, param_dict, dryrun=return_uv)
+        simsetup.write_uvdata(uv_out, param_dict, dryrun=return_uv)
     if return_uv:
         return uv_out
     comm.Barrier()
