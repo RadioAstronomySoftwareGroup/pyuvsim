@@ -340,12 +340,11 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         mock_keywords['Nsrcs'] = Nsrcs
         mock_keywords['alt'] = alt
         fluxes = np.ones(Nsrcs, dtype=float)
-
         if Nsrcs % 2 == 0:
             length = 180 - min_alt * 2
             spacing = length / (Nsrcs - 1)
             max_alt = 90. - spacing / 2
-            alts = np.linspace(min_alt, max_alt, Nsrcs / 2)
+            alts = np.linspace(min_alt, max_alt, Nsrcs // 2)
             alts = np.append(alts, np.flip(alts, axis=0))
             azs = np.append(np.zeros(Nsrcs // 2, dtype=float) + 180.,
                             np.zeros(Nsrcs // 2, dtype=float))

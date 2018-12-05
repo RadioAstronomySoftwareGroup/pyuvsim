@@ -63,7 +63,7 @@ def test_run_param_uvsim():
     # Test vot and txt catalogs for parameter simulation
 
     uv_ref = UVData()
-    uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
+    uvtest.checkWarnings(uv_ref.read_uvfits, [os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits')], message='antenna_diameters is not set')
     uv_ref.unphase_to_drift(use_ant_pos=True)
 
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')

@@ -253,7 +253,7 @@ def check_param_reader(config_num):
 # note that each config tested shows up as a separate '.' in the nosetests output
 def test_param_reader():
     """
-    Tests initialize_uvdata_from_params for five different parameter files.
+    Tests initialize_uvdata_from_params for six different parameter files.
         Each file has a different arrangement of parameters that should yield the same uvdata object, so this
         checks that the various configurations all work consistently, and that if insufficient information is
         provided that the function errors appropriately.
@@ -366,26 +366,33 @@ def test_uvfits_to_config():
     uv0 = UVData()
     uv0.read_uvfits(longbl_uvfits_file)
     path, telescope_config, layout_fname = \
-        pyuvsim.simsetup.uvdata_to_telescope_config(uv0, herabeam_default,
-                                                    path_out=opath, return_names=True)
+        uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_telescope_config,
+                             [uv0, herabeam_default], dict(path_out=opath, return_names=True),
+                             category=PendingDeprecationWarning,
+                             message='The enu array in ECEF_from_ENU is being interpreted as (Npts, 3)')
     uv0.integration_time[-1] += 2  # Test case of non-uniform integration times
-    pyuvsim.simsetup.uvdata_to_config_file(uv0,
-                                           telescope_config_name=os.path.join(path, telescope_config),
-                                           layout_csv_name=os.path.join(path, layout_fname),
-                                           path_out=opath)
+    uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_config_file, [uv0], dict(
+        telescope_config_name=os.path.join(path, telescope_config),
+        layout_csv_name=os.path.join(path, layout_fname),
+        path_out=opath),
+        message='The integration time is not constant. Using the shortest integration time')
     # From parameters, generate a uvdata object.
     with open(os.path.join(opath, param_filename), 'r') as pf:
         param_dict = yaml.safe_load(pf)
     param_dict['config_path'] = opath    # Ensure path is present
 
     orig_param_dict = copy.deepcopy(param_dict)   # The parameter dictionary gets modified in the function below.
-    uv1, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv1, new_beam_list, new_beam_dict, beam_ids = \
+        uvtest.checkWarnings(pyuvsim.initialize_uvdata_from_params, [param_dict],
+                             category=PendingDeprecationWarning,
+                             nwarnings=2)
     # Generate parameters from new uvfits and compare with old.
     path, telescope_config, layout_fname = \
-        pyuvsim.simsetup.uvdata_to_telescope_config(uv1, herabeam_default,
-                                                    telescope_config_name=telescope_config,
-                                                    layout_csv_name=layout_fname,
-                                                    path_out=opath, return_names=True)
+        uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_telescope_config, [uv1, herabeam_default],
+                             dict(telescope_config_name=telescope_config,
+                                  layout_csv_name=layout_fname,
+                                  path_out=opath, return_names=True),
+                             category=PendingDeprecationWarning)
     pyuvsim.simsetup.uvdata_to_config_file(uv1, param_filename=second_param_filename,
                                            telescope_config_name=os.path.join(path, telescope_config),
                                            layout_csv_name=os.path.join(path, layout_fname),
