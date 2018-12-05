@@ -974,7 +974,8 @@ def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_fo
         if not outfile_name.endswith(".uvh5"):
             outfile_name = outfile_name + ".uvh5"
 
-    if 'clobber' not in param_dict:
+    noclobber = ('clobber' not in param_dict) or bool(param_dict['clobber'])
+    if noclobber:
         outfile_name = check_file_exists_and_increment(outfile_name)
 
     if not dryrun:
