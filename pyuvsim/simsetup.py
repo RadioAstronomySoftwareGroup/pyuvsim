@@ -960,7 +960,6 @@ def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_fo
         outfile_name = os.path.join(param_dict['outdir'], outfile_name)
     else:
         outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
-    print('Outfile path: ', outfile_name)
 
     if not os.path.exists(param_dict['outdir']):
         os.makedirs(param_dict['outdir'])
@@ -973,15 +972,16 @@ def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_fo
         if not outfile_name.endswith(".uvh5"):
             outfile_name = outfile_name + ".uvh5"
 
-    noclobber = ('clobber' not in param_dict) or bool(param_dict['clobber'])
+    noclobber = ('clobber' not in param_dict) or not bool(param_dict['clobber'])
     if noclobber:
         outfile_name = check_file_exists_and_increment(outfile_name)
 
+    print('Outfile path: ', outfile_name)
     if not dryrun:
         if out_format == 'uvfits':
             uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
         elif out_format == 'miriad':
-            uv_obj.write_miriad(outfile_name)
+            uv_obj.write_miriad(outfile_name, clobber=not noclobber)
         elif out_format == 'uvh5':
             uv_obj.write_uvh5(outfile_name)
         else:

@@ -151,6 +151,11 @@ def strip_extension(filepath):
     if '.' not in filepath:
         return filepath, ''
     file_list = filepath.split('.')
+    ext = file_list[-1]
+    # miriad files might not have an extension
+    # support miriad, uvfits, and uvh5
+    if ext not in ['uvfits', 'uvh5']:
+        return filepath, ''
     return ".".join(file_list[:-1]), '.' + file_list[-1]
 
 
