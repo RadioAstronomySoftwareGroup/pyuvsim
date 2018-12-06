@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- Support for miriad and uvh5 output
 - stdout printing explicitly disabled for non-root ranks
 - Flux cut options with source catalogs
 - Coarse horizon cut for reduced computational load.
@@ -10,7 +11,7 @@
 - New batch scripts for profiling jobs on a SLURM-managed cluster, and plotting the results.
 
 ### Changed
-- Rename write_uvfits to write_uvdata, allowing for miriad output.
+- Rename write_uvfits to write_uvdata
 - Fixed memory overload bug due to local task indices creation step.
 - Moved parameter simulation functions from wrapper to uvsim
 - MPI3 enabled in travis.
