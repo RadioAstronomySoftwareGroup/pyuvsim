@@ -22,6 +22,12 @@ class Telescope(object):
         self.beam_list = beam_list
 
     def __eq__(self, other):
-        return ((np.allclose(self.location.to('m').value, other.location.to("m").value, atol=1e-3))
+        this_vector_loc = np.array([self.location.x.to('m').value,
+                                    self.location.y.to('m').value,
+                                    self.location.z.to('m').value])
+        other_vector_loc = np.array([other.location.x.to('m').value,
+                                     other.location.y.to('m').value,
+                                     other.location.z.to('m').value])
+        return ((np.allclose(this_vector_loc, other_vector_loc, atol=1e-3))
                 and (self.beam_list == other.beam_list)
                 and (self.name == other.name))
