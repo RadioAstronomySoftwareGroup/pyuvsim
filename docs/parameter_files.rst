@@ -45,10 +45,11 @@ Passed into ``run_param_pyuvsim.py``
       start_time: 2457458.1738949567    # Start and end times (Julian date)
       end_time: 2457458.175168105
       duration_hours: 0.0276
-    select: # any keyword parameters that UVData.select can accept, except polarizations
+    select: # limit which baselines are simulated. Use any UVData.select keywords (except polarizations) and/or redundant_threshold
       bls: [(1, 2), (3, 4), (5, 6)]
       ant_str: 'cross'
       antenna_nums: [1, 7, 9, 15]
+      redundant_threshold: 0.1 # redundancy threshold in meters. Only simulate one baseline per redundant group
 
 **Note** The example above is shown with all allowed keywords, but many of these are redundant. This will be further explained below.
 
@@ -146,3 +147,5 @@ Sources
 Select
 ^^^^^^
     Specify keywords to select which baselines to simulate. The selection is done by UVData.select, so it can accept any keyword that function accepts, except ones that affect polarization because pyuvsim computes all polarizations.
+
+    In addition to the UVData.select keywords, a ``redundant_threshold`` parameter can be specified. If it is present, only baseline from each set of redundant baselines is simulated. The ``redundant_threshold`` specifies how different two baseline vectors can be -- the magnitude of the vector differences must be less than or equal to the threshold. The vector differences are calculated for a phase center of zenith (i.e. in drift mode or for antenna locations in the ENU frame).
