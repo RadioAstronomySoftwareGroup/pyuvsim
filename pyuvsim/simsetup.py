@@ -767,11 +767,12 @@ def initialize_uvdata_from_params(obs_params):
                                  'can not down select on polarizations -- pyuvsim '
                                  'computes all polarizations')
 
-        select_params['metadata_only'] = True
-        uv_obj.select(**select_params)
+        if len(select_params) > 0:
+            select_params['metadata_only'] = True
+            uv_obj.select(**select_params)
 
         if redundant_threshold is not None:
-            uv_obj.compress_by_redundancy(tol=redundant_threshold)
+            uv_obj.compress_by_redundancy(tol=redundant_threshold, metadata_only=True)
 
     return uv_obj, beam_list, beam_dict, beam_ids
 

@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- Support for only simulating one baseline per redundant group
 - Support for miriad and uvh5 output
 - stdout printing explicitly disabled for non-root ranks
 - Flux cut options with source catalogs
