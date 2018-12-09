@@ -165,17 +165,12 @@ def check_file_exists_and_increment(filepath):
         Given filepath (path + filename), check if it exists. If so, add a _1
         at the end, if that exists add a _2, and so on.
     """
-    if os.path.exists(filepath):
-        filepath, ext = strip_extension(filepath)
-        if not filepath.endswith("_0"):
-            filepath += "_0" + ext
-        else:
-            filepath += ext
-    else:
-        return filepath
-    n = 1
+    base_filepath, ext = strip_extension(filepath)
+    bf_list = base_filepath.split('_')
+    if bf_list[-1].isdigit():
+        base_filepath = '_'.join(bf_list[:-1])
+    n = 0
     while os.path.exists(filepath):
-        filepath, ext = strip_extension(filepath)
-        filepath = filepath[:-2] + "_" + str(n) + ext
+        filepath = "{}_{}".format(base_filepath, n) + ext
         n += 1
     return filepath

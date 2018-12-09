@@ -98,6 +98,16 @@ def test_file_namer():
     """
     File name incrementer utility
     """
-    existing_file = param_filenames[0]
+    os.mkdir('tempfiles')
+    fnames = []
+    for i in range(111):
+        fname = os.path.join('tempfiles', 'file_' + str(i))
+        with open(fname, 'w') as f:
+            f.write(' ')
+        fnames.append(fname)
+    existing_file = fnames[0]
     new_filepath = pyuvsim.utils.check_file_exists_and_increment(existing_file)
-    nt.assert_true(new_filepath.endswith("_6.yaml"))    # There are five other of these param test files
+    for fn in fnames:
+        os.remove(fn)
+    os.rmdir('tempfiles')
+    nt.assert_true(new_filepath.endswith("_111"))    # There are four other of these param test files
