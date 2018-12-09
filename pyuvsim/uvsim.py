@@ -384,10 +384,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
         length = Neach_section
         start = extras * (Neach_section + 1) + (rank - extras) * length
         end = start + length
-    if six.PY2:
-        task_ids = xrange(start, end)
-    else:
-        task_ids = range(start, end)
+    task_ids = six.moves.range(start, end)
 
     # Construct beam objects from strings
     beam_models = [simsetup.beam_string_to_object(bm) for bm in beam_list]

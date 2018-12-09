@@ -401,8 +401,6 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         obs_params: Either an obsparam file name or a dictionary of parameters.
         input_uv: (UVData object) Needed to know location and time for mock catalog
                   and for horizon cuts
-        min_flux: Minimum flux (in Jy) of sources to select (Default: No selection)
-
     Returns:
         catalog: array of Source objects.
         source_list_name: (str) Catalog identifier for metadata.
@@ -985,6 +983,6 @@ def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_fo
         elif out_format == 'uvh5':
             uv_obj.write_uvh5(outfile_name)
         else:
-            raise ValueError("Invalid output format. Options are \" uvfits\" or \"miriad\"")
+            raise ValueError("Invalid output format. Options are \" uvfits\", \"uvh5\", or \"miriad\"")
     if return_filename:
         return outfile_name
