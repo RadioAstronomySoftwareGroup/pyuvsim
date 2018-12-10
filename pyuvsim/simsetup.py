@@ -746,7 +746,7 @@ def initialize_uvdata_from_params(obs_params):
     # Note: cannot down select polarizations (including via ant_str or bls keywords)
     if 'select' in param_dict:
         select_params = dict([(k, v) for k, v in param_dict['select'].items() if k in valid_select_keys])
-        redundant_threshold = select_params.pop('redundant_threshold', None)
+        redundant_threshold = param_dict['select'].get('redundant_threshold', None)
         if 'polarizations' in select_params:
             raise ValueError('Can not down select on polarizations -- pyuvsim '
                              'computes all polarizations')
