@@ -21,4 +21,4 @@ if args.paramsfile is None:
 
 if not os.path.isdir(os.path.dirname(args.paramsfile)):
     args.paramsfile = os.path.join('.', args.paramsfile)
-pyuvsim.uvsim.run_param_uvsim(args.paramsfile)
+pyuvsim.uvsim.run_uvsim(args.paramsfile)

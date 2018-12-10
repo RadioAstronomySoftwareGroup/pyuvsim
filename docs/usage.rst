@@ -2,7 +2,7 @@
 Running a simulation
 ====================
 
-The function ``uvsim.run_uvsim`` in uvsim.py accepts as input a path to a yaml ``obsparam`` file and writes out the data to ``uvfits`` format. Optionally, it can also skip writing the data out and just return a ``UVData`` object filled with simulated data.
+``pyuvsim`` takes a UVData object, instrument configuration settings, and a source catalog and effectively "fills" the UVData object with simulated data. The function ``uvsim.run_pyuvsim`` in uvsim.py accepts as input a path to a yaml ``obsparam`` file and writes out the data to ``uvfits``, ``miriad``, or ``uvh5`` format. Optionally, it can also skip writing the data out and just return a ``UVData`` object filled with simulated data. The default behavior is to write to ``uvfits``.
 
 This is demonstrated in more detail in ``run_param_pyuvsim.py`` in the scripts directory. See :doc:`parameter_files` for information on the parameter files.
 

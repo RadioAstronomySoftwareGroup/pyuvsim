@@ -5,6 +5,7 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+from numpy.lib import recfunctions
 import yaml
 import os
 import sys
@@ -44,12 +45,97 @@ def _parse_layout_csv(layout_csv):
                          dtype=dt.dtype)
 
 
-def read_votable_catalog(gleam_votable):
+def array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitude_deg=None, horizon_buffer=0.04364, min_flux=None, max_flux=None):
+    """
+    Generate list of source.Source objects from a recarray, performming flux and horizon selections.
+
+    Args:
+        catalog_table: recarray of source catalog information. Must have columns with names
+                       'source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'
+        lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
+        time_array: Array of (float) julian dates corresponding with lst_array
+        latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
+        horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
+                        Sources whose calculated altitude is less than -horizon_buffer are excluded by the catalog read.
+
+                        Caution! The altitude calculation does not account for precession/nutation of the Earth. The buffer angle
+                        is needed to ensure that the horizon cut doesn't exclude sources near but above the horizon.
+                        Since the cutoff is done using lst, and the lsts are calculated with astropy, the required buffer should
+                        _not_ drift with time since the J2000 epoch. The default buffer has been tested around julian date 2457458.0.
+
+        min_flux: Minimum stokes I flux to select [Jy]
+        max_flux: Maximum stokes I flux to select [Jy]
+    """
+
+    sourcelist = []
+    if len(catalog_table.shape) == 0:
+        catalog_table = catalog_table.reshape((1))
+    Nsrcs = catalog_table.shape[0]
+    coarse_kwds = [lst_array, latitude_deg]
+    coarse_horizon_cut = all([k is not None for k in coarse_kwds])
+    if (not coarse_horizon_cut) and any([k is not None for k in coarse_kwds]):
+        warnings.warn("It looks like you want to do a coarse horizon cut, but you're missing keywords!")
+
+    if coarse_horizon_cut:
+        lat_rad = np.radians(latitude_deg)
+        buff = horizon_buffer
+    for (source_id, ra_j2000, dec_j2000, flux_I, freq) in catalog_table:
+        if min_flux:
+            if (flux_I < min_flux):
+                continue
+        if max_flux:
+            if (flux_I > max_flux):
+                continue
+        ra = Angle(ra_j2000, units.deg)
+        dec = Angle(dec_j2000, units.deg)
+        rise_lst = None
+        set_lst = None
+        if coarse_horizon_cut:
+            # Identify circumpolar sources and unrising sources.
+            tans = np.tan(lat_rad) * np.tan(dec.rad)
+            if tans < -1:
+                continue   # Source doesn't rise.
+            circumpolar = tans > 1
+
+            if not circumpolar:
+                rise_lst = ra.rad - np.arccos((-1) * tans)
+                set_lst = ra.rad + np.arccos((-1) * tans)
+                rise_lst -= buff
+                set_lst += buff
+
+                if rise_lst < 0:
+                    rise_lst += 2 * np.pi
+                if set_lst > 2 * np.pi:
+                    set_lst -= 2 * np.pi
+
+        source = Source(source_id, ra,
+                        dec,
+                        freq=freq * units.Hz,
+                        stokes=np.array([flux_I, 0., 0., 0.]),
+                        rise_lst=rise_lst,
+                        set_lst=set_lst)
+
+        sourcelist.append(source)
+
+    return np.array(sourcelist)
+
+
+def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}):
     """
     Creates a list of pyuvsim source objects from a votable catalog.
 
     Args:
         gleam_votable: Path to votable catalog file.
+        input_uv: The UVData object for the simulation (needed for horizon cuts)
+        source_select_kwds: Dictionary of keywords for source selection
+            Valid options:
+            |  lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
+            |  time_array: Array of (float) julian dates corresponding with lst_array
+            |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
+            |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
+            |                  (See caveats in simsetup.array_to_sourcelist docstring)
+            |  min_flux: Minimum stokes I flux to select [Jy]
+            |  max_flux: Maximum stokes I flux to select [Jy]
 
     Returns:
         List of pyuvsim.Source objects
@@ -69,14 +155,75 @@ def read_votable_catalog(gleam_votable):
         table = tab
 
     data = table.array
-
     sourcelist = []
-    for entry in data:
-        source = Source(entry['GLEAM'], Angle(entry['RAJ2000'], unit=units.deg),
-                        Angle(entry['DEJ2000'], unit=units.deg),
-                        freq=(200e6 * units.Hz),
-                        stokes=np.array([entry['Fintwide'], 0., 0., 0.]))
-        sourcelist.append(source)
+    with np.warnings.catch_warnings():
+        np.warnings.filterwarnings('ignore', '', FutureWarning)
+        data = np.copy(data[['GLEAM', 'RAJ2000', 'DEJ2000', 'Fintwide']])
+    Nsrcs = data.shape[0]
+    freq = 200e6
+    data = recfunctions.append_fields(data, 'frequency', np.ones(Nsrcs) * freq)
+    data.dtype.names = ('source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency')
+    if input_uv:
+        lst_array, inds = np.unique(input_uv.lst_array, return_index=True)
+        time_array = input_uv.time_array[inds]
+        latitude = input_uv.telescope_location_lat_lon_alt_degrees[0]
+    else:
+        lst_array = None
+        latitude = None
+    sourcelist = array_to_sourcelist(data, lst_array=lst_array,
+                                     latitude_deg=latitude,
+                                     **source_select_kwds)
+
+    return sourcelist
+
+
+def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}):
+    """
+    Read in a text file of sources.
+
+    Args:
+        catalog_csv: csv file with the following expected columns:
+            |  Source_ID: source id as a string of maximum 10 characters
+            |  ra_j2000: right ascension at J2000 epoch, in decimal degrees
+            |  dec_j2000: declination at J2000 epoch, in decimal degrees
+            |  flux_density_I: Stokes I flux density in Janskys
+            |  frequency: reference frequency (for future spectral indexing) [Hz]
+                For now, all sources are flat spectrum.
+        input_uv: The UVData object for the simulation (needed for horizon cuts)
+        source_select_kwds: Dictionary of keywords for source selection.
+            Valid options:
+            |  lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
+            |  time_array: Array of (float) julian dates corresponding with lst_array
+            |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
+            |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
+            |                  (See caveats in simsetup.array_to_sourcelist docstring)
+            |  min_flux: Minimum stokes I flux to select [Jy]
+            |  max_flux: Maximum stokes I flux to select [Jy]
+
+    Returns:
+        List of pyuvsim.Source objects
+    """
+    with open(catalog_csv, 'r') as cfile:
+        header = cfile.readline()
+    header = [h.strip() for h in header.split() if not h[0] == '[']  # Ignore units in header
+    dt = np.format_parser(['U10', 'f8', 'f8', 'f8', 'f8'],
+                          ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], header)
+
+    catalog_table = np.genfromtxt(catalog_csv, autostrip=True, skip_header=1,
+                                  dtype=dt.dtype)
+
+    if input_uv:
+        lst_array, inds = np.unique(input_uv.lst_array, return_index=True)
+        time_array = input_uv.time_array[inds]
+        latitude = input_uv.telescope_location_lat_lon_alt_degrees[0]
+    else:
+        lst_array = None
+        latitude = None
+        time_array = None
+    sourcelist = array_to_sourcelist(catalog_table, lst_array=lst_array,
+                                     latitude_deg=latitude,
+                                     **source_select_kwds)
+
     return sourcelist
 
 
@@ -92,44 +239,6 @@ def write_catalog_to_file(filename, catalog):
         fo.write("SOURCE_ID\tRA_J2000 [deg]\tDec_J2000 [deg]\tFlux [Jy]\tFrequency [Hz]\n")
         for src in catalog:
             fo.write("{}\t{:f}\t{:f}\t{:0.2f}\t{:0.2f}\n".format(src.name, src.ra.deg, src.dec.deg, src.stokes[0], src.freq.to("Hz").value))
-
-
-def read_text_catalog(catalog_csv):
-    """
-    Read in a text file of sources.
-
-    Args:
-    catalog_csv: csv file with the following expected columns:
-        |  Source_ID: source id as a string of maximum 10 characters
-        |  ra_j2000: right ascension at J2000 epoch, in decimal degrees
-        |  dec_j2000: declination at J2000 epoch, in decimal degrees
-        |  flux_density_I: Stokes I flux density in Janskys
-        |  frequency: reference frequency (for future spectral indexing) [Hz]
-            For now, all sources are flat spectrum.
-
-    Returns:
-        List of pyuvsim.Source objects
-    """
-    with open(catalog_csv, 'r') as cfile:
-        header = cfile.readline()
-    header = [h.strip() for h in header.split() if not h[0] == '[']  # Ignore units in header
-    dt = np.format_parser(['U10', 'f8', 'f8', 'f8', 'f8'],
-                          ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], header)
-
-    catalog_table = np.genfromtxt(catalog_csv, autostrip=True, skip_header=1,
-                                  dtype=dt.dtype)
-
-    catalog = []
-    if len(catalog_table.shape) == 0:
-        catalog_table = catalog_table.reshape((1))
-    for si in range(catalog_table.size):
-        catalog.append(Source(catalog_table['source_id'][si],
-                              Angle(catalog_table['ra_j2000'][si], unit=units.deg),
-                              Angle(catalog_table['dec_j2000'][si], unit=units.deg),
-                              catalog_table['frequency'][si] * units.Hz,
-                              [catalog_table['flux_density_I'][si], 0, 0, 0]))
-
-    return catalog
 
 
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
@@ -154,6 +263,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         Nsrcs (int):  Number of sources to put at zenith
         array_location (EarthLocation object): [Default = HERA site]
         alt (float): For off-zenith and triangle arrangements, altitude to place sources. (deg)
+        min_alt (float): For random and long-line arrangements, minimum altitude at which to place sources. (deg)
         save (bool): Save mock catalog as npz file.
         rseed (int): If using the random configuration, pass in a RandomState seed.
 
@@ -230,12 +340,11 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         mock_keywords['Nsrcs'] = Nsrcs
         mock_keywords['alt'] = alt
         fluxes = np.ones(Nsrcs, dtype=float)
-
         if Nsrcs % 2 == 0:
             length = 180 - min_alt * 2
             spacing = length / (Nsrcs - 1)
             max_alt = 90. - spacing / 2
-            alts = np.linspace(min_alt, max_alt, Nsrcs / 2)
+            alts = np.linspace(min_alt, max_alt, Nsrcs // 2)
             alts = np.append(alts, np.flip(alts, axis=0))
             azs = np.append(np.zeros(Nsrcs // 2, dtype=float) + 180.,
                             np.zeros(Nsrcs // 2, dtype=float))
@@ -291,7 +400,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
     Args:
         obs_params: Either an obsparam file name or a dictionary of parameters.
         input_uv: (UVData object) Needed to know location and time for mock catalog
-
+                  and for horizon cuts
     Returns:
         catalog: array of Source objects.
         source_list_name: (str) Catalog identifier for metadata.
@@ -307,11 +416,20 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
     else:
         param_dict = obs_params
 
+    # Parse source selection options
+    catalog_select_keywords = ['min_flux', 'max_flux', 'horizon_buffer']
+    catalog_params = {}
+
     source_params = param_dict['sources']
     if 'catalog' in source_params:
         catalog = source_params['catalog']
     else:
         raise KeyError("No catalog defined.")
+
+    # Put catalog selection cuts in source section.
+    for key in catalog_select_keywords:
+        if key in source_params:
+            catalog_params[key] = float(source_params[key])
     if catalog == 'mock':
         mock_keywords = {'arrangement': source_params['mock_arrangement']}
         extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'min_alt', 'array_location']
@@ -349,9 +467,9 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         if not os.path.isfile(catalog):
             catalog = os.path.join(param_dict['config_path'], catalog)
         if catalog.endswith("txt"):
-            catalog = read_text_catalog(catalog)
+            catalog = read_text_catalog(catalog, input_uv=input_uv, source_select_kwds=catalog_params)
         elif catalog.endswith('vot'):
-            catalog = read_votable_catalog(catalog)
+            catalog = read_votable_catalog(catalog, input_uv=input_uv, source_select_kwds=catalog_params)
 
     return np.array(catalog), source_list_name
 
@@ -554,8 +672,8 @@ def initialize_uvdata_from_params(obs_params):
         if not dd:
             raise ValueError("Either duration or integration time "
                              "must be specified: " + kws_used)
-        time_params['integration_time'] = (time_params['duration']
-                                           / float(time_params['Ntimes']))
+        time_params['integration_time'] = (24. * 3600.) * (time_params['duration']
+                                                           / float(time_params['Ntimes']))  # In seconds
 
     inttime_days = time_params['integration_time'] * 1 / (24. * 3600.)
     inttime_days = np.trunc(inttime_days * 24 * 3600) / (24. * 3600.)
@@ -597,6 +715,7 @@ def initialize_uvdata_from_params(obs_params):
         src = src[0]
         source_file_name = os.path.basename(param_dict['sources']['catalog'])
         param_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(source_file_name, src.ra.deg, src.dec.deg)
+
     uv_obj = UVData()
     for k in param_dict:
         # use the __iter__ function on UVData to get list of UVParameters on UVData
@@ -622,15 +741,20 @@ def initialize_uvdata_from_params(obs_params):
     uv_obj.set_uvws_from_antenna_positions()
     uv_obj.history = ''
 
+    valid_select_keys = ['antenna_nums', 'antenna_names', 'ant_str', 'bls', 'frequencies', 'freq_chans', 'times', 'polarizations', 'blt_inds']
     # down select baselines (or anything that can be passed to pyuvdata's select method)
     # Note: cannot down select polarizations (including via ant_str or bls keywords)
     if 'select' in param_dict:
-        select_params = param_dict['select']
+        select_params = dict([(k, v) for k, v in param_dict['select'].items() if k in valid_select_keys])
         if 'polarizations' in select_params:
             raise ValueError('Can not down select on polarizations -- pyuvsim '
                              'computes all polarizations')
         if 'bls' in select_params:
             bls = select_params['bls']
+            if isinstance(bls, six.string_types):
+                # If read from file, this should be a string.
+                bls = eval(bls)
+                select_params['bls'] = bls
             if any([len(item) == 3 for item in bls]):
                 raise ValueError('Only length 2 tuples allowed in bls: can not '
                                  'down select on polarizations -- pyuvsim '
@@ -799,7 +923,7 @@ def beam_string_to_object(beam_model):
     return uvb
 
 
-def write_uvfits(uv_obj, param_dict, return_filename=False, dryrun=False):
+def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_format=None):
     """
     Parse output file information from parameters and write uvfits to file.
 
@@ -809,6 +933,7 @@ def write_uvfits(uv_obj, param_dict, return_filename=False, dryrun=False):
                     whether or not to clobber.
         return_filename: (Default false) Return the file path
         dryrun: (Default false) Don't write to file.
+        out_format: (Default uvfits) Write as uvfits/miriad/uvh5
 
     Returns:
         File path, if return_filename is True
@@ -817,6 +942,11 @@ def write_uvfits(uv_obj, param_dict, return_filename=False, dryrun=False):
         param_dict = param_dict['filing']
     if 'outdir' not in param_dict:
         param_dict['outdir'] = '.'
+    if 'output_format' in param_dict:
+        out_format = param_dict['output_format']
+    elif out_format is None:
+        out_format = 'uvfits'
+
     if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
         outfile_prefix = ""
         outfile_suffix = "results"
@@ -828,17 +958,31 @@ def write_uvfits(uv_obj, param_dict, return_filename=False, dryrun=False):
         outfile_name = os.path.join(param_dict['outdir'], outfile_name)
     else:
         outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
-    print('Outfile path: ', outfile_name)
-    if not outfile_name.endswith(".uvfits"):
-        outfile_name = outfile_name + ".uvfits"
-
-    if 'clobber' not in param_dict:
-        outfile_name = check_file_exists_and_increment(outfile_name)
 
     if not os.path.exists(param_dict['outdir']):
         os.makedirs(param_dict['outdir'])
 
+    if out_format == 'uvfits':
+        if not outfile_name.endswith(".uvfits"):
+            outfile_name = outfile_name + ".uvfits"
+
+    if out_format == 'uvh5':
+        if not outfile_name.endswith(".uvh5"):
+            outfile_name = outfile_name + ".uvh5"
+
+    noclobber = ('clobber' not in param_dict) or not bool(param_dict['clobber'])
+    if noclobber:
+        outfile_name = check_file_exists_and_increment(outfile_name)
+
+    print('Outfile path: ', outfile_name)
     if not dryrun:
-        uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
+        if out_format == 'uvfits':
+            uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
+        elif out_format == 'miriad':
+            uv_obj.write_miriad(outfile_name, clobber=not noclobber)
+        elif out_format == 'uvh5':
+            uv_obj.write_uvh5(outfile_name)
+        else:
+            raise ValueError("Invalid output format. Options are \" uvfits\", \"uvh5\", or \"miriad\"")
     if return_filename:
         return outfile_name

@@ -122,11 +122,12 @@ class UVEngine(object):
     def make_visibility(self):
         """ Visibility contribution from a single source """
         assert(isinstance(self.task.freq, Quantity))
-        self.apply_beam()
 
         pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.location)
         if pos_lmn is None:
             return np.array([0., 0., 0., 0.], dtype=np.complex128)
+
+        self.apply_beam()
 
         # need to convert uvws from meters to wavelengths
         uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
@@ -187,12 +188,11 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
                           beam_list)
 
     freq_array = input_uv.freq_array * units.Hz
-    time_array = Time(input_uv.time_array, scale='utc', format='jd')
+    time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
 
     # Shape indicates slowest to fastest index. (time is slowest, baselines is fastest).
-    task_indices = np.array(np.unravel_index(task_ids, (Ntimes, Nsrcs, Nfreqs, Nbls))).T
-
-    for (time_i, src_i, freq_i, bl_i) in task_indices:
+    for task_index in task_ids:
+        time_i, src_i, freq_i, bl_i = np.unravel_index(task_index, (Ntimes, Nsrcs, Nfreqs, Nbls))
         blti = bl_i + time_i * Nbls   # baseline is the fast axis
 
         # We reuse a lot of baseline info, so make the baseline list on the first go and reuse.
@@ -204,6 +204,25 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
             baselines[bl_i] = Baseline(antennas[index1], antennas[index2])
 
         source = catalog[src_i]
+
+        if source.rise_lst and source.set_lst:
+            r_lst = source.rise_lst
+            s_lst = source.set_lst
+            now_lst = input_uv.lst_array[blti]
+
+            # Compare time since rise to time between rise and set,
+            # properly accounting for phase wrap.
+            dt0 = now_lst - r_lst       # radians since rise time.
+            if dt0 < 0:
+                dt0 += 2 * np.pi
+
+            dt1 = s_lst - r_lst         # radians between rise and set
+            if dt1 < 0:
+                dt1 += 2 * np.pi
+
+            if dt1 < dt0:
+                continue
+
         time = time_array[blti]
         bl = baselines[bl_i]
         freq = freq_array[0, freq_i]  # 0 = spw axis
@@ -316,14 +335,15 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
         telescope_config_file: Telescope configuration file if running from config files.
         antenna_location_file: antenna_location file if running from config files.
     """
-
+    mpi.start_mpi()
     rank = mpi.get_rank()
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
     # The Head node will initialize our simulation
     # Read input file and make uvtask list
     if rank == 0:
-        print('Nblts:', input_uv.Nblts)
+        print('Nbls:', input_uv.Nbls)
+        print('Ntimes:', input_uv.Ntimes)
         print('Nfreqs:', input_uv.Nfreqs)
         print('Nsrcs:', len(catalog))
 
@@ -345,7 +365,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
     Npus = mpi.get_Npus()
 
     # Ensure all ranks have finished setup.
-    comm.Barrier()
+    # comm.Barrier()
 
     Nblts = input_uv.Nblts
     Nbls = input_uv.Nbls
@@ -355,12 +375,21 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
 
     Ntasks = Nblts * Nfreqs * Nsrcs
 
-    task_ids = np.array_split(range(Ntasks), Npus)[rank]
+    Neach_section, extras = divmod(Ntasks, Npus)
+    if rank < extras:
+        length = Neach_section + 1
+        start = rank * (length)
+        end = start + length
+    else:
+        length = Neach_section
+        start = extras * (Neach_section + 1) + (rank - extras) * length
+        end = start + length
+    task_ids = six.moves.range(start, end)
 
     # Construct beam objects from strings
     beam_models = [simsetup.beam_string_to_object(bm) for bm in beam_list]
 
-    Ntasks_local = task_ids.size
+    Ntasks_local = (end - start)
 
     local_task_iter = uvdata_to_task_iter(task_ids, input_uv, catalog, beam_models, beam_dict)
 
@@ -451,7 +480,7 @@ def run_uvsim(params, return_uv=False):
     if rank == 0:
         with open(params, 'r') as pfile:
             param_dict = yaml.safe_load(pfile)
-        simsetup.write_uvfits(uv_out, param_dict, dryrun=return_uv)
+        simsetup.write_uvdata(uv_out, param_dict, dryrun=return_uv)
     if return_uv:
         return uv_out
     comm.Barrier()

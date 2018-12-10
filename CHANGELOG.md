@@ -3,9 +3,16 @@
 ## [Unreleased]
 
 ### Added
+- Support for miriad and uvh5 output
+- stdout printing explicitly disabled for non-root ranks
+- Flux cut options with source catalogs
+- Coarse horizon cut for reduced computational load.
+- Selection keys in obsparam files (valid options for UVData.select)
 - New batch scripts for profiling jobs on a SLURM-managed cluster, and plotting the results.
 
 ### Changed
+- Rename write_uvfits to write_uvdata
+- Fixed memory overload bug due to local task indices creation step.
 - Moved parameter simulation functions from wrapper to uvsim
 - MPI3 enabled in travis.
 - Line profiling may be done by running `pyuvsim.profiling.set_profiler`.

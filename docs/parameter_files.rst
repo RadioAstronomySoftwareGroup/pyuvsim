@@ -19,7 +19,11 @@ Passed into ``run_param_pyuvsim.py``
 
     filing:
       outdir: '.'   #Output file directory
-      outfile_prefix: 'sim_' # Prefix for the output uvfits file.
+      outfile_prefix: 'sim' # Prefix for the output file name, separated by underscores
+      outfile_suffix: 'results' # Suffix for output file name
+      outfile_name: 'sim_results' # Alternatively, give the full name
+      output_format: 'uvfits'  # Format for output. Default is uvfits, but miriad and uvh5 are also supported.
+      clobber: False        # overwrite existing files. (Default False)
     freq:
       Nfreqs: 10    # Number of frequencies
       channel_width: 80000.0    # Frequency channel width
@@ -48,7 +52,10 @@ Passed into ``run_param_pyuvsim.py``
 
 **Note** The example above is shown with all allowed keywords, but many of these are redundant. This will be further explained below.
 
-
+Filing
+^^^^^^
+    Specifies where the results file will be output, what name the file should have, and whether or not to overwrite existing files. None of these parameters are required.
+    
 Time and frequency
 ^^^^^^^^^^^^^^^^^^
 
@@ -130,6 +137,11 @@ Sources
     .. module:: pyuvsim
 
     .. autofunction:: create_mock_catalog
+
+    Flux limits can be made by providing the keywords ``min_flux`` and ``max_flux``. These specify the min/max stokes I flux to choose from the catalog.
+
+    The option ``horizon_buffer`` can be set (in radians) to adjust the tolerance on the coarse horizon cut. After reading in the catalog, ``pyuvsim`` roughly calculates the rise and set times (in local sidereal time, in radians) for each source. If the source never rises, it is excluded from the simulation, and if the source never sets its rise/set times are set to None. This calculation is less accurate than the astropy alt/az calculation used in the main task loop, so a "buffer" angle is added to the set lst (and subtracted from the rise lst) to ensure sources aren't accidentally excluded. Tests indicate that a 10 minute buffer is sufficient.
+    Pyuvsim also excludes sources below the horizon after calculating their AltAz coordinates, which is more accurate. The coarse cut is only to reduce computational load.
 
 Select
 ^^^^^^

@@ -26,7 +26,7 @@ class Source(object):
     coherency_radec = None
     alt_az = None
 
-    def __init__(self, name, ra, dec, freq, stokes, pos_tol=np.finfo(float).eps):
+    def __init__(self, name, ra, dec, freq, stokes, rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
         """
         Initialize from source catalog
 
@@ -40,6 +40,12 @@ class Source(object):
                 4 element vector giving the source [I, Q, U, V]
             freq: astropy quantity
                 frequency of source catalog value
+            rise_lst: (float)
+                Approximate lst (radians) when the source rises. Set by coarse horizon cut in simsetup.
+                Default is None, meaning the source never rises.
+            set_lst: (float)
+                Approximate lst (radians) when the source sets.
+                Default is None, meaning the source never sets.
             pos_tol: float, defaults to minimum float in numpy
                 position tolerance in degrees
         """
@@ -62,6 +68,8 @@ class Source(object):
         self.dec = dec
         self.pos_tol = pos_tol
         self.time = None
+        self.rise_lst = rise_lst
+        self.set_lst = set_lst
 
         self.skycoord = SkyCoord(self.ra, self.dec, frame='icrs')
 
@@ -166,7 +174,7 @@ class Source(object):
         # Will only do the calculation if time has changed
         alt_az = self.get_alt_az(time, telescope_location)
 
-        # Need a horizon mask, for now using pi/2
+        # Horizon Mask
         if alt_az[0] < 0:
             return None
 
