@@ -351,6 +351,29 @@ def test_param_select_errors():
     nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, param_dict_bls_pol)
 
 
+def test_param_select_redundant():
+    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
+
+    with open(param_filename, 'r') as pfile:
+        param_dict = yaml.safe_load(pfile)
+
+    param_dict['config_path'] = os.path.dirname(param_filename)
+    param_dict['array_layout'] = os.path.dirname('../HERA65_layout.csv')
+
+    uv_obj_full, new_beam_list, new_beam_dict, beam_ids = pyuvsim.initialize_uvdata_from_params(param_dict)
+
+    # test only keeping one baseline per redundant group
+    param_dict['select'] = {'redundant_threshold': 0.1}
+
+    uv_obj_red, new_beam_list, new_beam_dict, beam_ids = \
+        pyuvsim.initialize_uvdata_from_params(param_dict)
+    nt.assert_true(uv_obj_red.Nbls < uv_obj_full.Nbls)
+
+    uv_obj_red2 = uv_obj_full.compress_by_redundancy(tol=0.1, inplace=False, metadata_only=True)
+
+    nt.assert_equal(uv_obj_red, uv_obj_red2)
+
+
 def test_uvfits_to_config():
     """
         Loopback test of reading parameters from uvfits file, generating uvfits file, and reading in again.
