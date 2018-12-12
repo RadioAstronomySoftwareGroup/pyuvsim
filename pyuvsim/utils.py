@@ -146,11 +146,13 @@ def zenithangle_azimuth_to_altaz(zenith_angle, azimuth):
     return altitude, new_azimuth
 
 
-def strip_extension(filepath):
+def strip_extension(filepath, ext=None):
     """ Remove extension from file. """
     if '.' not in filepath:
         return filepath, ''
     file_list = filepath.split('.')
+    if ext is not None:
+        return filepath[:-len(ext)], ext
     ext = file_list[-1]
     # miriad files might not have an extension
     # limited list of recognized extensions
@@ -159,12 +161,12 @@ def strip_extension(filepath):
     return ".".join(file_list[:-1]), '.' + file_list[-1]
 
 
-def check_file_exists_and_increment(filepath):
+def check_file_exists_and_increment(filepath, extension=None):
     """
         Given filepath (path + filename), check if it exists. If so, add a _1
         at the end, if that exists add a _2, and so on.
     """
-    base_filepath, ext = strip_extension(filepath)
+    base_filepath, ext = strip_extension(filepath, ext)
     bf_list = base_filepath.split('_')
     if bf_list[-1].isdigit():
         base_filepath = '_'.join(bf_list[:-1])
