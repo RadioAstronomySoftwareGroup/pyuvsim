@@ -224,7 +224,7 @@ def check_param_reader(config_num):
     # write_uvdata tests with different configs:
     with open(param_filename, 'r') as fhandle:
         param_dict = yaml.safe_load(fhandle)
-    expected_ofilepath = pyuvsim.simsetup.write_uvdata(uv_obj, param_dict, return_filename=True, dryrun=True)
+    expected_ofilepath = pyuvsim.utils.write_uvdata(uv_obj, param_dict, return_filename=True, dryrun=True)
     ofilename = 'sim_results.uvfits'
     if config_num == 1:
         if os.path.isdir('tempdir'):
@@ -258,37 +258,10 @@ def test_param_reader():
         yield (check_param_reader, n)
 
 
-def test_write_uvdata():
-    """ Test function that defines filenames from parameter dict """
-
-    uv = UVData()
-    uvtest.checkWarnings(uv.read_uvfits, [triangle_uvfits_file],
-                         message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
-
-    ofname = 'test_file'
-    filing_dict = {'outfile_name': ofname}
-    expected_ofname = pyuvsim.simsetup.write_uvdata(uv, filing_dict, return_filename=True)
-    ofname = os.path.join('.', ofname)
-    nt.assert_equal(ofname + '.uvfits', expected_ofname)
-    expected_ofname = pyuvsim.simsetup.write_uvdata(uv, filing_dict, return_filename=True, out_format='miriad')
-    nt.assert_equal(ofname, expected_ofname)
-    nt.assert_raises(ValueError, pyuvsim.simsetup.write_uvdata, uv, filing_dict, return_filename=True, out_format='')
-    filing_dict['output_format'] = 'uvh5'
-    expected_ofname = pyuvsim.simsetup.write_uvdata(uv, filing_dict, return_filename=True)
-    nt.assert_equal(ofname + '.uvh5', expected_ofname)
-
-    os.remove(ofname + '.uvh5')
-    os.remove(ofname + '.uvfits')
-    shutil.rmtree(ofname)
-
-
 def test_param_select_cross():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
 
-    with open(param_filename, 'r') as pfile:
-        param_dict = yaml.safe_load(pfile)
-
-    param_dict['config_path'] = os.path.dirname(param_filename)
+    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
 
     uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
 
@@ -306,10 +279,7 @@ def test_param_select_cross():
 def test_param_select_bls():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
 
-    with open(param_filename, 'r') as pfile:
-        param_dict = yaml.safe_load(pfile)
-
-    param_dict['config_path'] = os.path.dirname(param_filename)
+    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
 
     uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
 
@@ -327,10 +297,7 @@ def test_param_select_bls():
 def test_param_select_errors():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
 
-    with open(param_filename, 'r') as pfile:
-        param_dict = yaml.safe_load(pfile)
-
-    param_dict['config_path'] = os.path.dirname(param_filename)
+    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
 
     uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
 
@@ -350,11 +317,7 @@ def test_param_select_errors():
 def test_param_select_redundant():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
 
-    with open(param_filename, 'r') as pfile:
-        param_dict = yaml.safe_load(pfile)
-
-    param_dict['config_path'] = os.path.dirname(param_filename)
-    param_dict['array_layout'] = os.path.dirname('../HERA65_layout.csv')
+    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
 
     uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
 
@@ -395,10 +358,9 @@ def test_uvfits_to_config():
         layout_csv_name=os.path.join(path, layout_fname),
         path_out=opath),
         message='The integration time is not constant. Using the shortest integration time')
+
     # From parameters, generate a uvdata object.
-    with open(os.path.join(opath, param_filename), 'r') as pf:
-        param_dict = yaml.safe_load(pf)
-    param_dict['config_path'] = opath    # Ensure path is present
+    param_dict = pyuvsim.simsetup._config_str_to_dict(os.path.join(opath, param_filename))
 
     orig_param_dict = copy.deepcopy(param_dict)   # The parameter dictionary gets modified in the function below.
     uv1, new_beam_list, new_beam_dict = \
@@ -418,12 +380,13 @@ def test_uvfits_to_config():
                                            path_out=opath)
 
     del param_dict
-    with open(os.path.join(path, second_param_filename), 'r') as pf:
-        param_dict = yaml.safe_load(pf)
 
-    nt.assert_true(simtest.compare_dictionaries(param_dict, orig_param_dict))
-
+    param_dict = pyuvsim.simsetup._config_str_to_dict(os.path.join(opath, second_param_filename))
     shutil.rmtree(opath)
+    nt.assert_true(param_dict['param_file'] == second_param_filename)
+    nt.assert_true(orig_param_dict['param_file'] == param_filename)
+    orig_param_dict['param_file'] = second_param_filename
+    nt.assert_true(simtest.compare_dictionaries(param_dict, orig_param_dict))
 
 
 def test_point_catalog_reader():
