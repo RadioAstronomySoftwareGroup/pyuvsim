@@ -16,6 +16,7 @@ authors:
    orcid: 0000-0002-0917-2269
    affiliation: 3, 7
  - name: Matthew Kolopanis
+   orcid: 0000-0002-2950-2974
    affiliation: 3, 7
  - name: Jonathan C. Pober
    orcid: 0000-0002-3492-0433
