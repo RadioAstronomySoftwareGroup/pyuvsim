@@ -8,24 +8,24 @@ tags:
 authors:
  - name: Adam E. Lanman
    orcid: 0000-0003-2116-3573
-   affiliation: 4
+   affiliation: 4, 7
  - name: Bryna J. Hazelton
    orcid: 0000-0001-7532-645X
-   affiliation: 1, 2
+   affiliation: 1, 2, 7
  - name: Daniel C. Jacobs
    orcid: 0000-0002-0917-2269
-   affiliation: 3
+   affiliation: 3, 7
  - name: Matthew Kolopanis
-   affiliation: 3
+   affiliation: 3, 7
  - name: Jonathan C. Pober
    orcid: 0000-0002-3492-0433
-   affiliation: 4
+   affiliation: 4, 7
  - name: James Aguirre
-   affiliation: 6
+   affiliation: 6, 7
  - name: Zachary Martinot
-   affiliation: 6
+   affiliation: 6, 7
  - name: Nithyanandan Thyagarajan
-   affiliation: 5
+   affiliation: 5, 7
 affiliations:
  - name: University of Washington, eScience Institute
    index: 1
@@ -39,6 +39,8 @@ affiliations:
    index: 5
  - name: University of Pennsylvania, Physics Department
    index: 6
+ - name: Radio Astronomy Software Group
+   index: 7
 date: 10 December 2018
 bibliography: paper.bib
 ---
