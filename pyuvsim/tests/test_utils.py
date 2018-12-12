@@ -111,7 +111,24 @@ def test_file_namer():
     for fn in fnames:
         os.remove(fn)
     os.rmdir('tempfiles')
-    nt.assert_true(new_filepath.endswith("_111"))    # There are four other of these param test files
+    nt.assert_true(new_filepath.endswith("_111"))
+
+
+def test_file_namer_extensions():
+    """
+    File name incrementer with specified extension
+    """
+    os.mkdir('tempfiles')
+    fnames = []
+    for i in range(111):
+        fname = os.path.join('tempfiles', 'file_' + str(i) + '.ext')
+        with open(fname, 'w') as f:
+            f.write(' ')
+        fnames.append(fname)
+    existing_file = fnames[0]
+    new_filepath = simutils.check_file_exists_and_increment(existing_file, 'ext')
+    shutil.rmtree('tempfiles')
+    nt.assert_true(new_filepath.endswith("_111.ext"))
 
 
 def test_write_uvdata():
