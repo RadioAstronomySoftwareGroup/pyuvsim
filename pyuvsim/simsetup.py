@@ -581,40 +581,19 @@ def parse_telescope_params(tele_params, config_path):
     return return_dict, beam_list, beam_dict
 
 
-def initialize_uvdata_from_params(obs_params):
+def parse_frequency_params(freq_params):
     """
-    Construct a uvdata object from parameters in a valid yaml file.
-
-    Sufficient information must be provided by the parameters to define time and frequency arrays
-    and verify the channel widths and time steps. This will error if insufficient or incompatible
-    parameters are defined.
-
-    The parameter dictionary may contain any valid UVData attributes as well.
+    Parse the "freq" section of obsparam.
 
     Args:
-        obs_params: Either an obs_param file name or a dictionary of parameters read in.
-                    Any uvdata parameters may be passed in through here.
+        freq_params: Dictionary of frequency parameters
+
     Returns:
-        uv_obj, beam_list, beam_dict
+        dict of array properties:
+            |  channel_width: (float) Frequency channel spacing in Hz
+            |  Nfreqs: (int) Number of frequencies
+            |  freq_array: (dtype float, ndarray, shap=(Nspws, Nfreqs)) Frequency channel centers in Hz
     """
-    uvparam_dict = {}
-    if isinstance(obs_params, str):
-        param_dict = _config_str_to_dict(obs_params)
-    else:
-        param_dict = obs_params
-
-    # Parse telescope parameters
-    tele_dict = param_dict['telescope']
-    tele_params, beam_list, beam_dict = parse_telescope_params(tele_dict, param_dict['config_path'])
-    extra_keywords = {'obs_param_file': param_dict['param_file'],
-                      'telescope_config_file': tele_params['telescope_config_name'],
-                      'antenna_location_file': tele_params['array_layout']}
-
-    uvparam_dict.update(tele_params)
-    uvparam_dict['extra_keywords'] = extra_keywords
-
-    # Parse frequency structure
-    freq_params = param_dict['freq']
 
     freq_keywords = ['freq_array', 'start_freq', 'end_freq', 'Nfreqs',
                      'channel_width', 'bandwidth']
@@ -671,9 +650,50 @@ def initialize_uvdata_from_params(obs_params):
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
 
-    uvparam_dict['channel_width'] = freq_params['channel_width']
-    uvparam_dict['freq_array'] = freq_arr
-    uvparam_dict['Nfreqs'] = freq_params['Nfreqs']
+    return_dict = {}
+    return_dict['Nfreqs'] = freq_params['Nfreqs']
+    return_dict['freq_array'] = freq_arr
+    return_dict['channel_width'] = freq_params['channel_width']
+
+    return return_dict
+
+
+def initialize_uvdata_from_params(obs_params):
+    """
+    Construct a uvdata object from parameters in a valid yaml file.
+
+    Sufficient information must be provided by the parameters to define time and frequency arrays
+    and verify the channel widths and time steps. This will error if insufficient or incompatible
+    parameters are defined.
+
+    The parameter dictionary may contain any valid UVData attributes as well.
+
+    Args:
+        obs_params: Either an obs_param file name or a dictionary of parameters read in.
+                    Any uvdata parameters may be passed in through here.
+    Returns:
+        uv_obj, beam_list, beam_dict
+    """
+    uvparam_dict = {}
+    if isinstance(obs_params, str):
+        param_dict = _config_str_to_dict(obs_params)
+    else:
+        param_dict = obs_params
+
+    # Parse telescope parameters
+    tele_dict = param_dict['telescope']
+    tele_params, beam_list, beam_dict = parse_telescope_params(tele_dict, param_dict['config_path'])
+    uvparam_dict.update(tele_params)
+
+    # Use extra_keywords to pass along required paths for file history.
+    extra_keywords = {'obs_param_file': param_dict['param_file'],
+                      'telescope_config_file': tele_params['telescope_config_name'],
+                      'antenna_location_file': tele_params['array_layout']}
+    uvparam_dict['extra_keywords'] = extra_keywords
+
+    # Parse frequency structure
+    freq_dict = param_dict['freq']
+    uvparam_dict.update(parse_frequency_params(freq_dict))
 
     # Parse time structure
     time_params = param_dict['time']
