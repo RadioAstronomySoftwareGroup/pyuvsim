@@ -467,7 +467,7 @@ def run_uvsim(params, return_uv=False):
     source_list_name = None
 
     if rank == 0:
-        input_uv, beam_list, beam_dict, beam_ids = simsetup.initialize_uvdata_from_params(params)
+        input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(params)
         catalog, source_list_name = simsetup.initialize_catalog_from_params(params, input_uv)
 
     input_uv = comm.bcast(input_uv, root=0)
@@ -480,7 +480,7 @@ def run_uvsim(params, return_uv=False):
     if rank == 0:
         with open(params, 'r') as pfile:
             param_dict = yaml.safe_load(pfile)
-        simsetup.write_uvdata(uv_out, param_dict, dryrun=return_uv)
+        simutils.write_uvdata(uv_out, param_dict, dryrun=return_uv)
     if return_uv:
         return uv_out
     comm.Barrier()

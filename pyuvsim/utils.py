@@ -153,8 +153,7 @@ def strip_extension(filepath):
     file_list = filepath.split('.')
     ext = file_list[-1]
     # miriad files might not have an extension
-    # support miriad, uvfits, and uvh5
-    # yaml is included for the tests
+    # limited list of recognized extensions
     if ext not in ['uvfits', 'uvh5', 'yaml']:
         return filepath, ''
     return ".".join(file_list[:-1]), '.' + file_list[-1]
@@ -174,3 +173,68 @@ def check_file_exists_and_increment(filepath):
         filepath = "{}_{}".format(base_filepath, n) + ext
         n += 1
     return filepath
+
+
+def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_format=None):
+    """
+    Parse output file information from parameters and write uvfits to file.
+
+    Args:
+        uv_obj: UVData object to write out.
+        param_dict: parameter dictionary defining output path, filename, and
+                    whether or not to clobber.
+        return_filename: (Default false) Return the file path
+        dryrun: (Default false) Don't write to file.
+        out_format: (Default uvfits) Write as uvfits/miriad/uvh5
+
+    Returns:
+        File path, if return_filename is True
+    """
+    if 'filing' in param_dict.keys():
+        param_dict = param_dict['filing']
+    if 'outdir' not in param_dict:
+        param_dict['outdir'] = '.'
+    if 'output_format' in param_dict:
+        out_format = param_dict['output_format']
+    elif out_format is None:
+        out_format = 'uvfits'
+
+    if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
+        outfile_prefix = ""
+        outfile_suffix = "results"
+        if 'outfile_prefix' in param_dict:
+            outfile_prefix = param_dict['outfile_prefix']
+        if 'outfile_suffix' in param_dict:
+            outfile_suffix = param_dict['outfile_suffix']
+        outfile_name = "_".join([outfile_prefix, outfile_suffix])
+        outfile_name = os.path.join(param_dict['outdir'], outfile_name)
+    else:
+        outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
+
+    if not os.path.exists(param_dict['outdir']):
+        os.makedirs(param_dict['outdir'])
+
+    if out_format == 'uvfits':
+        if not outfile_name.endswith(".uvfits"):
+            outfile_name = outfile_name + ".uvfits"
+
+    if out_format == 'uvh5':
+        if not outfile_name.endswith(".uvh5"):
+            outfile_name = outfile_name + ".uvh5"
+
+    noclobber = ('clobber' not in param_dict) or not bool(param_dict['clobber'])
+    if noclobber:
+        outfile_name = check_file_exists_and_increment(outfile_name)
+
+    print('Outfile path: ', outfile_name)
+    if not dryrun:
+        if out_format == 'uvfits':
+            uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
+        elif out_format == 'miriad':
+            uv_obj.write_miriad(outfile_name, clobber=not noclobber)
+        elif out_format == 'uvh5':
+            uv_obj.write_uvh5(outfile_name)
+        else:
+            raise ValueError("Invalid output format. Options are \" uvfits\", \"uvh5\", or \"miriad\"")
+    if return_filename:
+        return outfile_name
