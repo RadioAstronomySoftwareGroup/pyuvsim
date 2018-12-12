@@ -152,7 +152,7 @@ def strip_extension(filepath, ext=None):
         return filepath, ''
     file_list = filepath.split('.')
     if ext is not None:
-        return filepath[:-len(ext)], ext
+        return filepath[:-len(ext) - 1], '.' + ext
     ext = file_list[-1]
     # miriad files might not have an extension
     # limited list of recognized extensions
@@ -166,7 +166,7 @@ def check_file_exists_and_increment(filepath, extension=None):
         Given filepath (path + filename), check if it exists. If so, add a _1
         at the end, if that exists add a _2, and so on.
     """
-    base_filepath, ext = strip_extension(filepath, ext)
+    base_filepath, ext = strip_extension(filepath, extension)
     bf_list = base_filepath.split('_')
     if bf_list[-1].isdigit():
         base_filepath = '_'.join(bf_list[:-1])
