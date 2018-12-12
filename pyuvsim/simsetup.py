@@ -658,6 +658,89 @@ def parse_frequency_params(freq_params):
     return return_dict
 
 
+def parse_time_params(time_params):
+    """
+    Parse the "time" section of obsparam.
+
+    Args:
+        time_params: Dictionary of time parameters
+
+    Returns:
+        dict of array properties:
+            |  channel_width: (float) Frequency channel spacing in Hz
+            |  Nfreqs: (int) Number of frequencies
+            |  freq_array: (dtype float, ndarray, shap=(Nspws, Nfreqs)) Frequency channel centers in Hz
+    """
+
+    return_dict = {}
+
+    time_keywords = ['start_time', 'end_time', 'Ntimes', 'integration_time',
+                     'duration_hours', 'duration_days']
+    st, et, nt, it, dh, dd = [tk in time_params for tk in time_keywords]
+    kws_used = ", ".join(time_params.keys())
+    daysperhour = 1 / 24.
+    hourspersec = 1 / 60.**2
+    dayspersec = daysperhour * hourspersec
+
+    if dh and not dd:
+        time_params['duration'] = time_params['duration_hours'] * daysperhour
+        dd = True
+    elif dd:
+        time_params['duration'] = time_params['duration_days']
+
+    if not nt:
+        if not it:
+            raise ValueError("Either integration_time or Ntimes must be "
+                             "included in parameters:" + kws_used)
+        if st and et:
+            time_params['duration'] = time_params['end_time'] - time_params['start_time']
+            dd = True
+        if dd:
+            time_params['Ntimes'] = int(np.round(time_params['duration']
+                                                 / (time_params['integration_time']
+                                                    * dayspersec))) + 1
+        else:
+            raise ValueError("Either duration or time bounds must be specified: "
+                             + kws_used)
+
+    if not it:
+        if not dd:
+            raise ValueError("Either duration or integration time "
+                             "must be specified: " + kws_used)
+        time_params['integration_time'] = (24. * 3600.) * (time_params['duration']
+                                                           / float(time_params['Ntimes'] - 1))  # In seconds
+
+    inttime_days = time_params['integration_time'] * 1 / (24. * 3600.)
+    inttime_days = np.trunc(inttime_days * 24 * 3600) / (24. * 3600.)
+    if not dd:
+        time_params['duration'] = inttime_days * (time_params['Ntimes'])
+        dd = True
+    if not st:
+        if et and dd:
+            time_params['start_time'] = time_params['end_time'] - time_params['duration']
+    if not et:
+        if st and dd:
+            time_params['end_time'] = time_params['start_time'] + time_params['duration']
+    if not (st or et):
+        raise ValueError("Either a start or end time must be specified: " + kws_used)
+
+    time_arr = np.linspace(time_params['start_time'],
+                           time_params['end_time'],
+                           time_params['Ntimes'], endpoint=False)
+
+    if time_params['Ntimes'] != 1:
+        assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=1e-4)   # To nearest second
+
+    return_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
+                                       * time_params['integration_time'])
+    return_dict['time_array'] = time_arr
+    return_dict['Ntimes'] = time_params['Ntimes']
+    return_dict['Nspws'] = 1
+    return_dict['Npols'] = 4
+
+    return return_dict
+
+
 def initialize_uvdata_from_params(obs_params):
     """
     Construct a uvdata object from parameters in a valid yaml file.
@@ -696,84 +779,22 @@ def initialize_uvdata_from_params(obs_params):
     uvparam_dict.update(parse_frequency_params(freq_dict))
 
     # Parse time structure
-    time_params = param_dict['time']
+    time_dict = param_dict['time']
+    uvparam_dict.update(parse_time_params(time_dict))
 
-    time_keywords = ['start_time', 'end_time', 'Ntimes', 'integration_time',
-                     'duration_hours', 'duration_days']
-    st, et, nt, it, dh, dd = [tk in time_params for tk in time_keywords]
-    kws_used = ", ".join(time_params.keys())
-    daysperhour = 1 / 24.
-    hourspersec = 1 / 60.**2
-    dayspersec = daysperhour * hourspersec
-
-    if dh and not dd:
-        time_params['duration'] = time_params['duration_hours'] * daysperhour
-        dd = True
-    elif dd:
-        time_params['duration'] = time_params['duration_days']
-
-    if not nt:
-        if not it:
-            raise ValueError("Either integration_time or Ntimes must be "
-                             "included in parameters:" + kws_used)
-        if st and et:
-            time_params['duration'] = time_params['end_time'] - time_params['start_time']
-            dd = True
-        if dd:
-            time_params['Ntimes'] = int(np.round(time_params['duration']
-                                                 / (time_params['integration_time']
-                                                    * dayspersec))) + 1
-        else:
-            raise ValueError("Either duration or time bounds must be specified: "
-                             + kws_used)
-
-    if not it:
-        if not dd:
-            raise ValueError("Either duration or integration time "
-                             "must be specified: " + kws_used)
-        time_params['integration_time'] = (24. * 3600.) * (time_params['duration']
-                                                           / float(time_params['Ntimes']))  # In seconds
-
-    inttime_days = time_params['integration_time'] * 1 / (24. * 3600.)
-    inttime_days = np.trunc(inttime_days * 24 * 3600) / (24. * 3600.)
-    if not dd:
-        time_params['duration'] = inttime_days * (time_params['Ntimes'])
-        dd = True
-    if not st:
-        if et and dd:
-            time_params['start_time'] = time_params['end_time'] - time_params['duration']
-    if not et:
-        if st and dd:
-            time_params['end_time'] = time_params['start_time'] + time_params['duration']
-    if not (st or et):
-        raise ValueError("Either a start or end time must be specified: " + kws_used)
-
-    time_arr = np.linspace(time_params['start_time'],
-                           time_params['end_time'],
-                           time_params['Ntimes'], endpoint=False)
-
-    if time_params['Ntimes'] != 1:
-        assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=1e-4)   # To nearest second
-
-    Nbl = (uvparam_dict['Nants_data'] + 1) * uvparam_dict['Nants_data'] // 2
-    time_arr = np.sort(np.tile(time_arr, Nbl))
-    uvparam_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
-                                        * time_params['integration_time'])
-    uvparam_dict['time_array'] = time_arr
-    uvparam_dict['Ntimes'] = time_params['Ntimes']
-    uvparam_dict['Nspws'] = 1
-    uvparam_dict['Npols'] = 4
     # Now make a UVData object with these settings built in.
     # The syntax below allows for other valid uvdata keywords to be passed
     #  without explicitly setting them here.
 
     if 'object_name' not in param_dict:
         tloc = EarthLocation.from_geocentric(*uvparam_dict['telescope_location'], unit='m')
-        time = Time(time_arr[0], scale='utc', format='jd')
+        time = Time(uvparam_dict['time_array'][0], scale='utc', format='jd')
         src, _ = create_mock_catalog(time, arrangement='zenith', array_location=tloc)
         src = src[0]
         source_file_name = os.path.basename(param_dict['sources']['catalog'])
         uvparam_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(source_file_name, src.ra.deg, src.dec.deg)
+    else:
+        uvparam_dict['object_name'] = param_dict['object_name']
 
     uv_obj = UVData()
     # use the __iter__ function on UVData to get list of UVParameters on UVData
@@ -790,6 +811,8 @@ def initialize_uvdata_from_params(obs_params):
 
     uv_obj.baseline_array = np.tile(bls, uv_obj.Ntimes)
     uv_obj.Nbls = bls.size
+    uv_obj.time_array = np.repeat(uv_obj.time_array, uv_obj.Nbls)
+    uv_obj.integration_time = np.repeat(uv_obj.integration_time, uv_obj.Nbls)
     uv_obj.Nblts = uv_obj.Nbls * uv_obj.Ntimes
 
     uv_obj.ant_1_array, uv_obj.ant_2_array = \
