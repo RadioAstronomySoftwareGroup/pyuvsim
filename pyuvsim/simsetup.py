@@ -711,7 +711,6 @@ def parse_time_params(time_params):
                                                            / float(time_params['Ntimes'] - 1))  # In seconds
 
     inttime_days = time_params['integration_time'] * 1 / (24. * 3600.)
-    inttime_days = np.trunc(inttime_days * 24 * 3600) / (24. * 3600.)
     if not dd:
         time_params['duration'] = inttime_days * (time_params['Ntimes'])
         dd = True
