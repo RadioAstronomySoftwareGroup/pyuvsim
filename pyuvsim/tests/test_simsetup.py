@@ -347,11 +347,14 @@ def test_uvfits_to_config():
     # Read uvfits file to params.
     uv0 = UVData()
     uv0.read_uvfits(longbl_uvfits_file)
+    warningmessages = ['The default for the `center` keyword has changed. Previously it defaulted to True, using the median antennna location; now it defaults to False, using the telescope_location.',
+                       'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3). Historically this function has supported (3, Npts) arrays, please verify that array ordering is as expected.']
     path, telescope_config, layout_fname = \
         uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_telescope_config,
                              [uv0, herabeam_default], dict(path_out=opath, return_names=True),
-                             category=PendingDeprecationWarning,
-                             message='The enu array in ECEF_from_ENU is being interpreted as (Npts, 3)')
+                             nwarnings=2,
+                             category=[DeprecationWarning, PendingDeprecationWarning],
+                             message=warningmessages)
     uv0.integration_time[-1] += 2  # Test case of non-uniform integration times
     uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_config_file, [uv0], dict(
         telescope_config_name=os.path.join(path, telescope_config),
@@ -373,7 +376,9 @@ def test_uvfits_to_config():
                              dict(telescope_config_name=telescope_config,
                                   layout_csv_name=layout_fname,
                                   path_out=opath, return_names=True),
-                             category=PendingDeprecationWarning)
+                             category=[DeprecationWarning, PendingDeprecationWarning],
+                             nwarnings=2,
+                             message=warningmessages)
     pyuvsim.simsetup.uvdata_to_config_file(uv1, param_filename=second_param_filename,
                                            telescope_config_name=os.path.join(path, telescope_config),
                                            layout_csv_name=os.path.join(path, layout_fname),
