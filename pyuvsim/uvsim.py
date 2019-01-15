@@ -165,7 +165,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     # There will always be relatively few antennas, so just build the full list.
     antenna_names = input_uv.antenna_names
     antennas = []
-    antpos_enu, antnums = input_uv.get_ENU_antpos(center=False)
+    antpos_enu, antnums = input_uv.get_ENU_antpos()
     for num, antname in enumerate(antenna_names):
         if beam_dict is None:
             beam_id = 0
