@@ -20,6 +20,9 @@
 - Which functions to profile is set by listing them by name, instead of by function decorators.
 - Improved test coverage
 
+### Fixed
+- Using the correct Bessel function in the definition of the Airy beam
+
 ### Deprecated
 - Simulation directly off of uvfits files.
 
