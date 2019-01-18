@@ -893,7 +893,7 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
         layout_csv_path = check_file_exists_and_increment(os.path.join(path_out, uvdata_in.telescope_name + "_layout.csv"))
         layout_csv_name = os.path.basename(layout_csv_path)
 
-    antpos_enu, antenna_numbers = uvdata_in.get_ENU_antpos(center=False)
+    antpos_enu, antenna_numbers = uvdata_in.get_ENU_antpos()
 
     e, n, u = antpos_enu.T
     beam_ids = np.zeros_like(e).astype(int)

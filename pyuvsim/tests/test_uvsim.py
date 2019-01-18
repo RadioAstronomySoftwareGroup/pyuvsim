@@ -371,8 +371,8 @@ def test_offzenith_source_multibl_uvfits():
 
     # get antennas positions into ENU
     antpos, ants = uvtest.checkWarnings(hera_uv.get_ENU_antpos,
-                                        message='The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)',
-                                        category=PendingDeprecationWarning)
+                                        category=[DeprecationWarning, PendingDeprecationWarning],
+                                        nwarnings=2)
     antenna1 = pyuvsim.Antenna('ant1', ants[0], np.array(antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna('ant2', ants[1], np.array(antpos[1, :]), 0)
     antenna3 = pyuvsim.Antenna('ant3', ants[2], np.array(antpos[2, :]), 0)
@@ -457,7 +457,8 @@ def test_file_to_tasks():
     Ntasks = Nblts * Nfreqs * Nsrcs
     beam_dict = None
 
-    uvtask_list = list(pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict))
+    taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
+    uvtask_list = uvtest.checkWarnings(list, [taskiter], category=DeprecationWarning)
 
     tlist = copy.deepcopy(uvtask_list)
 
@@ -579,7 +580,8 @@ def test_gather():
     Ntasks = Nblts * Nfreqs * Nsrcs
     beam_dict = dict(zip(hera_uv.antenna_names, [0] * hera_uv.Nants_data))
 
-    uvtask_list = list(pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict))
+    taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
+    uvtask_list = uvtest.checkWarnings(list, [taskiter], category=DeprecationWarning)
 
     uv_out = pyuvsim.init_uvdata_out(hera_uv, 'zenith_source',
                                      obs_param_file='', telescope_config_file='', antenna_location_file='')
@@ -618,7 +620,8 @@ def test_local_task_gen():
     beam_dict = None
 
     # Copy sources and beams so we don't accidentally reuse quantities.
-    uvtask_list = list(pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict))
+    taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
+    uvtask_list = uvtest.checkWarnings(list, [taskiter], category=DeprecationWarning)
     uvtask_iter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, copy.deepcopy(sources), copy.deepcopy(beam_list), beam_dict)
 
     # Check error conditions
