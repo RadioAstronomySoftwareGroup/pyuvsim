@@ -106,7 +106,7 @@ def test_airy_beam():
     za_grid, f_grid = np.meshgrid(interp_zas, freq_vals)
     xvals = diameter_m / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8
     airy_vals = np.zeros_like(xvals)
-    airy_vals[xvals > 0.] = 2. * j1(xvals[xvals > 0.]) / xvals[xvals > 0.]
+    airy_vals[xvals > 0.] = (2. * j1(xvals[xvals > 0.]) / xvals[xvals > 0.])**2
     airy_vals[xvals == 0.] = 1.
 
     expected_data[1, 0, 0, :, :] = airy_vals

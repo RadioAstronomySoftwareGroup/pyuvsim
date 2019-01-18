@@ -84,7 +84,7 @@ class AnalyticBeam(object):
             za_grid, f_grid = np.meshgrid(za_array, freq_array)
             xvals = self.diameter / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8
             values = np.zeros_like(xvals)
-            values[xvals > 0.] = 2. * j1(xvals[xvals > 0.]) / xvals[xvals > 0.]
+            values[xvals > 0.] = (2. * j1(xvals[xvals > 0.]) / xvals[xvals > 0.])**2
             values[xvals == 0.] = 1.
             interp_data[1, 0, 0, :, :] = values
             interp_data[0, 0, 1, :, :] = values
