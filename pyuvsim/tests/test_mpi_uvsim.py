@@ -63,7 +63,7 @@ def test_run_param_uvsim():
     # Test vot and txt catalogs for parameter simulation
 
     uv_ref = UVData()
-    uvtest.checkWarnings(uv_ref.read_uvfits, [os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits')], message='antenna_diameters is not set')
+    uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
     uv_ref.unphase_to_drift(use_ant_pos=True)
 
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
@@ -90,7 +90,6 @@ def test_run_param_uvsim():
     uvtest.checkWarnings(uv_new_vot.read_uvfits, [tempfilename], message='antenna_diameters is not set')
     uv_new_vot.unphase_to_drift(use_ant_pos=True)
     os.remove(tempfilename)
-
     uv_new_txt.history = uv_ref.history  # History includes irrelevant info for comparison
     uv_new_vot.history = uv_ref.history
     uv_new_vot.object_name = uv_ref.object_name
