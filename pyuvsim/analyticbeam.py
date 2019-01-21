@@ -86,7 +86,7 @@ class AnalyticBeam(object):
             values = np.zeros_like(xvals)
             nz = xvals != 0.
             ze = xvals == 0.
-            values[nz] = (2. * j1(xvals[nz]) / xvals[nz])**2
+            values[nz] = 2. * j1(xvals[nz]) / xvals[nz]
             values[ze] = 1.
             interp_data[1, 0, 0, :, :] = values
             interp_data[0, 0, 1, :, :] = values

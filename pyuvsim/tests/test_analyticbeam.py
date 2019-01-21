@@ -108,7 +108,7 @@ def test_airy_beam():
     airy_vals = np.zeros_like(xvals)
     nz = xvals != 0.
     ze = xvals == 0.
-    airy_vals[nz] = (2. * j1(xvals[nz]) / xvals[nz])**2
+    airy_vals[nz] = 2. * j1(xvals[nz]) / xvals[nz]
     airy_vals[ze] = 1.
 
     expected_data[1, 0, 0, :, :] = airy_vals
