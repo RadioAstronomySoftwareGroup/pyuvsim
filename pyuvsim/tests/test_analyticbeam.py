@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import numpy as np
 import nose.tools as nt
-from scipy.special import spherical_jn as jn
+from scipy.special import j1
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy import units
@@ -106,8 +106,10 @@ def test_airy_beam():
     za_grid, f_grid = np.meshgrid(interp_zas, freq_vals)
     xvals = diameter_m / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8
     airy_vals = np.zeros_like(xvals)
-    airy_vals[xvals > 0.] = 2. * jn(1, xvals[xvals > 0.]) / xvals[xvals > 0.]
-    airy_vals[xvals == 0.] = 1.
+    nz = xvals != 0.
+    ze = xvals == 0.
+    airy_vals[nz] = (2. * j1(xvals[nz]) / xvals[nz])**2
+    airy_vals[ze] = 1.
 
     expected_data[1, 0, 0, :, :] = airy_vals
     expected_data[0, 0, 1, :, :] = airy_vals
