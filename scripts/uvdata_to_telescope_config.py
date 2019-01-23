@@ -25,7 +25,7 @@ parser.add_argument('-b', '--beam_filepath', type=str, default=os.path.join(SIM_
 args = parser.parse_args()
 
 uvd = UVData()
-uvd.read_uvfits(args.file_in[0])
+uvd.read(args.file_in[0])
 
 pyuvsim.simsetup.uvdata_to_telescope_config(uvd, args.beam_filepath, layout_csv_name=args.layout_csv_name,
                                             telescope_config_name=args.telescope_config_name,
