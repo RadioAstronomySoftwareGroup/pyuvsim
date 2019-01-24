@@ -36,7 +36,7 @@ affiliations:
    index: 3
  - name: Brown University, Physics Department
    index: 4
- - name: National Radio Astronomical Observatory
+ - name: National Radio Astronomy Observatory
    index: 5
  - name: University of Pennsylvania, Physics Department
    index: 6
