@@ -59,7 +59,7 @@ def _config_str_to_dict(config_str):
 
 def array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitude_deg=None, horizon_buffer=0.04364, min_flux=None, max_flux=None):
     """
-    Generate list of source.Source objects from a recarray, performming flux and horizon selections.
+    Generate list of source.Source objects from a recarray, performing flux and horizon selections.
 
     Args:
         catalog_table: recarray of source catalog information. Must have columns with names
@@ -544,12 +544,18 @@ def parse_telescope_params(tele_params, config_path):
         for a in which_ants:
             beam_dict[a] = beamID
         if beam_model in AnalyticBeam.supported_types:
+            # Gaussian beam requires either diameter or sigma
+            # Airy beam requires diameter
             if beam_model == 'gaussian':
                 try:
-                    sigma = telconfig['sigma']
-                    beam_model = beam_model + '_' + str(sigma)
+                    diam = telconfig['diameter']
+                    beam_model = '_'.join([beam_model, 'diam', str(diam)])
                 except KeyError:
-                    raise KeyError("Missing sigma for gaussian beam.")
+                    try:
+                        sigma = telconfig['sigma']
+                        beam_model = '_'.join([beam_model, 'sig', str(sigma)])
+                    except KeyError:
+                        raise KeyError("Missing shape parameter for gaussian beam (diameter or sigma).")
             if beam_model == 'airy':
                 try:
                     diam = telconfig['diameter']
@@ -996,16 +1002,17 @@ def beam_string_to_object(beam_model):
         Make a beam object given an identifying string.
     """
     # Identify analytic beams
-    if beam_model.startswith('gaussian'):
-        sigma = float(beam_model.split("_")[1])
-        return AnalyticBeam('gaussian', sigma=sigma)
-    elif beam_model.startswith('airy'):
-        diameter = float(beam_model.split("_")[1])
-        return AnalyticBeam('airy', diameter=diameter)
-    elif beam_model.startswith('uniform'):
-        return AnalyticBeam('uniform')
-    else:
-        path = beam_model   # beam_model = path to beamfits
+
+    if beam_model.startswith('uniform'):
+        return AnalyticBeam(beam_model)
+
+    model, par, val = beam_model.split('_')
+    if par == 'sig':
+        return AnalyticBeam(beam_model, sigma=float(val))
+    if par == 'diam':
+        return AnalyticBeam(beam_model, diameter=float(val))
+
+    path = beam_model   # beam_model = path to beamfits
     uvb = UVBeam()
     uvb.read_beamfits(path)
     return uvb
