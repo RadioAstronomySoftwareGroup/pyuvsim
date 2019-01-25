@@ -22,6 +22,11 @@ def dummy_source(time, telescope_location):
 
 def test_calc_basis_rotation_matrix():
 
+    """
+    This tests whether the 3-D rotation matrix from RA/Dec to Alt/Az is
+    actually a rotation matrix (R R^T = R^T R = I)
+    """
+
     time = Time('2018-01-01 00:00')
     telescope_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
 
@@ -31,9 +36,16 @@ def test_calc_basis_rotation_matrix():
 
     # This is not a very strenous test :)
     assert(np.allclose(np.matmul(basis_rot_matrix, basis_rot_matrix.T), np.eye(3), atol=1.e-5))
+    assert(np.allclose(np.matmul(basis_rot_matrix.T, basis_rot_matrix), np.eye(3), atol=1.e-5))
 
 
 def test_calc_vector_rotation():
+
+    """
+    This checks that the 2-D coherency rotation matrix (which we call the
+    "vector" rotation) is unit determinant.  I suppose we could also have
+    checked (R R^T = R^T R = I)
+    """
 
     time = Time('2018-01-01 00:00')
     telescope_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
