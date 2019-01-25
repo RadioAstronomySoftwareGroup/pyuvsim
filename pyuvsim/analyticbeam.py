@@ -5,7 +5,27 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+import warnings
 from scipy.special import j1
+
+
+def diameter_to_sigma(diam, freqs):
+    """
+    Find the stddev of a gaussian with fwhm equal to that of
+    an Airy disk's main lobe for a given diameter.
+    """
+
+    if not isinstance(freqs, np.ndarray):
+        freqs = np.array([freqs]).dtype(np.float)
+
+    c_ms = 299792458.
+    wavelengths = c_ms / freqs
+
+    scalar = 1.616339948        # Found by fitting a Gaussian to an Airy disk function
+
+    sigma = np.arcsin(scalar * wavelengths / (np.pi * diam)) * 2 / 2.355
+
+    return sigma
 
 
 class AnalyticBeam(object):
@@ -28,6 +48,10 @@ class AnalyticBeam(object):
             raise ValueError('type not recognized')
 
         self.sigma = sigma
+        if self.type == 'gaussian' and self.sigma is not None:
+            warnings.warn("Achromatic gaussian beams will not be supported in the future."
+                          + "Define your gaussian beam by a dish diameter from now on.", PendingDeprecationWarning)
+
         self.diameter = diameter
         self.data_normalization = 'peak'
 
@@ -64,14 +88,18 @@ class AnalyticBeam(object):
             interp_data[0, 0, 0, :, :] = 1
             interp_basis_vector = None
         elif self.type == 'gaussian':
-            if self.sigma is None:
-                raise ValueError("Sigma needed for gaussian beam -- units: radians")
+            if (self.diameter is None) and (self.sigma is None):
+                raise ValueError("Dish diameter needed for gaussian beam -- units: meters")
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
             # gaussian beam only depends on Zenith Angle (symmetric is azimuth)
-            # standard deviation of sigma is refereing to the standard deviation of e-field beam!
-            values = np.exp(-(za_array**2) / (2 * self.sigma**2))
+            # standard deviation of sigma is referring to the standard deviation of e-field beam!
             # copy along freq. axis
-            values = np.broadcast_to(values, (freq_array.size, az_array.size))
+            if self.diameter is not None:
+                sigmas = diameter_to_sigma(diameter, freq_array)
+                values = np.exp(-(za_array[np.newaxis, ...]**2) / (2 * sigma[:, np.newaxis]**2))
+            elif self.sigma is not None:
+                values = np.exp(-(za_array**2) / (2 * self.sigma**2))
+                values = np.broadcast_to(values, (freq_array.size, az_array.size))
             interp_data[1, 0, 0, :, :] = values
             interp_data[0, 0, 1, :, :] = values
             interp_data[1, 0, 1, :, :] = values
@@ -79,7 +107,7 @@ class AnalyticBeam(object):
             interp_basis_vector = None
         elif self.type == 'airy':
             if self.diameter is None:
-                raise ValueError("Diameter needed for airy beam -- units: meters")
+                raise ValueError("Dish diameter needed for airy beam -- units: meters")
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
             za_grid, f_grid = np.meshgrid(za_array, freq_array)
             xvals = self.diameter / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8

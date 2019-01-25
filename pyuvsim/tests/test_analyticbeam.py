@@ -154,7 +154,7 @@ def test_uv_beam_widths():
         nt.assert_true(np.isclose(diameter_m / lams[i], kern_radius, rtol=0.5))
 
 
-def test_gaussian_beam():
+def test_achromatic_gaussian_beam():
     sigma_rad = Angle('5d').to('rad').value
     beam = pyuvsim.AnalyticBeam('gaussian', sigma=sigma_rad)
     beam.peak_normalize()
