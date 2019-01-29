@@ -56,3 +56,5 @@ Currently, ``pyuvsim`` supports simulating point sources from the GLEAM catalog 
 
 This work was supported in part by NASA Award #80NSSC18K0389.
 
+
+# References
