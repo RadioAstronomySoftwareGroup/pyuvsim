@@ -15,7 +15,7 @@ authors:
  - name: Daniel C. Jacobs
    orcid: 0000-0002-0917-2269
    affiliation: 3, 7
- - name: Matthew Kolopanis
+ - name: Matthew J. Kolopanis
    orcid: 0000-0002-2950-2974
    affiliation: 3, 7
  - name: Jonathan C. Pober
