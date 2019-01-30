@@ -65,14 +65,10 @@ def test_uniform_beam():
 
 
 def test_airy_beam():
-    diameter_m = 140.
+    diameter_m = 200.
     beam = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
-
-    time = Time('2018-03-01 00:00:00', scale='utc')
-    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
-                                   height=1073.)
 
     freq_vals = np.linspace(100e6, 130e6, 20)
     lams = 3e8 / freq_vals
@@ -84,22 +80,19 @@ def test_airy_beam():
     zas[Npix // 2:] = np.linspace(zmax, 0, Npix // 2)
     azs = np.zeros(Npix)
     azs[Npix // 2:] = np.pi
-    n_freqs = len(freq_vals)
     interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array(azs),
                                                          za_array=np.array(zas),
                                                          freq_array=np.array(freq_vals))
 
-    pbeam = interpolated_beam[0, 0, 0, :, :] * interpolated_beam[1, 0, 0, :, :]
-    beam_kern = np.fft.fftshift(np.fft.fft(pbeam, axis=1), axes=1)
+    pbeam = (interpolated_beam[0, 0, 0, :, :] * interpolated_beam[1, 0, 0, :, :])
+    radpix = 2 * zmax / Npix
+    beam_kern = np.fft.fftshift(np.fft.fft(pbeam, axis=1), axes=1) * radpix
     beam_kern = np.abs(beam_kern)
     ells = np.sin(zas) * np.cos(azs)
     dl = np.diff(ells)[0]
     u_vals = np.fft.fftshift(np.fft.fftfreq(Npix, d=dl))
-#    import pylab as pl
-#    pl.plot(u_vals, beam_kern[0], marker='.')
-#    pl.show()
     for i, bk in enumerate(beam_kern):
-        # For each frequency, check kernel width in wavelengths is less than dish diameter in wavelengths
+        # For each frequency, check kernel width is less than dish diameter in wavelengths
         r1, r2 = UnivariateSpline(u_vals, bk - 0.5 * np.max(bk), s=0).roots()
         kern_fwhm = (r2 - r1)
         dish_diam = diameter_m / lams[i]
