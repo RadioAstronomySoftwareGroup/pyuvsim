@@ -28,6 +28,10 @@ class Telescope(object):
         other_vector_loc = np.array([other.location.x.to('m').value,
                                      other.location.y.to('m').value,
                                      other.location.z.to('m').value])
-        return ((np.allclose(this_vector_loc, other_vector_loc, atol=1e-3))
-                and (self.beam_list == other.beam_list)
-                and (self.name == other.name))
+        Nbeams_self = len(self.beam_list)
+        Nbeams_other = len(other.beam_list)
+        if Nbeams_self == Nbeams_other:
+            return ((np.allclose(this_vector_loc, other_vector_loc, atol=1e-3))
+                    and (np.all([self.beam_list[bi] == other.beam_list[bi] for bi in range(Nbeams_self)]))
+                    and (self.name == other.name))
+        return false
