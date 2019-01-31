@@ -546,20 +546,22 @@ def parse_telescope_params(tele_params, config_path):
         if beam_model in AnalyticBeam.supported_types:
             # Gaussian beam requires either diameter or sigma
             # Airy beam requires diameter
+            if beam_model == 'uniform':
+                beam_model = 'analytic_uniform'
             if beam_model == 'gaussian':
                 try:
                     diam = telconfig['diameter']
-                    beam_model = '_'.join([beam_model, 'diam', str(diam)])
+                    beam_model = '_'.join(['analytic', beam_model, 'diam', str(diam)])
                 except KeyError:
                     try:
                         sigma = telconfig['sigma']
-                        beam_model = '_'.join([beam_model, 'sig', str(sigma)])
+                        beam_model = '_'.join(['analytic', beam_model, 'sig', str(sigma)])
                     except KeyError:
                         raise KeyError("Missing shape parameter for gaussian beam (diameter or sigma).")
             if beam_model == 'airy':
                 try:
                     diam = telconfig['diameter']
-                    beam_model = beam_model + '_' + str(diam)
+                    beam_model = '_'.join(['analytic', beam_model, 'diam', str(diam)])
                 except KeyError:
                     raise KeyError("Missing diameter for airy beam.")
         else:
@@ -1002,15 +1004,17 @@ def beam_string_to_object(beam_model):
         Make a beam object given an identifying string.
     """
     # Identify analytic beams
+    if beam_model.startswith('analytic'):
+        if beam_model.startswith('analytic_uniform'):
+            return AnalyticBeam('uniform')
 
-    if beam_model.startswith('uniform'):
-        return AnalyticBeam(beam_model)
-
-    model, par, val = beam_model.split('_')
-    if par == 'sig':
-        return AnalyticBeam(beam_model, sigma=float(val))
-    if par == 'diam':
-        return AnalyticBeam(beam_model, diameter=float(val))
+        _, model, par, val = beam_model.split('_')
+        if par == 'sig':
+            print(model)
+            return AnalyticBeam(model, sigma=float(val))
+        if par == 'diam':
+            print(model)
+            return AnalyticBeam(model, diameter=float(val))
 
     path = beam_model   # beam_model = path to beamfits
     uvb = UVBeam()

@@ -95,8 +95,8 @@ class AnalyticBeam(object):
             # standard deviation of sigma is referring to the standard deviation of e-field beam!
             # copy along freq. axis
             if self.diameter is not None:
-                sigmas = diameter_to_sigma(diameter, freq_array)
-                values = np.exp(-(za_array[np.newaxis, ...]**2) / (2 * sigma[:, np.newaxis]**2))
+                sigmas = diameter_to_sigma(self.diameter, freq_array)
+                values = np.exp(-(za_array[np.newaxis, ...]**2) / (2 * sigmas[:, np.newaxis]**2))
             elif self.sigma is not None:
                 values = np.exp(-(za_array**2) / (2 * self.sigma**2))
                 values = np.broadcast_to(values, (freq_array.size, az_array.size))
