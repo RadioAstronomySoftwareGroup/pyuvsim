@@ -165,8 +165,8 @@ def check_param_reader(config_num):
 
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
 
-        params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nosigma.yaml')
-        nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, params_bad)
+        #params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nosigma.yaml')
+        #nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, params_bad)
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml')
         nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, params_bad)
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml')
