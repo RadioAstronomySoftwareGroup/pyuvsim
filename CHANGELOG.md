@@ -23,6 +23,7 @@
 - Coarse horizon cut for reduced computational load.
 - Selection keys in obsparam files (valid options for UVData.select)
 - New batch scripts for profiling jobs on a SLURM-managed cluster, and plotting the results.
+- Checking the beam kernel width makes sense for Airy beams
 
 ### Changed
 - Rename write_uvfits to write_uvdata
