@@ -23,8 +23,3 @@
     1 time
     1 freq
     = 1.844736 MTasks
-
-
-To Do:
-    Write a wrapper that will do the MPI jobs and compile runtime data.
-        >> Collect slurm job IDs, runtime, maxRSS, NNodes, NTasks
