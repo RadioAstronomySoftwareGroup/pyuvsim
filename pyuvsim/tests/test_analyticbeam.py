@@ -125,34 +125,36 @@ def test_uv_beam_widths():
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
 
-    freq_vals = np.linspace(100e6, 130e6, 20)
+    Nfreqs = 20
+    freq_vals = np.linspace(100e6, 130e6, Nfreqs)
     lams = 3e8 / freq_vals
 
-    Npix = 1000
-    zmax = np.radians(80)  # Degrees
-    zas = np.zeros(Npix)
-    zas[:Npix // 2] = np.linspace(0, zmax, Npix // 2)
-    zas[Npix // 2:] = np.linspace(zmax, 0, Npix // 2)
-    azs = np.zeros(Npix)
-    azs[Npix // 2:] = np.pi
+    Npix = 700
+    zmax = np.radians(40)  # Degrees
+    x, y = np.meshgrid(range(-Npix // 2, Npix // 2), range(-Npix // 2, Npix // 2))
+    r = np.sqrt(x**2 + y**2) / float(Npix)
+    zas = 2 * r * zmax
+    azs = np.arctan2(y, x)
     interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array(azs),
                                                          za_array=np.array(zas),
                                                          freq_array=np.array(freq_vals))
 
-    pbeam = (interpolated_beam[0, 0, 0, :, :] * interpolated_beam[1, 0, 0, :, :])
-    radpix = 2 * zmax / Npix
-    beam_kern = np.fft.fftshift(np.fft.fft(pbeam, axis=1), axes=1) * radpix
-    beam_kern = np.abs(beam_kern)
-    ells = np.sin(zas) * np.cos(azs)
-    dl = np.diff(ells)[0]
-    u_vals = np.fft.fftshift(np.fft.fftfreq(Npix, d=dl))
+    ebeam = (interpolated_beam[0, 0, 0, :, :])
+    ebeam = ebeam.reshape(Nfreqs, Npix, Npix)
+    beam_kern = np.fft.fft2(ebeam, axes=(1, 2))
+    beam_kern = np.fft.fftshift(beam_kern, axes=(1, 2))
+
+    upix = np.pi / (2 * zmax)   # 2*zmax = FoV
+    uvals = np.arange(-Npix // 2, Npix // 2) * upix
     for i, bk in enumerate(beam_kern):
+        thresh = np.abs(bk[Npix // 2, Npix // 2]) * 0.01    # Cutoff at 1% of the center value in Fourier space.
+        points = np.sum(np.abs(bk) >= thresh)
+        area = np.sum(points) * upix**2
+        kern_radius = np.sqrt(area / np.pi)
+
         # For each frequency, check kernel width is less than dish diameter in wavelengths
-        r1, r2 = UnivariateSpline(u_vals, bk - 0.5 * np.max(bk), s=0).roots()
-        kern_fwhm = (r2 - r1)
-        dish_diam = diameter_m / lams[i]
-        print(dish_diam, kern_fwhm)
-        nt.assert_true(kern_fwhm < dish_diam)
+        nt.assert_true(kern_radius < 2 * diameter_m / lams[i])
+        print(kern_radius, 2 * diameter_m / lams[i])
 
 
 def test_gaussian_beam():
