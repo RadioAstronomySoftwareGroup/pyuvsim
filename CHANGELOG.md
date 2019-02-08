@@ -4,6 +4,14 @@
 
 ### Added
 - Support for only simulating one baseline per redundant group
+
+### Fixed
+- Using the correct Bessel function in the definition of the Airy beam
+
+
+## [0.2.1] - 2018-12-10
+
+### Added
 - Support for miriad and uvh5 output
 - stdout printing explicitly disabled for non-root ranks
 - Flux cut options with source catalogs
@@ -19,9 +27,6 @@
 - Line profiling may be done by running `pyuvsim.profiling.set_profiler`.
 - Which functions to profile is set by listing them by name, instead of by function decorators.
 - Improved test coverage
-
-### Fixed
-- Using the correct Bessel function in the definition of the Airy beam
 
 ### Deprecated
 - Simulation directly off of uvfits files.
