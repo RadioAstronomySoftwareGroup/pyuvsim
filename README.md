@@ -3,9 +3,9 @@
 [![Build Status](https://travis-ci.org/RadioAstronomySoftwareGroup/pyuvsim.svg?branch=master)](https://travis-ci.org/RadioAstronomySoftwareGroup/pyuvsim)
 [![Coverage Status](https://coveralls.io/repos/github/RadioAstronomySoftwareGroup/pyuvsim/badge.svg?branch=master)](https://coveralls.io/github/RadioAstronomySoftwareGroup/pyuvsim?branch=master)
 
-PYUVsim is a comprehensive simulation package for radio interferometers in python.
+pyuvsim is a comprehensive simulation package for radio interferometers in python.
 
-A number of analysis tools are available to simulate the output of a radio interferometer (CASA, OSCAR, FHD, PRISim, et al), however each makes numerical approximations to enable speed ups.  The PYUVsim goal is to provide a simulated instrument output which emphasizes accuracy and extensibility.
+A number of analysis tools are available to simulate the output of a radio interferometer (CASA, OSCAR, FHD, PRISim, et al), however each makes numerical approximations to enable speed ups.  The pyuvsim goal is to provide a simulated instrument output which emphasizes accuracy and extensibility.
 
 # Motivation and Approach
 The two primary pyuvsim goals are interferometer simulation accuracy at the level of precision necessary for 21cm cosmology science. Key elements of this approach include:
@@ -16,8 +16,8 @@ The two primary pyuvsim goals are interferometer simulation accuracy at the leve
 4. Design for scalability across many cpus.
 
 # Installation
-* Bleeding edge: `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`
-<!---* pip: `pip install pyuvsim`-->
+* For simple installation, the latest stable version is available via pip (`pip install pyuvsim`)
+* To install the development version: Clone the repository using `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`, navigate into the pyuvsim directory and run `pip install .` or `python setup.py install`
 * PYUVSim is mainly intended to run on clusters running the linux operating system
 
 ## Dependencies
@@ -26,7 +26,7 @@ The two primary pyuvsim goals are interferometer simulation accuracy at the leve
 
 # Inputs
 
-A simulation requires sets of times, frequencies, source positions and brightnesses, antenna positions, and direction-dependent primary beam responses. PYUVsim specifies times, frequencies, and array configuration via a UVData object (from the pyuvdata package), source positions and brightnesses via Source objects, and primary beams either through UVBeam or AnalyticBeam objects.
+A simulation requires sets of times, frequencies, source positions and brightnesses, antenna positions, and direction-dependent primary beam responses. pyuvsim specifies times, frequencies, and array configuration via a UVData object (from the pyuvdata package), source positions and brightnesses via Source objects, and primary beams either through UVBeam or AnalyticBeam objects.
 
 * All sources are treated as point sources, with flux specified in Stokes parameters and position in right ascension / declination in the International Celestial Reference Frame (equivalently, in J2000 epoch).
 * Primary beams are specified as full electric field components, and are interpolated in angle and frequency. This allows for an exact Jones matrix to be constructed for each desired source position.

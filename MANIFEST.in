@@ -3,7 +3,7 @@ include LICENSE
 include pyuvsim/VERSION
 include pyuvsim/GIT_INFO
 recursive-include pyuvsim/data *
-prune pyuvsim/data/test
 recursive-include docs *
+recursive-include reference_simulations *
 exclude docs/.DS_Store
 prune docs/_build
