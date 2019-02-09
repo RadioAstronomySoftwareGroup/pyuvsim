@@ -17,8 +17,8 @@ The two primary pyuvsim goals are interferometer simulation accuracy at the leve
 
 # Installation
 * For simple installation, the latest stable version is available via pip (`pip install pyuvsim`)
-* To install the development version: Clone the repository using `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`, navigate into the pyuvsim directory and run `pip install .` or `python setup.py install`
-* PYUVSim is mainly intended to run on clusters running the linux operating system
+* To install the development version: Clone the repository using `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`, navigate into the pyuvsim directory and run `pip install .`
+* pyuvsim is mainly intended to run on clusters running the linux operating system
 
 ## Dependencies
 * `numpy`, `astropy`, `scipy`, `mpi4py`, `pyyaml`, `six`, `pyuvdata`
