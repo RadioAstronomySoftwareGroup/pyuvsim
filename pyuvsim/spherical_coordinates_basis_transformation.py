@@ -49,12 +49,13 @@ def spherical_coordinates_map(R, theta, phi):
     where q is the 3D position vector of the point specified by (theta,phi) and
     R is the 3D rotation matrix that relates two coordinate charts.
     """
-    q_hat_1 = np.cos(phi) * np.cos(theta)
-    q_hat_2 = np.sin(phi) * np.cos(theta)
-    q_hat_3 = np.sin(theta)
-    q_hat = np.stack((q_hat_1, q_hat_2, q_hat_3))
+    # q_hat_1 = np.cos(phi) * np.cos(theta)
+    # q_hat_2 = np.sin(phi) * np.cos(theta)
+    # q_hat_3 = np.sin(theta)
+    # q_hat = np.stack((q_hat_1, q_hat_2, q_hat_3))
+    q_hat = r_hat(theta, phi)
     p_hat = np.einsum('ab...,b...->a...', R, q_hat)
-    beta = np.arcsin(p_hat[-1])
+    beta = np.arcsin(p_hat[2])
     alpha = np.arctan2(p_hat[1], p_hat[0])
     return (beta, alpha)
 
@@ -77,4 +78,4 @@ def spherical_basis_transformation_components(theta, phi, R):
         cosX = np.einsum('a...,a...', bh, th)
         sinX = np.einsum('a...,a...', bh, ph)
 
-    return cosX, sinX
+    return cosX, sinX, th, ph, bh, ah, beta, alpha
