@@ -8,7 +8,6 @@ import os
 import numpy as np
 import nose.tools as nt
 from scipy.special import j1
-from scipy.interpolate import UnivariateSpline
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy import units
@@ -154,7 +153,6 @@ def test_uv_beam_widths():
 
         # For each frequency, check kernel width is less than dish diameter in wavelengths
         nt.assert_true(kern_radius < 2 * diameter_m / lams[i])
-        print(kern_radius, 2 * diameter_m / lams[i])
 
 
 def test_gaussian_beam():
