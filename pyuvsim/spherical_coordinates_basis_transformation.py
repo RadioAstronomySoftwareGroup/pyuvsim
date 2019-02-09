@@ -8,16 +8,16 @@ import numpy as np
 
 
 def r_hat(theta, phi):
-    rhx = np.cos(phi) * np.cos(theta)
-    rhy = np.sin(phi) * np.cos(theta)
-    rhz = np.sin(theta)
+    rhx = np.cos(phi) * np.sin(theta)
+    rhy = np.sin(phi) * np.sin(theta)
+    rhz = np.cos(theta)
     return np.stack((rhx, rhy, rhz))
 
 
 def theta_hat(theta, phi):
-    thx = -np.cos(phi) * np.sin(theta)
-    thy = -np.sin(phi) * np.sin(theta)
-    thz = np.cos(theta)
+    thx = np.cos(phi) * np.cos(theta)
+    thy = np.sin(phi) * np.cos(theta)
+    thz = -np.sin(theta)
     return np.stack((thx, thy, thz))
 
 
@@ -28,54 +28,34 @@ def phi_hat(theta, phi):
     return np.stack((phx, phy, phz))
 
 
-def rotation_matrix(axis, angle):
-    """
-    Rodrigues' rotation matrix formula
-    """
-    Kmatrix = np.array([[0., -axis[2], axis[1]],
-                        [axis[2], 0., -axis[0]],
-                        [-axis[1], axis[0], 0.]])
-
-    Identity = np.identity(3)
-
-    Rotation = Identity + np.sin(angle) * Kmatrix + (1. - np.cos(angle)) * np.dot(Kmatrix, Kmatrix)
-
-    return Rotation
-
-
 def spherical_coordinates_map(R, theta, phi):
     """
     Returns the spherical coordinates of the point specified by p = R . q,
     where q is the 3D position vector of the point specified by (theta,phi) and
     R is the 3D rotation matrix that relates two coordinate charts.
     """
-    # q_hat_1 = np.cos(phi) * np.cos(theta)
-    # q_hat_2 = np.sin(phi) * np.cos(theta)
-    # q_hat_3 = np.sin(theta)
-    # q_hat = np.stack((q_hat_1, q_hat_2, q_hat_3))
-    q_hat = r_hat(theta, phi)
+    q_hat_1 = np.cos(phi) * np.sin(theta)
+    q_hat_2 = np.sin(phi) * np.sin(theta)
+    q_hat_3 = np.cos(theta)
+    q_hat = np.stack((q_hat_1, q_hat_2, q_hat_3))
     p_hat = np.einsum('ab...,b...->a...', R, q_hat)
-    beta = np.arcsin(p_hat[2])
-    alpha = np.arctan2(p_hat[1], p_hat[0])
+    beta = np.arccos(p_hat[-1, :])
+    alpha = np.arctan2(p_hat[1, :], p_hat[0, :])
+    alpha[alpha < 0] += 2. * np.pi
+
     return (beta, alpha)
 
 
 def spherical_basis_transformation_components(theta, phi, R):
+    beta, alpha = spherical_coordinates_map(R, theta, phi)
 
-    if np.allclose(R, np.eye(3)) is True:
-        cosX = np.ones_like(theta)
-        sinX = np.zeros_like(theta)
+    th = theta_hat(theta, phi)
+    ph = phi_hat(theta, phi)
 
-    else:
-        beta, alpha = spherical_coordinates_map(R, theta, phi)
+    bh = np.einsum('ab...,b...->a...', R.T, theta_hat(beta, alpha))
+    ah = np.einsum('ab...,b...->a...', R.T, phi_hat(beta, alpha))
 
-        th = theta_hat(theta, phi)
-        ph = phi_hat(theta, phi)
+    cosX = np.einsum('a...,a...', bh, th)
+    sinX = np.einsum('a...,a...', bh, ph)
 
-        bh = np.einsum('ab...,b...->a...', R.T, theta_hat(beta, alpha))
-        ah = np.einsum('ab...,b...->a...', R.T, phi_hat(beta, alpha))
-
-        cosX = np.einsum('a...,a...', bh, th)
-        sinX = np.einsum('a...,a...', bh, ph)
-
-    return cosX, sinX, th, ph, bh, ah, beta, alpha
+    return cosX, sinX
