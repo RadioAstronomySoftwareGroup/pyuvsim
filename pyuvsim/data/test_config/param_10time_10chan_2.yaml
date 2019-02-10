@@ -13,6 +13,6 @@ telescope:
   telescope_config_name: '28m_triangle_10time_10chan_sigmaonly.yaml'
 time:
   Ntimes: 10
-  duration_days: 0.001145833
+  duration_days: 0.0012731478148148147
   integration_time: 11.0
   start_time: 2457458.1738949567

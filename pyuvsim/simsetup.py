@@ -704,12 +704,11 @@ def parse_time_params(time_params):
             raise ValueError("Either integration_time or Ntimes must be "
                              "included in parameters:" + kws_used)
         if st and et:
-            time_params['duration'] = time_params['end_time'] - time_params['start_time']
+            time_params['duration'] = time_params['end_time'] - time_params['start_time'] + time_params['integration_time']*dayspersec
             dd = True
         if dd:
             time_params['Ntimes'] = int(np.round(time_params['duration']
-                                                 / (time_params['integration_time']
-                                                    * dayspersec))) + 1
+                                                 / (time_params['integration_time'] * dayspersec)))
         else:
             raise ValueError("Either duration or time bounds must be specified: "
                              + kws_used)
@@ -718,28 +717,28 @@ def parse_time_params(time_params):
         if not dd:
             raise ValueError("Either duration or integration time "
                              "must be specified: " + kws_used)
-        time_params['integration_time'] = (24. * 3600.) * (time_params['duration']
-                                                           / float(time_params['Ntimes'] - 1))  # In seconds
+        time_params['integration_time'] =  (time_params['duration'] / dayspersec
+                                                           / float(time_params['Ntimes']))  # In seconds
 
-    inttime_days = time_params['integration_time'] * 1 / (24. * 3600.)
+    inttime_days = time_params['integration_time'] * dayspersec
     if not dd:
         time_params['duration'] = inttime_days * (time_params['Ntimes'])
         dd = True
     if not st:
         if et and dd:
-            time_params['start_time'] = time_params['end_time'] - time_params['duration']
+            time_params['start_time'] = time_params['end_time'] - time_params['duration'] + inttime_days
     if not et:
         if st and dd:
-            time_params['end_time'] = time_params['start_time'] + time_params['duration']
+            time_params['end_time'] = time_params['start_time'] + time_params['duration'] - inttime_days
     if not (st or et):
         raise ValueError("Either a start or end time must be specified: " + kws_used)
 
     time_arr = np.linspace(time_params['start_time'],
-                           time_params['end_time'],
+                           time_params['end_time'] + inttime_days,
                            time_params['Ntimes'], endpoint=False)
 
     if time_params['Ntimes'] != 1:
-        assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=1e-4)   # To nearest second
+        assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=dayspersec)   # To nearest second
 
     return_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
                                        * time_params['integration_time'])

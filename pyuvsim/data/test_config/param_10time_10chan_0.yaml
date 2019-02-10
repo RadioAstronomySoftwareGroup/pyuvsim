@@ -16,4 +16,4 @@ time:
   Ntimes: 10        # Number of times.
   integration_time: 11.0  # Time step size  (seconds)
   start_time: 2457458.1738949567    # Start and end times (Julian date)
-  end_time: 2457458.175168105   
+  end_time: 2457458.1750407889
