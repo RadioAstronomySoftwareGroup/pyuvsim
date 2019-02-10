@@ -2,9 +2,9 @@ filing:
   outdir: '.'
   outfile_name: 'sim_results'
 freq:
-  channel_width: 80000.0
-  end_freq: 100800000.0
-  bandwidth: 800000.0
+  channel_width: 1.0
+  end_freq: 109.5
+  bandwidth: 10.0
 sources:
   catalog: 'mock'
   mock_arrangement: 'zenith'

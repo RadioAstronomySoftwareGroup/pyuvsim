@@ -3,9 +3,9 @@ filing:
   outfile_prefix: 'sim' # Prefix for the output uvfits file.
 freq:
   Nfreqs: 10    # Number of frequencies
-  channel_width: 80000.0    # Frequency channel width
-  end_freq: 100800000.0     # Start and end frequencies (Hz)
-  start_freq: 100000000.0
+  channel_width: 1.0    # Frequency channel width
+  end_freq:   109.5     # Start and end frequencies (Hz)
+  start_freq: 100.5
 sources:
   catalog: 'mock'       #Choice of catalog file name (or specify mock to use builtin catalogs).
   mock_arrangement: 'zenith'    # Choosing a mock layout

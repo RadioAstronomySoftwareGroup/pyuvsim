@@ -3,8 +3,8 @@ filing:
   outfile_name: 'sim_results.uvfits'
 freq:
   Nfreqs: 10
-  bandwidth: 800000.0
-  start_freq: 100000000.0
+  bandwidth: 10.0
+  start_freq: 100.5
 sources:
   catalog: 'mock'
   mock_arrangement: 'zenith'

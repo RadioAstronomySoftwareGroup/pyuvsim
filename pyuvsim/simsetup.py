@@ -613,6 +613,7 @@ def parse_frequency_params(freq_params):
         freq_params['Nfreqs'] = freq_arr.size
         if freq_params['Nfreqs'] > 1:
             freq_params['channel_width'] = np.diff(freq_arr)[0]
+            assert np.all(np.diff(freq_arr) == freq_params['channel_width'])
         elif 'channel_width' not in freq_params:
             raise ValueError("Channel width must be specified "
                              "if freq_arr has length 1")
@@ -622,7 +623,7 @@ def parse_frequency_params(freq_params):
                 raise ValueError("Either channel_width or Nfreqs "
                                  " must be included in parameters:" + kws_used)
             if sf and ef:
-                freq_params['bandwidth'] = freq_params['end_freq'] - freq_params['start_freq']
+                freq_params['bandwidth'] = freq_params['end_freq'] - freq_params['start_freq'] + freq_params['channel_width']
                 bw = True
             if bw:
                 freq_params['Nfreqs'] = int(np.floor(freq_params['bandwidth']
@@ -642,18 +643,20 @@ def parse_frequency_params(freq_params):
             freq_params['bandwidth'] = (freq_params['channel_width']
                                         * freq_params['Nfreqs'])
             bw = True
+
         if not sf:
             if ef and bw:
-                freq_params['start_freq'] = freq_params['end_freq'] - freq_params['bandwidth']
+                freq_params['start_freq'] = freq_params['end_freq'] - freq_params['bandwidth'] + freq_params['channel_width']
         if not ef:
             if sf and bw:
-                freq_params['end_freq'] = freq_params['start_freq'] + freq_params['bandwidth']
+                freq_params['end_freq'] = freq_params['start_freq'] + freq_params['bandwidth'] - freq_params['channel_width']
 
         freq_arr = np.linspace(freq_params['start_freq'],
-                               freq_params['end_freq'],
+                               freq_params['end_freq'] + freq_params['channel_width'],
                                freq_params['Nfreqs'], endpoint=False)
+
     if freq_params['Nfreqs'] != 1:
-        assert np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1), atol=1.0)  # 1 Hz
+        assert np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1))
 
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
