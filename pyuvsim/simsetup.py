@@ -704,7 +704,7 @@ def parse_time_params(time_params):
             raise ValueError("Either integration_time or Ntimes must be "
                              "included in parameters:" + kws_used)
         if st and et:
-            time_params['duration'] = time_params['end_time'] - time_params['start_time'] + time_params['integration_time']*dayspersec
+            time_params['duration'] = time_params['end_time'] - time_params['start_time'] + time_params['integration_time'] * dayspersec
             dd = True
         if dd:
             time_params['Ntimes'] = int(np.round(time_params['duration']
@@ -717,8 +717,8 @@ def parse_time_params(time_params):
         if not dd:
             raise ValueError("Either duration or integration time "
                              "must be specified: " + kws_used)
-        time_params['integration_time'] =  (time_params['duration'] / dayspersec
-                                                           / float(time_params['Ntimes']))  # In seconds
+        time_params['integration_time'] = (time_params['duration'] / dayspersec
+                                           / float(time_params['Ntimes']))  # In seconds
 
     inttime_days = time_params['integration_time'] * dayspersec
     if not dd:

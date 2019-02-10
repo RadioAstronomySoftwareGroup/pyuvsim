@@ -57,11 +57,18 @@ Filing
 ^^^^^^
     Specifies where the results file will be output, what name the file should have, and whether or not to overwrite existing files. None of these parameters are required.
     
-Time and frequency
-^^^^^^^^^^^^^^^^^^
+Frequency
+^^^^^^^^^
 
-    Time and frequency structure may be defined with different combinations of keywords to suit the user's purposes. The user must specify sufficient information for the frequency and time arrays to be defined.
+    As is the standard with ``pyuvdata``, the frequency channel numbers refer to the **frequency at the channel center**. The ``bandpass`` refers to the total band covered by all channels, and the channel width is the separation between channel centers. Therefore, the following relations hold::
 
+		bandpass = Nfreqs * channel_width
+		bandpass = (end_freq + channel_width/2.) - (start_freq - channel_width/2.) = ( end_freq - start_freq) + channel_width
+		start_freq = end_freq - bandpass + channel_width
+		end_freq = start_freq + bandpass - channel_width
+
+
+    Time and frequency structure may be defined with different combinations of keywords to suit the user's purposes. The user must specify sufficient information for the frequency array to be defined.
     Minimum frequency requirements:
         specify bandwidth via one of the following combinations:
             * (``start_freq``, ``end_freq``)
@@ -77,8 +84,21 @@ Time and frequency
             * (``end_freq``)
 
     As long as one of the sets from each category above is met by the supplied keywords, the frequency array will be successfully built.
-    Likewise for the time array:
+    You can also just give an explicit ``freq_array``.
 
+
+Time
+^^^^
+
+    The time array is specified similarly. The entries in the ``time_array`` indicate the **beginning of each time step in Julian date**. The ``integration_time`` is the time step size in seconds. The user may also specify ``duration_hours`` or ``duration_days`` to specify the total time covered by all time steps. The following relations among parameters hold::
+
+        duration_hours = Ntimes * integration_time / (3600.)
+        duration_days = duration_hours / 24.
+        duration_days = (end_time - start_time) + integration_time / 86400
+        start_time = end_time - duration_days + integration_time / 86400
+        end_time = start_time + duration_days - integration_time / 86400
+
+    The numerical factors are to convert among seconds, days, and hours. The user must specify sufficient information for the time array to be defined:
     Minimum time requirements:
         Total time:
             * (``start_time``, ``end_time``)
@@ -93,7 +113,8 @@ Time and frequency
             * (``start_time``)
             * (``end_time``)
 
-    You can also just give an explicit ``time_array`` or ``freq_array``.
+    As long as one of the sets from each category above is met by the supplied keywords, the time array will be successfully built.
+
 
 
 Telescope Configuration
