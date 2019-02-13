@@ -974,7 +974,7 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
         ),
         freq=dict(
             start_freq=freq_array[0],
-            end_freq=freq_array[-1] + uvdata_in.channel_width,
+            end_freq=freq_array[-1],
             channel_width=uvdata_in.channel_width,
             Nfreqs=uvdata_in.Nfreqs,
         ),
