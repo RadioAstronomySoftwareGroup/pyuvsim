@@ -119,7 +119,7 @@ def test_airy_beam_values():
 
 
 def test_uv_beam_widths():
-    diameter_m = 200.
+    diameter_m = 25.0
     beam = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
@@ -128,11 +128,13 @@ def test_uv_beam_widths():
     freq_vals = np.linspace(100e6, 130e6, Nfreqs)
     lams = 3e8 / freq_vals
 
-    Npix = 700
-    zmax = np.radians(40)  # Degrees
-    x, y = np.meshgrid(range(-Npix // 2, Npix // 2), range(-Npix // 2, Npix // 2))
-    r = np.sqrt(x**2 + y**2) / float(Npix)
-    zas = 2 * r * zmax
+    N = 250
+    Npix = 500
+    zmax = np.radians(90)  # Degrees
+    arr = np.arange(-N, N)
+    x, y = np.meshgrid(arr, arr)
+    r = np.sqrt(x**2 + y**2) / float(N)
+    zas = r * zmax
     azs = np.arctan2(y, x)
     interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array(azs),
                                                          za_array=np.array(zas),
@@ -143,16 +145,14 @@ def test_uv_beam_widths():
     beam_kern = np.fft.fft2(ebeam, axes=(1, 2))
     beam_kern = np.fft.fftshift(beam_kern, axes=(1, 2))
 
-    upix = np.pi / (2 * zmax)   # 2*zmax = FoV
-    uvals = np.arange(-Npix // 2, Npix // 2) * upix
     for i, bk in enumerate(beam_kern):
-        thresh = np.abs(bk[Npix // 2, Npix // 2]) * 0.01    # Cutoff at 1% of the center value in Fourier space.
+        thresh = np.max(np.abs(bk)) * 0.005  # Cutoff at half a % of the maximum value in Fourier space.
         points = np.sum(np.abs(bk) >= thresh)
+        upix = 1 / (2 * np.sin(zmax))   # 2*sin(zmax) = fov extent projected onto the xy plane
         area = np.sum(points) * upix**2
         kern_radius = np.sqrt(area / np.pi)
-
-        # For each frequency, check kernel width is less than dish diameter in wavelengths
-        nt.assert_true(kern_radius < 2 * diameter_m / lams[i])
+        print((diameter_m / lams[i]) / kern_radius)
+        nt.assert_true(np.isclose(diameter_m / lams[i], kern_radius, rtol=0.5))
 
 
 def test_gaussian_beam():
