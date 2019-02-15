@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+
+## [0.2.2] - 2019-2-8
+
 ### Added
 - Support for only simulating one baseline per redundant group
 
