@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- Checking the beam kernel width makes sense for Airy beams
+
 
 ## [0.2.3] - 2019-2-17
 

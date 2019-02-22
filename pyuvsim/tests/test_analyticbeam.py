@@ -63,7 +63,7 @@ def test_uniform_beam():
     nt.assert_true(np.allclose(interpolated_beam, expected_data))
 
 
-def test_airy_beam():
+def test_airy_beam_values():
     diameter_m = 14.
     beam = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)
     beam.peak_normalize()
@@ -108,7 +108,7 @@ def test_airy_beam():
     airy_vals = np.zeros_like(xvals)
     nz = xvals != 0.
     ze = xvals == 0.
-    airy_vals[nz] = (2. * j1(xvals[nz]) / xvals[nz])**2
+    airy_vals[nz] = 2. * j1(xvals[nz]) / xvals[nz]
     airy_vals[ze] = 1.
 
     expected_data[1, 0, 0, :, :] = airy_vals
@@ -116,6 +116,42 @@ def test_airy_beam():
     expected_data[1, 0, 1, :, :] = airy_vals
     expected_data[0, 0, 0, :, :] = airy_vals
     nt.assert_true(np.allclose(interpolated_beam, expected_data))
+
+
+def test_uv_beam_widths():
+    diameter_m = 25.0
+    beam = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)
+    beam.peak_normalize()
+    beam.interpolation_function = 'az_za_simple'
+
+    Nfreqs = 20
+    freq_vals = np.linspace(100e6, 130e6, Nfreqs)
+    lams = 3e8 / freq_vals
+
+    N = 250
+    Npix = 500
+    zmax = np.radians(90)  # Degrees
+    arr = np.arange(-N, N)
+    x, y = np.meshgrid(arr, arr)
+    r = np.sqrt(x**2 + y**2) / float(N)
+    zas = r * zmax
+    azs = np.arctan2(y, x)
+    interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array(azs),
+                                                         za_array=np.array(zas),
+                                                         freq_array=np.array(freq_vals))
+
+    ebeam = (interpolated_beam[0, 0, 0, :, :])
+    ebeam = ebeam.reshape(Nfreqs, Npix, Npix)
+    beam_kern = np.fft.fft2(ebeam, axes=(1, 2))
+    beam_kern = np.fft.fftshift(beam_kern, axes=(1, 2))
+
+    for i, bk in enumerate(beam_kern):
+        thresh = np.max(np.abs(bk)) * 0.005  # Cutoff at half a % of the maximum value in Fourier space.
+        points = np.sum(np.abs(bk) >= thresh)
+        upix = 1 / (2 * np.sin(zmax))   # 2*sin(zmax) = fov extent projected onto the xy plane
+        area = np.sum(points) * upix**2
+        kern_radius = np.sqrt(area / np.pi)
+        nt.assert_true(np.isclose(diameter_m / lams[i], kern_radius, rtol=0.5))
 
 
 def test_gaussian_beam():
@@ -214,6 +250,19 @@ def test_gaussbeam_values():
 
     beam_values = np.exp(-(zenith_angles)**2 / (2 * beam.sigma**2))
     nt.assert_true(np.all(beam_values**2 == coherencies))
+
+
+def test_comparison():
+    """
+    Beam __eq__ method
+    """
+    beam1 = pyuvsim.AnalyticBeam('uniform')
+    beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
+    beam2.type = 'undefined'
+
+    not_beam = UVData()
+    nt.assert_false(beam1 == not_beam)
+    nt.assert_false(beam2 == beam1)
 
 
 def test_beamerrs():

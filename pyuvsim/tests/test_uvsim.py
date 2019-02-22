@@ -208,7 +208,7 @@ def test_redundant_baselines():
     freq = hera_uv.freq_array[0, 0] * units.Hz
 
     # get antennas positions into ENU
-    antpos, _ = hera_uv.get_ENU_antpos(center=False)
+    antpos, _ = hera_uv.get_ENU_antpos()
 
     en_shift = [5., 5., 0]
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
@@ -271,7 +271,7 @@ def test_single_offzenith_source_uvfits():
     freq = hera_uv.freq_array[0, 0] * units.Hz
 
     # get antennas positions into ENU
-    antpos, _ = hera_uv.get_ENU_antpos(center=False)
+    antpos, _ = hera_uv.get_ENU_antpos()
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)

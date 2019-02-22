@@ -92,7 +92,7 @@ def test_run_param_uvsim():
     os.remove(tempfilename)
     uv_new_txt.history = uv_ref.history  # History includes irrelevant info for comparison
     uv_new_vot.history = uv_ref.history
-    uv_new_vot.object_name = uv_ref.object_name
+    uv_new_txt.object_name = uv_ref.object_name
     nt.assert_equal(uv_new_txt, uv_ref)
     nt.assert_equal(uv_new_vot, uv_ref)
 

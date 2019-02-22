@@ -144,7 +144,8 @@ def check_param_reader(config_num):
 
     beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2, 'ANT4': 3}
     Ntasks = hera_uv.Nblts * hera_uv.Nfreqs * len(sources)
-    expected_uvtask_list = list(pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources, beam_list, beam_dict=beam_dict))
+    taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources, beam_list, beam_dict=beam_dict)
+    expected_uvtask_list = uvtest.checkWarnings(list, [taskiter], category=DeprecationWarning)
 
     # Check error conditions:
     if config_num == 0:
@@ -220,7 +221,6 @@ def check_param_reader(config_num):
     uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_filename)
     for i, bm in enumerate(new_beam_list):
         new_beam_list[i] = pyuvsim.simsetup.beam_string_to_object(bm)
-
     # write_uvdata tests with different configs:
     with open(param_filename, 'r') as fhandle:
         param_dict = yaml.safe_load(fhandle)
@@ -236,7 +236,8 @@ def check_param_reader(config_num):
     nt.assert_equal(ofilename, expected_ofilepath)
 
     Ntasks = uv_obj.Nblts * uv_obj.Nfreqs * len(sources)
-    uvtask_list = list(pyuvsim.uvdata_to_task_iter(range(Ntasks), uv_obj, sources, new_beam_list, beam_dict=new_beam_dict))
+    taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources, beam_list, beam_dict=beam_dict)
+    uvtask_list = uvtest.checkWarnings(list, [taskiter], category=DeprecationWarning)
 
     # Tasks are not ordered in UVTask lists, so need to sort them.
     uvtask_list = sorted(uvtask_list)
@@ -456,8 +457,11 @@ def test_horizon_cut():
 
     # Now check that I get the same visibilities simulating with and without the horizon cut.
     beam_list = ['uniform']  # Simplify with a single uniform beam model
-    uv_select = pyuvsim.run_uvdata_uvsim(uv_in, beam_list, catalog=cut_sourcelist, source_list_name='random', obs_param_file='', telescope_config_file='', antenna_location_file='')
-    uv_full = pyuvsim.run_uvdata_uvsim(uv_in, beam_list, catalog=full_sourcelist, source_list_name='random', obs_param_file='', telescope_config_file='', antenna_location_file='')
+    kwds = dict(source_list_name='random', obs_param_file='', telescope_config_file='', antenna_location_file='')
+    kwds['catalog'] = cut_sourcelist
+    uv_select = uvtest.checkWarnings(pyuvsim.run_uvdata_uvsim, [uv_in, beam_list], kwds, category=DeprecationWarning)
+    kwds['catalog'] = full_sourcelist
+    uv_full = uvtest.checkWarnings(pyuvsim.run_uvdata_uvsim, [uv_in, beam_list], kwds, category=DeprecationWarning)
     nt.assert_equal(uv_full, uv_select)
 
 
