@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- Checking the beam kernel width makes sense for Airy beams
+
 
 ## [0.2.3] - 2019-2-17
 
@@ -9,7 +12,6 @@
 
 ### Added
 - Support for only simulating one baseline per redundant group
-- Checking the beam kernel width makes sense for Airy beams
 
 ### Fixed
 - Using the correct Bessel function in the definition of the Airy beam

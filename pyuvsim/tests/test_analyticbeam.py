@@ -151,7 +151,6 @@ def test_uv_beam_widths():
         upix = 1 / (2 * np.sin(zmax))   # 2*sin(zmax) = fov extent projected onto the xy plane
         area = np.sum(points) * upix**2
         kern_radius = np.sqrt(area / np.pi)
-        print((diameter_m / lams[i]) / kern_radius)
         nt.assert_true(np.isclose(diameter_m / lams[i], kern_radius, rtol=0.5))
 
 
