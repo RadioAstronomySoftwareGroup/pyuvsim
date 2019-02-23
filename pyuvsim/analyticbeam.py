@@ -15,9 +15,6 @@ def diameter_to_sigma(diam, freqs):
     an Airy disk's main lobe for a given diameter.
     """
 
-    if not isinstance(freqs, np.ndarray):
-        freqs = np.array([freqs]).dtype(np.float)
-
     c_ms = 299792458.
     wavelengths = c_ms / freqs
 
