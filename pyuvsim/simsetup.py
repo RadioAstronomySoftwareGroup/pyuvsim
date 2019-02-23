@@ -1010,10 +1010,8 @@ def beam_string_to_object(beam_model):
 
         _, model, par, val = beam_model.split('_')
         if par == 'sig':
-            print(model)
             return AnalyticBeam(model, sigma=float(val))
         if par == 'diam':
-            print(model)
             return AnalyticBeam(model, diameter=float(val))
 
     path = beam_model   # beam_model = path to beamfits

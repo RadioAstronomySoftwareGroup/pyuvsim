@@ -165,8 +165,6 @@ def check_param_reader(config_num):
 
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
 
-        #params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nosigma.yaml')
-        #nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, params_bad)
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml')
         nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, params_bad)
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml')
@@ -456,7 +454,7 @@ def test_horizon_cut():
             nt.assert_true(src.name in selected_source_names)
 
     # Now check that I get the same visibilities simulating with and without the horizon cut.
-    beam_list = ['uniform']  # Simplify with a single uniform beam model
+    beam_list = ['analytic_uniform']  # Simplify with a single uniform beam model
     kwds = dict(source_list_name='random', obs_param_file='', telescope_config_file='', antenna_location_file='')
     kwds['catalog'] = cut_sourcelist
     uv_select = uvtest.checkWarnings(pyuvsim.run_uvdata_uvsim, [uv_in, beam_list], kwds, category=DeprecationWarning)
