@@ -111,6 +111,14 @@ Telescope Configuration
 
     This yaml file provides the telescope name, location in latitude/longitude/altitude in degrees/degrees/meters (respectively), and the `beam dictionary`. In this case, beam_id == 0 is the UVBeam file written out to hera.uvbeam, and beam_id == 1 is an Airy beam with diameter 16m. The dictionary only needs to be as long as the number of unique beams used in the array, while the layout file specifies which antennas will use which beam type. This allows for a mixture of beams to be used, as in this example.
 
+    Analytic beams may require additional parameters.
+
+    - uniform = The same response in all directions. No additional parameters.
+    - gaussian = Gaussian function shaped beam. Requires either an antenna diameter (in meters) or a standard deviation sigma (in radians).
+    - airy = Airy disk (ie, diffraction pattern of a circular aperture). Requires an antenna diameter.
+
+    These extra keywords should be included after the beam dictionary in the telescope config file. Note that beams defined with an antenna diameter will be chromatic. That is, their widths on the sky will change with frequency.
+
     The figure below shows the array created by these configurations, with beam type indicated by color.
 
     .. image:: baseline_lite.png
