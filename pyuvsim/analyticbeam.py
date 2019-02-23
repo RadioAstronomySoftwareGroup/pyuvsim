@@ -21,7 +21,7 @@ def diameter_to_sigma(diam, freqs):
     c_ms = 299792458.
     wavelengths = c_ms / freqs
 
-    scalar = 1.616339948        # Found by fitting a Gaussian to an Airy disk function
+    scalar = 2.2150894        # Found by fitting a Gaussian to an Airy disk function
 
     sigma = np.arcsin(scalar * wavelengths / (np.pi * diam)) * 2 / 2.355
 
