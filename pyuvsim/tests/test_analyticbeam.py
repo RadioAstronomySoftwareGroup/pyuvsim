@@ -278,3 +278,43 @@ def test_beamerrs():
     nt.assert_raises(ValueError, beam.interp, az, za, freq_arr)
     beam.type = 'noninterpretable'
     nt.assert_raises(ValueError, beam.interp, az, za, freq_arr)
+
+
+def test_diameter_to_sigma():
+
+    diameter_m = 25.0
+    abm = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)
+    gbm = pyuvsim.AnalyticBeam('gaussian', diameter=diameter_m)
+
+    Nfreqs = 20
+    freq_vals = np.linspace(100e6, 130e6, Nfreqs)
+    lams = 3e8 / freq_vals
+
+    N = 250
+    Npix = 501
+    zmax = np.radians(40)  # Degrees
+
+    zas = np.linspace(-zmax, zmax, Npix)
+    azs = np.array([0.0] * (N + 1) + [np.pi] * N)
+
+    shape = (2, 1, 2, Nfreqs,) + azs.shape
+    airy_vals, interp_basis_vector = abm.interp(az_array=azs.flatten(),
+                                                za_array=zas.flatten(),
+                                                freq_array=freq_vals)
+
+    gauss_vals, interp_basis_vector = gbm.interp(az_array=azs.flatten(),
+                                                 za_array=zas.flatten(),
+                                                 freq_array=freq_vals)
+
+    airy_vals = airy_vals.reshape(shape)
+    gauss_vals = gauss_vals.reshape(shape)
+
+    airy_vals = airy_vals[0, 0, 0] * airy_vals[0, 0, 1]
+    gauss_vals = gauss_vals[0, 0, 0] * gauss_vals[0, 0, 1]  # Remove pol/spw/feed axes. Make power beam.
+
+    for fi in range(Nfreqs):
+        null = 1.22 * lams[fi] / diameter_m
+        inds = np.where(np.abs(zas) < null)
+
+        # Assert integral of power beams within the first Airy null are close
+        nt.assert_true(np.isclose(np.sum(airy_vals[fi, inds]), np.sum(gauss_vals[fi, inds]), rtol=1e-2))
