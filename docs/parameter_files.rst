@@ -114,7 +114,7 @@ Telescope Configuration
     Analytic beams may require additional parameters.
 
     - uniform = The same response in all directions. No additional parameters.
-    - gaussian = Gaussian function shaped beam. Requires either an antenna diameter (in meters) or a standard deviation sigma (in radians).
+    - gaussian = Gaussian function shaped beam. Requires either an antenna diameter (in meters) or a standard deviation sigma (in radians). This standard deviation sets the width of the beam in zenith angle.
     - airy = Airy disk (ie, diffraction pattern of a circular aperture). Requires an antenna diameter.
 
     These extra keywords should be included after the beam dictionary in the telescope config file. Note that beams defined with an antenna diameter will be chromatic. That is, their widths on the sky will change with frequency.

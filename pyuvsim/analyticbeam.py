@@ -13,6 +13,14 @@ def diameter_to_sigma(diam, freqs):
     """
     Find the stddev of a gaussian with fwhm equal to that of
     an Airy disk's main lobe for a given diameter.
+
+    Args:
+        diam: Antenna diameter in meters
+        freqs: Array of frequencies, in Hz
+    Returns:
+        sigma: The standard deviation in zenith angle radians for a Gaussian beam
+               with FWHM equal to that of an Airy disk's main lobe for an aperture
+               with the given diameter.
     """
 
     c_ms = 299792458.
