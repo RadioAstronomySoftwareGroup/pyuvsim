@@ -3,8 +3,8 @@
 ## [Unreleased]
 
 ### Added
-- Checking the beam kernel width makes sense for Airy beams
 - Enabled Gaussian beams to be defined from antenna diameter and have chromaticity
+- Checking the beam kernel width makes sense for Airy beams
 
 ### Changed
 - Pending deprecation of gaussian beams defined from sigma parameter
