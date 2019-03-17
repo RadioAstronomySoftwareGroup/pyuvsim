@@ -136,6 +136,9 @@ def array_to_sourcelist(catalog_table, lst_array=None, latitude_deg=None, horizo
     ids = catalog_table['source_id']
     freqs = catalog_table['frequency'] * units.Hz
 
+    if np.any(not np.isscalar(catalog_table['flux_density_I'])):
+        raise ValueError("Error in source array")
+
     # this can probably be written more cleanly... final shape is (4, Nsrcs)
     stokes = np.pad(np.expand_dims(catalog_table['flux_density_I'], 1), ((0, 0), (0, 3)), 'constant').T
 
@@ -188,22 +191,27 @@ def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}):
                 if 'GLEAM' in tab.array.dtype.names:
                     raise Found
     except Found:
-        table = tab
+        table = tab.to_table()      # Convert to astropy Table
 
-    data = table.array
-    sourcelist = []
-    with np.warnings.catch_warnings():
-        np.warnings.filterwarnings('ignore', '', FutureWarning)
-        data = np.copy(data[['GLEAM', 'RAJ2000', 'DEJ2000', 'Fintwide']])
-    Nsrcs = data.shape[0]
+    fieldnames = ['GLEAM', 'RAJ2000', 'DEJ2000', 'Fintwide']
+    newnames = ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency']
+
+    data = table[fieldnames]
+    Nsrcs = len(data)
     freq = 200e6
-    data = recfunctions.append_fields(data, 'frequency', np.ones(Nsrcs) * freq)
-    data.dtype.names = ('source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency')
+    for t in data.colnames:
+        i = fieldnames.index(t)
+        data[t] = data[t].squeeze()
+        data[t].name = newnames[i]
+    data.add_column(table.Column(np.ones(Nsrcs) * freq, name='frequency'))
+    data = data.as_array().data
+
     if input_uv:
         lst_array, inds = np.unique(input_uv.lst_array, return_index=True)
         latitude = input_uv.telescope_location_lat_lon_alt_degrees[0]
         source_select_kwds['latitude_deg'] = latitude
         source_select_kwds['lst_array'] = lst_array
+
     sourcelist = array_to_sourcelist(data, **source_select_kwds)
 
     return sourcelist
