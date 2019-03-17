@@ -5,7 +5,7 @@
 
 pyuvsim is a comprehensive simulation package for radio interferometers in python.
 
-A number of analysis tools are available to simulate the output of a radio interferometer (CASA, OSCAR, FHD, PRISim, et al), however each makes numerical approximations to enable speed ups.  The pyuvsim goal is to provide a simulated instrument output which emphasizes accuracy and extensibility.
+A number of analysis tools are available to simulate the output of a radio interferometer (CASA, OSKAR, FHD, PRISim, et al), however each makes numerical approximations to enable speed ups.  The pyuvsim goal is to provide a simulated instrument output which emphasizes accuracy and extensibility.
 
 # Motivation and Approach
 The two primary pyuvsim goals are interferometer simulation accuracy at the level of precision necessary for 21cm cosmology science. Key elements of this approach include:
@@ -16,7 +16,7 @@ The two primary pyuvsim goals are interferometer simulation accuracy at the leve
 4. Design for scalability across many cpus.
 
 # Installation
-* For simple installation, the latest stable version is available via pip (`pip install pyuvsim`)
+* For simple installation, the latest stable release is available via pip (`pip install pyuvsim`)
 * To install the development version: Clone the repository using `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`, navigate into the pyuvsim directory and run `pip install .`
 * pyuvsim is mainly intended to run on clusters running the linux operating system
 
@@ -34,6 +34,15 @@ A simulation requires sets of times, frequencies, source positions and brightnes
 
 These input objects may be made from a data file or from a set of `yaml` configuration files. See [Running a simulation](https://pyuvsim.readthedocs.io/en/latest/usage.html).
 
+# Outputs
+
+Data from a simulation run are written out to a file in any format accessible with `pyuvdata`. This includes:
+* uvfits
+* MIRIAD
+* uvh5
+
+When read into a UVData object, the `history` string will contain information on the pyuvsim and pyuvdata versions used for that run (including the latest git hash, if available), and details on the catalog used.
+
 # Quick start guide
 Example `obsparam` configuration files may be found in the `reference_simulations` directory.
 
@@ -45,6 +54,22 @@ mpirun -n 20 python run_param_pyuvsim.py reference_simulations/obsparam_1.1.yaml
 
 # Documentation
 Documentation on how to run simulations and developer API documentation is hosted on [ReadTheDocs](https://pyuvsim.readthedocs.io).
+
+# Testing
+
+`pyuvsim` uses the `nose` package for unit testing. If you've cloned the source into a directory `pyuvsim/`, you may verify it as follows:
+
+1. Install `nose` from anaconda or pip.
+2. Run the nosetests from `pyuvsim/`
+```
+nosetests pyuvsim/tests/
+```
+
+Note that you will need to have all dependencies installed and have your `pyuvsim/` directory in your environmental PYTHONPATH.
+
+# Where to find Support
+
+Please feel free to submit new issues to the [issue log](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/issues) to request new features, document new bugs, or ask questions.
 
 # How to contribute
 Contributions to this package to add new features or address any of the
