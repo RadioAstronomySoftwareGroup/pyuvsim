@@ -120,7 +120,7 @@ Time
 Telescope Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-    Under the telescope section, the keywords ``array_layout`` and ``telescope_config_name`` give paths to, respectively, the array layout text file and the telescope metadata configuration yaml file. If the full path is not specified, pyuvsim will look in the same directory as the obsparam file.
+    Under the telescope section, the keywords ``array_layout`` and ``telescope_config_name`` give paths to, respectively, the array layout text file and the telescope metadata configuration yaml file. These path may either be absolute or specified relative to the location of the obsparam yaml file.
 
     Example array layout with four antennas:
 
