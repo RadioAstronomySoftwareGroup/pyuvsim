@@ -19,7 +19,7 @@ Using MPI
 Enabling Profiling
 ^^^^^^^^^^^^^^^^^^
 
-The ``line_profiler`` module provides runtime estimates on a line by line basis. It is built into ``pyuvsim`` to work within the MPI framework using the functions in ``pyuvsim.profiling``. To run a simulation with profiling enabled, run the command ``profiling.set_profiler`` before starting ``run_uvsim()``. This function can be passed a list of functions you wish to profile (by name), as well as which rank to return data for (it will only profile one MPI rank at a time!).
+The ``line_profiler`` module provides runtime estimates on a line by line basis. It is built into ``pyuvsim`` to work within the MPI framework using the functions in ``pyuvsim.profiling``. To run a simulation with profiling enabled, run the command ``profiling.set_profiler()`` before starting ``run_uvsim()``. This function can be passed a list of functions you wish to profile (by name), as well as which rank to return data for (it will only profile one MPI rank at a time!).
 
 Generating Config Files from Data
 =================================
