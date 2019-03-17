@@ -1,0 +1,9 @@
+pyuvdata==1.2.1
+six==1.11.0
+mpi4py==3.0.1a0
+astropy==2.0.6
+setuptools==38.4.0
+numpy==1.11.3
+nose==1.3.7
+scipy==1.0.1
+PyYAML==5.1
