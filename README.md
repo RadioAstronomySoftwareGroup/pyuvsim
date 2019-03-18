@@ -37,6 +37,7 @@ These input objects may be made from a data file or from a set of `yaml` configu
 # Outputs
 
 Data from a simulation run are written out to a file in any format accessible with `pyuvdata`. This includes:
+
 * uvfits
 * MIRIAD
 * uvh5
@@ -65,7 +66,7 @@ Documentation on how to run simulations and developer API documentation is hoste
 nosetests pyuvsim/tests/
 ```
 
-Note that you will need to have all dependencies installed and have your `pyuvsim/` directory in your environmental PYTHONPATH.
+You will need to have all dependencies installed and have your `pyuvsim/` directory in your environmental PYTHONPATH.
 
 # Where to find Support
 
