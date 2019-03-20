@@ -14,12 +14,17 @@ A python package for generating full-sky simulations.
 Advantages (over pyuvsim):
 
 1. A bit faster.
+2. Well-tested through years of use.
+3. Support for a range of sky models including point sources, diffuse emission, and spectral cubes
+4. Support for tracking as well as transit telescopes 
+5. Parallelized over baselines, frequencies, or sky model/catalog
+6. Has been tested using imaging with CASA
 
 Disadvantages:
 
-1. Not fully parallelized, so a bit slower over 
-2. Does not use the full Jones matrix formalism.
-
+1. MPI overhead is large if time axis in simulation is long
+2. Supports only one polarization at a time
+3. Does not support non-identical antenna patterns
 
 Fast Holographic Deconvolution (FHD)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
