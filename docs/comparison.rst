@@ -11,37 +11,42 @@ Precision Radio Interferometry Simulator (PRISim)
 
 A python package for generating full-sky simulations.
 
-Advantages (over pyuvsim):
+Advantages:
 
 1. A bit faster.
 2. Well-tested through years of use.
-3. Support for a range of sky models including point sources, diffuse emission, and spectral cubes
-4. Support for tracking as well as transit telescopes
-5. Parallelized over baselines, frequencies, or sky model/catalog
-6. Has been tested using imaging with CASA
+3. Support for a range of sky models including point sources, diffuse emission, and spectral cubes.
+4. Support for tracking as well as transit telescopes.
+5. Parallelized over baselines, frequencies, or sky model/catalog.
+6. Has been tested using imaging with CASA.
 
 Disadvantages:
 
-1. MPI overhead is large if time axis in simulation is long
-2. Supports only one polarization at a time
-3. Does not support non-identical antenna patterns
+1. MPI overhead is large if time axis in simulation is long.
+2. Supports only one polarization at a time.
+3. Does not support non-identical antenna patterns.
 
 Fast Holographic Deconvolution (FHD)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-FHD is a data calibration and modeling framework written in IDL by researchers at the University of Washington. It calculates sky models
+FHD is a data calibration and modeling framework written in IDL by researchers at the University of Washington for analyzing data from the Murchison Widefield Array (MWA) in Western Australia. It calculates sky models by convolving a high-resolution psf with the exact DFT of point sources. This is approach is more efficient when working with wide primary beams, which will be narrower in Fourier space and thus limit the size of the convolution to be performed.
 
 Advantages:
 
 1. Fast.
 2. Well-tested through years of use.
 3. Support for diffuse foreground models.
+4. Support for discrete pointings.
+5. Uses IDL's native parallelization efficiently.
 
 Disadvantages:
 
 1. Written in the proprietary IDL language.
-2. Designed for the Murchison Widefield Array (MWA), and has limited support for other instruments.
+2. Designed for the MWA, and has limited support for other instruments.
 3. The discrete convolution in Fourier Space can introduce aliasing and ringing artifacts at a level relevant to 21cm cosmology.
+4. Measurement equation formalism relies on the flat-sky approximation, limiting curved sky effects.
+5. Primary beam motion on the sky is limited to the "snapshot" size, not the time step size.
+6. Not parallelized over frequency.
 
 
 Common Astronomy Software Applications (CASA)
