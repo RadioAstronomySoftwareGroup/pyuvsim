@@ -16,7 +16,7 @@ Advantages (over pyuvsim):
 1. A bit faster.
 2. Well-tested through years of use.
 3. Support for a range of sky models including point sources, diffuse emission, and spectral cubes
-4. Support for tracking as well as transit telescopes 
+4. Support for tracking as well as transit telescopes
 5. Parallelized over baselines, frequencies, or sky model/catalog
 6. Has been tested using imaging with CASA
 
@@ -47,15 +47,15 @@ Disadvantages:
 Common Astronomy Software Applications (CASA)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-CASA is a set of tools published by the National Radio Astronomical Observatory (NRAO), and has tools available for visibility simulation.
+CASA is a set of tools published by the National Radio Astronomical Observatory (NRAO), and has tools available for visibility simulation. Fully parallelized by partitioning Measurement Set (MS) files into smaller tasks and distributed with MPI across any number of available processing units. Non-trivial parallelization also available via OpenMP for shared memory computations on a single node.
 
 Advantages:
 
 1. Faster, and less
 2. Established in the field already and very well-documented.
+3. OpenMP utilizes shared memory on a single node if the calculation an be decomposed efficiently. MPI for all other parallel processing needs
 
 Disadvantages:
 
 1. Limited support for user-defined primary beam models.
 2. Lacks full-sky coverage.
-3. Unparallelized.
