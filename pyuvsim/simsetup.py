@@ -21,7 +21,7 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from pyuvdata import UVBeam, UVData
 import pyuvdata.utils as uvutils
 
-from .source import Source
+from .source import Sources
 from .analyticbeam import AnalyticBeam
 from .mpi import get_rank
 from .utils import check_file_exists_and_increment
@@ -80,15 +80,14 @@ def _config_str_to_dict(config_str):
     return param_dict
 
 
-def array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitude_deg=None, horizon_buffer=0.04364, min_flux=None, max_flux=None):
+def array_to_sourcelist(catalog_table, lst_array=None, latitude_deg=None, horizon_buffer=0.04364, min_flux=None, max_flux=None):
     """
-    Generate list of source.Source objects from a recarray, performing flux and horizon selections.
+    Generate a Sources object from a recarray, performing flux and horizon selections.
 
     Args:
         catalog_table: recarray of source catalog information. Must have columns with names
                        'source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'
         lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
-        time_array: Array of (float) julian dates corresponding with lst_array
         latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
         horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
                         Sources whose calculated altitude is less than -horizon_buffer are excluded by the catalog read.
@@ -114,45 +113,48 @@ def array_to_sourcelist(catalog_table, lst_array=None, time_array=None, latitude
     if coarse_horizon_cut:
         lat_rad = np.radians(latitude_deg)
         buff = horizon_buffer
-    for (source_id, ra_j2000, dec_j2000, flux_I, freq) in catalog_table:
-        if min_flux:
-            if (flux_I < min_flux):
-                continue
-        if max_flux:
-            if (flux_I > max_flux):
-                continue
-        ra = Angle(ra_j2000, units.deg)
-        dec = Angle(dec_j2000, units.deg)
-        rise_lst = None
-        set_lst = None
-        if coarse_horizon_cut:
-            # Identify circumpolar sources and unrising sources.
-            tans = np.tan(lat_rad) * np.tan(dec.rad)
-            if tans < -1:
-                continue   # Source doesn't rise.
-            circumpolar = tans > 1
 
-            if not circumpolar:
-                rise_lst = ra.rad - np.arccos((-1) * tans)
-                set_lst = ra.rad + np.arccos((-1) * tans)
-                rise_lst -= buff
-                set_lst += buff
+    ra = Angle(catalog_table['ra_j2000'], units.deg)
+    dec = Angle(catalog_table['dec_j2000'], units.deg)
 
-                if rise_lst < 0:
-                    rise_lst += 2 * np.pi
-                if set_lst > 2 * np.pi:
-                    set_lst -= 2 * np.pi
+    if min_flux:
+        catalog_table = catalog_table[catalog_table['flux_I'] > min_flux]
 
-        source = Source(source_id, ra,
-                        dec,
-                        freq=freq * units.Hz,
-                        stokes=np.array([flux_I, 0., 0., 0.]),
-                        rise_lst=rise_lst,
-                        set_lst=set_lst)
+    if max_flux:
+        catalog_table = catalog_table[catalog_table['flux_I'] < max_flux]
 
-        sourcelist.append(source)
+    if coarse_horizon_cut:
+        tans = np.tan(lat_rad) * np.tan(dec.rad)
+        nonrising = tans < -1
 
-    return np.array(sourcelist)
+        catalog_table = catalog_table[~nonrising]
+        tans = tans[~nonrising]
+
+        ra = ra[~nonrising]
+        dec = dec[~nonrising]
+
+    ids = catalog_table['source_id']
+    freqs = catalog_table['frequency'] * units.Hz
+
+    # this can probably be written more cleanly... final shape is (4, Nsrcs)
+    stokes = np.pad(np.expand_dims(catalog_table['flux_density_I'], 1), ((0, 0), (0, 3)), 'constant').T
+
+    sourcelist = Sources(ids, ra, dec, freqs, stokes)
+
+    if coarse_horizon_cut:
+        circumpolar = tans > 1
+        rise_lst = sourcelist.ra.rad - np.arccos( (-1) * tans) - buff
+        set_lst = sourcelist.ra.rad + np.arccos( (-1) * tans) + buff
+        rise_lst[rise_lst < 0] += 2*np.pi
+        set_lst[set_lst < 0] -= 2*np.pi
+        sourcelist.rise_lst = rise_lst
+        sourcelist.set_lst  = set_lst
+        sourcelist.rise_lst[circumpolar] = None
+        sourcelist.set_lst[circumpolar] = None
+
+    import IPython; IPython.embed()
+
+    return sourcelist
 
 
 def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}):
@@ -165,7 +167,6 @@ def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}):
         source_select_kwds: Dictionary of keywords for source selection
             Valid options:
             |  lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
-            |  time_array: Array of (float) julian dates corresponding with lst_array
             |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
             |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
             |                  (See caveats in simsetup.array_to_sourcelist docstring)
@@ -200,14 +201,10 @@ def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}):
     data.dtype.names = ('source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency')
     if input_uv:
         lst_array, inds = np.unique(input_uv.lst_array, return_index=True)
-        time_array = input_uv.time_array[inds]
         latitude = input_uv.telescope_location_lat_lon_alt_degrees[0]
-    else:
-        lst_array = None
-        latitude = None
-    sourcelist = array_to_sourcelist(data, lst_array=lst_array,
-                                     latitude_deg=latitude,
-                                     **source_select_kwds)
+        source_select_kwds['latitude_deg'] = latitude
+        source_select_kwds['lst_array'] = lst_array
+    sourcelist = array_to_sourcelist(data, **source_select_kwds)
 
     return sourcelist
 
@@ -228,7 +225,6 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}):
         source_select_kwds: Dictionary of keywords for source selection.
             Valid options:
             |  lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
-            |  time_array: Array of (float) julian dates corresponding with lst_array
             |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
             |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
             |                  (See caveats in simsetup.array_to_sourcelist docstring)
@@ -249,15 +245,11 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}):
 
     if input_uv:
         lst_array, inds = np.unique(input_uv.lst_array, return_index=True)
-        time_array = input_uv.time_array[inds]
         latitude = input_uv.telescope_location_lat_lon_alt_degrees[0]
-    else:
-        lst_array = None
-        latitude = None
-        time_array = None
-    sourcelist = array_to_sourcelist(catalog_table, lst_array=lst_array,
-                                     latitude_deg=latitude,
-                                     **source_select_kwds)
+        source_select_kwds['latitude_deg'] = latitude
+        source_select_kwds['lst_array'] = lst_array
+
+    sourcelist = array_to_sourcelist(catalog_table, **source_select_kwds)
 
     return sourcelist
 
@@ -419,12 +411,14 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    for si in range(Nsrcs):
-        catalog.append(Source('src' + str(si), ra[si], dec[si], freq, [fluxes[si], 0, 0, 0]))
+    names = np.array(['src' + str(si) for si in range(Nsrcs)])
+    stokes = np.zeros((4, Nsrcs))
+    stokes[0, :] = fluxes
+    freqs = np.ones(Nsrcs) * freq
+    catalog = Sources(names, ra, dec, freqs, stokes)
     if get_rank() == 0 and save:
         np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
 
-    catalog = np.array(catalog)
     return catalog, mock_keywords
 
 

@@ -9,15 +9,55 @@ from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
+from . import utils as simutils
+
 
 class Source(object):
     """
-    Defines a single point source at a given ICRS ra/dec coordinate, with a
-    flux density defined by stokes parameters.
+    Does nothing. Placeholder while I fix other things
+
+    """
+
+    def __init__(self):
+        self.nothing = None
+
+
+class _single_source(object):
+    """
+    Interface for accessing attributes of a single source component in a source list.
+    """
+
+    def __init__(self, sourcelist, index):
+        self.index = index
+        self.sourcelist = sourcelist
+
+    def __getattr__(self, key):
+
+        Ncomp_attrs = ['ra', 'dec', 'coherency_radec', 'coherency_local', 'stokes', 'alt_az', 'rise_lst', 'set_lst', 'freq', 'name']
+        scalar_attrs = ['time', 'pos_tol']
+
+        if key in Ncomp_attrs:
+            val = getattr(self.sourcelist, key)[..., self.index]
+            if isinstance(val, np.ndarray):
+                # Turn length 0 arrays into scalars
+                if val.size == 1:
+                    val = val.flatten()[0]
+            return val
+        else:
+            return getattr(self.sourcelist, key)
+
+
+class Sources(object):
+    """
+    Defines a set of point source components at given ICRS ra/dec coordinates, with a
+    flux densities defined by stokes parameters.
 
     Used to calculate local coherency matrix for source brightness in AltAz
     frame at a specified time.
     """
+
+    Ncomponents = None      # Number of point source components represented here.
+
     name = None
     freq = None
     stokes = None
@@ -25,6 +65,8 @@ class Source(object):
     dec = None
     coherency_radec = None
     alt_az = None
+    rise_lst = None
+    set_lst = None
 
     def __init__(self, name, ra, dec, freq, stokes, rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
         """
@@ -32,18 +74,19 @@ class Source(object):
 
         Args:
             name: Unique identifier for the source.
-            ra: astropy Angle object
+            ra: astropy Angle object, shape (Ncomponents,)
                 source RA in J2000 (or ICRS) coordinates
-            dec: astropy Angle object
+            dec: astropy Angle object, shape (Ncomponents,)
                 source Dec in J2000 (or ICRS) coordinates
             stokes:
+                shape (Ncomponents,4)
                 4 element vector giving the source [I, Q, U, V]
-            freq: astropy quantity
-                frequency of source catalog value
-            rise_lst: (float)
+            freq: astropy quantity, shape (Ncomponents,)
+                reference frequencies of flux values
+            rise_lst: (float), shape (Ncomponents,)
                 Approximate lst (radians) when the source rises. Set by coarse horizon cut in simsetup.
                 Default is None, meaning the source never rises.
-            set_lst: (float)
+            set_lst: (float), shape (Ncomponents,)
                 Approximate lst (radians) when the source sets.
                 Default is None, meaning the source never sets.
             pos_tol: float, defaults to minimum float in numpy
@@ -71,14 +114,45 @@ class Source(object):
         self.rise_lst = rise_lst
         self.set_lst = set_lst
 
+        self.Ncomponents = ra.size
+
+        assert np.all([self.Ncomponents == l for l in
+            [self.ra.size, self.dec.size, self.freq.size, self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
+
+        if self.Ncomponents == 1:
+            self.stokes = self.stokes.reshape(1, 1)
+
         self.skycoord = SkyCoord(self.ra, self.dec, frame='icrs')
 
         # The coherency is a 2x2 matrix giving electric field correlation in Jy.
         # Multiply by .5 to ensure that Trace sums to I not 2*I
-        self.coherency_radec = .5 * np.array([[self.stokes[0] + self.stokes[1],
-                                               self.stokes[2] - 1j * self.stokes[3]],
-                                              [self.stokes[2] + 1j * self.stokes[3],
-                                               self.stokes[0] - self.stokes[1]]])
+        # Shape = (2,2,Ncomponents)
+        self.coherency_radec = .5 * np.array([[self.stokes[0, :] + self.stokes[1, :],
+                                               self.stokes[2, :] - 1j * self.stokes[3, :]],
+                                              [self.stokes[2, :] + 1j * self.stokes[3, :],
+                                               self.stokes[0, :] - self.stokes[1, :]]])
+
+    def __getitem__(self, i):
+        return _single_source(self, i)
+
+    def __iter__(self):
+        self._counter = 0
+        return self
+
+    def __next__(self):
+        if self._counter < self.Ncomponents:
+            i = self._counter
+            self._counter += 1
+            return self[i]
+        else:
+            raise StopIteration
+
+    def __len__(self):
+        return self.Ncomponents
+
+    def next(self):
+         # For python 2 compatibility
+        return self.__next__()
 
     def coherency_calc(self, time, telescope_location):
         """
@@ -103,26 +177,29 @@ class Source(object):
             raise ValueError('telescope_location must be an astropy EarthLocation object. '
                              'value was: {al}'.format(al=telescope_location))
 
-        if np.sum(np.abs(self.stokes[1:])) == 0:
-            rotation_matrix = np.array([[1, 0], [0, 1]])
-        else:
+        Ionly_mask = np.sum(self.stokes[1:, :], axis=0) == 0.0
+        NstokesI = np.sum(Ionly_mask)   # Number of unpolarized sources
+
+        # For unpolarized sources, there's no need to rotate the coherency matrix.
+        coherency_local = self.coherency_radec.copy()
+
+        if NstokesI < self.Ncomponents:
+            # If there are any polarized sources, do rotation.
+
             # First need to calculate the sin & cos of the parallactic angle
             # See Meeus's astronomical algorithms eq 14.1
             # also see Astroplan.observer.parallactic_angle method
-            time.location = telescope_location
-            lst = time.sidereal_time('apparent')
+            polarized_sources = np.where(~Ionly_mask)
+            sinX = np.sin(self.hour_angle)
+            cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(self.hour_angle)
+    
+            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]]).astype(float)       # (2, 2, Ncomponents)
+            rotation_matrix = rotation_matrix[..., polarized_sources]
 
-            cirs_source_coord = self.skycoord.transform_to('cirs')
-            tee_ra = simutils.cirs_to_tee_ra(cirs_source_coord.ra, time)
-
-            hour_angle = (lst - tee_ra).rad
-            sinX = np.sin(hour_angle)
-            cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(hour_angle)
-
-            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
-
-        coherency_local = np.einsum('ab,bc,cd->ad', rotation_matrix.T,
-                                    self.coherency_radec, rotation_matrix)
+            rotation_matrix_T = np.swapaxes(rotation_matrix, 0, 1)
+            coherency_local[:,:,polarized_sources] = np.einsum('abx,bcx,cdx->adx', rotation_matrix_T,
+                                                                self.coherency_radec[:,:,polarized_sources],
+                                                                rotation_matrix)
 
         return coherency_local
 
@@ -135,7 +212,7 @@ class Source(object):
             telescope_location: astropy EarthLocation object
 
         Returns:
-            (altitude, azimuth) in radians
+            (altitude, azimuth) in radians. Each has length (Ncomponents,)
         """
         if not isinstance(time, Time):
             raise ValueError('time must be an astropy Time object. '
