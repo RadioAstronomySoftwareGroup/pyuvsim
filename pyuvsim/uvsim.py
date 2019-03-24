@@ -205,7 +205,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
 
         source = catalog[src_i]
 
-        if source.rise_lst and source.set_lst:
+        if np.isfinite(source.rise_lst + source.set_lst):
             r_lst = source.rise_lst
             s_lst = source.set_lst
             now_lst = input_uv.lst_array[blti]

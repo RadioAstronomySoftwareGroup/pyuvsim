@@ -136,7 +136,7 @@ def array_to_sourcelist(catalog_table, lst_array=None, latitude_deg=None, horizo
     ids = catalog_table['source_id']
     freqs = catalog_table['frequency'] * units.Hz
 
-    if np.any(not np.isscalar(catalog_table['flux_density_I'])):
+    if not np.all([np.isscalar(f) for f in catalog_table['flux_density_I']]):
         raise ValueError("Error in source array")
 
     # this can probably be written more cleanly... final shape is (4, Nsrcs)
@@ -145,17 +145,15 @@ def array_to_sourcelist(catalog_table, lst_array=None, latitude_deg=None, horizo
     sourcelist = Sources(ids, ra, dec, freqs, stokes)
 
     if coarse_horizon_cut:
-        circumpolar = tans > 1
-        rise_lst = sourcelist.ra.rad - np.arccos( (-1) * tans) - buff
-        set_lst = sourcelist.ra.rad + np.arccos( (-1) * tans) + buff
-        rise_lst[rise_lst < 0] += 2*np.pi
-        set_lst[set_lst < 0] -= 2*np.pi
+        circumpolar = tans >= 1      # These will have rise/set lst set to nan
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)
+            rise_lst = sourcelist.ra.rad - np.arccos( (-1) * tans) - buff
+            set_lst = sourcelist.ra.rad + np.arccos( (-1) * tans) + buff
+            rise_lst[rise_lst < 0] += 2*np.pi
+            set_lst[set_lst < 0] -= 2*np.pi
         sourcelist.rise_lst = rise_lst
         sourcelist.set_lst  = set_lst
-        sourcelist.rise_lst[circumpolar] = None
-        sourcelist.set_lst[circumpolar] = None
-
-    import IPython; IPython.embed()
 
     return sourcelist
 

@@ -65,10 +65,8 @@ class Sources(object):
     dec = None
     coherency_radec = None
     alt_az = None
-    rise_lst = None
-    set_lst = None
 
-    def __init__(self, name, ra, dec, freq, stokes, rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
+    def __init__(self, name, ra, dec, freq, stokes, rise_lst=np.nan, set_lst=None, pos_tol=np.finfo(float).eps):
         """
         Initialize from source catalog
 
@@ -85,7 +83,7 @@ class Sources(object):
                 reference frequencies of flux values
             rise_lst: (float), shape (Ncomponents,)
                 Approximate lst (radians) when the source rises. Set by coarse horizon cut in simsetup.
-                Default is None, meaning the source never rises.
+                Default is nan, meaning the source never rises.
             set_lst: (float), shape (Ncomponents,)
                 Approximate lst (radians) when the source sets.
                 Default is None, meaning the source never sets.
