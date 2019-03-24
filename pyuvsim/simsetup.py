@@ -148,12 +148,12 @@ def array_to_sourcelist(catalog_table, lst_array=None, latitude_deg=None, horizo
         circumpolar = tans >= 1      # These will have rise/set lst set to nan
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', RuntimeWarning)
-            rise_lst = sourcelist.ra.rad - np.arccos( (-1) * tans) - buff
-            set_lst = sourcelist.ra.rad + np.arccos( (-1) * tans) + buff
-            rise_lst[rise_lst < 0] += 2*np.pi
-            set_lst[set_lst < 0] -= 2*np.pi
+            rise_lst = sourcelist.ra.rad - np.arccos((-1) * tans) - buff
+            set_lst = sourcelist.ra.rad + np.arccos((-1) * tans) + buff
+            rise_lst[rise_lst < 0] += 2 * np.pi
+            set_lst[set_lst < 0] -= 2 * np.pi
         sourcelist.rise_lst = rise_lst
-        sourcelist.set_lst  = set_lst
+        sourcelist.set_lst = set_lst
 
     return sourcelist
 
@@ -238,7 +238,7 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}):
             |  max_flux: Maximum stokes I flux to select [Jy]
 
     Returns:
-        List of pyuvsim.Source objects
+        pyuvsim.Sources object
     """
     with open(catalog_csv, 'r') as cfile:
         header = cfile.readline()
@@ -266,7 +266,7 @@ def write_catalog_to_file(filename, catalog):
 
     Args:
         filename: Path to output file (string)
-        catalog: List of pyuvsim.Source objects
+        catalog: pyuvsim.Sources object
     """
     with open(filename, 'w+') as fo:
         fo.write("SOURCE_ID\tRA_J2000 [deg]\tDec_J2000 [deg]\tFlux [Jy]\tFrequency [Hz]\n")
@@ -301,7 +301,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         rseed (int): If using the random configuration, pass in a RandomState seed.
 
     Returns:
-        catalog: List of pyuvsim.Source objects
+        catalog: pyuvsim.Sources object
         mock_kwds: (dictionary) The keywords defining this source catalog
     """
 

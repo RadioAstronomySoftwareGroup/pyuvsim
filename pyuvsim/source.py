@@ -115,7 +115,7 @@ class Sources(object):
         self.Ncomponents = ra.size
 
         assert np.all([self.Ncomponents == l for l in
-            [self.ra.size, self.dec.size, self.freq.size, self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
+                       [self.ra.size, self.dec.size, self.freq.size, self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
 
         if self.Ncomponents == 1:
             self.stokes = self.stokes.reshape(1, 1)
