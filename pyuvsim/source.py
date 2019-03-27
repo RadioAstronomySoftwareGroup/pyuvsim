@@ -5,6 +5,7 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+import copy
 from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
@@ -22,29 +23,48 @@ class Source(object):
         self.nothing = None
 
 
-class _single_source(object):
+class _view_source(object):
     """
-    Interface for accessing attributes of a single source component in a source list.
+    Interface for accessing a subset of sources in a source list.
+
+    This is returned by Sources.__getitem__ and should not be used directly.
     """
 
     def __init__(self, sourcelist, index):
-        self.index = index
+        self.slice = index
         self.sourcelist = sourcelist
 
     def __getattr__(self, key):
 
-        Ncomp_attrs = ['ra', 'dec', 'coherency_radec', 'coherency_local', 'stokes', 'alt_az', 'rise_lst', 'set_lst', 'freq', 'name']
-        scalar_attrs = ['time', 'pos_tol']
-
-        if key in Ncomp_attrs:
-            val = getattr(self.sourcelist, key)[..., self.index]
+        if key in self.sourcelist._Ncomp_attrs:
+            val = getattr(self.sourcelist, key)
+            if val is None:
+                return val
+            val = val[..., self.slice]
             if isinstance(val, np.ndarray):
                 # Turn length 0 arrays into scalars
                 if val.size == 1:
                     val = val.flatten()[0]
             return val
-        else:
+        elif key in self.sourcelist._scalar_attrs:
             return getattr(self.sourcelist, key)
+        elif key in self.sourcelist._member_funcs:
+            func = getattr(self.sourcelist, key)
+            return lambda x: func(x, src_inds=self.slice)
+
+    def copy(self):
+        """
+        Copy this selected segment as a new Sources object.
+        """
+        src_obj = Sources(None, None, None, None, None)
+        attrs = self.sourcelist._Ncomp_attrs + self.sourcelist._scalar_attrs
+        for key in attrs:
+            if hasattr(self.sourcelist, key):
+                val = copy.copy(self.__getattr__(key))
+                setattr(src_obj, key, val)
+
+        src_obj.Ncomponents = src_obj.ra.size
+        return src_obj
 
 
 class Sources(object):
@@ -65,8 +85,19 @@ class Sources(object):
     dec = None
     coherency_radec = None
     alt_az = None
+    pos_lmn = None
 
-    def __init__(self, name, ra, dec, freq, stokes, rise_lst=np.nan, set_lst=None, pos_tol=np.finfo(float).eps):
+
+    _Ncomp_attrs = ['ra', 'dec', 'coherency_radec', 'coherency_local',
+                       'stokes', 'alt_az', 'rise_lst', 'set_lst', 'freq',
+                       'pos_lmn', 'name']
+    _scalar_attrs = ['Ncomponents', 'time', 'pos_tol']
+
+    _member_funcs = ['coherency_calc', 'update_positions']
+
+
+    def __init__(self, name, ra, dec, freq, stokes,
+                 rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
         """
         Initialize from source catalog
 
@@ -90,6 +121,12 @@ class Sources(object):
             pos_tol: float, defaults to minimum float in numpy
                 position tolerance in degrees
         """
+
+        if stokes is None:
+            if np.all([None] * 4 == [name, ra, dec, freq]):
+                # Not initializing here.
+                return
+
         if not isinstance(ra, Angle):
             raise ValueError('ra must be an astropy Angle object. '
                              'value was: {ra}'.format(ra=ra))
@@ -102,6 +139,8 @@ class Sources(object):
             raise ValueError('freq must be an astropy Quantity object. '
                              'value was: {f}'.format(f=freq))
 
+        self.Ncomponents = ra.size
+
         self.name = name
         self.freq = freq
         self.stokes = stokes
@@ -112,7 +151,15 @@ class Sources(object):
         self.rise_lst = rise_lst
         self.set_lst = set_lst
 
-        self.Ncomponents = ra.size
+        # If rise/set lsts are not passed in they should be Ncomponent arrays of NaN
+        if self.rise_lst is None:
+            self.rise_lst = np.array([np.nan] * self.Ncomponents)
+        if self.set_lst is None:
+            self.set_lst = np.array([np.nan] * self.Ncomponents)
+
+
+        # Get a list of all member functions
+#        method_list = [func for func in dir(self) if callable(getattr(self, func)) and not func.startswith("__")]
 
         assert np.all([self.Ncomponents == l for l in
                        [self.ra.size, self.dec.size, self.freq.size, self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
@@ -130,8 +177,28 @@ class Sources(object):
                                               [self.stokes[2, :] + 1j * self.stokes[3, :],
                                                self.stokes[0, :] - self.stokes[1, :]]])
 
+    def select(self, s):
+        """
+        Subselect from the Ncomponents
+        """
+
+        for k in self._Ncomp_attrs:
+            if not hasattr(self, k):
+                continue
+            val = getattr(self, k)
+            if val is not None:
+                val = val[..., s]
+            if isinstance(val, np.ndarray):
+                if val.size == 1:
+                    val = val.flatten()[0]
+            setattr(self, k, val)
+
+        self.Ncomponents = self.ra.size
+
+
     def __getitem__(self, i):
-        return _single_source(self, i)
+        # i = valid index object
+        return _view_source(self, i)
 
     def __iter__(self):
         self._counter = 0
