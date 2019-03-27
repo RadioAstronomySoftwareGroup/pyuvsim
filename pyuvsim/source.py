@@ -313,6 +313,9 @@ class Sources(object):
         self.pos_lmn[1,src_inds] = pos_m
         self.pos_lmn[2,src_inds] = pos_n
 
+        # Horizon mask:
+        self.horizon_mask = self.alt_az[:,0] < 0.0
+
     def __eq__(self, other):
         return (np.isclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)
                 and np.isclose(self.dec.deg, other.dec.deg, atol=self.pos_tol)
