@@ -219,7 +219,7 @@ class Sources(object):
          # For python 2 compatibility
         return self.__next__()
 
-    def coherency_calc(self, time, telescope_location):
+    def coherency_calc(self, time, telescope_location, src_inds=slice(None)):
         """
         Calculate the local coherency in alt/az basis for this source at a time & location.
 
@@ -230,6 +230,7 @@ class Sources(object):
         Args:
             time: astropy Time object
             telescope_location: astropy EarthLocation object
+            src_inds: Optionally, only calculate for a subset of sources.
 
         Returns:
             local coherency in alt/az basis
@@ -268,17 +269,22 @@ class Sources(object):
 
         return coherency_local
 
-    def alt_az_calc(self, time, telescope_location):
+    def update_positions(self, time, telescope_location):
         """
-        calculate the altitude & azimuth for this source at a time & location
+        Calculate the altitude/azimuth positions for these sources
+        From alt/az, calculate direction cosines (lmn)
 
         Args:
             time: astropy Time object
             telescope_location: astropy EarthLocation object
+            src_inds: Optionally, only calculate for a subset of sources.
 
-        Returns:
-            (altitude, azimuth) in radians. Each has length (Ncomponents,)
+        Sets:
+            self.pos_lmn: (3, Ncomponents)
+            self.alt_az: (2, Ncomponents)
+            self.time: (1,) Time object
         """
+
         if not isinstance(time, Time):
             raise ValueError('time must be an astropy Time object. '
                              'value was: {t}'.format(t=time))
@@ -287,44 +293,25 @@ class Sources(object):
             raise ValueError('telescope_location must be an astropy EarthLocation object. '
                              'value was: {al}'.format(al=telescope_location))
 
-        source_altaz = self.skycoord.transform_to(AltAz(obstime=time, location=telescope_location))
+        if self.time == time:  # Don't repeat calculations
+            return
 
-        alt_az = (source_altaz.alt.rad, source_altaz.az.rad)
+        source_altaz = self.skycoord[src_inds].transform_to(AltAz(obstime=time, location=telescope_location))
+
         self.time = time
+        alt_az = np.array([source_altaz.alt.rad, source_altaz.az.rad])
         self.alt_az = alt_az
-        return alt_az
 
-    def get_alt_az(self, time, telescope_location):
-        """ Reuse alt_az if already calculated """
-        if (self.alt_az is None) or (not time == self.time):
-            return self.alt_az_calc(time, telescope_location)
-        else:
-            return self.alt_az
+        pos_l = np.sin(alt_az[1,:]) * np.cos(alt_az[0,:])
+        pos_m = np.cos(alt_az[1,:]) * np.cos(alt_az[0,:])
+        pos_n = np.sin(alt_az[0,:])
 
-    def pos_lmn(self, time, telescope_location):
-        """
-        calculate the direction cosines of this source at a time & location
+        if self.pos_lmn is None:
+            self.pos_lmn = np.array([np.zeros(self.Ncomponents)] * 3)
 
-        Args:
-            time: astropy Time object
-            telescope_location: astropy EarthLocation object
-
-        Returns:
-            (l, m, n) direction cosine values
-        """
-        # calculate direction cosines of source at current time and array location
-        # Will only do the calculation if time has changed
-        alt_az = self.get_alt_az(time, telescope_location)
-
-        # Horizon Mask
-        if alt_az[0] < 0:
-            return None
-
-        pos_l = np.sin(alt_az[1]) * np.cos(alt_az[0])
-        pos_m = np.cos(alt_az[1]) * np.cos(alt_az[0])
-        pos_n = np.sin(alt_az[0])
-
-        return (pos_l, pos_m, pos_n)
+        self.pos_lmn[0,src_inds] = pos_l
+        self.pos_lmn[1,src_inds] = pos_m
+        self.pos_lmn[2,src_inds] = pos_n
 
     def __eq__(self, other):
         return (np.isclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)
