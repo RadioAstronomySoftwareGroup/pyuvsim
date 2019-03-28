@@ -696,7 +696,7 @@ def parse_time_params(time_params):
         dict of array properties:
             |  integration_time: (float) Time array spacing in seconds.
             |  Ntimes: (int) Number of times
-            |  time_array: (dtype float, ndarray, shape=(Nfreqs,)) Time step centers in JD.
+            |  time_array: (dtype float, ndarray, shape=(Ntimes,)) Time step centers in JD.
     """
 
     return_dict = {}
