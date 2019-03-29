@@ -8,9 +8,9 @@ import numpy as np
 from numpy.lib import recfunctions
 import yaml
 import os
-import sys
 import warnings
 import six
+import copy
 from six.moves import map, range, zip
 import astropy.units as units
 from astropy.time import Time
@@ -628,7 +628,7 @@ def parse_frequency_params(freq_params):
                 bw = True
             if bw:
                 Nfreqs = float(np.floor(freq_params['bandwidth']
-                                       / freq_params['channel_width']))
+                                        / freq_params['channel_width']))
                 if not np.isclose(Nfreqs % 1, 0):
                     raise ValueError("end_freq - start_freq must be evenly divisible by channel_width")
 
@@ -756,6 +756,58 @@ def parse_time_params(time_params):
     return_dict['Npols'] = 4
 
     return return_dict
+
+
+def freq_array_to_params(freq_array):
+    """
+    Give the channel width, bandwidth, start, and end frequencies corresponding
+    to a given frequency array.
+
+    Args:
+        freq_array : (ndarray, shape = (Nfreqs,)) of frequencies.
+
+    Returns:
+        Dictionary of frequency parameters consistent with freq_array.
+    """
+    freq_array = np.asarray(freq_array).ravel()
+
+    fdict = {}
+    if freq_array.size < 2:
+        raise ValueError("Frequency array must be longer than 1 to give meaningful results.")
+
+    fdict['channel_width'] = np.diff(freq_array)[0]
+    fdict['Nfreqs'] = freq_array.size
+    fdict['bandwidth'] = fdict['channel_width'] * fdict['Nfreqs']
+    fdict['start_freq'] = freq_array[0]
+    fdict['end_freq'] = freq_array[-1]
+
+    return fdict
+
+
+def time_array_to_params(time_array):
+    """
+    Returns integration_time, duration, and start and end times corresponding to a given time array.
+
+    Args:
+        time_array : (ndarray) of julian dates
+
+    Returns:
+        Dictionary of time parameters consistent with time_array.
+
+    """
+    time_array = np.asarray(time_array)
+
+    tdict = {}
+    if time_array.size < 2:
+        raise ValueError("Time array must be longer than 1 to give meaningful results.")
+
+    tdict['integration_time'] = np.diff(time_array)[0] * (24. * 3600.)
+    tdict['Ntimes'] = time_array.size
+    tdict['duration'] = tdict['integration_time'] * tdict['Ntimes'] / (24. * 3600.)
+    tdict['start_time'] = time_array[0]
+    tdict['end_time'] = time_array[-1]
+
+    return tdict
 
 
 def initialize_uvdata_from_params(obs_params):

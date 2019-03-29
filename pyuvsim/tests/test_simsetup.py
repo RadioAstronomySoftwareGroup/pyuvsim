@@ -259,6 +259,17 @@ def test_param_reader():
         yield (check_param_reader, n)
 
 
+def test_freq_time_params():
+    freqs = np.linspace(100, 200, 1024)
+    times = np.linspace(2458570, 2458570 + 0.5, 239)
+    time_dict = pyuvsim.simsetup.time_array_to_params(times)
+    freq_dict = pyuvsim.simsetup.freq_array_to_params(freqs)
+    ftest = pyuvsim.simsetup.parse_frequency_params(freq_dict)
+    ttest = pyuvsim.simsetup.parse_time_params(time_dict)
+    nt.assert_true(np.allclose(ftest['freq_array'], freqs))
+    nt.assert_true(np.allclose(ttest['time_array'], times))
+
+
 def test_param_select_cross():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
 
