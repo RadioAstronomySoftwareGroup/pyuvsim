@@ -607,6 +607,7 @@ def parse_frequency_params(freq_params):
                      'channel_width', 'bandwidth']
     fa, sf, ef, nf, cw, bw = [fk in freq_params for fk in freq_keywords]
     kws_used = ", ".join(freq_params.keys())
+    _freq_params = copy.deepcopy(freq_params)
 
     if fa:
         freq_arr = np.array(freq_params['freq_array'])
@@ -661,6 +662,7 @@ def parse_frequency_params(freq_params):
     if freq_params['Nfreqs'] != 1:
         assert np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1))
 
+    freq_params = _freq_params
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
 
@@ -687,6 +689,8 @@ def parse_time_params(time_params):
     """
 
     return_dict = {}
+
+    _time_params = copy.deepcopy(time_params)
 
     time_keywords = ['start_time', 'end_time', 'Ntimes', 'integration_time',
                      'duration_hours', 'duration_days']
@@ -743,6 +747,7 @@ def parse_time_params(time_params):
     if time_params['Ntimes'] != 1:
         assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=dayspersec)   # To nearest second
 
+    time_params = _time_params  # Restore backup
     return_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
                                        * time_params['integration_time'])
     return_dict['time_array'] = time_arr
