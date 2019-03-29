@@ -150,6 +150,7 @@ def check_param_reader(config_num):
     # Check error conditions:
     if config_num == 0:
         params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
+        bak_params_bad = copy.deepcopy(params_bad)
 
         # Missing config file info
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, 'nonexistent_directory', 'nonexistent_file')
@@ -161,10 +162,16 @@ def check_param_reader(config_num):
         nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
 
         # Missing beam keywords
-        params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
+        params_bad = copy.deepcopy(bak_params_bad)
 
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
 
+        params_bad['freq']['end_freq'] += 30.0
+        params_bad['freq']['channel_width'] = np.pi
+        del params_bad['freq']['Nfreqs']
+        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+
+        params_bad = copy.deepcopy(bak_params_bad)
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_gaussnoshape.yaml')
         nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, params_bad)
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml')
@@ -173,7 +180,7 @@ def check_param_reader(config_num):
         nt.assert_raises(OSError, pyuvsim.initialize_uvdata_from_params, params_bad)
 
         # Errors on frequency configuration
-        params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
+        params_bad = copy.deepcopy(bak_params_bad)
 
         # Define channel_width but not Nfreqs
         bak_nfreq = params_bad['freq']['Nfreqs']
@@ -201,7 +208,7 @@ def check_param_reader(config_num):
         nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
 
         # Now check time configuration:
-        params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
+        params_bad = copy.deepcopy(bak_params_bad)
 
         # Don't define start or end time:
         del params_bad['time']['end_time']
