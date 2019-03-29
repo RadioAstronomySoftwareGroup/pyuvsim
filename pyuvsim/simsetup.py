@@ -632,6 +632,7 @@ def parse_frequency_params(freq_params):
                                         / freq_params['channel_width']))
                 if not np.isclose(Nfreqs % 1, 0):
                     raise ValueError("end_freq - start_freq must be evenly divisible by channel_width")
+                freq_params['Nfreqs'] = int(Nfreqs)
 
             else:
                 raise ValueError("Either bandwidth or band edges "
@@ -1082,4 +1083,6 @@ def beam_string_to_object(beam_model):
     path = beam_model   # beam_model = path to beamfits
     uvb = UVBeam()
     uvb.read_beamfits(path)
+    if uvb.freq_interp_kind is None:
+        uvb.freq_interp_kind = 'linear'
     return uvb

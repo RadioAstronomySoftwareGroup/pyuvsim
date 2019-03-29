@@ -59,6 +59,7 @@ class AnalyticBeam(object):
 
         self.diameter = diameter
         self.data_normalization = 'peak'
+        self.freq_interp_kind = 'linear'
 
     def peak_normalize(self):
         pass
