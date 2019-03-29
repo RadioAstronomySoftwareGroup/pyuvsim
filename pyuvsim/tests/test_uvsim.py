@@ -24,7 +24,7 @@ import pyuvsim.tests as simtest
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
-beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
+beam_files = [os.path.join(DATA_PATH, 'NicCSTbeams', f) for f in cst_files]
 hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 EW_uvfits_10time10chan = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfits')
@@ -48,12 +48,7 @@ def test_visibility_single_zenith_source():
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
+    beam = simtest.make_cst_beams()
 
     beam_list = [beam]
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
@@ -86,12 +81,7 @@ def test_visibility_source_below_horizon():
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
+    beam = simtest.make_cst_beams()
 
     beam_list = [beam]
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
@@ -125,12 +115,7 @@ def test_visibility_source_below_horizon_radec():
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[150e6, 123e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
+    beam = simtest.make_cst_beams()
 
     beam_list = [beam]
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
@@ -172,13 +157,7 @@ def test_visibility_single_zenith_source_uvdata():
     source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
     source = source_arr[0]
 
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
-
+    beam = simtest.make_cst_beams()
     beam_list = [beam]
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
@@ -222,13 +201,7 @@ def test_redundant_baselines():
     source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     source = source_arr[0]
 
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
-
+    beam = simtest.make_cst_beams()
     beam_list = [beam]
 
     baseline1 = pyuvsim.Baseline(antenna1, antenna2)
@@ -292,13 +265,7 @@ def test_single_offzenith_source_uvfits():
     nt.assert_true(np.isclose(src_lmn[1], src_m))
     nt.assert_true(np.isclose(src_lmn[2], src_n))
 
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
-
+    beam = simtest.make_cst_beams()
     beam_list = [beam]
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
@@ -384,13 +351,6 @@ def test_offzenith_source_multibl_uvfits():
     source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     source = source_arr[0]
 
-    # beam = UVBeam()
-    # beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
-    #                    telescope_name='HERA',
-    #                    feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-    #                    model_name='E-field pattern - Rigging height 4.9m',
-    #                    model_version='1.0')
-
     beam = pyuvsim.AnalyticBeam('uniform')
 
     beam_list = [beam]
@@ -439,13 +399,7 @@ def test_file_to_tasks():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
-
+    beam = simtest.make_cst_beams()
     beam_list = [beam]
 
     Nblts = hera_uv.Nblts
@@ -562,13 +516,7 @@ def test_gather():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
-
+    beam = simtest.make_cst_beams()
     beam_list = [beam]
 
     Nblts = hera_uv.Nblts
@@ -602,13 +550,7 @@ def test_local_task_gen():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, kwds = pyuvsim.create_mock_catalog(time, arrangement='random', Nsrcs=5)
 
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
-
+    beam = simtest.make_cst_beams()
     beam_list = [beam]
 
     Nblts = hera_uv.Nblts
