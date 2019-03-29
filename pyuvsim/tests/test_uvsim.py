@@ -157,7 +157,7 @@ def test_visibility_single_zenith_source_uvdata():
     source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
     source = source_arr[0]
 
-    beam = simtest.make_cst_beams()
+    beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
@@ -201,7 +201,7 @@ def test_redundant_baselines():
     source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     source = source_arr[0]
 
-    beam = simtest.make_cst_beams()
+    beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
 
     baseline1 = pyuvsim.Baseline(antenna1, antenna2)
@@ -265,7 +265,7 @@ def test_single_offzenith_source_uvfits():
     nt.assert_true(np.isclose(src_lmn[1], src_m))
     nt.assert_true(np.isclose(src_lmn[2], src_n))
 
-    beam = simtest.make_cst_beams()
+    beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
@@ -516,7 +516,7 @@ def test_gather():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
-    beam = simtest.make_cst_beams()
+    beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
 
     Nblts = hera_uv.Nblts
@@ -550,7 +550,7 @@ def test_local_task_gen():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, kwds = pyuvsim.create_mock_catalog(time, arrangement='random', Nsrcs=5)
 
-    beam = simtest.make_cst_beams()
+    beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
 
     Nblts = hera_uv.Nblts

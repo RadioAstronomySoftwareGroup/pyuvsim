@@ -21,8 +21,6 @@ from pyuvsim import mpi
 import pyuvsim.tests as simtest
 
 
-cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
-beam_files = [os.path.join(DATA_PATH, 'NicCSTbeams', f) for f in cst_files]
 hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(4)]   # Five different test configs
@@ -38,7 +36,7 @@ def test_run_uvsim():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
 
-    beam = simtest.make_cst_beams()
+    beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam.write_beamfits("temp.uvbeam")
     beamfile = os.path.join(os.getcwd(), "temp.uvbeam")
 
