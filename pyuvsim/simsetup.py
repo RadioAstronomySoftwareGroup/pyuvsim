@@ -10,6 +10,7 @@ import yaml
 import os
 import warnings
 import six
+import ast
 import copy
 from six.moves import map, range, zip
 import astropy.units as units
@@ -662,7 +663,6 @@ def parse_frequency_params(freq_params):
     if freq_params['Nfreqs'] != 1:
         assert np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1))
 
-    freq_params = _freq_params
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
 
@@ -670,6 +670,8 @@ def parse_frequency_params(freq_params):
     return_dict['Nfreqs'] = freq_params['Nfreqs']
     return_dict['freq_array'] = freq_arr
     return_dict['channel_width'] = freq_params['channel_width']
+
+    freq_params = _freq_params
 
     return return_dict
 
@@ -747,13 +749,14 @@ def parse_time_params(time_params):
     if time_params['Ntimes'] != 1:
         assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=dayspersec)   # To nearest second
 
-    time_params = _time_params  # Restore backup
     return_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
                                        * time_params['integration_time'])
     return_dict['time_array'] = time_arr
     return_dict['Ntimes'] = time_params['Ntimes']
     return_dict['Nspws'] = 1
     return_dict['Npols'] = 4
+
+    time_params = _time_params  # Restore backup
 
     return return_dict
 
@@ -907,7 +910,7 @@ def initialize_uvdata_from_params(obs_params):
             bls = select_params['bls']
             if isinstance(bls, six.string_types):
                 # If read from file, this should be a string.
-                bls = eval(bls)
+                bls = ast.literal_eval(bls)
                 select_params['bls'] = bls
             if any([len(item) == 3 for item in bls]):
                 raise ValueError('Only length 2 tuples allowed in bls: can not '
