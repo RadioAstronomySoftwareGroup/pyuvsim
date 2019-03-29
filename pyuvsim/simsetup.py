@@ -626,8 +626,11 @@ def parse_frequency_params(freq_params):
                 freq_params['bandwidth'] = freq_params['end_freq'] - freq_params['start_freq'] + freq_params['channel_width']
                 bw = True
             if bw:
-                freq_params['Nfreqs'] = int(np.floor(freq_params['bandwidth']
-                                                     / freq_params['channel_width']))
+                Nfreqs = float(np.floor(freq_params['bandwidth']
+                                       / freq_params['channel_width']))
+                if not np.isclose(Nfreqs % 1, 0):
+                    raise ValueError("end_freq - start_freq must be evenly divisible by channel_width")
+
             else:
                 raise ValueError("Either bandwidth or band edges "
                                  "must be specified: " + kws_used)
