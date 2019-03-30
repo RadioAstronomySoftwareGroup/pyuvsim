@@ -664,7 +664,9 @@ def parse_frequency_params(freq_params):
                                freq_params['Nfreqs'], endpoint=False)
 
     if freq_params['Nfreqs'] != 1:
-        assert np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1))
+        if not np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1)):
+            raise ValueError("Frequency array spacings are not equal to channel width."+
+                             "\nInput parameters are: {}".format(str(_freq_params)))
 
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
@@ -718,14 +720,31 @@ def parse_time_params(time_params):
         if st and et:
             time_params['duration'] = time_params['end_time'] - time_params['start_time'] + time_params['integration_time'] * dayspersec
             dd = True
-        if dd:
-            time_params['Ntimes'] = int(np.round(time_params['duration']
-                                                 / (time_params['integration_time'] * dayspersec)))
-        else:
-            raise ValueError("Either duration or time bounds must be specified: "
-                             + kws_used)
-
-    if not it:
+        elif dd:
+            time_params['duration'] = time_params['duration_days']
+    
+        if not nt:
+            if not it:
+                raise ValueError("Either integration_time or Ntimes must be "
+                                 "included in parameters:" + kws_used)
+            if st and et:
+                time_params['duration'] = time_params['end_time'] - time_params['start_time'] + time_params['integration_time'] * dayspersec
+                dd = True
+            if dd:
+                time_params['Ntimes'] = int(np.round(time_params['duration']
+                                                     / (time_params['integration_time'] * dayspersec)))
+            else:
+                raise ValueError("Either duration or time bounds must be specified: "
+                                 + kws_used)
+    
+        if not it:
+            if not dd:
+                raise ValueError("Either duration or integration time "
+                                 "must be specified: " + kws_used)
+            time_params['integration_time'] = (time_params['duration'] / dayspersec
+                                               / float(time_params['Ntimes']))  # In seconds
+    
+        inttime_days = time_params['integration_time'] * dayspersec
         if not dd:
             raise ValueError("Either duration or integration time "
                              "must be specified: " + kws_used)
