@@ -699,26 +699,22 @@ def parse_time_params(time_params):
 
     _time_params = copy.deepcopy(time_params)
 
-    time_keywords = ['start_time', 'end_time', 'Ntimes', 'integration_time',
+    time_keywords = ['time_array', 'start_time', 'end_time', 'Ntimes', 'integration_time',
                      'duration_hours', 'duration_days']
-    st, et, nt, it, dh, dd = [tk in time_params for tk in time_keywords]
+    ta, st, et, nt, it, dh, dd = [tk in time_params for tk in time_keywords]
     kws_used = ", ".join(time_params.keys())
     daysperhour = 1 / 24.
     hourspersec = 1 / 60.**2
     dayspersec = daysperhour * hourspersec
 
-    if dh and not dd:
-        time_params['duration'] = time_params['duration_hours'] * daysperhour
-        dd = True
-    elif dd:
-        time_params['duration'] = time_params['duration_days']
+    if ta:
+        # Time array is defined. Supercedes all other parameters:
+        time_arr = time_params['time_array']
+        time_params['Ntimes'] = len(time_arr)
 
-    if not nt:
-        if not it:
-            raise ValueError("Either integration_time or Ntimes must be "
-                             "included in parameters:" + kws_used)
-        if st and et:
-            time_params['duration'] = time_params['end_time'] - time_params['start_time'] + time_params['integration_time'] * dayspersec
+    else:
+        if dh and not dd:
+            time_params['duration'] = time_params['duration_hours'] * daysperhour
             dd = True
         elif dd:
             time_params['duration'] = time_params['duration_days']
@@ -746,37 +742,30 @@ def parse_time_params(time_params):
     
         inttime_days = time_params['integration_time'] * dayspersec
         if not dd:
-            raise ValueError("Either duration or integration time "
-                             "must be specified: " + kws_used)
-        time_params['integration_time'] = (time_params['duration'] / dayspersec
-                                           / float(time_params['Ntimes']))  # In seconds
-
-    inttime_days = time_params['integration_time'] * dayspersec
-    if not dd:
-        time_params['duration'] = inttime_days * (time_params['Ntimes'])
-        dd = True
-    if not st:
-        if et and dd:
-            time_params['start_time'] = time_params['end_time'] - time_params['duration'] + inttime_days
-    if not et:
-        if st and dd:
-            time_params['end_time'] = time_params['start_time'] + time_params['duration'] - inttime_days
-    if not (st or et):
-        raise ValueError("Either a start or end time must be specified: " + kws_used)
-
-    time_arr = np.linspace(time_params['start_time'],
-                           time_params['end_time'] + inttime_days,
-                           time_params['Ntimes'], endpoint=False)
-
-    if time_params['Ntimes'] != 1:
-        assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=dayspersec)   # To nearest second
-
-    return_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
-                                       * time_params['integration_time'])
+            time_params['duration'] = inttime_days * (time_params['Ntimes'])
+            dd = True
+        if not st:
+            if et and dd:
+                time_params['start_time'] = time_params['end_time'] - time_params['duration'] + inttime_days
+        if not et:
+            if st and dd:
+                time_params['end_time'] = time_params['start_time'] + time_params['duration'] - inttime_days
+        if not (st or et):
+            raise ValueError("Either a start or end time must be specified: " + kws_used)
+    
+        time_arr = np.linspace(time_params['start_time'],
+                               time_params['end_time'] + inttime_days,
+                               time_params['Ntimes'], endpoint=False)
+    
+        if time_params['Ntimes'] != 1:
+            if not np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=dayspersec):   # To nearest second
+                raise ValueError("Time array spacings are not equal to integration_time."+
+                                 "\nInput parameters are: {}".format(str(_time_params)))
+    
+        return_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
+                                           * time_params['integration_time'])
     return_dict['time_array'] = time_arr
     return_dict['Ntimes'] = time_params['Ntimes']
-    return_dict['Nspws'] = 1
-    return_dict['Npols'] = 4
 
     time_params = _time_params  # Restore backup
 
@@ -798,13 +787,16 @@ def freq_array_to_params(freq_array):
 
     fdict = {}
     if freq_array.size < 2:
-        raise ValueError("Frequency array must be longer than 1 to give meaningful results.")
+        fdict['channel_width'] = 1.0
+        fdict['Nfreqs'] = 1
+        fdict['start_freq'] = freq_array.item(0)
+        return fdict
 
-    fdict['channel_width'] = np.diff(freq_array)[0]
+    fdict['channel_width'] = np.diff(freq_array).item(0)
     fdict['Nfreqs'] = freq_array.size
     fdict['bandwidth'] = fdict['channel_width'] * fdict['Nfreqs']
-    fdict['start_freq'] = freq_array[0]
-    fdict['end_freq'] = freq_array[-1]
+    fdict['start_freq'] = freq_array.item(0)
+    fdict['end_freq'] = freq_array.item(-1)
 
     return fdict
 
@@ -821,16 +813,24 @@ def time_array_to_params(time_array):
 
     """
     time_array = np.asarray(time_array)
+    Ntimes_uniq = np.unique(time_array).size
 
     tdict = {}
-    if time_array.size < 2:
-        raise ValueError("Time array must be longer than 1 to give meaningful results.")
+    if Ntimes_uniq < 2:
+        tdict['integration_time'] = 1.0
+        tdict['Ntimes'] = 1
+        tdict['start_time'] = time_array.item(0)
+        return tdict
 
-    tdict['integration_time'] = np.diff(time_array)[0] * (24. * 3600.)
-    tdict['Ntimes'] = time_array.size
-    tdict['duration'] = tdict['integration_time'] * tdict['Ntimes'] / (24. * 3600.)
-    tdict['start_time'] = time_array[0]
-    tdict['end_time'] = time_array[-1]
+    dt = np.diff(np.unique(time_array))[0]
+    if not np.allclose(np.diff(time_array), np.ones(time_array.size - 1) * dt):
+        tdict['time_array'] = time_array.tolist()
+
+    tdict['integration_time'] = np.min(np.diff(time_array)).item() * (24. * 3600.)
+    tdict['Ntimes'] = Ntimes_uniq
+    tdict['duration_days'] = tdict['integration_time'] * tdict['Ntimes'] / (24. * 3600.)
+    tdict['start_time'] = time_array.item(0)
+    tdict['end_time'] = time_array.item(-1)
 
     return tdict
 
@@ -1044,25 +1044,19 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
         param_filename = check_file_exists_and_increment(os.path.join(path_out, 'obsparam.yaml'))
         param_filename = os.path.basename(param_filename)
 
-    freq_array = uvdata_in.freq_array[0, :].tolist()
-    time_array = uvdata_in.time_array.tolist()
+    freq_array = uvdata_in.freq_array[0, :]
+    time_array = uvdata_in.time_array
     integration_time_array = np.array(uvdata_in.integration_time)
     if np.max(integration_time_array) != np.min(integration_time_array):
         warnings.warn('The integration time is not constant. Using the shortest integration time')
     integration_time = float(np.min(integration_time_array))
+
+    tdict = time_array_to_params(time_array)
+    fdict = freq_array_to_params(freq_array)
+
     param_dict = dict(
-        time=dict(
-            start_time=time_array[0],
-            end_time=time_array[-1],
-            Ntimes=uvdata_in.Ntimes,
-            integration_time=integration_time,
-        ),
-        freq=dict(
-            start_freq=freq_array[0],
-            end_freq=freq_array[-1],
-            channel_width=uvdata_in.channel_width,
-            Nfreqs=uvdata_in.Nfreqs,
-        ),
+        time=tdict,
+        freq=fdict,
         sources=dict(
             catalog=catalog
         ),
