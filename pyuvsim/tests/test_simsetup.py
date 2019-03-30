@@ -276,6 +276,14 @@ def test_freq_time_params():
     nt.assert_true(np.allclose(ftest['freq_array'], freqs))
     nt.assert_true(np.allclose(ttest['time_array'], times))
 
+    # Check that this works for unevenly-spaced times
+
+    times = np.random.choice(times, 150, replace=False)
+    times.sort()
+    time_dict = pyuvsim.simsetup.time_array_to_params(times)
+    ttest = pyuvsim.simsetup.parse_time_params(time_dict)
+    nt.assert_true(np.allclose(ttest['time_array'], times))
+
 
 def test_param_select_cross():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
@@ -366,6 +374,7 @@ def test_uvfits_to_config():
     # Read uvfits file to params.
     uv0 = UVData()
     uv0.read_uvfits(longbl_uvfits_file)
+
     warningmessages = ['The default for the `center` keyword has changed. Previously it defaulted to True, using the median antennna location; now it defaults to False, using the telescope_location.',
                        'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3). Historically this function has supported (3, Npts) arrays, please verify that array ordering is as expected.']
     path, telescope_config, layout_fname = \
