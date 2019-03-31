@@ -665,8 +665,8 @@ def parse_frequency_params(freq_params):
 
     if freq_params['Nfreqs'] != 1:
         if not np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1)):
-            raise ValueError("Frequency array spacings are not equal to channel width." +
-                             "\nInput parameters are: {}".format(str(_freq_params)))
+            raise ValueError("Frequency array spacings are not equal to channel width."
+                             + "\nInput parameters are: {}".format(str(_freq_params)))
 
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
@@ -760,8 +760,8 @@ def parse_time_params(time_params):
 
         if time_params['Ntimes'] != 1:
             if not np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=dayspersec):   # To nearest second
-                raise ValueError("Time array spacings are not equal to integration_time." +
-                                 "\nInput parameters are: {}".format(str(_time_params)))
+                raise ValueError("Time array spacings are not equal to integration_time."
+                                 + "\nInput parameters are: {}".format(str(_time_params)))
 
         return_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
                                            * time_params['integration_time'])
