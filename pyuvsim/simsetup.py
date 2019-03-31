@@ -601,7 +601,7 @@ def parse_frequency_params(freq_params):
         dict of array properties:
             |  channel_width: (float) Frequency channel spacing in Hz
             |  Nfreqs: (int) Number of frequencies
-            |  freq_array: (dtype float, ndarray, shap=(Nspws, Nfreqs)) Frequency channel centers in Hz
+            |  freq_array: (dtype float, ndarray, shape=(Nspws, Nfreqs)) Frequency channel centers in Hz
     """
 
     freq_keywords = ['freq_array', 'start_freq', 'end_freq', 'Nfreqs',
@@ -675,6 +675,7 @@ def parse_frequency_params(freq_params):
     return_dict['Nfreqs'] = freq_params['Nfreqs']
     return_dict['freq_array'] = freq_arr
     return_dict['channel_width'] = freq_params['channel_width']
+    return_dict['Nspws'] = 1
 
     freq_params = _freq_params
 
@@ -875,6 +876,7 @@ def initialize_uvdata_from_params(obs_params):
     # Parse time structure
     time_dict = param_dict['time']
     uvparam_dict.update(parse_time_params(time_dict))
+    uvparam_dict['Npols'] = 4
 
     # Now make a UVData object with these settings built in.
     # The syntax below allows for other valid uvdata keywords to be passed
