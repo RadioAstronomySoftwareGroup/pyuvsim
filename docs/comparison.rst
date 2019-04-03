@@ -27,7 +27,6 @@ Disadvantages:
 1. MPI overhead is large if time axis in simulation is long.
 2. Supports only one polarization at a time.
 3. Does not support non-identical antenna patterns.
-4. Internal phasing methods are in error.
 
 Fast Holographic Deconvolution (FHD)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
