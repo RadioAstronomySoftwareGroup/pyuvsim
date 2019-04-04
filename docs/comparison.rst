@@ -72,11 +72,12 @@ Disadvantages:
 
 1. Limited support for user-defined primary beam models.
 2. Lacks full-sky coverage.
-3. Point sources are gridded to pixel locations, losing precision.
-4. Does not handle source polarization correctly.
-
-The loss of precision introduced by gridding point sources can introduce point source subtraction errors [CTROTT2012]_.
+3. Point sources are gridded to pixel locations, losing precision. This pixel-scale imprecision can introduce point source subtraction errors that are significant to 21cm cosmology experiments [CTROTT2012]_.
+4. Full direction-dependent Jones matrices are supported, but simulating with them requires that the beam times sky model calculation be carried out in separate softwa [JAGANNATHAN17]_.
 
 
 .. [CTROTT2012]
    Trott, Cathryn M., Randall B. Wayth, and Steven J. Tingay. "The impact of point-source subtraction residuals on 21 cm epoch of reionization estimation." The Astrophysical Journal 757.1 (2012): 101.
+
+.. [JAGANNATHAN17]
+   Jagannathan, P., et al. "Direction-dependent Corrections in Polarimetric Radio Imaging. I. Characterizing the Effects of the Primary Beam on Full-Stokes Imaging." The Astronomical Journal 154.2 (2017): 56.
