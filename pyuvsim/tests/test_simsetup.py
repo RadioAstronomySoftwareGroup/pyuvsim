@@ -204,6 +204,7 @@ def check_param_reader(config_num):
 # This loops through different config files and tests all of them the same way
 # note that each config tested shows up as a separate '.' in the nosetests output
 
+
 def test_param_reader():
     """
     Tests initialize_uvdata_from_params for six different parameter files.
@@ -221,16 +222,15 @@ def test_freq_parser():
     """
 
     fdict_base = dict(
-                 Nfreqs = 10,
-                 channel_width = 0.5,
-                 start_freq = 0.0,
-                 end_freq = 4.5,
-                 bandwidth = 5.0)
-
+        Nfreqs=10,
+        channel_width=0.5,
+        start_freq=0.0,
+        end_freq=4.5,
+        bandwidth=5.0)
 
     freq_array = np.linspace(fdict_base['start_freq'],
                              fdict_base['start_freq'] + fdict_base['bandwidth'] - fdict_base['channel_width'],
-                             fdict_base['Nfreqs'],  endpoint=True)
+                             fdict_base['Nfreqs'], endpoint=True)
 
     fdict_base['freq_array'] = freq_array
 
@@ -241,7 +241,7 @@ def test_freq_parser():
                         ('channel_width', 'Nfreqs'),
                         ('bandwidth',)]
     chwid_kwd_combos = [('bandwidth', 'Nfreqs'),
-                       ('channel_width',)]
+                        ('channel_width',)]
     ref_freq_combos = [('start_freq',),
                        ('end_freq',)]
 
@@ -249,17 +249,17 @@ def test_freq_parser():
         for chwid in chwid_kwd_combos:
             for ref in ref_freq_combos:
                 keys = tuple(set(bpass + chwid + (ref)))  # Get unique keys
-                subdict = {key : fdict_base[key] for key in keys}
+                subdict = {key: fdict_base[key] for key in keys}
                 test = pyuvsim.parse_frequency_params(subdict)
                 nt.assert_true(np.allclose(test['freq_array'][0], freq_array))
 
     # Now check error cases
-    err_cases = [ ('bandwidth',),
-                  ('start_freq', 'Nfreqs'),
-                  ('start_freq', 'channel_width'),
-                  ('start_freq', 'end_freq')]
+    err_cases = [('bandwidth',),
+                 ('start_freq', 'Nfreqs'),
+                 ('start_freq', 'channel_width'),
+                 ('start_freq', 'end_freq')]
     for er in err_cases:
-        subdict = {key : fdict_base[key] for key in er}
+        subdict = {key: fdict_base[key] for key in er}
         nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
         try:
             pyuvsim.parse_frequency_params(subdict)
@@ -267,39 +267,19 @@ def test_freq_parser():
             print(ve)
             pass
 
-    subdict = {'freq_array' : freq_array[0]}
+    subdict = {'freq_array': freq_array[0]}
     nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
-    try:
-        pyuvsim.parse_frequency_params(subdict)
-    except ValueError as ve:
-        print(ve)
-        pass
 
-    subdict = {'freq_array' : np.random.choice(freq_array, 4, replace=False)}
+    subdict = {'freq_array': np.random.choice(freq_array, 4, replace=False)}
     nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
-    try:
-        pyuvsim.parse_frequency_params(subdict)
-    except ValueError as ve:
-        print(ve)
-        pass
 
-    subdict = {'channel_width' : 3.14, 'start_freq': 1.0, 'end_freq' : 8.3}
+    subdict = {'channel_width': 3.14, 'start_freq': 1.0, 'end_freq': 8.3}
     nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
-    try:
-        pyuvsim.parse_frequency_params(subdict)
-    except ValueError as ve:
-        print(ve)
-        pass
 
     subdict = fdict_base.copy()
     subdict['Nfreqs'] = 7
     del subdict['freq_array']
     nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
-    try:
-        pyuvsim.parse_frequency_params(subdict)
-    except ValueError as ve:
-        print(ve)
-        pass
 
 
 def test_time_parser():
@@ -307,8 +287,8 @@ def test_time_parser():
     Check a variety of cases for the time parser.
     """
 
-    daysperhour = 1/24.
-    dayspersec  = 1/(24 * 3600.)
+    daysperhour = 1 / 24.
+    dayspersec = 1 / (24 * 3600.)
 
     tdict_base = {'Ntimes': 24,
                   'duration_hours': 0.9999999962747097 / daysperhour,
@@ -317,9 +297,9 @@ def test_time_parser():
                   'start_time': 2457458.0}
 
     inttime_days = tdict_base['integration_time'] * dayspersec
-    time_array = np.linspace(tdict_base['start_time'] + inttime_days/2.,
-                             tdict_base['start_time'] + tdict_base['duration_hours']*daysperhour - inttime_days/2.,
-                             tdict_base['Ntimes'],  endpoint=True)
+    time_array = np.linspace(tdict_base['start_time'] + inttime_days / 2.,
+                             tdict_base['start_time'] + tdict_base['duration_hours'] * daysperhour - inttime_days / 2.,
+                             tdict_base['Ntimes'], endpoint=True)
 
     tdict_base['time_array'] = time_array
 
@@ -330,7 +310,7 @@ def test_time_parser():
                         ('integration_time', 'Ntimes'),
                         ('duration_hours',)]
     chwid_kwd_combos = [('duration_hours', 'Ntimes'),
-                       ('integration_time',)]
+                        ('integration_time',)]
     ref_freq_combos = [('start_time',),
                        ('end_time',)]
 
@@ -338,45 +318,30 @@ def test_time_parser():
         for chwid in chwid_kwd_combos:
             for ref in ref_freq_combos:
                 keys = tuple(set(bpass + chwid + (ref)))  # Get unique keys
-                subdict = {key : tdict_base[key] for key in keys}
+                subdict = {key: tdict_base[key] for key in keys}
                 test = pyuvsim.parse_time_params(subdict)
                 nt.assert_true(np.allclose(test['time_array'], time_array, atol=dayspersec))
 
-    subdict = {'time_array' : time_array}
-    test =  pyuvsim.parse_time_params(subdict)
+    subdict = {'time_array': time_array}
+    test = pyuvsim.parse_time_params(subdict)
     nt.assert_true(np.allclose(test['time_array'], time_array, atol=dayspersec))
 
     # Now check error cases
-    err_cases = [ ('duration_hours',),
-                  ('start_time', 'Ntimes'),
-                  ('start_time', 'integration_time'),
-                  ('start_time', 'end_time')]
+    err_cases = [('duration_hours',),
+                 ('start_time', 'Ntimes'),
+                 ('start_time', 'integration_time'),
+                 ('start_time', 'end_time')]
     for er in err_cases:
-        subdict = {key : tdict_base[key] for key in er}
+        subdict = {key: tdict_base[key] for key in er}
         nt.assert_raises(ValueError, pyuvsim.parse_time_params, subdict)
-        try:
-            pyuvsim.parse_time_params(subdict)
-        except ValueError as ve:
-            print(ve)
-            pass
 
-    subdict = {'integration_time' : 3.14, 'start_time': 10000.0, 'end_time' : 80000.3, 'Ntimes' : 30}
+    subdict = {'integration_time': 3.14, 'start_time': 10000.0, 'end_time': 80000.3, 'Ntimes': 30}
     nt.assert_raises(ValueError, pyuvsim.parse_time_params, subdict)
-    try:
-        pyuvsim.parse_time_params(subdict)
-    except ValueError as ve:
-        print(ve)
-        pass
 
     subdict = tdict_base.copy()
     subdict['Ntimes'] = 7
     del subdict['time_array']
     nt.assert_raises(ValueError, pyuvsim.parse_time_params, subdict)
-    try:
-        pyuvsim.parse_time_params(subdict)
-    except ValueError as ve:
-        print(ve)
-        pass
 
 
 def test_freq_time_params():
