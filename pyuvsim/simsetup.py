@@ -611,11 +611,12 @@ def parse_frequency_params(freq_params):
     _freq_params = copy.deepcopy(freq_params)
 
     if fa:
-        freq_arr = np.array(freq_params['freq_array'])
+        freq_arr = np.asarray(freq_params['freq_array'])
         freq_params['Nfreqs'] = freq_arr.size
         if freq_params['Nfreqs'] > 1:
             freq_params['channel_width'] = np.diff(freq_arr)[0]
-            assert np.all(np.diff(freq_arr) == freq_params['channel_width'])
+            if not np.allclose(np.diff(freq_arr), freq_params['channel_width']):
+                raise ValueError("Specified channel width is not close to frequency spacing.")
         elif 'channel_width' not in freq_params:
             raise ValueError("Channel width must be specified "
                              "if freq_arr has length 1")

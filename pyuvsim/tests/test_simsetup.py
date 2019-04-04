@@ -198,6 +198,11 @@ def check_param_reader(config_num):
         nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
         del params_bad['freq']['freq_array']
 
+        # Irregularly-spaced frequency array.
+        params_bad['freq']['freq_array'] = np.array([1e8, 1e8 + 1e6, 1e8 + 2.5e6])
+        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+        del params_bad['freq']['channel_width']
+
         # Don't define Nfreqs or channel_width
         del params_bad['freq']['Nfreqs']
         nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
