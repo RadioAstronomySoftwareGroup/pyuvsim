@@ -174,56 +174,6 @@ def check_param_reader(config_num):
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml')
         nt.assert_raises(OSError, pyuvsim.initialize_uvdata_from_params, params_bad)
 
-        # Errors on frequency configuration
-        params_bad = copy.deepcopy(bak_params_bad)
-
-        # Define channel_width but not Nfreqs
-        bak_nfreq = params_bad['freq']['Nfreqs']
-        bak_sfreq = params_bad['freq']['start_freq']
-        del params_bad['freq']['Nfreqs']
-        del params_bad['freq']['start_freq']
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-        params_bad['freq']['Nfreqs'] = bak_nfreq
-        params_bad['freq']['start_freq'] = bak_sfreq
-
-        # Define freq_arr but not channel_width
-        params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
-        params_bad['freq']['freq_array'] = np.array([1e8])
-        del params_bad['freq']['channel_width']
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-        del params_bad['freq']['freq_array']
-
-        # Irregularly-spaced frequency array.
-        params_bad['freq']['freq_array'] = np.array([1e8, 1e8 + 1e6, 1e8 + 2.5e6])
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-        del params_bad['freq']['channel_width']
-
-        # Don't define Nfreqs or channel_width
-        del params_bad['freq']['Nfreqs']
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-
-        # Define Nfreqs but not bandwidth
-        del params_bad['freq']['end_freq']  # Can't make bandwidth without start and end
-        params_bad['freq']['Nfreqs'] = 10
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-
-        # Now check time configuration:
-        params_bad = copy.deepcopy(bak_params_bad)
-
-        # Don't define start or end time:
-        del params_bad['time']['end_time']
-        del params_bad['time']['start_time']
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-
-        # Don't define Ntimes or integration_time
-        del params_bad['time']['Ntimes']
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-        del params_bad['time']['integration_time']
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-
-        params_bad['time']['Ntimes'] = 10
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_filename)
     for i, bm in enumerate(new_beam_list):
@@ -474,7 +424,7 @@ def test_param_select_bls():
     uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
 
     # test only keeping certain baselines
-    param_dict['select'] = {'bls': [(40, 41), (42, 43), (44, 45)]}
+    param_dict['select'] = {'bls': '[(40, 41), (42, 43), (44, 45)]'}    # Test as string
 
     uv_obj_bls, new_beam_list, new_beam_dict = \
         pyuvsim.initialize_uvdata_from_params(param_dict)
