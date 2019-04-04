@@ -616,11 +616,13 @@ def parse_frequency_params(freq_params):
         if freq_params['Nfreqs'] > 1:
             freq_params['channel_width'] = np.diff(freq_arr)[0]
             if not np.allclose(np.diff(freq_arr), freq_params['channel_width']):
-                raise ValueError("Specified channel width is not close to frequency spacing.")
+                raise ValueError("Spacing in frequency array is uneven.")
         elif 'channel_width' not in freq_params:
             raise ValueError("Channel width must be specified "
                              "if freq_arr has length 1")
     else:
+        if not (sf or ef):
+            raise ValueError('Either start or end frequency must be specified: ' + kws_used)
         if not nf:
             if not cw:
                 raise ValueError("Either channel_width or Nfreqs "
@@ -692,9 +694,9 @@ def parse_time_params(time_params):
 
     Returns:
         dict of array properties:
-            |  channel_width: (float) Frequency channel spacing in Hz
-            |  Nfreqs: (int) Number of frequencies
-            |  freq_array: (dtype float, ndarray, shap=(Nspws, Nfreqs)) Frequency channel centers in Hz
+            |  integration_time: (float) Time array spacing in seconds.
+            |  Ntimes: (int) Number of times
+            |  time_array: (dtype float, ndarray, shape=(Nfreqs,)) Time step centers in JD.
     """
 
     return_dict = {}
@@ -715,6 +717,8 @@ def parse_time_params(time_params):
         time_params['Ntimes'] = len(time_arr)
 
     else:
+        if not (st or et):
+            raise ValueError("Start or end time must be specified: " + kws_used)
         if dh and not dd:
             time_params['duration'] = time_params['duration_hours'] * daysperhour
             dd = True
@@ -752,8 +756,6 @@ def parse_time_params(time_params):
         if not et:
             if st and dd:
                 time_params['end_time'] = time_params['start_time'] + time_params['duration'] - inttime_days
-        if not (st or et):
-            raise ValueError("Either a start or end time must be specified: " + kws_used)
 
         time_arr = np.linspace(time_params['start_time'],
                                time_params['end_time'] + inttime_days,
@@ -761,7 +763,7 @@ def parse_time_params(time_params):
 
         if time_params['Ntimes'] != 1:
             if not np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=dayspersec):   # To nearest second
-                raise ValueError("Time array spacings are not equal to integration_time."
+                raise ValueError("Calculated time array is not consistent with set integration_time."
                                  + "\nInput parameters are: {}".format(str(_time_params)))
 
         return_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
