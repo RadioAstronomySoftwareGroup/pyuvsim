@@ -39,8 +39,17 @@ def _parse_layout_csv(layout_csv):
         str_format_code = 'a'
     else:
         str_format_code = 'U'
-    dt = np.format_parser([str_format_code + '10', 'i4', 'i4', 'f8', 'f8', 'f8'],
-                          ['name', 'number', 'beamid', 'e', 'n', 'u'], header)
+
+    # get data types for each column
+    dtypes = {"name": str_format_code + '10', 'number': 'i4', 'beamid': 'i4', 'e': 'f8', 'n': 'f8', 'u': 'f8'}
+
+    # check columns in file
+    lower_header = [col.lower() for col in header]
+    columns = ['name', 'number', 'beamid', 'e', 'n', 'u']
+    col_exist = [col for col in columns if col in lower_header]
+
+    dt = np.format_parser([dtypes[col] for col in col_exist],
+                          col_exist, header)
 
     return np.genfromtxt(layout_csv, autostrip=True, skip_header=1,
                          dtype=dt.dtype)
@@ -487,12 +496,15 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
     return np.array(catalog), source_list_name
 
 
-def parse_telescope_params(tele_params, config_path):
+def parse_telescope_params(tele_params, config_path=''):
     """
     Parse the "telescope" section of obsparam.
 
     Args:
         tele_params: Dictionary of telescope parameters
+            See pyuvsim documentation for allowable keys.
+        config_path: path to directory holding configuration and
+            layout files.
 
     Returns:
         dict of array properties:
@@ -502,39 +514,86 @@ def parse_telescope_params(tele_params, config_path):
             |  antenna_numbers: corresponding list of antenna numbers
             |  antenna_positions: Array of ECEF antenna positions
             |  telescope_location: ECEF array center location
+            |  telescope_location_lat_lon_alt: Lat Lon Alt array center location
             |  telescope_config_file: Path to configuration yaml file
             |  antenna_location_file: Path to csv layout file
             |  telescope_name: observatory name
         beam_list:  Beam models in the configuration.
         beam_dict:  Antenna numbers to beam indices
     """
-
-    telescope_config_name = tele_params['telescope_config_name']
-    layout_csv = tele_params['array_layout']
-    if not os.path.isdir(config_path):
-        config_path = os.path.dirname(config_path)
+    tele_params = copy.deepcopy(tele_params)
+    # check for telescope config
+    tele_config = 'telescope_config_name' in tele_params
+    if tele_config:
+        # parse telescope config
         if not os.path.isdir(config_path):
-            raise ValueError('config_path from yaml is not a directory')
-    if not os.path.exists(telescope_config_name):
-        telescope_config_name = os.path.join(config_path, telescope_config_name)
+            config_path = os.path.dirname(config_path)
+            if not os.path.isdir(config_path):
+                raise ValueError('config_path {} is not a directory'.format(config_path))
+        telescope_config_name = tele_params['telescope_config_name']
         if not os.path.exists(telescope_config_name):
-            raise ValueError('telescope_config_name file from yaml does not exist')
+            telescope_config_name = os.path.join(config_path, telescope_config_name)
+            if not os.path.exists(telescope_config_name):
+                raise ValueError('telescope_config_name file from yaml does not exist')
+        with open(telescope_config_name, 'r') as yf:
+            telconfig = yaml.safe_load(yf)
+            telescope_location_latlonalt = ast.literal_eval(telconfig['telescope_location'])
+            telescope_location = list(telescope_location_latlonalt)
+            telescope_location[0] *= np.pi / 180.
+            telescope_location[1] *= np.pi / 180.   # Convert to radians
+            tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
+            telescope_name = telconfig['telescope_name']
+
+    else:
+        # if not provided, get bare-minumum keys from tele_params
+        if 'telescope_location' not in tele_params:
+            raise KeyError("If telescope_config_name not provided in tele_params, must provide telescope_location")
+        if 'telescope_name' not in tele_params:
+            raise KeyError("If telescope_config_name not provided in tele_params, must provide telescope_name")
+        telescope_location_latlonalt = tele_params['telescope_location']
+        if isinstance(telescope_location_latlonalt, (str, np.str)):
+            telescope_location_latlonalt = ast.literal_eval(telescope_location_latlonalt)
+        telescope_location = list(telescope_location_latlonalt)
+        telescope_location[0] *= np.pi / 180.
+        telescope_location[1] *= np.pi / 180.   # Convert to radians
+        telescope_name = tele_params['telescope_name']
+        tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
+
+    # get array layout
+    if 'array_layout' not in tele_params:
+        raise KeyError("array_layout required in tele_params")
+    layout_csv = tele_params['array_layout']
     if not os.path.exists(layout_csv):
         layout_csv = os.path.join(config_path, layout_csv)
         if not os.path.exists(layout_csv):
-            raise ValueError('layout_csv file from yaml does not exist')
+            raise ValueError('layout_csv file {} from yaml does not exist'.format(layout_csv))
 
+    # parse array layout
     ant_layout = _parse_layout_csv(layout_csv)
-    with open(telescope_config_name, 'r') as yf:
-        telconfig = yaml.safe_load(yf)
-        tloc = telconfig['telescope_location'][1:-1]  # drop parens
-        tloc = list(map(float, tloc.split(",")))
-        tloc[0] *= np.pi / 180.
-        tloc[1] *= np.pi / 180.   # Convert to radians
-        tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*tloc)
-
     E, N, U = ant_layout['e'], ant_layout['n'], ant_layout['u']
     antnames = ant_layout['name']
+
+    # fill in outputs with just array info
+    return_dict = {}
+    beam_list = []
+    beam_dict = {}
+
+    return_dict['Nants_data'] = antnames.size
+    return_dict['Nants_telescope'] = antnames.size
+    return_dict['antenna_names'] = np.array(antnames.tolist())
+    return_dict['antenna_numbers'] = np.array(ant_layout['number'])
+    antpos_enu = np.vstack((E, N, U)).T
+    return_dict['antenna_positions'] = uvutils.ECEF_from_ENU(antpos_enu, *telescope_location) - tele_params['telescope_location']
+    return_dict['array_layout'] = layout_csv
+    return_dict['telescope_location'] = tuple(tele_params['telescope_location'])
+    return_dict['telescope_location_lat_lon_alt'] = tuple(telescope_location_latlonalt)
+    return_dict['telescope_name'] = telescope_name
+
+    # if provided, parse sections related to beam files and types
+    if not tele_config:
+        return return_dict, beam_list, beam_dict
+
+    return_dict['telescope_config_name'] = telescope_config_name
     beam_ids = ant_layout['beamid']
     beam_list = []
     beam_dict = {}
@@ -574,18 +633,6 @@ def parse_telescope_params(tele_params, config_path):
                     raise OSError("Could not find file " + beam_model)
         beam_list.append(beam_model)
 
-    return_dict = {}
-
-    return_dict['Nants_data'] = antnames.size
-    return_dict['Nants_telescope'] = antnames.size
-    return_dict['antenna_names'] = np.array(antnames.tolist())
-    return_dict['antenna_numbers'] = np.array(ant_layout['number'])
-    antpos_enu = np.vstack((E, N, U)).T
-    return_dict['antenna_positions'] = uvutils.ECEF_from_ENU(antpos_enu, *tloc) - tele_params['telescope_location']
-    return_dict['telescope_config_name'] = telescope_config_name
-    return_dict['array_layout'] = layout_csv
-    return_dict['telescope_location'] = tele_params['telescope_location']
-    return_dict['telescope_name'] = telconfig['telescope_name']
 
     return return_dict, beam_list, beam_dict
 
@@ -716,6 +763,7 @@ def parse_time_params(time_params):
         # Time array is defined. Supersedes all other parameters:
         time_arr = time_params['time_array']
         time_params['Ntimes'] = len(time_arr)
+        time_params['start_time'] = np.min(time_arr)
 
     else:
         if not (st or et):
@@ -814,7 +862,6 @@ def time_array_to_params(time_array):
 
     Returns:
         Dictionary of time parameters consistent with time_array.
-
     """
     time_array = np.asarray(time_array)
     Ntimes_uniq = np.unique(time_array).size
@@ -859,12 +906,15 @@ def initialize_uvdata_from_params(obs_params):
     if isinstance(obs_params, str):
         param_dict = _config_str_to_dict(obs_params)
     else:
-        param_dict = obs_params
+        param_dict = copy.deepcopy(obs_params)
 
     # Parse telescope parameters
     tele_dict = param_dict['telescope']
-    tele_params, beam_list, beam_dict = parse_telescope_params(tele_dict, param_dict['config_path'])
-    uvparam_dict.update(tele_params)
+    uvparam_dict.update(tele_dict)
+    tele_params, beam_list, beam_dict = parse_telescope_params(tele_dict, config_path=param_dict['config_path'])
+    uvparam_dict['telescope_location'] = tele_params['telescope_location_lat_lon_alt']
+    uvparam_dict['telescope_name'] = tele_params['telescope_name']
+    uvparam_dict['array_layout'] = tele_params['array_layout']
 
     # Use extra_keywords to pass along required paths for file history.
     extra_keywords = {'obs_param_file': param_dict['param_file'],
@@ -879,60 +929,35 @@ def initialize_uvdata_from_params(obs_params):
     # Parse time structure
     time_dict = param_dict['time']
     uvparam_dict.update(parse_time_params(time_dict))
-    uvparam_dict['Npols'] = 4
+    uvparam_dict['polarizations'] = np.array([-5, -6, -7, -8])
 
-    # Now make a UVData object with these settings built in.
-    # The syntax below allows for other valid uvdata keywords to be passed
-    #  without explicitly setting them here.
+    # setup object
+    if 'select' in param_dict:
+        uvparam_dict.update(param_dict['select'])
+    if 'object' in param_dict:
+        uvparam_dict['object'] = param_dict['object']
+    uv_obj = setup_uvdata(fill_blts=True, **uvparam_dict)
 
+    # set object name
     if 'object_name' not in param_dict:
-        tloc = EarthLocation.from_geocentric(*uvparam_dict['telescope_location'], unit='m')
-        time = Time(uvparam_dict['time_array'][0], scale='utc', format='jd')
+        tloc = EarthLocation.from_geocentric(*uv_obj.telescope_location, unit='m')
+        time = Time(uv_obj.time_array[0], scale='utc', format='jd')
         src, _ = create_mock_catalog(time, arrangement='zenith', array_location=tloc)
         src = src[0]
         source_file_name = os.path.basename(param_dict['sources']['catalog'])
-        uvparam_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(source_file_name, src.ra.deg, src.dec.deg)
-    else:
-        uvparam_dict['object_name'] = param_dict['object_name']
+        uv_obj.object = '{}_ra{:.4f}_dec{:.4f}'.format(source_file_name, src.ra.deg, src.dec.deg)
 
-    uv_obj = UVData()
-    # use the __iter__ function on UVData to get list of UVParameters on UVData
-    valid_param_names = [getattr(uv_obj, param).name for param in uv_obj]
-    for k in valid_param_names:
-        if k in param_dict:
-            setattr(uv_obj, k, param_dict[k])
-        if k in uvparam_dict:
-            setattr(uv_obj, k, uvparam_dict[k])
-
-    bls = np.array([uv_obj.antnums_to_baseline(uv_obj.antenna_numbers[j], uv_obj.antenna_numbers[i])
-                    for i in range(0, uv_obj.Nants_data)
-                    for j in range(i, uv_obj.Nants_data)])
-
-    uv_obj.baseline_array = np.tile(bls, uv_obj.Ntimes)
-    uv_obj.Nbls = bls.size
-    uv_obj.time_array = np.repeat(uv_obj.time_array, uv_obj.Nbls)
-    uv_obj.integration_time = np.repeat(uv_obj.integration_time, uv_obj.Nbls)
-    uv_obj.Nblts = uv_obj.Nbls * uv_obj.Ntimes
-
-    uv_obj.ant_1_array, uv_obj.ant_2_array = \
-        uv_obj.baseline_to_antnums(uv_obj.baseline_array)
-
-    # add other required metadata to allow select to work without errors
-    # these will all be overwritten in uvsim.init_uvdata_out, so it's ok to hardcode them here
-    uv_obj.polarization_array = np.array([-5, -6, -7, -8])
-    uv_obj.set_lsts_from_time_array()
-    uv_obj.set_uvws_from_antenna_positions()
-    uv_obj.history = ''
-
+    # select on object
     valid_select_keys = ['antenna_nums', 'antenna_names', 'ant_str', 'bls', 'frequencies', 'freq_chans', 'times', 'polarizations', 'blt_inds']
+
     # down select baselines (or anything that can be passed to pyuvdata's select method)
     # Note: cannot down select polarizations (including via ant_str or bls keywords)
     if 'select' in param_dict:
         select_params = dict([(k, v) for k, v in param_dict['select'].items() if k in valid_select_keys])
-        redundant_threshold = param_dict['select'].get('redundant_threshold', None)
         if 'polarizations' in select_params:
             raise ValueError('Can not down select on polarizations -- pyuvsim '
                              'computes all polarizations')
+        # bl selection passed to setup_uvdata, but still check for pol selection here
         if 'bls' in select_params:
             bls = select_params['bls']
             if isinstance(bls, six.string_types):
@@ -940,9 +965,9 @@ def initialize_uvdata_from_params(obs_params):
                 bls = ast.literal_eval(bls)
                 select_params['bls'] = bls
             if any([len(item) == 3 for item in bls]):
-                raise ValueError('Only length 2 tuples allowed in bls: can not '
-                                 'down select on polarizations -- pyuvsim '
-                                 'computes all polarizations')
+                raise ValueError('Only length 2 tuples allowed in bls')
+            # don't need it because it was already
+            select_params.pop("bls")
         if 'ant_str' in select_params:
             bls, polarizations = uv_obj.parse_ants(select_params['ant_str'])
             if polarizations is not None:
@@ -951,13 +976,208 @@ def initialize_uvdata_from_params(obs_params):
                                  'computes all polarizations')
 
         if len(select_params) > 0:
-            select_params['metadata_only'] = True
             uv_obj.select(**select_params)
 
-        if redundant_threshold is not None:
-            uv_obj.compress_by_redundancy(tol=redundant_threshold, metadata_only=True)
-
     return uv_obj, beam_list, beam_dict
+
+
+def complete_uvdata(uv_obj, run_check=True):
+    """
+    Given a UVData object lacking Nblts-length arrays, fill out the rest.
+
+    Args:
+        uv_obj : UVData object to finish.
+        run_check : Run the standard UVData checks.
+
+    Returns:
+        uv_obj : Filled UVData object
+    """
+    anums = uv_obj.antenna_numbers      # (Nants_telescope,)
+    antnames = uv_obj.antenna_names     # (Nants_telescope,)
+    bl_array = uv_obj.baseline_array    # (Nbls,)
+    time_array = uv_obj.time_array      # (Ntimes,)
+    dt = np.diff(np.unique(time_array))[0]
+
+    uv_obj.baseline_array = np.tile(bl_array, uv_obj.Ntimes)
+    uv_obj.ant_1_array, uv_obj.ant_2_array = uv_obj.baseline_to_antnums(uv_obj.baseline_array)
+    uv_obj.Nbls = np.unique(uv_obj.baseline_array).size
+    uv_obj.Nblts = uv_obj.Nbls * uv_obj.Ntimes
+    uv_obj.time_array = np.repeat(time_array, uv_obj.Nbls)
+    uv_obj.integration_time = np.ones(uv_obj.Nblts, dtype=np.float) * dt * (24. * 3600.)
+    uv_obj.Nants_data = np.unique(uv_obj.ant_1_array.tolist() + uv_obj.ant_2_array.tolist()).size
+    uv_obj.set_lsts_from_time_array()
+
+    # fill in data
+    uv_obj.data_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=np.complex128)
+    uv_obj.flag_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=np.bool)
+    uv_obj.nsample_array = np.ones((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=np.float64)
+
+    # Other attributes
+    uv_obj.set_uvws_from_antenna_positions()
+
+    if run_check:
+        uv_obj.check()
+
+    return uv_obj
+
+
+def setup_uvdata(array_layout=None, telescope_location=None, telescope_name=None,
+                 Nfreqs=None, start_freq=None, bandwidth=None, freq_array=None,
+                 Ntimes=None, integration_time=None, start_time=None, time_array=None,
+                 bls=None, antenna_nums=None, polarizations=None, no_autos=False, fill_blts=True,
+                 redundant_threshold=None, run_check=True, **kwargs):
+    """
+    Setup a UVData object for simulating.
+
+    Args:
+        array_layout : str
+            Path to array layout .csv file. See pyuvsim documentation for details.
+        telescope_location : len-3 tuple
+            Telescope location on Earth in LatLonAlt coordinates [deg, deg, meters]
+        telescope_name : str
+            Name of telescope
+        Nfreqs : int
+            Number of frequency channels
+        start_freq : float
+            Starting frequency [Hz]
+        bandwidth : float
+            Total frequency bandwidth of spectral window [Hz]
+        freq_array : ndarray
+            frequency array [Hz], if this is specified, it supersedes Nfreqs, start_freq, bandwidth
+        Ntimes : int
+            Number of integration bins
+        integration_time : float
+            Width of time bins [seconds]
+        start_time : float
+            Time of the first integration bin [Julian Date]
+        time_array : ndarray
+            time array [Julian Date]. If this is specified it supersedes values of Ntimes, start_time and integration_time
+        bls : list
+            List of antenna-pair tuples for baseline selection
+        redundant_threshold: float
+            Redundant baseline selection tolerance for selection [meters]
+        antenna_nums : list
+            List of antenna numbers to keep in array
+        polarizations : list
+            List of polarization strings to insert into object
+        no_autos : bool 
+            If True, eliminate all auto correlations
+        fill_blts : Fill out UVData attributes of size Nblts.
+            If False, creates an invalid UVData object, where baseline_array has length Nbls, etc.
+            This is to avoid excessive memory usage up front when it's not necessary.
+        kwargs : dictionary
+            Any additional valid UVData attribute to assign to object.
+
+    Returns:
+        UVData object with zeroed data_array
+    """
+    # get antenna information
+    tele_dict, _, _ = parse_telescope_params(dict(array_layout=array_layout, telescope_location=telescope_location, telescope_name=telescope_name))
+    lat, lon, alt = uvutils.LatLonAlt_from_XYZ(tele_dict['telescope_location'])
+    antpos = tele_dict['antenna_positions']
+    enu = uvutils.ENU_from_ECEF(tele_dict['antenna_positions'] + tele_dict['telescope_location'], lat, lon, alt)
+    anums = tele_dict['antenna_numbers']
+    antnames = tele_dict['antenna_names']
+    Nants = tele_dict['Nants_data']
+
+    # setup object
+    uv_obj = UVData()
+
+    # fill in extra metadata by default: can be overwritten with kwargs, so hardcoded here is okay
+    uv_obj.instrument = 'simulator'
+    uv_obj.object_name = 'zenith'
+    uv_obj.vis_units = 'Jy'
+    uv_obj.history = ''
+
+    # update object with extra keys if fed
+    valid_param_names = [getattr(uv_obj, param).name for param in uv_obj]
+    for k in valid_param_names:
+        if k in kwargs:
+            setattr(uv_obj, k, kwargs[k])
+
+    # fill in basic info
+    uv_obj.telescope_location = tele_dict['telescope_location']
+    uv_obj.telescope_location_lat_lon_alt = (lat, lon, alt)
+    uv_obj.telescope_location_lat_lon_alt_degrees = (np.degrees(lat), np.degrees(lon), alt)
+    uv_obj.antenna_numbers = anums
+    uv_obj.antenna_names = antnames
+    uv_obj.antenna_positions = antpos
+    uv_obj.Nants_telescope = Nants
+
+    # fill in frequency and time info: wait to fill in len-Nblts arrays until later
+    if freq_array is not None:
+        if freq_array.ndim == 1:
+            freq_array = freq_array.reshape(1, -1)
+            Nfreqs = freq_array.size
+    else:
+        freq_dict = parse_frequency_params(dict(Nfreqs=Nfreqs, start_freq=start_freq, bandwidth=bandwidth))
+        freq_array = freq_dict['freq_array']
+
+    if time_array is not None:
+        Ntimes = time_array.size
+    else:
+        time_dict = parse_time_params(dict(Ntimes=Ntimes, start_time=start_time, integration_time=integration_time))
+        time_array = time_dict['time_array']
+
+    uv_obj.freq_array = freq_array
+    uv_obj.Nfreqs = Nfreqs
+    uv_obj.Ntimes = Ntimes
+
+    # fill in other attributes
+    uv_obj.spw_array = np.array([0], dtype=np.int)
+    uv_obj.Nspws = 1
+    uv_obj.polarization_array = []
+    for pol in polarizations:
+        if isinstance(pol, (str, np.str)):
+            uv_obj.polarization_array.append(uvutils.polstr2num(pol))
+        else:
+            uv_obj.polarization_array.append(pol)
+    uv_obj.polarization_array = np.asarray(uv_obj.polarization_array, dtype=np.int)
+    uv_obj.polarization_array = uv_obj.polarization_array[np.argsort(np.abs(uv_obj.polarization_array))]
+    uv_obj.Npols = uv_obj.polarization_array.size
+    if uv_obj.Nfreqs > 1:
+        uv_obj.channel_width = np.diff(uv_obj.freq_array[0])[0]
+    else:
+        uv_obj.channel_width = 1.0
+    uv_obj.set_drift()
+    uv_obj.telescope_name = tele_dict['telescope_name']
+
+    # compress redundant baselines: if specifying bls, this is skipped
+    if redundant_threshold is not None and bls is None:
+        reds, vec_bin_centers, lengths = uvutils.get_antenna_redundancies(anums, enu, tol=redundant_threshold, include_autos=not bool(no_autos))
+        bls = [r[0] for r in reds]
+        # ensures antpairs are (low, hi) ordering
+        bls = sorted([tuple(sorted(uvutils.baseline_to_antnums(bl_ind, Nants))) for bl_ind in bls])
+
+    # Setup array and implement antenna/baseline selections.
+    bl_array = []
+    _bls = sorted([(a1, a2) for a1 in anums for a2 in anums if a1 <= a2])  # given in (low, hi) ordering
+    if bls is not None:
+        if isinstance(bls, (str, np.str)):
+            bls = ast.literal_eval(bls)
+        bls = [bl for bl in _bls if bl in bls]
+    else:
+        bls = _bls
+    if bool(no_autos):
+        bls = [bl for bl in bls if bl[0] != bl[1]]
+    if antenna_nums is not None:
+        if isinstance(antenna_nums, (str, np.str)):
+            antenna_nums = ast.literal_eval(antenna_nums)
+        if isinstance(antenna_nums, (int, np.int)):
+            antenna_nums = [antenna_nums]
+        bls = [(a1, a2) for (a1, a2) in bls if a1 in antenna_nums or a2 in antenna_nums]
+    bls = sorted(bls)
+    for (a1, a2) in bls:
+        bl_array.append(uvutils.antnums_to_baseline(a1, a2, 1))
+    bl_array = np.asarray(bl_array)
+
+    uv_obj.time_array = time_array  # Keep length Ntimes
+    uv_obj.baseline_array = bl_array  # Length Nbls
+
+    if fill_blts:
+        uv_obj = complete_uvdata(uv_obj, run_check=run_check)
+
+    return uv_obj
 
 
 def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
