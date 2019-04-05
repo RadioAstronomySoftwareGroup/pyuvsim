@@ -30,7 +30,7 @@ setup_args = {
     'scripts': glob.glob('scripts/*'),
     'version': version.version,
     'include_package_data': True,
-    'test_suite': 'nose.collector'
+    'test_suite': 'nose.collector',
     'test_requires': ['nose', 'h5py'],
     'install_requires': ['numpy>=1.14', 'astropy>=2.0', 'scipy', 'mpi4py>1.3.1',
                          'pyyaml', 'six>=1.10', 'pyuvdata>=1.3'],
