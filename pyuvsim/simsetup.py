@@ -595,7 +595,8 @@ def parse_frequency_params(freq_params):
     Parse the "freq" section of obsparam.
 
     Args:
-        freq_params: Dictionary of frequency parameters
+        freq_params: Dictionary of frequency parameters.
+            See pyuvsim documentation for examples of allowable key combinations.
 
     Returns:
         dict of array properties:
@@ -603,12 +604,12 @@ def parse_frequency_params(freq_params):
             |  Nfreqs: (int) Number of frequencies
             |  freq_array: (dtype float, ndarray, shape=(Nspws, Nfreqs)) Frequency channel centers in Hz
     """
-
     freq_keywords = ['freq_array', 'start_freq', 'end_freq', 'Nfreqs',
                      'channel_width', 'bandwidth']
     fa, sf, ef, nf, cw, bw = [fk in freq_params for fk in freq_keywords]
     kws_used = ", ".join(freq_params.keys())
-    _freq_params = copy.deepcopy(freq_params)
+    freq_params = copy.deepcopy(freq_params)
+    init_freq_params = copy.deepcopy(freq_params)
 
     if fa:
         freq_arr = np.asarray(freq_params['freq_array'])
@@ -669,7 +670,7 @@ def parse_frequency_params(freq_params):
     if freq_params['Nfreqs'] != 1:
         if not np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1)):
             raise ValueError("Frequency array spacings are not equal to channel width."
-                             + "\nInput parameters are: {}".format(str(_freq_params)))
+                             + "\nInput parameters are: {}".format(str(init_freq_params)))
 
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
@@ -680,8 +681,6 @@ def parse_frequency_params(freq_params):
     return_dict['channel_width'] = freq_params['channel_width']
     return_dict['Nspws'] = 1
 
-    freq_params = _freq_params
-
     return return_dict
 
 
@@ -691,17 +690,19 @@ def parse_time_params(time_params):
 
     Args:
         time_params: Dictionary of time parameters
+            See pyuvsim documentation for examples of allowable key combinations.
 
     Returns:
         dict of array properties:
             |  integration_time: (float) Time array spacing in seconds.
             |  Ntimes: (int) Number of times
+            |  start_time: (float) Starting time in Julian Date
             |  time_array: (dtype float, ndarray, shape=(Ntimes,)) Time step centers in JD.
     """
-
     return_dict = {}
 
-    _time_params = copy.deepcopy(time_params)
+    init_time_params = copy.deepcopy(time_params)
+    time_params = copy.deepcopy(time_params)
 
     time_keywords = ['time_array', 'start_time', 'end_time', 'Ntimes', 'integration_time',
                      'duration_hours', 'duration_days']
@@ -712,7 +713,7 @@ def parse_time_params(time_params):
     dayspersec = daysperhour * hourspersec
 
     if ta:
-        # Time array is defined. Supercedes all other parameters:
+        # Time array is defined. Supersedes all other parameters:
         time_arr = time_params['time_array']
         time_params['Ntimes'] = len(time_arr)
 
@@ -764,14 +765,13 @@ def parse_time_params(time_params):
         if time_params['Ntimes'] != 1:
             if not np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=dayspersec):   # To nearest second
                 raise ValueError("Calculated time array is not consistent with set integration_time."
-                                 + "\nInput parameters are: {}".format(str(_time_params)))
+                                 + "\nInput parameters are: {}".format(str(init_time_params)))
 
         return_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
                                            * time_params['integration_time'])
     return_dict['time_array'] = time_arr
     return_dict['Ntimes'] = time_params['Ntimes']
-
-    time_params = _time_params  # Restore backup
+    return_dict['start_time'] = time_params['start_time']
 
     return return_dict
 
@@ -782,7 +782,7 @@ def freq_array_to_params(freq_array):
     to a given frequency array.
 
     Args:
-        freq_array : (ndarray, shape = (Nfreqs,)) of frequencies.
+        freq_array : (ndarray, shape = (Nfreqs,)) of frequencies [Hz].
 
     Returns:
         Dictionary of frequency parameters consistent with freq_array.
