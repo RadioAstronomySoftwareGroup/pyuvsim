@@ -2,9 +2,12 @@ filing:
   outfile_prefix: 'sim'
   outfile_suffix: 'results'
 freq:
-  channel_width: 80000.0
-  end_freq: 100800000.0
-  start_freq: 100000000.0
+        #  channel_width:  80000.0
+        #  end_freq:   100760000.0
+        #  start_freq: 100040000.0
+  channel_width:  1.0
+  end_freq:   109.5
+  start_freq: 100.5
 sources:
   catalog: 'mock'
   mock_arrangement: 'zenith'

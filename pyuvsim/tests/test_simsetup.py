@@ -150,6 +150,7 @@ def check_param_reader(config_num):
     # Check error conditions:
     if config_num == 0:
         params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
+        bak_params_bad = copy.deepcopy(params_bad)
 
         # Missing config file info
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, 'nonexistent_directory', 'nonexistent_file')
@@ -161,61 +162,17 @@ def check_param_reader(config_num):
         nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
 
         # Missing beam keywords
-        params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
+        params_bad = copy.deepcopy(bak_params_bad)
 
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
 
+        params_bad = copy.deepcopy(bak_params_bad)
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_gaussnoshape.yaml')
         nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, params_bad)
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml')
         nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, params_bad)
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml')
         nt.assert_raises(OSError, pyuvsim.initialize_uvdata_from_params, params_bad)
-
-        # Errors on frequency configuration
-        params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
-
-        # Define channel_width but not Nfreqs
-        bak_nfreq = params_bad['freq']['Nfreqs']
-        bak_sfreq = params_bad['freq']['start_freq']
-        del params_bad['freq']['Nfreqs']
-        del params_bad['freq']['start_freq']
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-        params_bad['freq']['Nfreqs'] = bak_nfreq
-        params_bad['freq']['start_freq'] = bak_sfreq
-
-        # Define freq_arr but not channel_width
-        params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
-        params_bad['freq']['freq_array'] = np.array([1e8])
-        del params_bad['freq']['channel_width']
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-        del params_bad['freq']['freq_array']
-
-        # Don't define Nfreqs or channel_width
-        del params_bad['freq']['Nfreqs']
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-
-        # Define Nfreqs but not bandwidth
-        del params_bad['freq']['end_freq']  # Can't make bandwidth without start and end
-        params_bad['freq']['Nfreqs'] = 10
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-
-        # Now check time configuration:
-        params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
-
-        # Don't define start or end time:
-        del params_bad['time']['end_time']
-        del params_bad['time']['start_time']
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-
-        # Don't define Ntimes or integration_time
-        del params_bad['time']['Ntimes']
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-        del params_bad['time']['integration_time']
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
-
-        params_bad['time']['Ntimes'] = 10
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
 
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_filename)
@@ -255,8 +212,155 @@ def test_param_reader():
         checks that the various configurations all work consistently, and that if insufficient information is
         provided that the function errors appropriately.
     """
-    for n in range(6):
+    for n in [0]:
         yield (check_param_reader, n)
+
+
+def test_freq_parser():
+    """
+    Check a variety of cases for the frequency parser.
+    """
+
+    fdict_base = dict(
+        Nfreqs=10,
+        channel_width=0.5,
+        start_freq=0.0,
+        end_freq=4.5,
+        bandwidth=5.0)
+
+    freq_array = np.linspace(fdict_base['start_freq'],
+                             fdict_base['start_freq'] + fdict_base['bandwidth'] - fdict_base['channel_width'],
+                             fdict_base['Nfreqs'], endpoint=True)
+
+    fdict_base['freq_array'] = freq_array
+
+    # As long as one tuple from each set is represented,
+    # the param parser should work.
+
+    bpass_kwd_combos = [('start_freq', 'end_freq'),
+                        ('channel_width', 'Nfreqs'),
+                        ('bandwidth',)]
+    chwid_kwd_combos = [('bandwidth', 'Nfreqs'),
+                        ('channel_width',)]
+    ref_freq_combos = [('start_freq',),
+                       ('end_freq',)]
+
+    for bpass in bpass_kwd_combos:
+        for chwid in chwid_kwd_combos:
+            for ref in ref_freq_combos:
+                keys = tuple(set(bpass + chwid + (ref)))  # Get unique keys
+                subdict = {key: fdict_base[key] for key in keys}
+                test = pyuvsim.parse_frequency_params(subdict)
+                nt.assert_true(np.allclose(test['freq_array'][0], freq_array))
+
+    # Now check error cases
+    err_cases = [('bandwidth',),
+                 ('start_freq', 'Nfreqs'),
+                 ('start_freq', 'channel_width'),
+                 ('start_freq', 'end_freq')]
+    for er in err_cases:
+        subdict = {key: fdict_base[key] for key in er}
+        nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
+        try:
+            pyuvsim.parse_frequency_params(subdict)
+        except ValueError as ve:
+            print(ve)
+            pass
+
+    subdict = {'freq_array': freq_array[0]}
+    nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
+
+    subdict = {'freq_array': np.random.choice(freq_array, 4, replace=False)}
+    nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
+
+    subdict = {'channel_width': 3.14, 'start_freq': 1.0, 'end_freq': 8.3}
+    nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
+
+    subdict = fdict_base.copy()
+    subdict['Nfreqs'] = 7
+    del subdict['freq_array']
+    nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
+
+
+def test_time_parser():
+    """
+    Check a variety of cases for the time parser.
+    """
+
+    daysperhour = 1 / 24.
+    dayspersec = 1 / (24 * 3600.)
+
+    tdict_base = {'Ntimes': 24,
+                  'duration_hours': 0.9999999962747097 / daysperhour,
+                  'end_time': 2457458.9583333298,
+                  'integration_time': 3599.999986588955,
+                  'start_time': 2457458.0}
+
+    inttime_days = tdict_base['integration_time'] * dayspersec
+    time_array = np.linspace(tdict_base['start_time'] + inttime_days / 2.,
+                             tdict_base['start_time'] + tdict_base['duration_hours'] * daysperhour - inttime_days / 2.,
+                             tdict_base['Ntimes'], endpoint=True)
+
+    tdict_base['time_array'] = time_array
+
+    # As long as one tuple from each set is represented,
+    # the param parser should work.
+
+    bpass_kwd_combos = [('start_time', 'end_time'),
+                        ('integration_time', 'Ntimes'),
+                        ('duration_hours',)]
+    chwid_kwd_combos = [('duration_hours', 'Ntimes'),
+                        ('integration_time',)]
+    ref_freq_combos = [('start_time',),
+                       ('end_time',)]
+
+    for bpass in bpass_kwd_combos:
+        for chwid in chwid_kwd_combos:
+            for ref in ref_freq_combos:
+                keys = tuple(set(bpass + chwid + (ref)))  # Get unique keys
+                subdict = {key: tdict_base[key] for key in keys}
+                test = pyuvsim.parse_time_params(subdict)
+                nt.assert_true(np.allclose(test['time_array'], time_array, atol=dayspersec))
+
+    subdict = {'time_array': time_array}
+    test = pyuvsim.parse_time_params(subdict)
+    nt.assert_true(np.allclose(test['time_array'], time_array, atol=dayspersec))
+
+    # Now check error cases
+    err_cases = [('duration_hours',),
+                 ('start_time', 'Ntimes'),
+                 ('start_time', 'integration_time'),
+                 ('start_time', 'end_time')]
+    for er in err_cases:
+        subdict = {key: tdict_base[key] for key in er}
+        nt.assert_raises(ValueError, pyuvsim.parse_time_params, subdict)
+
+    subdict = {'integration_time': 3.14, 'start_time': 10000.0, 'end_time': 80000.3, 'Ntimes': 30}
+    nt.assert_raises(ValueError, pyuvsim.parse_time_params, subdict)
+
+    subdict = tdict_base.copy()
+    subdict['Ntimes'] = 7
+    del subdict['time_array']
+    nt.assert_raises(ValueError, pyuvsim.parse_time_params, subdict)
+
+
+def test_freq_time_params():
+    freqs = np.linspace(100, 200, 1024)
+    times = np.linspace(2458570, 2458570 + 0.5, 239)
+    time_dict = pyuvsim.simsetup.time_array_to_params(times)
+    freq_dict = pyuvsim.simsetup.freq_array_to_params(freqs)
+    ftest = pyuvsim.simsetup.parse_frequency_params(freq_dict)
+    ttest = pyuvsim.simsetup.parse_time_params(time_dict)
+    nt.assert_true(np.allclose(ftest['freq_array'], freqs))
+    nt.assert_true(np.allclose(ttest['time_array'], times))
+
+    # Check that this works for unevenly-spaced times
+
+    times = np.random.choice(times, 150, replace=False)
+    times.sort()
+    time_dict = pyuvsim.simsetup.time_array_to_params(times)
+    ttest = pyuvsim.simsetup.parse_time_params(time_dict)
+    nt.assert_true(np.allclose(ttest['time_array'], times))
 
 
 def test_param_select_cross():
@@ -285,7 +389,7 @@ def test_param_select_bls():
     uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
 
     # test only keeping certain baselines
-    param_dict['select'] = {'bls': [(40, 41), (42, 43), (44, 45)]}
+    param_dict['select'] = {'bls': '[(40, 41), (42, 43), (44, 45)]'}    # Test as string
 
     uv_obj_bls, new_beam_list, new_beam_dict = \
         pyuvsim.initialize_uvdata_from_params(param_dict)
@@ -348,6 +452,7 @@ def test_uvfits_to_config():
     # Read uvfits file to params.
     uv0 = UVData()
     uv0.read_uvfits(longbl_uvfits_file)
+
     warningmessages = ['The default for the `center` keyword has changed. Previously it defaulted to True, using the median antennna location; now it defaults to False, using the telescope_location.',
                        'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3). Historically this function has supported (3, Npts) arrays, please verify that array ordering is as expected.']
     path, telescope_config, layout_fname = \

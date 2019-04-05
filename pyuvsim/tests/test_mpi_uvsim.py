@@ -18,10 +18,9 @@ import pyuvdata.tests as uvtest
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
 from pyuvsim import mpi
+import pyuvsim.tests as simtest
 
 
-cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
-beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
 hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(4)]   # Five different test configs
@@ -37,13 +36,7 @@ def test_run_uvsim():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
 
-    beam = UVBeam()
-    beam.read_cst_beam(beam_files, beam_type='efield', frequency=[100e6, 123e6],
-                       telescope_name='HERA',
-                       feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-                       model_name='E-field pattern - Rigging height 4.9m',
-                       model_version='1.0')
-
+    beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam.write_beamfits("temp.uvbeam")
     beamfile = os.path.join(os.getcwd(), "temp.uvbeam")
 

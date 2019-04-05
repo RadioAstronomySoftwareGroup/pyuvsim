@@ -8,9 +8,10 @@ import numpy as np
 from numpy.lib import recfunctions
 import yaml
 import os
-import sys
 import warnings
 import six
+import ast
+import copy
 from six.moves import map, range, zip
 import astropy.units as units
 from astropy.time import Time
@@ -600,33 +601,40 @@ def parse_frequency_params(freq_params):
         dict of array properties:
             |  channel_width: (float) Frequency channel spacing in Hz
             |  Nfreqs: (int) Number of frequencies
-            |  freq_array: (dtype float, ndarray, shap=(Nspws, Nfreqs)) Frequency channel centers in Hz
+            |  freq_array: (dtype float, ndarray, shape=(Nspws, Nfreqs)) Frequency channel centers in Hz
     """
 
     freq_keywords = ['freq_array', 'start_freq', 'end_freq', 'Nfreqs',
                      'channel_width', 'bandwidth']
     fa, sf, ef, nf, cw, bw = [fk in freq_params for fk in freq_keywords]
     kws_used = ", ".join(freq_params.keys())
+    _freq_params = copy.deepcopy(freq_params)
 
     if fa:
-        freq_arr = np.array(freq_params['freq_array'])
+        freq_arr = np.asarray(freq_params['freq_array'])
         freq_params['Nfreqs'] = freq_arr.size
         if freq_params['Nfreqs'] > 1:
             freq_params['channel_width'] = np.diff(freq_arr)[0]
+            if not np.allclose(np.diff(freq_arr), freq_params['channel_width']):
+                raise ValueError("Spacing in frequency array is uneven.")
         elif 'channel_width' not in freq_params:
             raise ValueError("Channel width must be specified "
                              "if freq_arr has length 1")
     else:
+        if not (sf or ef):
+            raise ValueError('Either start or end frequency must be specified: ' + kws_used)
         if not nf:
             if not cw:
                 raise ValueError("Either channel_width or Nfreqs "
                                  " must be included in parameters:" + kws_used)
             if sf and ef:
-                freq_params['bandwidth'] = freq_params['end_freq'] - freq_params['start_freq']
+                freq_params['bandwidth'] = freq_params['end_freq'] - freq_params['start_freq'] + freq_params['channel_width']
                 bw = True
             if bw:
-                freq_params['Nfreqs'] = int(np.floor(freq_params['bandwidth']
-                                                     / freq_params['channel_width']))
+                Nfreqs = float(freq_params['bandwidth']
+                               / freq_params['channel_width'])
+                freq_params['Nfreqs'] = Nfreqs
+
             else:
                 raise ValueError("Either bandwidth or band edges "
                                  "must be specified: " + kws_used)
@@ -642,18 +650,26 @@ def parse_frequency_params(freq_params):
             freq_params['bandwidth'] = (freq_params['channel_width']
                                         * freq_params['Nfreqs'])
             bw = True
+
         if not sf:
             if ef and bw:
-                freq_params['start_freq'] = freq_params['end_freq'] - freq_params['bandwidth']
+                freq_params['start_freq'] = freq_params['end_freq'] - freq_params['bandwidth'] + freq_params['channel_width']
         if not ef:
             if sf and bw:
-                freq_params['end_freq'] = freq_params['start_freq'] + freq_params['bandwidth']
+                freq_params['end_freq'] = freq_params['start_freq'] + freq_params['bandwidth'] - freq_params['channel_width']
+
+        if not np.isclose(freq_params['Nfreqs'] % 1, 0):
+            raise ValueError("end_freq - start_freq must be evenly divisible by channel_width")
+        freq_params['Nfreqs'] = int(freq_params['Nfreqs'])
 
         freq_arr = np.linspace(freq_params['start_freq'],
-                               freq_params['end_freq'],
+                               freq_params['end_freq'] + freq_params['channel_width'],
                                freq_params['Nfreqs'], endpoint=False)
+
     if freq_params['Nfreqs'] != 1:
-        assert np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1), atol=1.0)  # 1 Hz
+        if not np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1)):
+            raise ValueError("Frequency array spacings are not equal to channel width."
+                             + "\nInput parameters are: {}".format(str(_freq_params)))
 
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
@@ -662,6 +678,9 @@ def parse_frequency_params(freq_params):
     return_dict['Nfreqs'] = freq_params['Nfreqs']
     return_dict['freq_array'] = freq_arr
     return_dict['channel_width'] = freq_params['channel_width']
+    return_dict['Nspws'] = 1
+
+    freq_params = _freq_params
 
     return return_dict
 
@@ -675,77 +694,149 @@ def parse_time_params(time_params):
 
     Returns:
         dict of array properties:
-            |  channel_width: (float) Frequency channel spacing in Hz
-            |  Nfreqs: (int) Number of frequencies
-            |  freq_array: (dtype float, ndarray, shap=(Nspws, Nfreqs)) Frequency channel centers in Hz
+            |  integration_time: (float) Time array spacing in seconds.
+            |  Ntimes: (int) Number of times
+            |  time_array: (dtype float, ndarray, shape=(Nfreqs,)) Time step centers in JD.
     """
 
     return_dict = {}
 
-    time_keywords = ['start_time', 'end_time', 'Ntimes', 'integration_time',
+    _time_params = copy.deepcopy(time_params)
+
+    time_keywords = ['time_array', 'start_time', 'end_time', 'Ntimes', 'integration_time',
                      'duration_hours', 'duration_days']
-    st, et, nt, it, dh, dd = [tk in time_params for tk in time_keywords]
+    ta, st, et, nt, it, dh, dd = [tk in time_params for tk in time_keywords]
     kws_used = ", ".join(time_params.keys())
     daysperhour = 1 / 24.
     hourspersec = 1 / 60.**2
     dayspersec = daysperhour * hourspersec
 
-    if dh and not dd:
-        time_params['duration'] = time_params['duration_hours'] * daysperhour
-        dd = True
-    elif dd:
-        time_params['duration'] = time_params['duration_days']
+    if ta:
+        # Time array is defined. Supercedes all other parameters:
+        time_arr = time_params['time_array']
+        time_params['Ntimes'] = len(time_arr)
 
-    if not nt:
-        if not it:
-            raise ValueError("Either integration_time or Ntimes must be "
-                             "included in parameters:" + kws_used)
-        if st and et:
-            time_params['duration'] = time_params['end_time'] - time_params['start_time']
+    else:
+        if not (st or et):
+            raise ValueError("Start or end time must be specified: " + kws_used)
+        if dh and not dd:
+            time_params['duration'] = time_params['duration_hours'] * daysperhour
             dd = True
-        if dd:
-            time_params['Ntimes'] = int(np.round(time_params['duration']
-                                                 / (time_params['integration_time']
-                                                    * dayspersec))) + 1
-        else:
-            raise ValueError("Either duration or time bounds must be specified: "
-                             + kws_used)
+        elif dd:
+            time_params['duration'] = time_params['duration_days']
 
-    if not it:
+        if not nt:
+            if not it:
+                raise ValueError("Either integration_time or Ntimes must be "
+                                 "included in parameters:" + kws_used)
+            if st and et:
+                time_params['duration'] = time_params['end_time'] - time_params['start_time'] + time_params['integration_time'] * dayspersec
+                dd = True
+            if dd:
+                time_params['Ntimes'] = int(np.round(time_params['duration']
+                                                     / (time_params['integration_time'] * dayspersec)))
+            else:
+                raise ValueError("Either duration or time bounds must be specified: "
+                                 + kws_used)
+
+        if not it:
+            if not dd:
+                raise ValueError("Either duration or integration time "
+                                 "must be specified: " + kws_used)
+            time_params['integration_time'] = (time_params['duration'] / dayspersec
+                                               / float(time_params['Ntimes']))  # In seconds
+
+        inttime_days = time_params['integration_time'] * dayspersec
         if not dd:
-            raise ValueError("Either duration or integration time "
-                             "must be specified: " + kws_used)
-        time_params['integration_time'] = (24. * 3600.) * (time_params['duration']
-                                                           / float(time_params['Ntimes'] - 1))  # In seconds
+            time_params['duration'] = inttime_days * (time_params['Ntimes'])
+            dd = True
+        if not st:
+            if et and dd:
+                time_params['start_time'] = time_params['end_time'] - time_params['duration'] + inttime_days
+        if not et:
+            if st and dd:
+                time_params['end_time'] = time_params['start_time'] + time_params['duration'] - inttime_days
 
-    inttime_days = time_params['integration_time'] * 1 / (24. * 3600.)
-    if not dd:
-        time_params['duration'] = inttime_days * (time_params['Ntimes'])
-        dd = True
-    if not st:
-        if et and dd:
-            time_params['start_time'] = time_params['end_time'] - time_params['duration']
-    if not et:
-        if st and dd:
-            time_params['end_time'] = time_params['start_time'] + time_params['duration']
-    if not (st or et):
-        raise ValueError("Either a start or end time must be specified: " + kws_used)
+        time_arr = np.linspace(time_params['start_time'],
+                               time_params['end_time'] + inttime_days,
+                               time_params['Ntimes'], endpoint=False)
 
-    time_arr = np.linspace(time_params['start_time'],
-                           time_params['end_time'],
-                           time_params['Ntimes'], endpoint=False)
+        if time_params['Ntimes'] != 1:
+            if not np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=dayspersec):   # To nearest second
+                raise ValueError("Calculated time array is not consistent with set integration_time."
+                                 + "\nInput parameters are: {}".format(str(_time_params)))
 
-    if time_params['Ntimes'] != 1:
-        assert np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1), atol=1e-4)   # To nearest second
-
-    return_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
-                                       * time_params['integration_time'])
+        return_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
+                                           * time_params['integration_time'])
     return_dict['time_array'] = time_arr
     return_dict['Ntimes'] = time_params['Ntimes']
-    return_dict['Nspws'] = 1
-    return_dict['Npols'] = 4
+
+    time_params = _time_params  # Restore backup
 
     return return_dict
+
+
+def freq_array_to_params(freq_array):
+    """
+    Give the channel width, bandwidth, start, and end frequencies corresponding
+    to a given frequency array.
+
+    Args:
+        freq_array : (ndarray, shape = (Nfreqs,)) of frequencies.
+
+    Returns:
+        Dictionary of frequency parameters consistent with freq_array.
+    """
+    freq_array = np.asarray(freq_array).ravel()
+
+    fdict = {}
+    if freq_array.size < 2:
+        fdict['channel_width'] = 1.0
+        fdict['Nfreqs'] = 1
+        fdict['start_freq'] = freq_array.item(0)
+        return fdict
+
+    fdict['channel_width'] = np.diff(freq_array).item(0)
+    fdict['Nfreqs'] = freq_array.size
+    fdict['bandwidth'] = fdict['channel_width'] * fdict['Nfreqs']
+    fdict['start_freq'] = freq_array.item(0)
+    fdict['end_freq'] = freq_array.item(-1)
+
+    return fdict
+
+
+def time_array_to_params(time_array):
+    """
+    Returns integration_time, duration, and start and end times corresponding to a given time array.
+
+    Args:
+        time_array : (ndarray) of julian dates
+
+    Returns:
+        Dictionary of time parameters consistent with time_array.
+
+    """
+    time_array = np.asarray(time_array)
+    Ntimes_uniq = np.unique(time_array).size
+
+    tdict = {}
+    if Ntimes_uniq < 2:
+        tdict['integration_time'] = 1.0
+        tdict['Ntimes'] = 1
+        tdict['start_time'] = time_array.item(0)
+        return tdict
+
+    dt = np.diff(np.unique(time_array))[0]
+    if not np.allclose(np.diff(time_array), np.ones(time_array.size - 1) * dt):
+        tdict['time_array'] = time_array.tolist()
+
+    tdict['integration_time'] = np.min(np.diff(time_array)).item() * (24. * 3600.)
+    tdict['Ntimes'] = Ntimes_uniq
+    tdict['duration_days'] = tdict['integration_time'] * tdict['Ntimes'] / (24. * 3600.)
+    tdict['start_time'] = time_array.item(0)
+    tdict['end_time'] = time_array.item(-1)
+
+    return tdict
 
 
 def initialize_uvdata_from_params(obs_params):
@@ -788,6 +879,7 @@ def initialize_uvdata_from_params(obs_params):
     # Parse time structure
     time_dict = param_dict['time']
     uvparam_dict.update(parse_time_params(time_dict))
+    uvparam_dict['Npols'] = 4
 
     # Now make a UVData object with these settings built in.
     # The syntax below allows for other valid uvdata keywords to be passed
@@ -845,7 +937,7 @@ def initialize_uvdata_from_params(obs_params):
             bls = select_params['bls']
             if isinstance(bls, six.string_types):
                 # If read from file, this should be a string.
-                bls = eval(bls)
+                bls = ast.literal_eval(bls)
                 select_params['bls'] = bls
             if any([len(item) == 3 for item in bls]):
                 raise ValueError('Only length 2 tuples allowed in bls: can not '
@@ -957,25 +1049,19 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
         param_filename = check_file_exists_and_increment(os.path.join(path_out, 'obsparam.yaml'))
         param_filename = os.path.basename(param_filename)
 
-    freq_array = uvdata_in.freq_array[0, :].tolist()
-    time_array = uvdata_in.time_array.tolist()
+    freq_array = uvdata_in.freq_array[0, :]
+    time_array = uvdata_in.time_array
     integration_time_array = np.array(uvdata_in.integration_time)
     if np.max(integration_time_array) != np.min(integration_time_array):
         warnings.warn('The integration time is not constant. Using the shortest integration time')
     integration_time = float(np.min(integration_time_array))
+
+    tdict = time_array_to_params(time_array)
+    fdict = freq_array_to_params(freq_array)
+
     param_dict = dict(
-        time=dict(
-            start_time=time_array[0],
-            end_time=time_array[-1],
-            Ntimes=uvdata_in.Ntimes,
-            integration_time=integration_time,
-        ),
-        freq=dict(
-            start_freq=freq_array[0],
-            end_freq=freq_array[-1] + uvdata_in.channel_width,
-            channel_width=uvdata_in.channel_width,
-            Nfreqs=uvdata_in.Nfreqs,
-        ),
+        time=tdict,
+        freq=fdict,
         sources=dict(
             catalog=catalog
         ),
@@ -1017,4 +1103,6 @@ def beam_string_to_object(beam_model):
     path = beam_model   # beam_model = path to beamfits
     uvb = UVBeam()
     uvb.read_beamfits(path)
+    if uvb.freq_interp_kind is None:
+        uvb.freq_interp_kind = 'linear'
     return uvb
