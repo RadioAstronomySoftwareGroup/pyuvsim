@@ -30,8 +30,10 @@ setup_args = {
     'scripts': glob.glob('scripts/*'),
     'version': version.version,
     'include_package_data': True,
-    'install_requires': ['numpy>=1.10', 'astropy>=1.2', 'scipy', 'mpi4py',
-                         'pyyaml', 'six>=1.10', 'pyuvdata'],
+    'test_suite': 'nose.collector'
+    'test_requires': ['nose', 'h5py'],
+    'install_requires': ['numpy>=1.14', 'astropy>=2.0', 'scipy', 'mpi4py>1.3.1',
+                         'pyyaml', 'six>=1.10', 'pyuvdata>=1.3'],
     'classifiers': ['Development Status :: 3 - Alpha',
                     'Intended Audience :: Science/Research',
                     'License :: OSI Approved :: BSD License',
