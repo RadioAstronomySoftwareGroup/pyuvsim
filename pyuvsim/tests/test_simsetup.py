@@ -515,6 +515,20 @@ def test_setup_uvdata():
     for attr in attrs:
         nt.assert_true(getattr(uvd, attr) is None)
 
+    # test feeding array layout as dictionary
+    antpos, ants = uvd.get_ENU_antpos()
+    antpos_d = dict(zip(ants, antpos))
+    uvd = pyuvsim.simsetup.setup_uvdata(array_layout=antpos_d,
+                                        telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
+                                        telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
+                                        integration_time=100.0, start_time=2458101.0, polarizations=[-5], no_autos=True,
+                                        fill_blts=True, run_check=True)
+    nt.assert_equal(uvd.Nbls, 6)
+    nt.assert_equal(uvd.Nants_data, 4)
+    ap, a = uvd.get_ENU_antpos()
+    apd = dict(zip(a, ap))
+    nt.assert_true(np.all([np.isclose(antpos_d[a], apd[a]) for a in ants]))
+
 
 def test_uvfits_to_config():
     """
@@ -552,9 +566,10 @@ def test_uvfits_to_config():
     orig_param_dict = copy.deepcopy(param_dict)   # The parameter dictionary gets modified in the function below.
     uv1, new_beam_list, new_beam_dict = \
         uvtest.checkWarnings(pyuvsim.initialize_uvdata_from_params, [param_dict],
-                             category=DeprecationWarning,
-                             nwarnings=2, message=['The enu array in ECEF_from_ENU is being interpreted',
-                                                   'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'])
+                             category=[DeprecationWarning] * 4 + [UserWarning] * 3,
+                             nwarnings=7, message= ['The enu array in ECEF_from_ENU is being interpreted'] * 2
+                                                   + ['The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'] * 2
+                                                   + ['key '] * 3)
     # Generate parameters from new uvfits and compare with old.
     path, telescope_config, layout_fname = \
         uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_telescope_config, [uv1, herabeam_default],

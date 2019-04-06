@@ -563,15 +563,23 @@ def parse_telescope_params(tele_params, config_path=''):
     if 'array_layout' not in tele_params:
         raise KeyError("array_layout required in tele_params")
     layout_csv = tele_params['array_layout']
-    if not os.path.exists(layout_csv):
-        layout_csv = os.path.join(config_path, layout_csv)
+    # if array layout is a str, parse it as .csv filepath
+    if isinstance(layout_csv, (str, np.str)):
         if not os.path.exists(layout_csv):
-            raise ValueError('layout_csv file {} from yaml does not exist'.format(layout_csv))
+            layout_csv = os.path.join(config_path, layout_csv)
+            if not os.path.exists(layout_csv):
+                raise ValueError('layout_csv file {} from yaml does not exist'.format(layout_csv))
+        ant_layout = _parse_layout_csv(layout_csv)
+        E, N, U = ant_layout['e'], ant_layout['n'], ant_layout['u']
+        antnames = ant_layout['name']
+        antnums = np.array(ant_layout['number'])
 
-    # parse array layout
-    ant_layout = _parse_layout_csv(layout_csv)
-    E, N, U = ant_layout['e'], ant_layout['n'], ant_layout['u']
-    antnames = ant_layout['name']
+    # otherwise interpret as a dictionary
+    else:
+        antnums = np.array(sorted(layout_csv.keys()))
+        antnames = np.array(["ANT{}".format(an + 1) for an in antnums])
+        E, N, U = np.array([layout_csv[an] for an in antnums]).T
+        layout_csv = 'user-fed dict'
 
     # fill in outputs with just array info
     return_dict = {}
@@ -581,7 +589,7 @@ def parse_telescope_params(tele_params, config_path=''):
     return_dict['Nants_data'] = antnames.size
     return_dict['Nants_telescope'] = antnames.size
     return_dict['antenna_names'] = np.array(antnames.tolist())
-    return_dict['antenna_numbers'] = np.array(ant_layout['number'])
+    return_dict['antenna_numbers'] = np.array(antnums)
     antpos_enu = np.vstack((E, N, U)).T
     return_dict['antenna_positions'] = uvutils.ECEF_from_ENU(antpos_enu, *telescope_location) - tele_params['telescope_location']
     return_dict['array_layout'] = layout_csv
@@ -1035,8 +1043,10 @@ def setup_uvdata(array_layout=None, telescope_location=None, telescope_name=None
     Setup a UVData object for simulating.
 
     Args:
-        array_layout : str
-            Path to array layout .csv file. See pyuvsim documentation for details.
+        array_layout : str or dictionary
+            If str, path to array layout .csv file: see pyuvsim documentation for details.
+            If dictionary, keys are integer antenna numbers, values are len-3 baseline vectors
+            in ENU coordinates [meters]. Antenna names are assigned as "ANT%s" % antnum + 1.
         telescope_location : len-3 tuple
             Telescope location on Earth in LatLonAlt coordinates [deg, deg, meters]
         telescope_name : str
