@@ -388,6 +388,15 @@ def test_freq_time_params():
     ttest = pyuvsim.simsetup.parse_time_params(time_dict)
     nt.assert_true(np.allclose(ttest['time_array'], times))
 
+    # check Ntimes = 1 and Nfreqs = 1 case
+    times = np.linspace(2458570, 2458570.5, 1)
+    tdict = pyuvsim.simsetup.time_array_to_params(times)
+    nt.assert_equal(tdict['Ntimes'], 1)
+
+    freqs = np.linspace(100, 200, 1)
+    fdict = pyuvsim.simsetup.freq_array_to_params(freqs)
+    nt.assert_equal(fdict['Nfreqs'], 1)
+
 
 def test_param_select_cross():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
@@ -425,6 +434,16 @@ def test_param_select_bls():
     uv_obj_bls.history, uv_obj_bls2.history = '', ''
 
     nt.assert_equal(uv_obj_bls, uv_obj_bls2)
+
+    # check kwargs passed
+    param_dict['object_name'] = 'foo'
+    uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    nt.assert_equal(uv_obj_full.object_name, 'foo')
+
+    # check exceptions
+    pdict = copy.deepcopy(param_dict)
+    pdict['select']['bls'] = '[(40, 41, "xx")]'
+    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, pdict)
 
 
 def test_param_select_errors():
@@ -485,11 +504,12 @@ def test_setup_uvdata():
                                         integration_time=100.0, start_time=2458101.0, polarizations=['xx'], bls=bls,
                                         fill_blts=True, run_check=True)
     nt.assert_equal(uvd.Nbls, len(bls))
+    # also check that '1' gets converted to [1]
     uvd = pyuvsim.simsetup.setup_uvdata(array_layout=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
                                         telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
                                         telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
                                         integration_time=100.0, start_time=2458101.0, polarizations=['xx', 'yy'], bls=bls,
-                                        fill_blts=True, antenna_nums=[1],
+                                        fill_blts=True, antenna_nums='1',
                                         no_autos=False, run_check=True)
     nt.assert_equal(uvd.Nbls, 1)
     nt.assert_equal(uvd.Npols, 2)

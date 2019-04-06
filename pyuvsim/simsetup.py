@@ -944,8 +944,8 @@ def initialize_uvdata_from_params(obs_params):
     # setup object
     if 'select' in param_dict:
         uvparam_dict.update(param_dict['select'])
-    if 'object' in param_dict:
-        uvparam_dict['object'] = param_dict['object']
+    if 'object_name' in param_dict:
+        uvparam_dict['object_name'] = param_dict['object_name']
     uv_obj = setup_uvdata(fill_blts=True, **uvparam_dict)
 
     # set object name
