@@ -1011,11 +1011,11 @@ def complete_uvdata(uv_obj, run_check=True):
     else:
         dt = 1.0 / (24. * 3600.)
 
-    uv_obj.baseline_array = np.tile(bl_array, uv_obj.Ntimes)
+    uv_obj.baseline_array = np.repeat(bl_array, uv_obj.Ntimes)
     uv_obj.ant_1_array, uv_obj.ant_2_array = uv_obj.baseline_to_antnums(uv_obj.baseline_array)
     uv_obj.Nbls = np.unique(uv_obj.baseline_array).size
     uv_obj.Nblts = uv_obj.Nbls * uv_obj.Ntimes
-    uv_obj.time_array = np.repeat(time_array, uv_obj.Nbls)
+    uv_obj.time_array = np.tile(time_array, uv_obj.Nbls)
     uv_obj.integration_time = np.ones(uv_obj.Nblts, dtype=np.float) * dt * (24. * 3600.)
     uv_obj.Nants_data = np.unique(uv_obj.ant_1_array.tolist() + uv_obj.ant_2_array.tolist()).size
     uv_obj.set_lsts_from_time_array()
