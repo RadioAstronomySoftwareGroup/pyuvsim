@@ -633,7 +633,6 @@ def parse_telescope_params(tele_params, config_path=''):
                     raise OSError("Could not find file " + beam_model)
         beam_list.append(beam_model)
 
-
     return return_dict, beam_list, beam_dict
 
 
@@ -873,7 +872,10 @@ def time_array_to_params(time_array):
         tdict['start_time'] = time_array.item(0)
         return tdict
 
-    dt = np.diff(np.unique(time_array))[0]
+    if time_array.size > 1:
+        dt = np.diff(np.unique(time_array))[0]
+    else:
+        dt = 1.0 / (24. * 3600.)
     if not np.allclose(np.diff(time_array), np.ones(time_array.size - 1) * dt):
         tdict['time_array'] = time_array.tolist()
 
@@ -996,7 +998,10 @@ def complete_uvdata(uv_obj, run_check=True):
     antnames = uv_obj.antenna_names     # (Nants_telescope,)
     bl_array = uv_obj.baseline_array    # (Nbls,)
     time_array = uv_obj.time_array      # (Ntimes,)
-    dt = np.diff(np.unique(time_array))[0]
+    if time_array.size > 1:
+        dt = np.diff(np.unique(time_array))[0]
+    else:
+        dt = 1.0 / (24. * 3600.)
 
     uv_obj.baseline_array = np.tile(bl_array, uv_obj.Ntimes)
     uv_obj.ant_1_array, uv_obj.ant_2_array = uv_obj.baseline_to_antnums(uv_obj.baseline_array)
@@ -1060,7 +1065,7 @@ def setup_uvdata(array_layout=None, telescope_location=None, telescope_name=None
             List of antenna numbers to keep in array
         polarizations : list
             List of polarization strings to insert into object
-        no_autos : bool 
+        no_autos : bool
             If True, eliminate all auto correlations
         fill_blts : Fill out UVData attributes of size Nblts.
             If False, creates an invalid UVData object, where baseline_array has length Nbls, etc.

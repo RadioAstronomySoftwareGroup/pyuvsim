@@ -605,7 +605,7 @@ def test_horizon_cut():
     # Check that the coarse horizon cut doesn't remove sources that are actually up.
     uv_in, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(manytimes_config)
     Nsrcs = 20
-    uv_in.select(times=np.unique(uv_in.time_array)[:50], bls=[(0, 1)], metadata_only=True)
+    uv_in.select(times=np.unique(uv_in.time_array)[:50], bls=[(0, 1)], metadata_only=False)
     hera_loc = EarthLocation.from_geocentric(*uv_in.telescope_location, unit='m')
 
     dt = np.format_parser(['U10', 'f8', 'f8', 'f8', 'f8'],
