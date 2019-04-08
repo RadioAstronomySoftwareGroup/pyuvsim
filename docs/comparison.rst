@@ -25,8 +25,7 @@ Advantages:
 Disadvantages:
 
 1. MPI overhead is large if time axis in simulation is long.
-2. Supports only one polarization at a time.
-3. Limited to accurately simulating the total intensity radio interferometer measurement equation, which is accurate if polarization leakage effects are negligible. This leakage can be due to polarized sky emission or off-diagonal terms in the beam Jones matrix.
+2. Limited to accurately simulating the total intensity radio interferometer measurement equation, which is accurate if polarization leakage effects are negligible. This leakage is negligible if either the sky is unpolarized or if the off-diagonal terms in the beam Jones matrix are insiginificant.
 3. Does not support non-identical antenna patterns.
 
 Fast Holographic Deconvolution (FHD)
