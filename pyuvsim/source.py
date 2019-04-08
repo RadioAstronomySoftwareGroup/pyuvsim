@@ -79,7 +79,7 @@ class SkyModel(object):
 
     _Ncomp_attrs = ['ra', 'dec', 'coherency_radec', 'coherency_local',
                     'stokes', 'alt_az', 'rise_lst', 'set_lst', 'freq',
-                    'pos_lmn', 'name']
+                    'pos_lmn', 'name', 'below_horizon', 'skycoord']
     _scalar_attrs = ['Ncomponents', 'time', 'pos_tol']
 
     _member_funcs = ['coherency_calc', 'update_positions']
@@ -129,32 +129,36 @@ class SkyModel(object):
 
         self.Ncomponents = ra.size
 
+        # If rise/set lsts are not passed in they should be Ncomponent arrays of NaN
+        if rise_lst is None:
+            rise_lst = np.array([np.nan] * self.Ncomponents)
+        if set_lst is None:
+            set_lst = np.array([np.nan] * self.Ncomponents)
+
         self.name = np.asarray(name)
-        self.freq = freq
+        self.freq = np.asarray(freq)
         self.stokes = np.asarray(stokes)
         self.ra = ra
         self.dec = dec
         self.pos_tol = pos_tol
         self.time = None
-        self.rise_lst = rise_lst
-        self.set_lst = set_lst
-
-        # If rise/set lsts are not passed in they should be Ncomponent arrays of NaN
-        if self.rise_lst is None:
-            self.rise_lst = np.array([np.nan] * self.Ncomponents)
-        if self.set_lst is None:
-            self.set_lst = np.array([np.nan] * self.Ncomponents)
+        self.rise_lst = np.asarray(rise_lst)
+        self.set_lst = np.asarray(set_lst)
 
         if self.Ncomponents == 1:
             self.stokes = self.stokes.reshape(4, 1)
             self.ra = self.ra.reshape(1, 1)
             self.dec = self.dec.reshape(1, 1)
             self.name = self.name.reshape(1, 1)
+            self.rise_lst = self.rise_lst.reshape(1, 1)
+            self.set_lst = self.set_lst.reshape(1, 1)
 
         assert np.all([self.Ncomponents == l for l in
                        [self.ra.size, self.dec.size, self.freq.size, self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
 
         self.skycoord = SkyCoord(self.ra, self.dec, frame='icrs')
+
+        self.below_horizon = np.zeros(self.Ncomponents).astype(bool)
 
         # The coherency is a 2x2 matrix giving electric field correlation in Jy.
         # Multiply by .5 to ensure that Trace sums to I not 2*I
@@ -163,6 +167,13 @@ class SkyModel(object):
                                                self.stokes[2, :] - 1j * self.stokes[3, :]],
                                               [self.stokes[2, :] + 1j * self.stokes[3, :],
                                                self.stokes[0, :] - self.stokes[1, :]]])
+
+    def split(self, N):
+        """
+        Split this into a list of N SkyModel objects
+
+        Numbers of components per object follows the splitting logic of numpy.array_split
+        """
 
     def select(self, s):
         """
@@ -184,7 +195,8 @@ class SkyModel(object):
 
     def __getitem__(self, i):
         # i = valid index object
-        return _view_source(self, i)
+        self._select = i
+        return self
 
     def __iter__(self):
         self._counter = 0
@@ -205,7 +217,7 @@ class SkyModel(object):
          # For python 2 compatibility
         return self.__next__()
 
-    def coherency_calc(self, time, telescope_location, src_inds=slice(None)):
+    def coherency_calc(self, telescope_location, src_inds=slice(None)):
         """
         Calculate the local coherency in alt/az basis for this source at a time & location.
 
@@ -214,17 +226,12 @@ class SkyModel(object):
         but must be rotated into local alt/az.
 
         Args:
-            time: astropy Time object
-            telescope_location: astropy EarthLocation object
             src_inds: Optionally, only calculate for a subset of sources.
+            telescope_location: astropy EarthLocation object
 
         Returns:
             local coherency in alt/az basis
         """
-        if not isinstance(time, Time):
-            raise ValueError('time must be an astropy Time object. '
-                             'value was: {t}'.format(t=time))
-
         if not isinstance(telescope_location, EarthLocation):
             raise ValueError('telescope_location must be an astropy EarthLocation object. '
                              'value was: {al}'.format(al=telescope_location))
@@ -252,7 +259,6 @@ class SkyModel(object):
             coherency_local[:,:,polarized_sources] = np.einsum('abx,bcx,cdx->adx', rotation_matrix_T,
                                                                 self.coherency_radec[:,:,polarized_sources],
                                                                 rotation_matrix)
-
         return coherency_local
 
     def update_positions(self, time, telescope_location, src_inds=slice(None)):
@@ -284,6 +290,14 @@ class SkyModel(object):
 
         source_altaz = self.skycoord[src_inds].transform_to(AltAz(obstime=time, location=telescope_location))
 
+        time.location = telescope_location
+        lst = time.sidereal_time('apparent')
+
+        cirs_source_coord = self.skycoord[src_inds].transform_to('cirs')
+        tee_ra = simutils.cirs_to_tee_ra(cirs_source_coord.ra, time)
+
+        self.hour_angle = (lst - tee_ra).rad
+
         self.time = time
         alt_az = np.array([source_altaz.alt.rad, source_altaz.az.rad])
         self.alt_az = alt_az
@@ -300,7 +314,7 @@ class SkyModel(object):
         self.pos_lmn[2, src_inds] = pos_n
 
         # Horizon mask:
-        self.horizon_mask = self.alt_az[:, 0] < 0.0
+        self.below_horizon = self.alt_az[0, :] < 0.0
 
     def __eq__(self, other):
         return (np.isclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)

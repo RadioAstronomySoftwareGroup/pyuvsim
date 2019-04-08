@@ -52,7 +52,7 @@ def test_mock_catalog_zenith_source():
     ra = icrs_coord.ra
     dec = icrs_coord.dec
 
-    test_source = pyuvsim.Source('src0', ra, dec, freq, [1, 0, 0, 0])
+    test_source = pyuvsim.SkyModel('src0', ra, dec, freq, [1, 0, 0, 0])
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith')
     cat_source = cat[0]
@@ -77,7 +77,7 @@ def test_mock_catalog_off_zenith_source():
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    test_source = pyuvsim.Source('src0', ra, dec, freq, [1.0, 0, 0, 0])
+    test_source = pyuvsim.SkyModel('src0', ra, dec, freq, [1.0, 0, 0, 0])
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     cat_source = cat[0]

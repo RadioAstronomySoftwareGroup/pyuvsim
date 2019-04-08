@@ -33,13 +33,12 @@ __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata
 
 
 class UVTask(object):
-    # holds all the information necessary to calculate a single src, t, f, bl, array
-    # need the array because we need an array location for mapping to local alt/az
+    # holds all the information necessary to calculate a visibility for a set of sources at a single (t, f, bl)
 
-    def __init__(self, source, time, freq, baseline, telescope):
+    def __init__(self, sources, time, freq, baseline, telescope):
         self.time = time
         self.freq = freq
-        self.source = source
+        self.sources = sources  # SkyModel object
         self.baseline = baseline
         self.telescope = telescope
         self.visibility_vector = None
@@ -103,17 +102,13 @@ class UVEngine(object):
         # where x and y vectors along the local alt/az axes.
 
         # Apparent coherency gives the direction and polarization dependent baseline response to a source.
-        beam1_jones = baseline.antenna1.get_beam_jones(self.task.telescope,
-                                                       source.get_alt_az(self.task.time,
-                                                                         self.task.telescope.location),
+        beam1_jones = baseline.antenna1.get_beam_jones(self.task.telescope, source.alt_az,
                                                        self.task.freq, reuse_spline=self.reuse_spline)
-        beam2_jones = baseline.antenna2.get_beam_jones(self.task.telescope,
-                                                       source.get_alt_az(self.task.time,
-                                                                         self.task.telescope.location),
+        beam2_jones = baseline.antenna2.get_beam_jones(self.task.telescope, source.alt_az,
                                                        self.task.freq, reuse_spline=self.reuse_spline)
-        this_apparent_coherency = np.dot(beam1_jones,
-                                         source.coherency_calc(self.task.time,
-                                                               self.task.telescope.location))
+
+        coherency = source.coherency_calc(self.task.telescope.location)
+        this_apparent_coherency = np.dot(beam1_jones,coherency)
         this_apparent_coherency = np.dot(this_apparent_coherency,
                                          (beam2_jones.conj().T))
 
@@ -123,8 +118,18 @@ class UVEngine(object):
         """ Visibility contribution from a single source """
         assert(isinstance(self.task.freq, Quantity))
 
-        pos_lmn = self.task.source.pos_lmn(self.task.time, self.task.telescope.location)
-        if pos_lmn is None:
+        ## TODO --- Replace the Task's Source with a SkyModel of multiple sources.
+        ##          Sum over the components axis in place.
+
+        src = self.task.source
+        time = self.task.time
+        location = self.task.telescope.location
+
+        if src.pos_lmn is None:
+            src.update_positions(time, location)
+
+        pos_lmn = src.pos_lmn
+        if src.below_horizon:
             return np.array([0., 0., 0., 0.], dtype=np.complex128)
 
         self.apply_beam()
@@ -188,9 +193,9 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
 
     # Reduce catalog to only the sources that will be evaluated here.
-    _, (min_src_ind, max_src_ind), _, _  = np.unravel_index(task_id[[0,-1]], (Ntimes, Nsrcs, Nfreqs, Nbls))
+    _, (min_src_ind, max_src_ind), _, _  = np.unravel_index(task_ids[[0,-1]], (Ntimes, Nsrcs, Nfreqs, Nbls))
 
-    catalog = catalog[min_src_id:max_src_id].copy()
+    catalog = catalog[min_src_ind:max_src_ind+1].copy()
     src_ind_offset = min_src_ind
 
     # Shape indicates slowest to fastest index. (time is slowest, baselines is fastest).

@@ -42,6 +42,7 @@ def test_visibility_single_zenith_source():
     freq = (150e6 * units.Hz)
     source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
     source = source_arr[0]
+    source.update_positions(time, array_location)
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
@@ -58,7 +59,6 @@ def test_visibility_single_zenith_source():
     engine = pyuvsim.UVEngine(task)
 
     visibility = engine.make_visibility()
-
     nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3))
 
 
@@ -107,7 +107,7 @@ def test_visibility_source_below_horizon_radec():
     source_coord = SkyCoord(ra=Angle('13h20m'), dec=Angle('-30d43m17.5s'),
                             obstime=time, frame='icrs', location=array_location)
 
-    source = pyuvsim.Source('src_down', source_coord.ra, source_coord.dec, freq,
+    source = pyuvsim.SkyModel('src_down', source_coord.ra, source_coord.dec, freq,
                             [1.0, 0, 0, 0])
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
@@ -253,12 +253,13 @@ def test_single_offzenith_source_uvfits():
     # create_mock_catalog uses azimuth of 90
     source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     source = source_arr[0]
-
-    src_alt_az = source.alt_az_calc(time, array_location)
+    
+    source.update_positions(time, array_location)
+    src_alt_az = source.alt_az
     nt.assert_true(np.isclose(src_alt_az[0], src_alt.rad))
     nt.assert_true(np.isclose(src_alt_az[1], src_az.rad))
 
-    src_lmn = source.pos_lmn(time, array_location)
+    src_lmn = source.pos_lmn
     nt.assert_true(np.isclose(src_lmn[0], src_l))
     nt.assert_true(np.isclose(src_lmn[1], src_m))
     nt.assert_true(np.isclose(src_lmn[2], src_n))
@@ -474,6 +475,7 @@ def test_file_to_tasks():
         exp_task = expected_task_list[idx]
         nt.assert_equal(task, exp_task)
 
+test_file_to_tasks()
 
 def test_uvdata_init():
     hera_uv = UVData()
