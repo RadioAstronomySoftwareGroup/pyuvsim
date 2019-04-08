@@ -13,21 +13,11 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from . import utils as simutils
 
 
-class Source(object):
-    """
-    Does nothing. Placeholder while I fix other things
-
-    """
-
-    def __init__(self):
-        self.nothing = None
-
-
 class _view_source(object):
     """
     Interface for accessing a subset of sources in a source list.
 
-    This is returned by Sources.__getitem__ and should not be used directly.
+    This is returned by SkyModel.__getitem__ and should not be used directly.
     """
 
     def __init__(self, sourcelist, index):
@@ -50,13 +40,13 @@ class _view_source(object):
             return getattr(self.sourcelist, key)
         elif key in self.sourcelist._member_funcs:
             func = getattr(self.sourcelist, key)
-            return lambda x: func(x, src_inds=self.slice)
+            return lambda *x: func(*x, src_inds=self.slice)
 
     def copy(self):
         """
-        Copy this selected segment as a new Sources object.
+        Copy this selected segment as a new SkyModel object.
         """
-        src_obj = Sources(None, None, None, None, None)
+        src_obj = SkyModel(None, None, None, None, None)
         attrs = self.sourcelist._Ncomp_attrs + self.sourcelist._scalar_attrs
         for key in attrs:
             if hasattr(self.sourcelist, key):
@@ -67,7 +57,7 @@ class _view_source(object):
         return src_obj
 
 
-class Sources(object):
+class SkyModel(object):
     """
     Defines a set of point source components at given ICRS ra/dec coordinates, with a
     flux densities defined by stokes parameters.
@@ -87,14 +77,12 @@ class Sources(object):
     alt_az = None
     pos_lmn = None
 
-
     _Ncomp_attrs = ['ra', 'dec', 'coherency_radec', 'coherency_local',
-                       'stokes', 'alt_az', 'rise_lst', 'set_lst', 'freq',
-                       'pos_lmn', 'name']
+                    'stokes', 'alt_az', 'rise_lst', 'set_lst', 'freq',
+                    'pos_lmn', 'name']
     _scalar_attrs = ['Ncomponents', 'time', 'pos_tol']
 
     _member_funcs = ['coherency_calc', 'update_positions']
-
 
     def __init__(self, name, ra, dec, freq, stokes,
                  rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
@@ -141,9 +129,9 @@ class Sources(object):
 
         self.Ncomponents = ra.size
 
-        self.name = name
+        self.name = np.asarray(name)
         self.freq = freq
-        self.stokes = stokes
+        self.stokes = np.asarray(stokes)
         self.ra = ra
         self.dec = dec
         self.pos_tol = pos_tol
@@ -157,15 +145,14 @@ class Sources(object):
         if self.set_lst is None:
             self.set_lst = np.array([np.nan] * self.Ncomponents)
 
-
-        # Get a list of all member functions
-#        method_list = [func for func in dir(self) if callable(getattr(self, func)) and not func.startswith("__")]
+        if self.Ncomponents == 1:
+            self.stokes = self.stokes.reshape(4, 1)
+            self.ra = self.ra.reshape(1, 1)
+            self.dec = self.dec.reshape(1, 1)
+            self.name = self.name.reshape(1, 1)
 
         assert np.all([self.Ncomponents == l for l in
                        [self.ra.size, self.dec.size, self.freq.size, self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
-
-        if self.Ncomponents == 1:
-            self.stokes = self.stokes.reshape(1, 1)
 
         self.skycoord = SkyCoord(self.ra, self.dec, frame='icrs')
 
@@ -194,7 +181,6 @@ class Sources(object):
             setattr(self, k, val)
 
         self.Ncomponents = self.ra.size
-
 
     def __getitem__(self, i):
         # i = valid index object
@@ -269,7 +255,7 @@ class Sources(object):
 
         return coherency_local
 
-    def update_positions(self, time, telescope_location):
+    def update_positions(self, time, telescope_location, src_inds=slice(None)):
         """
         Calculate the altitude/azimuth positions for these sources
         From alt/az, calculate direction cosines (lmn)
@@ -302,19 +288,19 @@ class Sources(object):
         alt_az = np.array([source_altaz.alt.rad, source_altaz.az.rad])
         self.alt_az = alt_az
 
-        pos_l = np.sin(alt_az[1,:]) * np.cos(alt_az[0,:])
-        pos_m = np.cos(alt_az[1,:]) * np.cos(alt_az[0,:])
-        pos_n = np.sin(alt_az[0,:])
+        pos_l = np.sin(alt_az[1, :]) * np.cos(alt_az[0, :])
+        pos_m = np.cos(alt_az[1, :]) * np.cos(alt_az[0, :])
+        pos_n = np.sin(alt_az[0, :])
 
         if self.pos_lmn is None:
             self.pos_lmn = np.array([np.zeros(self.Ncomponents)] * 3)
 
-        self.pos_lmn[0,src_inds] = pos_l
-        self.pos_lmn[1,src_inds] = pos_m
-        self.pos_lmn[2,src_inds] = pos_n
+        self.pos_lmn[0, src_inds] = pos_l
+        self.pos_lmn[1, src_inds] = pos_m
+        self.pos_lmn[2, src_inds] = pos_n
 
         # Horizon mask:
-        self.horizon_mask = self.alt_az[:,0] < 0.0
+        self.horizon_mask = self.alt_az[:, 0] < 0.0
 
     def __eq__(self, other):
         return (np.isclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)

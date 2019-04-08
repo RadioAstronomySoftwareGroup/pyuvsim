@@ -21,7 +21,7 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from pyuvdata import UVBeam, UVData
 import pyuvdata.utils as uvutils
 
-from .source import Sources
+from .source import SkyModel
 from .analyticbeam import AnalyticBeam
 from .mpi import get_rank
 from .utils import check_file_exists_and_increment
@@ -82,7 +82,7 @@ def _config_str_to_dict(config_str):
 
 def array_to_sourcelist(catalog_table, lst_array=None, latitude_deg=None, horizon_buffer=0.04364, min_flux=None, max_flux=None):
     """
-    Generate a Sources object from a recarray, performing flux and horizon selections.
+    Generate a SkyModel object from a recarray, performing flux and horizon selections.
 
     Args:
         catalog_table: recarray of source catalog information. Must have columns with names
@@ -90,7 +90,7 @@ def array_to_sourcelist(catalog_table, lst_array=None, latitude_deg=None, horizo
         lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
         latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
         horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
-                        Sources whose calculated altitude is less than -horizon_buffer are excluded by the catalog read.
+                        SkyModel whose calculated altitude is less than -horizon_buffer are excluded by the catalog read.
 
                         Caution! The altitude calculation does not account for precession/nutation of the Earth. The buffer angle
                         is needed to ensure that the horizon cut doesn't exclude sources near but above the horizon.
@@ -142,7 +142,7 @@ def array_to_sourcelist(catalog_table, lst_array=None, latitude_deg=None, horizo
     # this can probably be written more cleanly... final shape is (4, Nsrcs)
     stokes = np.pad(np.expand_dims(catalog_table['flux_density_I'], 1), ((0, 0), (0, 3)), 'constant').T
 
-    sourcelist = Sources(ids, ra, dec, freqs, stokes)
+    sourcelist = SkyModel(ids, ra, dec, freqs, stokes)
 
     if coarse_horizon_cut:
         circumpolar = tans >= 1      # These will have rise/set lst set to nan
@@ -238,7 +238,7 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}):
             |  max_flux: Maximum stokes I flux to select [Jy]
 
     Returns:
-        pyuvsim.Sources object
+        pyuvsim.SkyModel object
     """
     with open(catalog_csv, 'r') as cfile:
         header = cfile.readline()
@@ -266,7 +266,7 @@ def write_catalog_to_file(filename, catalog):
 
     Args:
         filename: Path to output file (string)
-        catalog: pyuvsim.Sources object
+        catalog: pyuvsim.SkyModel object
     """
     with open(filename, 'w+') as fo:
         fo.write("SOURCE_ID\tRA_J2000 [deg]\tDec_J2000 [deg]\tFlux [Jy]\tFrequency [Hz]\n")
@@ -279,7 +279,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     """
     Create a mock catalog.
 
-    Sources are defined in an AltAz frame at the given time, then returned in
+    SkyModel are defined in an AltAz frame at the given time, then returned in
     ICRS ra/dec coordinates.
 
     Args:
@@ -301,7 +301,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         rseed (int): If using the random configuration, pass in a RandomState seed.
 
     Returns:
-        catalog: pyuvsim.Sources object
+        catalog: pyuvsim.SkyModel object
         mock_kwds: (dictionary) The keywords defining this source catalog
     """
 
@@ -421,7 +421,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     stokes = np.zeros((4, Nsrcs))
     stokes[0, :] = fluxes
     freqs = np.ones(Nsrcs) * freq
-    catalog = Sources(names, ra, dec, freqs, stokes)
+    catalog = SkyModel(names, ra, dec, freqs, stokes)
     if get_rank() == 0 and save:
         np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
 

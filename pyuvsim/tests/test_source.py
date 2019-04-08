@@ -36,15 +36,15 @@ def test_source_zenith_from_icrs():
     dec = icrs_coord.dec
     # Check error cases
     simtest.assert_raises_message(ValueError, 'ra must be an astropy Angle object. value was: 3.14',
-                                  pyuvsim.Source, 'icrs_zen', ra.rad, dec.rad, freq.value, [1, 0, 0, 0])
+                                  pyuvsim.SkyModel, 'icrs_zen', ra.rad, dec.rad, freq.value, [1, 0, 0, 0])
     simtest.assert_raises_message(ValueError, 'dec must be an astropy Angle object. value was: -0.53',
-                                  pyuvsim.Source, 'icrs_zen', ra, dec.rad, freq.value, [1, 0, 0, 0])
+                                  pyuvsim.SkyModel, 'icrs_zen', ra, dec.rad, freq.value, [1, 0, 0, 0])
     simtest.assert_raises_message(ValueError, 'freq must be an astropy Quantity object. value was: 150000000.0',
-                                  pyuvsim.Source, 'icrs_zen', ra, dec, freq.value, [1, 0, 0, 0])
+                                  pyuvsim.SkyModel, 'icrs_zen', ra, dec, freq.value, [1, 0, 0, 0])
     zenith_source = pyuvsim.Source('icrs_zen', ra, dec, freq, [1, 0, 0, 0])
 
-    zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
-
+    zenith_source.update_positions(time, array_location)
+    zenith_source_lmn = zenith_source.pos_lmn.squeeze()
     nt.assert_true(np.allclose(zenith_source_lmn, np.array([0, 0, 1]), atol=1e-5))
 
 
@@ -57,7 +57,9 @@ def test_source_zenith():
     source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith',
                                                 array_location=array_location)
     zenith_source = source_arr[0]
-    zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
+
+    zenith_source.update_positions(time, array_location)
+    zenith_source_lmn = zenith_source.pos_lmn
 
     nt.assert_true(np.allclose(zenith_source_lmn, np.array([0, 0, 1])))
 

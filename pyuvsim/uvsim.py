@@ -146,7 +146,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     Args:
         task_ids (numpy.ndarray of ints): Task index in the full flattened meshgrid of parameters.
         input_uv (UVData): UVData object to use
-        catalog: array of Source objects
+        catalog: a SkyModel object
         beam_list: (list of UVBeam or AnalyticBeam objects
         beam_dict (dict, optional): dict mapping antenna number to beam index in beam_list
 
@@ -158,9 +158,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     # The task_ids refer to tasks on the flattened meshgrid.
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
-
-    if not isinstance(catalog, np.ndarray):
-        raise TypeError("sources must be a numpy array")
 
     # There will always be relatively few antennas, so just build the full list.
     antenna_names = input_uv.antenna_names
@@ -176,7 +173,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     baselines = {}
     Ntimes = input_uv.Ntimes
     Nfreqs = input_uv.Nfreqs
-    Nsrcs = len(catalog)
+    Nsrcs = catalog.Ncomponents
     Nbls = input_uv.Nbls
 
     prev_src_ind = None
@@ -189,6 +186,12 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
 
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
+
+    # Reduce catalog to only the sources that will be evaluated here.
+    _, (min_src_ind, max_src_ind), _, _  = np.unravel_index(task_id[[0,-1]], (Ntimes, Nsrcs, Nfreqs, Nbls))
+
+    catalog = catalog[min_src_id:max_src_id].copy()
+    src_ind_offset = min_src_ind
 
     # Shape indicates slowest to fastest index. (time is slowest, baselines is fastest).
     for task_index in task_ids:
@@ -203,6 +206,14 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
             index2 = np.where(input_uv.antenna_numbers == antnum2)[0][0]
             baselines[bl_i] = Baseline(antennas[index1], antennas[index2])
 
+        time = time_array[blti]
+        bl = baselines[bl_i]
+        freq = freq_array[0, freq_i]  # 0 = spw axis
+
+        # This will only update positions if time changes.
+        catalog.update_positions(time, telescope.location)
+
+        src_i -= src_ind_offset
         source = catalog[src_i]
 
         if np.isfinite(source.rise_lst + source.set_lst):
@@ -222,10 +233,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
 
             if dt1 < dt0:
                 continue
-
-        time = time_array[blti]
-        bl = baselines[bl_i]
-        freq = freq_array[0, freq_i]  # 0 = spw axis
 
         task = UVTask(source, time, freq, bl, telescope)
         task.uvdata_index = (blti, 0, freq_i)    # 0 = spectral window index
