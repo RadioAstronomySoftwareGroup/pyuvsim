@@ -8,17 +8,26 @@ pyuvsim is a comprehensive simulation package for radio interferometers in pytho
 A number of analysis tools are available to simulate the output of a radio interferometer (CASA, OSKAR, FHD, PRISim, et al), however each makes numerical approximations to enable speed ups.  The pyuvsim goal is to provide a simulated instrument output which emphasizes accuracy and extensibility.
 
 # Motivation and Approach
-The two primary pyuvsim goals are interferometer simulation accuracy at the level of precision necessary for 21cm cosmology science. Key elements of this approach include:
+The two primary pyuvsim goals are interferometer simulation accuracy at the level of precision necessary for 21cm cosmology science, and maximum flexibility in use cases. Key elements of this approach include:
 
 1. High level of test coverage including accuracy (design goal is 97%).
 2. Include analytic tests in unittests.
 3. Comparison with external simulations.
 4. Design for scalability across many cpus.
+5. Fully-polarized instrument response, floating-point source position accuracy, full-sky field of view, and exact antenna positions.
+6. Support for varied beam models across the array.
 
 # Installation
 * For simple installation, the latest stable release is available via pip (`pip install pyuvsim`)
 * To install the development version: Clone the repository using `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`, navigate into the pyuvsim directory and run `pip install .`
-* pyuvsim is mainly intended to run on clusters running the linux operating system
+* `pyuvsim` is mainly intended to run on clusters running the linux operating system.
+--
+**Note**
+The `mpi4py` module is installed as a wrapper around an existing installation of MPI. The easiest way to install it is to use anaconda, which will install a compatible version of MPI and configure mpi4py to use it:
+```
+conda install -c conda-forge mpi4py
+```
+--
 
 ## Dependencies
 * `numpy`, `astropy`, `scipy`, `mpi4py`, `pyyaml`, `six`, `pyuvdata`
