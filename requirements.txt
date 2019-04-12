@@ -4,4 +4,4 @@ setuptools>=38.4.0
 scipy>=1.0.1
 PyYAML>=5.1
 mpi4py>=3.0.0
-astropy>=2.0.6
+astropy>=2.0
