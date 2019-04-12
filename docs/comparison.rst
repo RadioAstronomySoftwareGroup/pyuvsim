@@ -15,7 +15,7 @@ A python package for generating full-sky simulations.
 
 Advantages:
 
-1. Faster due to vectorized calculations. 
+1. Faster due to vectorized calculations.
 2. Well-tested through years of use.
 3. Support for a range of sky models including point sources, diffuse emission, and spectral cubes.
 4. Support for tracking as well as transit telescopes.
@@ -25,13 +25,19 @@ Advantages:
 Disadvantages:
 
 1. MPI overhead is large if time axis in simulation is long.
-2. Limited to accurately simulating the total intensity radio interferometer measurement equation, which is accurate if polarization leakage effects are negligible. This leakage is negligible if either the sky is unpolarized or if the off-diagonal terms in the beam Jones matrix are insiginificant.
+2. Limited to accurately simulating the total intensity (stokes I) radio interferometer measurement equation,
+which is accurate if the polarized sky emission is negligible and the off-diagonal terms
+in the beam pattern (e.g. XY or YX for linear polarization) are negligible.
 3. Does not support non-identical antenna patterns.
 
 Fast Holographic Deconvolution (FHD)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-FHD is a data calibration and modeling framework written in IDL by researchers at the University of Washington for analyzing data from the Murchison Widefield Array (MWA) in Western Australia. It calculates sky models by convolving a high-resolution psf with the exact DFT of point sources. This is approach is more efficient when working with wide primary beams, which will be narrower in Fourier space and thus limit the size of the convolution to be performed.
+FHD is a data calibration and modeling framework written in IDL by researchers
+by researchers at the University of Washington, originally developed for analyzing
+EoR data from the Murchison Widefield Array (MWA) in Western Australia.
+It calculates sky models by convolving a high-resolution psf with the exact DFT
+of point sources.
 
 Advantages:
 
@@ -39,14 +45,19 @@ Advantages:
 2. Well-tested through years of use.
 3. Support for diffuse foreground models.
 4. Support for discrete pointings.
-5. Uses IDL's native parallelization efficiently.
+5. Supports non-identical antenna patterns (can be memory intensive if there are many different patterns).
+6. Uses IDL's native parallelization efficiently.
+
 
 Disadvantages:
 
 1. Written in the proprietary IDL language.
 2. The discrete convolution in Fourier Space can introduce aliasing and ringing artifacts at a level relevant to 21cm cosmology.
+3. Memory usage scales with the size of the uv-plane. It is very fast for
+compact 21 cm cosmology arrays, but for higher resolution arrays with sparse uv coverage
+the memory scaling can be poor.
 3. Primary beam motion on the sky is limited to the "snapshot" size, not the time step size.
-4. Much slower for complex spectral structure.
+4. Much slower for simulating complex spectral structure.
 
 .. image:: fhd_uvsim_compare.png
     :width: 600
@@ -69,10 +80,12 @@ Advantages:
 Disadvantages:
 
 1. Limited support for user-defined primary beam models.
-2. Internal UVW rotation is known to be incorrect, affecting coherence far from the phase center.
+2. Internal UVW rotation is known to be incorrect, affecting coherence far from
+the phase center (CASA helpdesk ticket 2291, listed as closed but apparently not fixed).
 3. In its default (and fastest) mode of operation, point sources are gridded to pixel locations so an FFT can be performed. This pixel-scale imprecision can introduce point source subtraction errors that are significant to 21cm cosmology experiments [CTROTT2012]_.
-4. Full direction-dependent Jones matrices are supported, but simulating with them requires that the beam times sky model calculation be carried out in separate software [JAGANNATHAN17]_.
-5. Simulating additional instrument effects, such as beam variations among antennas or 
+4. Full direction-dependent Jones matrices can only be simulated if the
+beam times sky model calculation is carried out in separate software [JAGANNATHAN17]_.
+3. Does not support non-identical antenna patterns.
 
 
 .. [CTROTT2012]
