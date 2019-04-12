@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- Option to convert analytic beams from efield to pstokes
+- Enabled Gaussian beams to be defined with power law widths.
 - Enabled Gaussian beams to be defined from antenna diameter and have chromaticity
 - Checking the beam kernel width makes sense for Airy beams
 

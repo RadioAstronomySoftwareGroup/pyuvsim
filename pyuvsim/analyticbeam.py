@@ -168,7 +168,8 @@ class AnalyticBeam(object):
             raise ValueError('no interp for this type: ', self.type)
 
         if self.beam_type == 'power':
-            interp_data = interp_data**2
+            # Cross multiply feeds.
+            interp_data = interp_data[0] * interp_data[1]
 
         return interp_data, interp_basis_vector
 
