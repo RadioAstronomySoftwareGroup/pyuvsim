@@ -33,7 +33,7 @@ setup_args = {
     'test_suite': 'nose.collector',
     'test_requires': ['nose', 'h5py'],
     'install_requires': ['numpy>=1.15', 'astropy>=2.0', 'scipy', 'mpi4py>=3.0.0',
-                         'pyyaml', 'six>=1.10', 'pyuvdata>=1.3.7'],
+                         'pyyaml>=5.1', 'six>=1.10', 'pyuvdata>=1.3.7'],
     'classifiers': ['Development Status :: 3 - Alpha',
                     'Intended Audience :: Science/Research',
                     'License :: OSI Approved :: BSD License',
