@@ -252,6 +252,36 @@ def test_gaussbeam_values():
     nt.assert_true(np.all(beam_values**2 == coherencies))
 
 
+def test_chromatic_gaussian():
+    """
+    test_chromatic_gaussian
+    Defining a gaussian beam with a spectral index and reference frequency.
+    Check that beam width follows prescribed power law.
+    """
+    freqs = np.arange(120e6, 160e6, 4e6)
+    Nfreqs = len(freqs)
+    Npix = 1000
+    alpha = -1.5
+    sigma = np.radians(15.0)
+
+    az = np.zeros(Npix)
+    za = np.linspace(0, np.pi / 2., Npix)
+
+    A = pyuvsim.AnalyticBeam('gaussian', sigma=sigma, ref_freq=freqs[0], spectral_index=alpha)
+
+    # Get the widths at each frequency.
+
+    vals, _ = A.interp(az, za, freqs)
+
+    vals = vals[0, 0, 0]
+
+    for fi in range(Nfreqs):
+        hwhm = za[np.argmin(np.abs(vals[fi] - 0.5))]
+        sig_f = sigma * (freqs[fi] / freqs[0])**alpha
+        print(sig_f, 2 * hwhm / 2.355)
+        nt.assert_true(np.isclose(sig_f, 2 * hwhm / 2.355, atol=1e-3))
+
+
 def test_comparison():
     """
     Beam __eq__ method

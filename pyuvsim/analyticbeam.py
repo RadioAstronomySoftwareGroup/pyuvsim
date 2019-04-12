@@ -83,7 +83,9 @@ class AnalyticBeam(object):
         if (not spectral_index == 0.0) and (ref_freq is None):
             raise ValueError("ref_freq must be set for nonzero gaussian beam spectral index")
         elif ref_freq is None:
-            self.ref_freq = 1.0
+            ref_freq = 1.0
+        self.ref_freq = ref_freq
+        self.spectral_index = spectral_index
         self.diameter = diameter
         self.data_normalization = 'peak'
         self.freq_interp_kind = 'linear'
@@ -99,7 +101,6 @@ class AnalyticBeam(object):
         self.beam_type = 'power'
         pol_strings = ['pI', 'pQ', 'pU', 'pV']
         self.polarization_array = np.array([uvutils.polstr2num(ps.upper()) for ps in pol_strings])
-
 
     def interp(self, az_array, za_array, freq_array, reuse_spline=None):
         """
