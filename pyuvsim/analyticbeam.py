@@ -8,6 +8,8 @@ import numpy as np
 import warnings
 from scipy.special import j1
 
+import pyuvdata.utils as uvutils
+
 
 def diameter_to_sigma(diam, freqs):
     """
@@ -60,9 +62,19 @@ class AnalyticBeam(object):
         self.diameter = diameter
         self.data_normalization = 'peak'
         self.freq_interp_kind = 'linear'
+        self.beam_type = 'efield'
 
     def peak_normalize(self):
         pass
+
+    def efield_to_pstokes(self):
+        """
+        Tell interp to return values corresponding with a pstokes power beam.
+        """
+        self.beam_type = 'power'
+        pol_strings = ['pI', 'pQ', 'pU', 'pV']
+        self.polarization_array = np.array([uvutils.polstr2num(ps.upper()) for ps in pol_strings])
+
 
     def interp(self, az_array, za_array, freq_array, reuse_spline=None):
         """
@@ -129,6 +141,9 @@ class AnalyticBeam(object):
             interp_basis_vector = None
         else:
             raise ValueError('no interp for this type: ', self.type)
+
+        if self.beam_type == 'power':
+            interp_data = interp_data**2
 
         return interp_data, interp_basis_vector
 
