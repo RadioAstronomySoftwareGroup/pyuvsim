@@ -267,6 +267,9 @@ def test_chromatic_gaussian():
     az = np.zeros(Npix)
     za = np.linspace(0, np.pi / 2., Npix)
 
+    # Error if trying to define chromatic beam without a reference frequency
+
+    nt.assert_raises(ValueError, pyuvsim.AnalyticBeam, ['gaussian'], dict(sigma=sigma, spectral_index=alpha))
     A = pyuvsim.AnalyticBeam('gaussian', sigma=sigma, ref_freq=freqs[0], spectral_index=alpha)
 
     # Get the widths at each frequency.
