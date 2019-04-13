@@ -285,6 +285,23 @@ def test_chromatic_gaussian():
         nt.assert_true(np.isclose(sig_f, 2 * hwhm / 2.355, atol=1e-3))
 
 
+def test_power_analytic_beam():
+    freqs = np.arange(120e6, 160e6, 4e6)
+    Nfreqs = len(freqs)
+    Npix = 1000
+    diam = 14.0
+
+    az = np.zeros(Npix)
+    za = np.linspace(0, np.pi / 2., Npix)
+
+    eb = pyuvsim.AnalyticBeam('gaussian', diameter=diam)
+    pb = pyuvsim.AnalyticBeam('gaussian', diameter=diam)
+    pb.efield_to_pstokes()
+    evals = eb.interp(az, za, freqs)[0][0, 0, 0]
+    pvals = pb.interp(az, za, freqs)[0][0, 0]
+    nt.assert_true(np.allclose(evals**2, pvals))
+
+
 def test_comparison():
     """
     Beam __eq__ method
