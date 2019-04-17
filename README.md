@@ -16,6 +16,7 @@ The two primary pyuvsim goals are interferometer simulation accuracy at the leve
 4. Design for scalability across many cpus.
 5. Fully-polarized instrument response, floating-point source position accuracy, full-sky field of view, and exact antenna positions.
 6. Support for varied beam models across the array.
+7. Defining a clear, user-friendly standard for simulation design.
 
 # Installation
 * For simple installation, the latest stable release is available via pip (`pip install pyuvsim`)
