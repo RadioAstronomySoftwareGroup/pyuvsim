@@ -29,14 +29,14 @@ pip install -r requirements.txt
 pip install .
 ```
 * `pyuvsim` is mainly intended to run on clusters running the linux operating system.
---
+
+---
 **Note**
 The `mpi4py` module is installed as a wrapper around an existing installation of MPI. The easiest way to install it is to use anaconda, which will install a compatible version of MPI and configure mpi4py to use it:
 ```
 conda install -c conda-forge mpi4py
 ```
---
-
+---
 ## Dependencies
 * `numpy`, `astropy`, `scipy`, `mpi4py`, `pyyaml`, `six`, `pyuvdata`
 * optionally `line_profiler` if you want to do profiling (support for profiling is built in)
