@@ -23,9 +23,7 @@ Advantages:
 Disadvantages:
 
 1. MPI overhead is large if time axis in simulation is long.
-2. Limited to accurately simulating the total intensity (stokes I) radio interferometer measurement equation,
-which is accurate if the polarized sky emission is negligible and the off-diagonal terms
-in the beam pattern (e.g. XY or YX for linear polarization) are negligible.
+2. Limited to accurately simulating the total intensity (stokes I) radio interferometer measurement equation, which is accurate if the polarized sky emission is negligible and the off-diagonal terms in the beam pattern (e.g. XY or YX for linear polarization) are negligible.
 3. Does not support non-identical antenna patterns.
 
 Fast Holographic Deconvolution (FHD)
@@ -51,11 +49,9 @@ Disadvantages:
 
 1. Written in the proprietary IDL language.
 2. The discrete convolution in Fourier Space can introduce aliasing and ringing artifacts at a level relevant to 21cm cosmology.
-3. Memory usage scales with the size of the uv-plane. It is very fast for
-compact 21 cm cosmology arrays, but for higher resolution arrays with sparse uv coverage
-the memory scaling can be poor.
-3. Primary beam motion on the sky is limited to the "snapshot" size, not the time step size.
-4. Much slower for simulating complex spectral structure.
+3. Memory usage scales with the size of the uv-plane. It is very fast for compact 21 cm cosmology arrays, but for higher resolution arrays with sparse uv coverage the memory scaling can be poor.
+4. Primary beam motion on the sky is limited to the "snapshot" size, not the time step size.
+5. Much slower for simulating complex spectral structure.
 
 .. image:: fhd_uvsim_compare.png
     :width: 600
@@ -78,12 +74,10 @@ Advantages:
 Disadvantages:
 
 1. Limited support for user-defined primary beam models.
-2. Internal UVW rotation is known to be incorrect, affecting coherence far from
-the phase center (CASA helpdesk ticket 2291, listed as closed but apparently not fixed).
+2. Internal UVW rotation is known to be incorrect, affecting coherence far from the phase center (CASA helpdesk ticket 2291, listed as closed but apparently not fixed).
 3. In its default (and fastest) mode of operation, point sources are gridded to pixel locations so an FFT can be performed. This pixel-scale imprecision can introduce point source subtraction errors that are significant to 21cm cosmology experiments [CTROTT2012]_.
-4. Full direction-dependent Jones matrices can only be simulated if the
-beam times sky model calculation is carried out in separate software [JAGANNATHAN17]_.
-3. Does not support non-identical antenna patterns.
+4. Full direction-dependent Jones matrices can only be simulated if the beam times sky model calculation is carried out in separate software [JAGANNATHAN17]_.
+5. Does not support non-identical antenna beam patterns.
 
 
 .. [CTROTT2012]
