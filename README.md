@@ -5,10 +5,13 @@
 
 pyuvsim is a comprehensive simulation package for radio interferometers in python.
 
-A number of analysis tools are available to simulate the output of a radio interferometer (CASA, OSKAR, FHD, PRISim, et al), however each makes numerical approximations to enable speed ups.  The pyuvsim goal is to provide a simulated instrument output which emphasizes accuracy and extensibility.
+A number of analysis tools are available to simulate the output of a radio
+interferometer (CASA, OSKAR, FHD, PRISim, et al), however each makes numerical
+approximations to enable speed ups. pyuvsim's goal is to provide a simulated
+instrument output which emphasizes accuracy and extensibility.
 
 # Motivation and Approach
-The two primary pyuvsim goals are interferometer simulation accuracy at the level of precision necessary for 21cm cosmology science, and maximum flexibility in use cases. Key elements of this approach include:
+pyuvsim's two primary goals are interferometer simulation accuracy at the level of precision necessary for 21cm cosmology science, and maximum flexibility in use cases. Key elements of this approach include:
 
 1. High level of test coverage including accuracy (design goal is 97%).
 2. Include analytic tests in unittests.
@@ -80,7 +83,7 @@ Documentation on how to run simulations and developer API documentation is hoste
 nosetests pyuvsim/tests/
 ```
 
-You will need to have all dependencies installed and have your `pyuvsim/` directory in your environmental PYTHONPATH.
+You will need to have all dependencies installed.
 
 # Where to find Support
 
