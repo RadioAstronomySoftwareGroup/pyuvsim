@@ -2,11 +2,9 @@
 Comparison with other simulators
 ================================
 
-pyuvsim is designed to calculate visibilities from point sources and a given primary beam model. It does this through direct calculation of the full-polarization Radio Interferometer Measurement Equation (RIME), fully parallelized across a set of MPI processes. Its development has progressed with the goal of providing a tool that can be used reliably and flexibly, but most of all it has focused on avoiding effects that confound foreground modeling efforts in 21cm cosmology.
+pyuvsim is designed to calculate visibilities from point sources and a given primary beam model. It does this through direct calculation of the full-polarization Radio Interferometer Measurement Equation (RIME), parallelized across a set of MPI processes. Our design approach prioritizes precision, design clarity, flexible usefulness over speed and efficiency. As such, it has relatively slow speed and large memory usage compared with several other simulators. Deciding which tool to use will ultimately depend on what factors are important to the user. We recommend pyuvsim as a reference tool to verify the results of other simulators, and for producing limited datasets for comparison with observations (particularly on long baselines). Users will need access to a lot of memory and a large number of processor cores to take advantage of pyuvsim's accuracy and precision, ideally on a dedicated high-performance computing cluster.
 
-As such, it has relatively slow speed and large memory usage compared with several other simulators. Deciding which tool to use will ultimately depend on what factors are important to the user. We recommend pyuvsim as a reference tool to verify the results of other simulators, and for producing limited datasets for comparison with observations (particularly on long baselines). Users will need access to a lot of memory and a large number of processor cores to take advantage of pyuvsim's accuracy and precision, ideally on a dedicated high-performance computing cluster.
-
-On this page, we compare pyuvsim's features and performance to several other visibility simulators.
+On this page, we compare pyuvsim's features and performance to some other visibility simulators.
 
 Precision Radio Interferometry Simulator (PRISim)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
