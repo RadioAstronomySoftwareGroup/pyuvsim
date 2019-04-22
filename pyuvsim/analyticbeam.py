@@ -80,7 +80,7 @@ class AnalyticBeam(object):
             warnings.warn("Achromatic gaussian beams will not be supported in the future."
                           + "Define your gaussian beam by a dish diameter from now on.", PendingDeprecationWarning)
 
-        if (not spectral_index == 0.0) and (ref_freq is None):
+        if (spectral_index != 0.0) and (ref_freq is None):
             raise ValueError("ref_freq must be set for nonzero gaussian beam spectral index")
         elif ref_freq is None:
             ref_freq = 1.0
