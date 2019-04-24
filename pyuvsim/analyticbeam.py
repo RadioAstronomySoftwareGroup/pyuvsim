@@ -8,6 +8,8 @@ import numpy as np
 import warnings
 from scipy.special import j1
 
+import pyuvdata.utils as uvutils
+
 
 def diameter_to_sigma(diam, freqs):
     """
@@ -42,11 +44,32 @@ class AnalyticBeam(object):
 
     Supports uniform (unit response in all directions), gaussian, and Airy
     function beam types.
+
+    Supported types:
+        Uniform beam : Unit response from all directions.
+        Airy: An Airy disk pattern (the 2D Fourier transform of a circular aperture of width given by `diameter`)
+        Gaussian : A peak-normalized gaussian function.
+                   If given a `diameter`, then this makes a chromatic beam with FWHMs matching an equivalent Airy disk beam at each frequency.
+                   If given a `sigma`, this makes an achromatic beam with standard deviation set to `sigma`
+                   If given a `sigma`, `ref_freq`, and `spectral_index`, then this will make a chromatic beam
+                        with standard deviation defined by a power law:
+                            stddev(f) = sigma * (f/ref_freq)**(spectral_index)
+
+    Args:
+        type: (string)
+            Beam type to use
+        sigma: (float)
+            standard deviation [radians] for gaussian beam
+            When spectral index is set, this represents the FWHM at the ref_freq.
+        spectral_index : (float, optional)
+            Scale gaussian beam width as a power law with frequency.
+        ref_freq : (float, optional)
+            If set, this sets the reference frequency for the beam width power law.
     """
 
     supported_types = ['uniform', 'gaussian', 'airy']
 
-    def __init__(self, type, sigma=None, diameter=None):
+    def __init__(self, type, sigma=None, diameter=None, spectral_index=0.0, ref_freq=None):
         if type in self.supported_types:
             self.type = type
         else:
@@ -57,12 +80,28 @@ class AnalyticBeam(object):
             warnings.warn("Achromatic gaussian beams will not be supported in the future."
                           + "Define your gaussian beam by a dish diameter from now on.", PendingDeprecationWarning)
 
+        if (spectral_index != 0.0) and (ref_freq is None):
+            raise ValueError("ref_freq must be set for nonzero gaussian beam spectral index")
+        elif ref_freq is None:
+            ref_freq = 1.0
+        self.ref_freq = ref_freq
+        self.spectral_index = spectral_index
         self.diameter = diameter
         self.data_normalization = 'peak'
         self.freq_interp_kind = 'linear'
+        self.beam_type = 'efield'
 
     def peak_normalize(self):
         pass
+
+    def efield_to_power(self):
+        """
+        Tell interp to return values corresponding with a power beam.
+        """
+
+        self.beam_type = 'power'
+        pol_strings = ['XX', 'XY', 'YX', 'YY']
+        self.polarization_array = np.array([uvutils.polstr2num(ps.upper()) for ps in pol_strings])
 
     def interp(self, az_array, za_array, freq_array, reuse_spline=None):
         """
@@ -102,10 +141,9 @@ class AnalyticBeam(object):
             # copy along freq. axis
             if self.diameter is not None:
                 sigmas = diameter_to_sigma(self.diameter, freq_array)
-                values = np.exp(-(za_array[np.newaxis, ...]**2) / (2 * sigmas[:, np.newaxis]**2))
             elif self.sigma is not None:
-                values = np.exp(-(za_array**2) / (2 * self.sigma**2))
-                values = np.broadcast_to(values, (freq_array.size, az_array.size))
+                sigmas = self.sigma * (freq_array / self.ref_freq)**(self.spectral_index)
+            values = np.exp(-(za_array[np.newaxis, ...]**2) / (2 * sigmas[:, np.newaxis]**2))
             interp_data[1, 0, 0, :, :] = values
             interp_data[0, 0, 1, :, :] = values
             interp_data[1, 0, 1, :, :] = values
@@ -129,6 +167,17 @@ class AnalyticBeam(object):
             interp_basis_vector = None
         else:
             raise ValueError('no interp for this type: ', self.type)
+
+        if self.beam_type == 'power':
+            # Cross-multiplying feeds, adding vector components
+            pairs = [(i, j) for i in range(2) for j in range(2)]
+            power_data = np.zeros((1, 1, 4) + values.shape, dtype=np.float)
+            for pol_i, pair in enumerate(pairs):
+                power_data[:, :, pol_i] = ((interp_data[0, :, pair[0]]
+                                            * np.conj(interp_data[0, :, pair[1]]))
+                                           + (interp_data[1, :, pair[0]]
+                                              * np.conj(interp_data[1, :, pair[1]])))
+            interp_data = power_data
 
         return interp_data, interp_basis_vector
 
