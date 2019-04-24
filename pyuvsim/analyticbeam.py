@@ -94,12 +94,13 @@ class AnalyticBeam(object):
     def peak_normalize(self):
         pass
 
-    def efield_to_pstokes(self):
+    def efield_to_power(self):
         """
-        Tell interp to return values corresponding with a pstokes power beam.
+        Tell interp to return values corresponding with a power beam.
         """
+
         self.beam_type = 'power'
-        pol_strings = ['pI', 'pQ', 'pU', 'pV']
+        pol_strings = ['XX', 'XY', 'YX', 'YY']
         self.polarization_array = np.array([uvutils.polstr2num(ps.upper()) for ps in pol_strings])
 
     def interp(self, az_array, za_array, freq_array, reuse_spline=None):
@@ -168,8 +169,15 @@ class AnalyticBeam(object):
             raise ValueError('no interp for this type: ', self.type)
 
         if self.beam_type == 'power':
-            # Cross multiply feeds.
-            interp_data = interp_data[0] * interp_data[1]
+            # Cross-multiplying feeds, adding vector components
+            pairs = [(i, j) for i in range(2) for j in range(2)]
+            power_data = np.zeros((1, 1, 4) + values.shape, dtype=np.float)
+            for pol_i, pair in enumerate(pairs):
+                power_data[:, :, pol_i] = ((interp_data[0, :, pair[0]]
+                                            * np.conj(interp_data[0, :, pair[1]]))
+                                           + (interp_data[1, :, pair[0]]
+                                              * np.conj(interp_data[1, :, pair[1]])))
+            interp_data = power_data
 
         return interp_data, interp_basis_vector
 

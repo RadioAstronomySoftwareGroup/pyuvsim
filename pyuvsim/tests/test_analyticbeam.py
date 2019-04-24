@@ -295,10 +295,11 @@ def test_power_analytic_beam():
 
     eb = pyuvsim.AnalyticBeam('gaussian', diameter=diam)
     pb = pyuvsim.AnalyticBeam('gaussian', diameter=diam)
-    pb.efield_to_pstokes()
+    pb.efield_to_power()
     evals = eb.interp(az, za, freqs)[0][0, 0, 0]
     pvals = pb.interp(az, za, freqs)[0][0, 0]
-    nt.assert_true(np.allclose(evals**2, pvals))
+
+    nt.assert_true(np.allclose(evals**2, pvals / 2.))
 
 
 def test_comparison():
