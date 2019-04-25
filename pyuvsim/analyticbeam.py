@@ -129,8 +129,8 @@ class AnalyticBeam(object):
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
             interp_data[1, 0, 0, :, :] = 1
             interp_data[0, 0, 1, :, :] = 1
-            interp_data[1, 0, 1, :, :] = 1
-            interp_data[0, 0, 0, :, :] = 1
+            interp_data[1, 0, 1, :, :] = 0
+            interp_data[0, 0, 0, :, :] = 0
             interp_basis_vector = None
         elif self.type == 'gaussian':
             if (self.diameter is None) and (self.sigma is None):
@@ -146,8 +146,6 @@ class AnalyticBeam(object):
             values = np.exp(-(za_array[np.newaxis, ...]**2) / (2 * sigmas[:, np.newaxis]**2))
             interp_data[1, 0, 0, :, :] = values
             interp_data[0, 0, 1, :, :] = values
-            interp_data[1, 0, 1, :, :] = values
-            interp_data[0, 0, 0, :, :] = values
             interp_basis_vector = None
         elif self.type == 'airy':
             if self.diameter is None:
@@ -162,8 +160,6 @@ class AnalyticBeam(object):
             values[ze] = 1.
             interp_data[1, 0, 0, :, :] = values
             interp_data[0, 0, 1, :, :] = values
-            interp_data[1, 0, 1, :, :] = values
-            interp_data[0, 0, 0, :, :] = values
             interp_basis_vector = None
         else:
             raise ValueError('no interp for this type: {}'.format(self.type))
