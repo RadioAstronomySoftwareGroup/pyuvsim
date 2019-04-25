@@ -52,7 +52,7 @@ class UVTask(object):
     def __eq__(self, other):
         return (np.isclose(self.time.jd, other.time.jd, atol=1e-4)
                 and np.isclose(self.freq.value, other.freq.value, atol=1e-4)
-                and (self.source == other.source)
+                and (self.sources == other.sources)
                 and (self.baseline == other.baseline)
                 and (self.visibility_vector == other.visibility_vector)
                 and (self.uvdata_index == other.uvdata_index)
@@ -96,21 +96,20 @@ class UVEngine(object):
     def apply_beam(self):
         """ Get apparent coherency from jones matrices and source coherency. """
         baseline = self.task.baseline
-        source = self.task.source
+        sources = self.task.sources
         # coherency is a 2x2 matrix
         # [ |Ex|^2, Ex* Ey, Ey* Ex |Ey|^2 ]
         # where x and y vectors along the local alt/az axes.
 
         # Apparent coherency gives the direction and polarization dependent baseline response to a source.
-        beam1_jones = baseline.antenna1.get_beam_jones(self.task.telescope, source.alt_az,
+        beam1_jones = baseline.antenna1.get_beam_jones(self.task.telescope, sources.alt_az,
                                                        self.task.freq, reuse_spline=self.reuse_spline)
-        beam2_jones = baseline.antenna2.get_beam_jones(self.task.telescope, source.alt_az,
+        beam2_jones = baseline.antenna2.get_beam_jones(self.task.telescope, sources.alt_az,
                                                        self.task.freq, reuse_spline=self.reuse_spline)
 
-        coherency = source.coherency_calc(self.task.telescope.location)
-        this_apparent_coherency = np.dot(beam1_jones,coherency)
-        this_apparent_coherency = np.dot(this_apparent_coherency,
-                                         (beam2_jones.conj().T))
+        coherency = sources.coherency_calc(self.task.telescope.location)
+        beam2_jones = np.swapaxes(beam2_jones, 0, 1).conj()  # Transpose at each component.
+        this_apparent_coherency = np.einsum("abz,bcz,cdz->adz", beam1_jones, coherency, beam2_jones)
 
         self.apparent_coherency = this_apparent_coherency
 
@@ -121,16 +120,16 @@ class UVEngine(object):
         ## TODO --- Replace the Task's Source with a SkyModel of multiple sources.
         ##          Sum over the components axis in place.
 
-        src = self.task.source
+        srcs = self.task.sources
         time = self.task.time
         location = self.task.telescope.location
 
-        if src.pos_lmn is None:
-            src.update_positions(time, location)
+        if srcs.pos_lmn is None:
+            srcs.update_positions(time, location)
 
-        pos_lmn = src.pos_lmn
-        if src.below_horizon:
-            return np.array([0., 0., 0., 0.], dtype=np.complex128)
+        pos_lmn = srcs.pos_lmn
+       # if src.below_horizon:
+       #     return np.array([0., 0., 0., 0.], dtype=np.complex128)
 
         self.apply_beam()
 
@@ -139,9 +138,12 @@ class UVEngine(object):
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
         vij = self.apparent_coherency * fringe
 
+        # Sum over source component axis:
+        vij = np.sum(vij, axis=2)
+
         # Reshape to be [xx, yy, xy, yx]
-        vis_vector = [vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]]
-        return np.array(vis_vector)
+        vis_vector = np.asarray([vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]])
+        return vis_vector
 
 
 def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
