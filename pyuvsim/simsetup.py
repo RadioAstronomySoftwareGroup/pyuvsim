@@ -80,7 +80,25 @@ def _config_str_to_dict(config_str):
     return param_dict
 
 
-def array_to_sourcelist(catalog_table, lst_array=None, latitude_deg=None, horizon_buffer=0.04364, min_flux=None, max_flux=None):
+def skymodel_to_array(sky):
+    """
+    Return a recarray of source components from a given SkyModel object.
+    """
+
+    dt = np.format_parser(['U10', 'f8', 'f8', 'f8', 'f8'], ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], [])
+
+    arr = np.empty(sky.Ncomponents, dtype=dt.dtype)
+    arr['source_id'] = sky.name
+    arr['ra_j2000'] = sky.ra.value
+    arr['dec_j2000'] = sky.dec.value
+    arr['flux_density_I'] = sky.stokes[0,:]
+    arr['frequency'] = sky.freq
+
+    return arr
+
+
+
+def array_to_skymodel(catalog_table, lst_array=None, latitude_deg=None, horizon_buffer=0.04364, min_flux=None, max_flux=None):
     """
     Generate a SkyModel object from a recarray, performing flux and horizon selections.
 
@@ -158,24 +176,27 @@ def array_to_sourcelist(catalog_table, lst_array=None, latitude_deg=None, horizo
     return sourcelist
 
 
-def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}):
+def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}, return_table=False):
     """
     Creates a list of pyuvsim source objects from a votable catalog.
 
     Args:
         gleam_votable: Path to votable catalog file.
         input_uv: The UVData object for the simulation (needed for horizon cuts)
+        return_table: If True, return the astropy table instead of a list of Source objects. (Default False)
         source_select_kwds: Dictionary of keywords for source selection
             Valid options:
             |  lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
             |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
             |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
-            |                  (See caveats in simsetup.array_to_sourcelist docstring)
+            |                  (See caveats in simsetup.array_to_skymodel docstring)
             |  min_flux: Minimum stokes I flux to select [Jy]
             |  max_flux: Maximum stokes I flux to select [Jy]
 
     Returns:
-        List of pyuvsim.Source objects
+        if return_table : recarray of source parameters
+        otherwise:
+            pyuvsim.SkyModel object
 
     Tested on: GLEAM EGC catalog, version 2
     """
@@ -209,13 +230,14 @@ def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}):
         latitude = input_uv.telescope_location_lat_lon_alt_degrees[0]
         source_select_kwds['latitude_deg'] = latitude
         source_select_kwds['lst_array'] = lst_array
+    if not return_table:
+        sourcelist = array_to_skymodel(data, **source_select_kwds)
+        return sourcelist
+    else:
+        return data
 
-    sourcelist = array_to_sourcelist(data, **source_select_kwds)
 
-    return sourcelist
-
-
-def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}):
+def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}, return_table=False):
     """
     Read in a text file of sources.
 
@@ -233,7 +255,7 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}):
             |  lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
             |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
             |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
-            |                  (See caveats in simsetup.array_to_sourcelist docstring)
+            |                  (See caveats in simsetup.array_to_skymodel docstring)
             |  min_flux: Minimum stokes I flux to select [Jy]
             |  max_flux: Maximum stokes I flux to select [Jy]
 
@@ -255,7 +277,9 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}):
         source_select_kwds['latitude_deg'] = latitude
         source_select_kwds['lst_array'] = lst_array
 
-    sourcelist = array_to_sourcelist(catalog_table, **source_select_kwds)
+    if return_table:
+        return catalog_table
+    sourcelist = array_to_skymodel(catalog_table, **source_select_kwds)
 
     return sourcelist
 
@@ -275,7 +299,7 @@ def write_catalog_to_file(filename, catalog):
 
 
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
-                        alt=None, save=False, min_alt=None, rseed=None):
+                        alt=None, save=False, min_alt=None, rseed=None, return_table=False):
     """
     Create a mock catalog.
 
@@ -301,7 +325,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         rseed (int): If using the random configuration, pass in a RandomState seed.
 
     Returns:
-        catalog: pyuvsim.SkyModel object
+        catalog: pyuvsim.SkyModel object (or a recarray of source parameters if return_table is True)
         mock_kwds: (dictionary) The keywords defining this source catalog
     """
 
@@ -422,6 +446,8 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     stokes[0, :] = fluxes
     freqs = np.ones(Nsrcs) * freq
     catalog = SkyModel(names, ra, dec, freqs, stokes)
+    if return_table:
+        return skymodel_to_array(catalog), mock_keywords
     if get_rank() == 0 and save:
         np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
 
@@ -437,7 +463,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         input_uv: (UVData object) Needed to know location and time for mock catalog
                   and for horizon cuts
     Returns:
-        catalog: array of Source objects.
+        catalog: source recarray
         source_list_name: (str) Catalog identifier for metadata.
     """
     if input_uv is not None and not isinstance(input_uv, UVData):
@@ -502,11 +528,11 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         if not os.path.isfile(catalog):
             catalog = os.path.join(param_dict['config_path'], catalog)
         if catalog.endswith("txt"):
-            catalog = read_text_catalog(catalog, input_uv=input_uv, source_select_kwds=catalog_params)
+            catalog = read_text_catalog(catalog, input_uv=input_uv, source_select_kwds=catalog_params, return_table=True)
         elif catalog.endswith('vot'):
-            catalog = read_votable_catalog(catalog, input_uv=input_uv, source_select_kwds=catalog_params)
+            catalog = read_votable_catalog(catalog, input_uv=input_uv, source_select_kwds=catalog_params, return_table=True)
 
-    return np.array(catalog), source_list_name
+    return np.asarray(catalog), source_list_name
 
 
 def parse_telescope_params(tele_params, config_path=''):
@@ -1171,7 +1197,7 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
     """
     From a uvfits file, generate telescope parameters files.
 
-    Output config files are written to the current directory, unless keep_path is set.
+    Output config files are written to the current directory, unless path_out is set.
 
     Args:
         uvdata_in (UVData): object to process

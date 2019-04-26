@@ -667,16 +667,16 @@ def test_horizon_cut():
     catalog_table['flux_density_I'] = np.ones(Nsrcs)
     catalog_table['frequency'] = np.ones(Nsrcs) * 200e6
 
-    uvtest.checkWarnings(pyuvsim.simsetup.array_to_sourcelist, [catalog_table],
+    uvtest.checkWarnings(pyuvsim.simsetup.array_to_skymodel, [catalog_table],
                          {'lst_array': uv_in.lst_array},
                          message="It looks like you want to do a coarse horizon cut, but you're missing keywords", nwarnings=1)
 
-    cut_sourcelist = pyuvsim.simsetup.array_to_sourcelist(catalog_table, lst_array=uv_in.lst_array,
+    cut_sourcelist = pyuvsim.simsetup.array_to_skymodel(catalog_table, lst_array=uv_in.lst_array,
                                                           latitude_deg=uv_in.telescope_location_lat_lon_alt_degrees[0])
 
     selected_source_names = [s.name for s in cut_sourcelist]
 
-    full_sourcelist = pyuvsim.simsetup.array_to_sourcelist(catalog_table)  # No cuts
+    full_sourcelist = pyuvsim.simsetup.array_to_skymodel(catalog_table)  # No cuts
 
     # For each source in the full sourcelist, calculate the AltAz for all times.
     # If Alt > 0 at any time, confirm that the source is in the selection.

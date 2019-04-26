@@ -25,6 +25,7 @@ from . import profiling
 from .antenna import Antenna
 from .baseline import Baseline
 from .telescope import Telescope
+from .source import SkyModel
 from . import utils as simutils
 from . import simsetup
 from . import mpi
@@ -114,22 +115,17 @@ class UVEngine(object):
         self.apparent_coherency = this_apparent_coherency
 
     def make_visibility(self):
-        """ Visibility contribution from a single source """
+        """ Visibility contribution from a set of source components """
         assert(isinstance(self.task.freq, Quantity))
-
-        ## TODO --- Replace the Task's Source with a SkyModel of multiple sources.
-        ##          Sum over the components axis in place.
 
         srcs = self.task.sources
         time = self.task.time
         location = self.task.telescope.location
 
-        if srcs.pos_lmn is None:
-            srcs.update_positions(time, location)
+        # This will only be run if time has changed
+        srcs.update_positions(time, location)
 
         pos_lmn = srcs.pos_lmn
-       # if src.below_horizon:
-       #     return np.array([0., 0., 0., 0.], dtype=np.complex128)
 
         self.apply_beam()
 
@@ -166,6 +162,9 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
 
+    if not isinstance(catalog, SkyModel):
+        raise TypeError("catalog must be a SkyModel object")
+
     # There will always be relatively few antennas, so just build the full list.
     antenna_names = input_uv.antenna_names
     antennas = []
@@ -183,10 +182,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     Nsrcs = catalog.Ncomponents
     Nbls = input_uv.Nbls
 
-    prev_src_ind = None
-    prev_time_ind = None
-    prev_freq_ind = None
-
     telescope = Telescope(input_uv.telescope_name,
                           EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
                           beam_list)
@@ -194,15 +189,9 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
 
-    # Reduce catalog to only the sources that will be evaluated here.
-    _, (min_src_ind, max_src_ind), _, _  = np.unravel_index(task_ids[[0,-1]], (Ntimes, Nsrcs, Nfreqs, Nbls))
-
-    catalog = catalog[min_src_ind:max_src_ind+1].copy()
-    src_ind_offset = min_src_ind
-
     # Shape indicates slowest to fastest index. (time is slowest, baselines is fastest).
     for task_index in task_ids:
-        time_i, src_i, freq_i, bl_i = np.unravel_index(task_index, (Ntimes, Nsrcs, Nfreqs, Nbls))
+        time_i, freq_i, bl_i = np.unravel_index(task_index, (Ntimes, Nfreqs, Nbls))
         blti = bl_i + time_i * Nbls   # baseline is the fast axis
 
         # We reuse a lot of baseline info, so make the baseline list on the first go and reuse.
@@ -217,36 +206,28 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         bl = baselines[bl_i]
         freq = freq_array[0, freq_i]  # 0 = spw axis
 
-        # This will only update positions if time changes.
-        catalog.update_positions(time, telescope.location)
+        ## TODO Replace the rise/set coarse horizon logic.
 
-        src_i -= src_ind_offset
-        source = catalog[src_i]
+#        if np.isfinite(source.rise_lst + source.set_lst):
+#            r_lst = source.rise_lst
+#            s_lst = source.set_lst
+#            now_lst = input_uv.lst_array[blti]
+#
+#            # Compare time since rise to time between rise and set,
+#            # properly accounting for phase wrap.
+#            dt0 = now_lst - r_lst       # radians since rise time.
+#            if dt0 < 0:
+#                dt0 += 2 * np.pi
+#
+#            dt1 = s_lst - r_lst         # radians between rise and set
+#            if dt1 < 0:
+#                dt1 += 2 * np.pi
+#
+#            if dt1 < dt0:
+#                continue
 
-        if np.isfinite(source.rise_lst + source.set_lst):
-            r_lst = source.rise_lst
-            s_lst = source.set_lst
-            now_lst = input_uv.lst_array[blti]
-
-            # Compare time since rise to time between rise and set,
-            # properly accounting for phase wrap.
-            dt0 = now_lst - r_lst       # radians since rise time.
-            if dt0 < 0:
-                dt0 += 2 * np.pi
-
-            dt1 = s_lst - r_lst         # radians between rise and set
-            if dt1 < 0:
-                dt1 += 2 * np.pi
-
-            if dt1 < dt0:
-                continue
-
-        task = UVTask(source, time, freq, bl, telescope)
+        task = UVTask(catalog, time, freq, bl, telescope)
         task.uvdata_index = (blti, 0, freq_i)    # 0 = spectral window index
-
-        prev_src_ind = src_i
-        prev_time_ind = time_i
-        prev_freq_ind = freq_i
 
         yield task
 
@@ -391,7 +372,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
     Nfreqs = input_uv.Nfreqs
     Nsrcs = len(catalog)
 
-    Ntasks = Nblts * Nfreqs * Nsrcs
+    Ntasks = Nblts * Nfreqs# * Nsrcs
 
     Neach_section, extras = divmod(Ntasks, Npus)
     if rank < extras:

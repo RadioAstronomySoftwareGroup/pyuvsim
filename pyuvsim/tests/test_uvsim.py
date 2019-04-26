@@ -79,7 +79,6 @@ def test_visibility_source_below_horizon():
     src_alt = Angle('-40d')
 
     source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
-    source = source_arr[0]
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
@@ -91,7 +90,7 @@ def test_visibility_source_below_horizon():
     beam_list = [beam]
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
 
-    task = pyuvsim.UVTask(source, time, freq, baseline, array)
+    task = pyuvsim.UVTask(source_arr, time, freq, baseline, array)
 
     engine = pyuvsim.UVEngine(task)
 
@@ -113,7 +112,7 @@ def test_visibility_source_below_horizon_radec():
                             obstime=time, frame='icrs', location=array_location)
 
     source = pyuvsim.SkyModel('src_down', source_coord.ra, source_coord.dec, freq,
-                            [1.0, 0, 0, 0])
+                            np.array([1.0, 0, 0, 0]).reshape(4,1))
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
@@ -292,7 +291,7 @@ def test_single_offzenith_source_uvfits():
     interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([beam_az]),
                                                          za_array=np.array([beam_za]),
                                                          freq_array=np.array([freq.to('Hz').value]))
-    jones = np.zeros((2, 2), dtype=np.complex64)
+    jones = np.zeros((2, 2, 1), dtype=np.complex64)
     jones[0, 0] = interpolated_beam[1, 0, 0, 0, 0]
     jones[1, 1] = interpolated_beam[0, 0, 1, 0, 0]
     jones[1, 0] = interpolated_beam[1, 0, 1, 0, 0]
@@ -305,7 +304,9 @@ def test_single_offzenith_source_uvfits():
     nt.assert_true(np.allclose(beam_jones, jones))
 
     uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
-
+    jones_T = np.swapaxes(jones, 0, 1)
+    # Remove source axis from jones matrix
+    jones = jones.squeeze()
     vis_analytic = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(2j * np.pi * (uvw_wavelength_array[0, 0] * src_l + uvw_wavelength_array[0, 1] * src_m + uvw_wavelength_array[0, 2] * src_n))
     vis_analytic = np.array([vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[0, 1], vis_analytic[1, 0]])
 
@@ -569,8 +570,14 @@ def test_local_task_gen():
     Ntimes = hera_uv.Ntimes
     Nfreqs = hera_uv.Nfreqs
     Nsrcs = len(sources)
-    Ntasks = Nblts * Nfreqs * Nsrcs
+    Ntasks = Nblts * Nfreqs
     beam_dict = None
+
+    # Check error conditions
+    uv_iter0 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), 'not_uvdata', sources, beam_list, beam_dict)
+    simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', next, uv_iter0)
+    uv_iter1 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, 'not_ndarray', beam_list, beam_dict)
+    simtest.assert_raises_message(TypeError, 'sources must be a numpy array', next, uv_iter1)
 
     # Copy sources and beams so we don't accidentally reuse quantities.
     taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
@@ -579,13 +586,8 @@ def test_local_task_gen():
                                        category=DeprecationWarning)
     uvtask_iter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, copy.deepcopy(sources), copy.deepcopy(beam_list), beam_dict)
 
-    # Check error conditions
-    uv_iter0 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), 'not_uvdata', sources, beam_list, beam_dict)
-    simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', next, uv_iter0)
-    uv_iter1 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, 'not_ndarray', beam_list, beam_dict)
-    simtest.assert_raises_message(TypeError, 'sources must be a numpy array', next, uv_iter1)
-
     engine0 = pyuvsim.UVEngine(reuse_spline=False)
+
     for tki, task0 in enumerate(uvtask_iter):
         task1 = uvtask_list[tki]
         engine1 = pyuvsim.UVEngine(task1, reuse_spline=True)
