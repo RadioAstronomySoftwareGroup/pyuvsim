@@ -79,7 +79,7 @@ class SkyModel(object):
 
     _Ncomp_attrs = ['ra', 'dec', 'coherency_radec', 'coherency_local',
                     'stokes', 'alt_az', 'rise_lst', 'set_lst', 'freq',
-                    'pos_lmn', 'name', 'below_horizon', 'skycoord']
+                    'pos_lmn', 'name', 'horizon_mask', 'skycoord']
     _scalar_attrs = ['Ncomponents', 'time', 'pos_tol']
 
     _member_funcs = ['coherency_calc', 'update_positions']
@@ -138,8 +138,8 @@ class SkyModel(object):
         self.name = np.asarray(name)
         self.freq = np.asarray(freq)
         self.stokes = np.asarray(stokes)
-        self.ra = ra
-        self.dec = dec
+        self.ra = np.atleast_1d(ra)
+        self.dec = np.atleast_1d(dec)
         self.pos_tol = pos_tol
         self.time = None
         self.rise_lst = np.asarray(rise_lst)
@@ -147,18 +147,13 @@ class SkyModel(object):
 
         if self.Ncomponents == 1:
             self.stokes = self.stokes.reshape(4, 1)
-            self.ra = self.ra.reshape(1, 1)
-            self.dec = self.dec.reshape(1, 1)
-            self.name = self.name.reshape(1, 1)
-            self.rise_lst = self.rise_lst.reshape(1, 1)
-            self.set_lst = self.set_lst.reshape(1, 1)
 
         assert np.all([self.Ncomponents == l for l in
                        [self.ra.size, self.dec.size, self.freq.size, self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
 
         self.skycoord = SkyCoord(self.ra, self.dec, frame='icrs')
 
-        self.below_horizon = np.zeros(self.Ncomponents).astype(bool)
+        self.horizon_mask = np.zeros(self.Ncomponents).astype(bool)     # If true, source component is below horizon.
 
         # The coherency is a 2x2 matrix giving electric field correlation in Jy.
         # Multiply by .5 to ensure that Trace sums to I not 2*I
@@ -259,6 +254,9 @@ class SkyModel(object):
             coherency_local[:,:,polarized_sources] = np.einsum('abx,bcx,cdx->adx', rotation_matrix_T,
                                                                 self.coherency_radec[:,:,polarized_sources],
                                                                 rotation_matrix)
+        # Zero coherency on sources below horizon.
+        coherency_local[:,:,self.horizon_mask] *= 0.0
+
         return coherency_local
 
     def update_positions(self, time, telescope_location, src_inds=slice(None)):
@@ -288,18 +286,23 @@ class SkyModel(object):
         if self.time == time:  # Don't repeat calculations
             return
 
-        source_altaz = self.skycoord[src_inds].transform_to(AltAz(obstime=time, location=telescope_location))
+        skycoord_use = self.skycoord[src_inds]
+
+        source_altaz = skycoord_use.transform_to(AltAz(obstime=time, location=telescope_location))
 
         time.location = telescope_location
         lst = time.sidereal_time('apparent')
 
-        cirs_source_coord = self.skycoord[src_inds].transform_to('cirs')
+        cirs_source_coord = skycoord_use.transform_to('cirs')
         tee_ra = simutils.cirs_to_tee_ra(cirs_source_coord.ra, time)
 
         self.hour_angle = (lst - tee_ra).rad
 
         self.time = time
         alt_az = np.array([source_altaz.alt.rad, source_altaz.az.rad])
+        if alt_az.ndim == 1:
+            alt_az = alt_az[:,None]
+
         self.alt_az = alt_az
 
         pos_l = np.sin(alt_az[1, :]) * np.cos(alt_az[0, :])
@@ -314,11 +317,10 @@ class SkyModel(object):
         self.pos_lmn[2, src_inds] = pos_n
 
         # Horizon mask:
-        self.below_horizon = self.alt_az[0, :] < 0.0
+        self.horizon_mask = self.alt_az[0, :] < 0.0
 
     def __eq__(self, other):
-        return (np.isclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)
-                and np.isclose(self.dec.deg, other.dec.deg, atol=self.pos_tol)
-                and np.all(self.stokes == other.stokes)
-                and (self.name == other.name)
-                and (self.freq == other.freq))
+        return (np.allclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)
+                and np.allclose(self.stokes, other.stokes)
+                and np.all(self.name == other.name)
+                and np.all(self.freq == other.freq))
