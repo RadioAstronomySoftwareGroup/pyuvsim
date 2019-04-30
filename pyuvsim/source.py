@@ -136,7 +136,7 @@ class SkyModel(object):
             set_lst = np.array([np.nan] * self.Ncomponents)
 
         self.name = np.asarray(name)
-        self.freq = np.asarray(freq)
+        self.freq = np.atleast_1d(freq)
         self.stokes = np.asarray(stokes)
         self.ra = np.atleast_1d(ra)
         self.dec = np.atleast_1d(dec)
@@ -162,31 +162,6 @@ class SkyModel(object):
                                                self.stokes[2, :] - 1j * self.stokes[3, :]],
                                               [self.stokes[2, :] + 1j * self.stokes[3, :],
                                                self.stokes[0, :] - self.stokes[1, :]]])
-
-    def split(self, N):
-        """
-        Split this into a list of N SkyModel objects
-
-        Numbers of components per object follows the splitting logic of numpy.array_split
-        """
-
-    def select(self, s):
-        """
-        Subselect from the Ncomponents
-        """
-
-        for k in self._Ncomp_attrs:
-            if not hasattr(self, k):
-                continue
-            val = getattr(self, k)
-            if val is not None:
-                val = val[..., s]
-            if isinstance(val, np.ndarray):
-                if val.size == 1:
-                    val = val.flatten()[0]
-            setattr(self, k, val)
-
-        self.Ncomponents = self.ra.size
 
     def __getitem__(self, i):
         # i = valid index object

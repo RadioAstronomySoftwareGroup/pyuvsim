@@ -99,6 +99,7 @@ def test_catalog_from_params():
     uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [{'sources': source_dict}],
                          message="No array_location specified. Defaulting to the HERA site.")
     catalog_uv, srclistname = pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict}, hera_uv)
+    catalog_uv = pyuvsim.simsetup.array_to_skymodel(catalog_uv)
     source_dict['array_location'] = arrloc
     del source_dict['time']
 
@@ -119,8 +120,9 @@ def test_flux_cuts():
                                                 message=gleam_path, nwarnings=11,
                                                 category=[astropy.io.votable.exceptions.W27]
                                                 + [astropy.io.votable.exceptions.W50] * 10)
-    for src in catalog:
-        nt.assert_true(0.2 < src.stokes[0] < 1.5)
+    catalog = pyuvsim.simsetup.array_to_skymodel(catalog)
+    for sI in catalog.stokes[0,:]:
+        nt.assert_true(np.all(0.2 < sI < 1.5))
 
 
 def check_param_reader(config_num):
@@ -218,7 +220,6 @@ def check_param_reader(config_num):
 
 # This loops through different config files and tests all of them the same way
 # note that each config tested shows up as a separate '.' in the nosetests output
-
 
 def test_param_reader():
     """
@@ -647,7 +648,6 @@ def test_point_catalog_reader():
         nt.assert_true(src.dec.deg in catalog_table['dec_j2000'])
         nt.assert_true(src.stokes[0] in catalog_table['flux_density_I'])
         nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])
-    # shouldn't this also test the values?
 
 
 def test_horizon_cut():
@@ -667,14 +667,14 @@ def test_horizon_cut():
     catalog_table['flux_density_I'] = np.ones(Nsrcs)
     catalog_table['frequency'] = np.ones(Nsrcs) * 200e6
 
-    uvtest.checkWarnings(pyuvsim.simsetup.array_to_skymodel, [catalog_table],
+    uvtest.checkWarnings(pyuvsim.simsetup.source_cuts, [catalog_table],
                          {'lst_array': uv_in.lst_array},
                          message="It looks like you want to do a coarse horizon cut, but you're missing keywords", nwarnings=1)
 
-    cut_sourcelist = pyuvsim.simsetup.array_to_skymodel(catalog_table, lst_array=uv_in.lst_array,
-                                                          latitude_deg=uv_in.telescope_location_lat_lon_alt_degrees[0])
+    cut_sourcelist = pyuvsim.simsetup.array_to_skymodel(catalog_table)
+    cut_sourcelist = pyuvsim.simsetup.source_cuts(catalog_table, input_uv=uv_in) #lst_array=uv_in.lst_array, latitude_deg=uv_in.telescope_location_lat_lon_alt_degrees[0])
 
-    selected_source_names = [s.name for s in cut_sourcelist]
+    selected_source_names = cut_sourcelist['source_id'] #[s.name for s in cut_sourcelist]
 
     full_sourcelist = pyuvsim.simsetup.array_to_skymodel(catalog_table)  # No cuts
 
@@ -682,12 +682,13 @@ def test_horizon_cut():
     # If Alt > 0 at any time, confirm that the source is in the selection.
 
     time_arr = Time(uv_in.time_array, scale='utc', format='jd')
-    for src in full_sourcelist:
-        alt, az = src.alt_az_calc(time_arr, hera_loc)
-        src.alt_az = None
-        if np.any(alt > 0):
-            nt.assert_true(src.name in selected_source_names)
+    for t in time_arr:
+        full_sourcelist.update_positions(t, hera_loc)
+        above_horizon = full_sourcelist.alt_az[0] > 0
+        if sum(above_horizon) > 0:
+            nt.assert_true(np.all(np.in1d(full_sourcelist.name[above_horizon], selected_source_names)))
 
+    full_sourcelist = pyuvsim.simsetup.skymodel_to_array(full_sourcelist)
     # Now check that I get the same visibilities simulating with and without the horizon cut.
     beam_list = ['analytic_uniform']  # Simplify with a single uniform beam model
     kwds = dict(source_list_name='random', obs_param_file='', telescope_config_file='', antenna_location_file='')
@@ -746,10 +747,10 @@ def test_mock_catalogs():
     loc = EarthLocation.from_geodetic(loc[1], loc[0], loc[2])    # Lon, Lat, alt
     fname = 'mock_catalog_random.npz'
     alts_reload = np.load(fname)['alts']
-    for i, src in enumerate(cat):
-        alt, az = src.alt_az_calc(time, loc)
-        nt.assert_true(np.degrees(alt) > 30.)
-        nt.assert_true(np.isclose(alts_reload[i], np.degrees(alt)))
+    cat.update_positions(time, loc)
+    alt, az = cat.alt_az
+    nt.assert_true(np.all(alt > np.radians(30.)))
+    nt.assert_true(np.allclose(alts_reload, np.degrees(alt)))
     os.remove(fname)
 
 
