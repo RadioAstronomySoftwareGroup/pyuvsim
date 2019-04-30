@@ -385,6 +385,20 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
         end = start + length
     task_ids = six.moves.range(start, end)
 
+    # Find the first and last index of each axis
+    minmax = np.unravel_index([start, end - 1], tasks_shape)
+
+    src_ind0, src_ind1 = minmax[src_ax]
+    src_ind1 += 1   # Inclusive ranges
+    if src_ind1 < src_ind0:
+        # Loop around the end of the source list.
+        srcs_inds = itertools.chain(six.moves.range(src_ind0, Nsrcs), six.moves.range(0, src_ind1))
+    else:
+        src_inds = six.moves.range(src_ind0, src_ind1)
+
+    # TODO The shared memory array made to be read-only on all ranks. Include a test that will error if you try to write to it.
+    sky = simsetup.array_to_skymodel(catalog[list(src_inds)])
+
     # Construct beam objects from strings
     beam_models = [simsetup.beam_string_to_object(bm) for bm in beam_list]
 
