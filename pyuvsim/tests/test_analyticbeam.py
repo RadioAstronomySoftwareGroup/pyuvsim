@@ -30,37 +30,25 @@ def test_uniform_beam():
     time = Time('2018-03-01 00:00:00', scale='utc')
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
-    source_list, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
+    sources, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
 
-    nsrcs = len(source_list)
+    nsrcs = len(sources)
     az_vals = []
     za_vals = []
     freq_vals = []
-    for src in source_list:
-        src_coord = SkyCoord(ra=src.ra, dec=src.dec, frame='icrs', obstime=time,
-                             location=array_location)
-        src_coord_altaz = src_coord.transform_to('altaz')
 
-        beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_coord_altaz.alt.to('rad').value,
-                                                                 src_coord_altaz.az.to('rad').value)
-        az_vals.append(beam_az)
-        za_vals.append(beam_za)
-
-        if len(freq_vals) > 0:
-            if src.freq.to('Hz').value != freq_vals[0]:
-                freq_vals.append(src.freq.to('Hz').value)
-        else:
-            freq_vals.append(src.freq.to('Hz').value)
+    sources.update_positions(time, array_location)
+    za_vals = np.pi / 2. - sources.alt_az[1]  # rad
+    az_vals = sources.alt_az[1]
+    freq_vals = sources.freq
 
     n_freqs = len(freq_vals)
-    interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array(az_vals),
-                                                         za_array=np.array(za_vals),
-                                                         freq_array=np.array(freq_vals))
+    interpolated_beam, interp_basis_vector = beam.interp(az_array=az_vals,
+                                                         za_array=za_vals,
+                                                         freq_array=freq_vals)
     expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=np.float)
     expected_data[1, 0, 0, :, :] = 1
     expected_data[0, 0, 1, :, :] = 1
-    expected_data[1, 0, 1, :, :] = 1
-    expected_data[0, 0, 0, :, :] = 1
     nt.assert_true(np.allclose(interpolated_beam, expected_data))
 
 
@@ -73,49 +61,34 @@ def test_airy_beam_values():
     time = Time('2018-03-01 00:00:00', scale='utc')
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
-    source_list, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
+    sources, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
 
-    nsrcs = len(source_list)
+    nsrcs = len(sources)
     az_vals = []
     za_vals = []
     freq_vals = []
-    for src in source_list:
-        src_coord = SkyCoord(ra=src.ra, dec=src.dec, frame='icrs', obstime=time,
-                             location=array_location)
-        src_coord_altaz = src_coord.transform_to('altaz')
 
-        beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_coord_altaz.alt.to('rad').value,
-                                                                 src_coord_altaz.az.to('rad').value)
-        az_vals.append(beam_az)
-        za_vals.append(beam_za)
-
-        if len(freq_vals) > 0:
-            if src.freq.to('Hz').value != freq_vals[0]:
-                freq_vals.append(src.freq.to('Hz').value)
-        else:
-            freq_vals.append(src.freq.to('Hz').value)
+    sources.update_positions(time, array_location)
+    za_vals = np.pi / 2. - sources.alt_az[1]  # rad
+    az_vals = sources.alt_az[1]
+    freq_vals = sources.freq.to("Hz").value
 
     n_freqs = len(freq_vals)
-    interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array(az_vals),
-                                                         za_array=np.array(za_vals),
-                                                         freq_array=np.array(freq_vals))
+    interpolated_beam, interp_basis_vector = beam.interp(az_array=az_vals,
+                                                         za_array=za_vals,
+                                                         freq_array=freq_vals)
 
-    expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=np.float)
-    interp_zas = np.zeros((n_freqs, nsrcs), dtype=np.float)
-    for f_ind in range(n_freqs):
-        interp_zas[f_ind, :] = np.array(za_vals)
-    za_grid, f_grid = np.meshgrid(interp_zas, freq_vals)
+    expected_data = np.zeros((2, 1, 2, freq_vals.size, az_vals.size), dtype=np.float)
+    za_grid, f_grid = np.meshgrid(za_vals, freq_vals)
     xvals = diameter_m / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8
-    airy_vals = np.zeros_like(xvals)
+    airy_values = np.zeros_like(xvals)
     nz = xvals != 0.
     ze = xvals == 0.
-    airy_vals[nz] = 2. * j1(xvals[nz]) / xvals[nz]
-    airy_vals[ze] = 1.
+    airy_values[nz] = 2. * j1(xvals[nz]) / xvals[nz]
+    airy_values[ze] = 1.
+    expected_data[1, 0, 0, :, :] = airy_values
+    expected_data[0, 0, 1, :, :] = airy_values
 
-    expected_data[1, 0, 0, :, :] = airy_vals
-    expected_data[0, 0, 1, :, :] = airy_vals
-    expected_data[1, 0, 1, :, :] = airy_vals
-    expected_data[0, 0, 0, :, :] = airy_vals
     nt.assert_true(np.allclose(interpolated_beam, expected_data))
 
 
@@ -141,11 +114,10 @@ def test_uv_beam_widths():
                                                          za_array=np.array(zas),
                                                          freq_array=np.array(freq_vals))
 
-    ebeam = (interpolated_beam[0, 0, 0, :, :])
+    ebeam = interpolated_beam[0, 0, 1, :, :]
     ebeam = ebeam.reshape(Nfreqs, Npix, Npix)
     beam_kern = np.fft.fft2(ebeam, axes=(1, 2))
     beam_kern = np.fft.fftshift(beam_kern, axes=(1, 2))
-
     for i, bk in enumerate(beam_kern):
         thresh = np.max(np.abs(bk)) * 0.005  # Cutoff at half a % of the maximum value in Fourier space.
         points = np.sum(np.abs(bk) >= thresh)
@@ -164,27 +136,17 @@ def test_achromatic_gaussian_beam():
     time = Time('2018-03-01 00:00:00', scale='utc')
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
-    source_list, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
+    sources, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
 
-    nsrcs = len(source_list)
+    nsrcs = len(sources)
     az_vals = []
     za_vals = []
     freq_vals = []
-    for src in source_list:
-        src_coord = SkyCoord(ra=src.ra, dec=src.dec, frame='icrs', obstime=time,
-                             location=array_location)
-        src_coord_altaz = src_coord.transform_to('altaz')
 
-        beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_coord_altaz.alt.to('rad').value,
-                                                                 src_coord_altaz.az.to('rad').value)
-        az_vals.append(beam_az)
-        za_vals.append(beam_za)
-
-        if len(freq_vals) > 0:
-            if src.freq.to('Hz').value != freq_vals[0]:
-                freq_vals.append(src.freq.to('Hz').value)
-        else:
-            freq_vals.append(src.freq.to('Hz').value)
+    sources.update_positions(time, array_location)
+    za_vals = np.pi / 2. - sources.alt_az[1]  # rad
+    az_vals = sources.alt_az[1]
+    freq_vals = sources.freq.to("Hz").value
 
     n_freqs = len(freq_vals)
     interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array(az_vals),
@@ -199,8 +161,6 @@ def test_achromatic_gaussian_beam():
 
     expected_data[1, 0, 0, :, :] = gaussian_vals
     expected_data[0, 0, 1, :, :] = gaussian_vals
-    expected_data[1, 0, 1, :, :] = gaussian_vals
-    expected_data[0, 0, 0, :, :] = gaussian_vals
 
     nt.assert_true(np.allclose(interpolated_beam, expected_data))
 
@@ -234,16 +194,14 @@ def test_gaussbeam_values():
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
-    coherencies = []
-    altitudes = []
-    for src in catalog:
-        task = pyuvsim.UVTask(src, time, freq, baseline, array)
-        engine = pyuvsim.UVEngine(task)
-        engine.apply_beam()
-        altitudes.append(task.source.alt_az[0])   # In radians.
-        coherencies.append(np.real(engine.apparent_coherency[0, 0]).astype(float))  # All four components should be identical
 
-    coherencies = np.array(coherencies)
+    task = pyuvsim.UVTask(catalog, time, freq, baseline, array)
+
+    engine = pyuvsim.UVEngine(task)
+    engine.apply_beam()
+    altitudes = task.sources.alt_az[0]   # In radians.
+    coherencies = np.real(engine.apparent_coherency[0, 0] + engine.apparent_coherency[1, 1]).astype(float)  # All four components should be identical
+
     zenith_angles, _ = simutils.altaz_to_zenithangle_azimuth(altitudes,
                                                              np.zeros_like(np.array(altitudes)))
 
@@ -278,7 +236,7 @@ def test_chromatic_gaussian():
 
     vals, _ = A.interp(az, za, freqs)
 
-    vals = vals[0, 0, 0]
+    vals = vals[0, 0, 1]
 
     for fi in range(Nfreqs):
         hwhm = za[np.argmin(np.abs(vals[fi] - 0.5))]
@@ -299,10 +257,9 @@ def test_power_analytic_beam():
     eb = pyuvsim.AnalyticBeam('gaussian', diameter=diam)
     pb = pyuvsim.AnalyticBeam('gaussian', diameter=diam)
     pb.efield_to_power()
-    evals = eb.interp(az, za, freqs)[0][0, 0, 0]
-    pvals = pb.interp(az, za, freqs)[0][0, 0]
-
-    nt.assert_true(np.allclose(evals**2, pvals / 2.))
+    evals = eb.interp(az, za, freqs)[0][0, 0, 1]
+    pvals = pb.interp(az, za, freqs)[0][0, 0, 0]
+    nt.assert_true(np.allclose(evals**2, pvals))
 
 
 def test_comparison():

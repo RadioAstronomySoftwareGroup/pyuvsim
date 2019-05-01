@@ -40,29 +40,29 @@ def test_visibility_single_zenith_source():
     beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.0)
 
     time = Time('2018-03-01 00:00:00', scale='utc')
-    
+
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
     time.location = array_location
-    
+
     freq = (150e6 * units.Hz)
     source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
     source = source_arr[0]
     source.update_positions(time, array_location)
-    
+
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
-    
+
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
     for beam in [beam0, beam1, beam2, beam3]:
         beam_list = [beam]
         array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
-    
+
         task = pyuvsim.UVTask(source, time, freq, baseline, array)
-    
+
         engine = pyuvsim.UVEngine(task)
-    
+
         visibility = engine.make_visibility()
         nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3))
 
@@ -112,7 +112,7 @@ def test_visibility_source_below_horizon_radec():
                             obstime=time, frame='icrs', location=array_location)
 
     source = pyuvsim.SkyModel('src_down', source_coord.ra, source_coord.dec, freq,
-                            np.array([1.0, 0, 0, 0]).reshape(4,1))
+                              np.array([1.0, 0, 0, 0]).reshape(4, 1))
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
@@ -257,7 +257,7 @@ def test_single_offzenith_source_uvfits():
     # create_mock_catalog uses azimuth of 90
     source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
     source = source_arr[0]
-    
+
     source.update_positions(time, array_location)
     src_alt_az = source.alt_az
     nt.assert_true(np.isclose(src_alt_az[0], src_alt.rad))
@@ -414,9 +414,8 @@ def test_file_to_tasks():
     Ntimes = hera_uv.Ntimes
     Nfreqs = hera_uv.Nfreqs
     Nsrcs = len(sources)
-    print(Nsrcs)
 
-    Ntasks = Nblts * Nfreqs# * Nsrcs
+    Ntasks = Nblts * Nfreqs * Nsrcs
     beam_dict = None
 
     taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
@@ -424,8 +423,8 @@ def test_file_to_tasks():
                                        message=['The default for the `center` keyword has changed'],
                                        category=DeprecationWarning)
 
+    Ntasks //= Nsrcs
     tlist = copy.deepcopy(uvtask_list)
-
     # Test task comparisons
     tlist.sort()
     nt.assert_true(np.all([tlist[i + 1] > tlist[i] for i in range(Ntasks - 1)]))

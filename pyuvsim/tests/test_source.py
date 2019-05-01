@@ -56,10 +56,11 @@ def test_source_zenith():
                                    height=1073.)
     source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith',
                                                 array_location=array_location)
-    zenith_source = source_arr[0]
+    zenith_source = source_arr
 
     zenith_source.update_positions(time, array_location)
-    zenith_source_lmn = zenith_source.pos_lmn
+    zenith_source_lmn = zenith_source.pos_lmn.squeeze()
+    print(zenith_source_lmn)
 
     nt.assert_true(np.allclose(zenith_source_lmn, np.array([0, 0, 1])))
 

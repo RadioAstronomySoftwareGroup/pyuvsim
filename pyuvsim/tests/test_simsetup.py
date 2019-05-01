@@ -121,7 +121,7 @@ def test_flux_cuts():
                                                 category=[astropy.io.votable.exceptions.W27]
                                                 + [astropy.io.votable.exceptions.W50] * 10)
     catalog = pyuvsim.simsetup.array_to_skymodel(catalog)
-    for sI in catalog.stokes[0,:]:
+    for sI in catalog.stokes[0, :]:
         nt.assert_true(np.all(0.2 < sI < 1.5))
 
 
@@ -220,6 +220,7 @@ def check_param_reader(config_num):
 
 # This loops through different config files and tests all of them the same way
 # note that each config tested shows up as a separate '.' in the nosetests output
+
 
 def test_param_reader():
     """
@@ -672,9 +673,9 @@ def test_horizon_cut():
                          message="It looks like you want to do a coarse horizon cut, but you're missing keywords", nwarnings=1)
 
     cut_sourcelist = pyuvsim.simsetup.array_to_skymodel(catalog_table)
-    cut_sourcelist = pyuvsim.simsetup.source_cuts(catalog_table, input_uv=uv_in) #lst_array=uv_in.lst_array, latitude_deg=uv_in.telescope_location_lat_lon_alt_degrees[0])
+    cut_sourcelist = pyuvsim.simsetup.source_cuts(catalog_table, input_uv=uv_in)  # lst_array=uv_in.lst_array, latitude_deg=uv_in.telescope_location_lat_lon_alt_degrees[0])
 
-    selected_source_names = cut_sourcelist['source_id'] #[s.name for s in cut_sourcelist]
+    selected_source_names = cut_sourcelist['source_id']  # [s.name for s in cut_sourcelist]
 
     full_sourcelist = pyuvsim.simsetup.array_to_skymodel(catalog_table)  # No cuts
 

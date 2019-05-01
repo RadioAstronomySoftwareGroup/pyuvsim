@@ -98,6 +98,10 @@ class UVEngine(object):
         """ Get apparent coherency from jones matrices and source coherency. """
         baseline = self.task.baseline
         sources = self.task.sources
+
+        if sources.alt_az is None:
+            sources.update_positions(self.task.time, self.task.telescope.location)
+
         # coherency is a 2x2 matrix
         # [ |Ex|^2, Ex* Ey, Ey* Ex |Ey|^2 ]
         # where x and y vectors along the local alt/az axes.
@@ -142,7 +146,8 @@ class UVEngine(object):
         return vis_vector
 
 
-def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
+def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict,
+                        tasks_shape=None, axis_inds=None):
     """
     Generate local tasks, reusing quantities where possible.
 
@@ -150,14 +155,13 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         task_ids (numpy.ndarray of ints): Task index in the full flattened meshgrid of parameters.
         input_uv (UVData): UVData object to use
         catalog: a SkyModel object
-        beam_list: (list of UVBeam or AnalyticBeam objects
-        beam_dict (dict, optional): dict mapping antenna number to beam index in beam_list
-
+        beam_list: list of UVBeam or AnalyticBeam objects
+        beam_dict: dict mapping antenna number to beam index in beam_list
+        tasks_shape: Shape of the unraveled task array.
+        axis_inds: list giving the index of (baseline, time, freqs, source) in tasks_shape
     Yields:
         Iterable of task objects to be done on current rank.
     """
-
-    # Loops, outer to inner: times, sources, frequencies, baselines
     # The task_ids refer to tasks on the flattened meshgrid.
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
@@ -182,6 +186,14 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     Nsrcs = catalog.Ncomponents
     Nbls = input_uv.Nbls
 
+    if axis_inds is None:
+        axis_inds = range(4)
+        if not tasks_shape is None:
+            raise ValueError("tasks_shape and axis_inds must both be provided")
+        tasks_shape = (Nbls, Ntimes, Nfreqs, Nsrcs)
+
+    bl_ax, time_ax, freq_ax, src_ax = axis_inds
+
     telescope = Telescope(input_uv.telescope_name,
                           EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
                           beam_list)
@@ -189,9 +201,18 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
 
+    prev_bltfi = None
     # Shape indicates slowest to fastest index. (time is slowest, baselines is fastest).
     for task_index in task_ids:
-        time_i, freq_i, bl_i = np.unravel_index(task_index, (Ntimes, Nfreqs, Nbls))
+        unrav_ind = np.unravel_index(task_index, tasks_shape)
+        bl_i = unrav_ind[bl_ax]
+        time_i = unrav_ind[time_ax]
+        freq_i = unrav_ind[freq_ax]
+        src_i = unrav_ind[src_ax]
+        if prev_bltfi == (bl_i, time_i, freq_i):
+            continue
+        prev_bltfi = (bl_i, time_i, freq_i)
+
         blti = bl_i + time_i * Nbls   # baseline is the fast axis
 
         # We reuse a lot of baseline info, so make the baseline list on the first go and reuse.
@@ -206,7 +227,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         bl = baselines[bl_i]
         freq = freq_array[0, freq_i]  # 0 = spw axis
 
-        ## TODO Replace the rise/set coarse horizon logic.
+        # TODO Replace the rise/set coarse horizon logic.
 
 #        if np.isfinite(source.rise_lst + source.set_lst):
 #            r_lst = source.rise_lst
@@ -325,7 +346,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
                    the beam_list. This assigns beams to antennas.
                    Default: All antennas get the 0th beam in the beam_list.
         source_list_name: Catalog identifier string for file metadata. Only required on rank 0
-        catalog: array of source.Source objects
+        catalog: recarray of source parameters
         obs_param_file: Parameter filename if running from config files.
         telescope_config_file: Telescope configuration file if running from config files.
         antenna_location_file: antenna_location file if running from config files.
@@ -338,7 +359,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
     if not ((input_uv.Npols == 4) and (input_uv.polarization_array.tolist() == [-5, -6, -7, -8])):
         raise ValueError("input_uv must have XX,YY,XY,YX polarization")
 
-    # The Head node will initialize our simulation
+    # The root node will initialize our simulation
     # Read input file and make uvtask list
     if rank == 0:
         print('Nbls:', input_uv.Nbls)
@@ -360,20 +381,27 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
                                        telescope_config_file=telescope_config_file,
                                        antenna_location_file=antenna_location_file)
 
-    comm = mpi.get_comm()
+    comm, _, _ = mpi.get_comm()
     Npus = mpi.get_Npus()
 
     # Ensure all ranks have finished setup.
     # comm.Barrier()
-
     Nblts = input_uv.Nblts
     Nbls = input_uv.Nbls
     Ntimes = input_uv.Ntimes
     Nfreqs = input_uv.Nfreqs
     Nsrcs = len(catalog)
 
-    Ntasks = Nblts * Nfreqs# * Nsrcs
+    axis_labels = ['Nbls', 'Ntimes', 'Nfreqs', 'Nsrcs']
+    axis_values = [Nbls, Ntimes, Nfreqs, Nsrcs]
 
+    inds = np.argsort(axis_values)[::-1]            # Largest axis first.
+    axis_labels = [axis_labels[i] for i in inds]
+    tasks_shape = tuple([axis_values[i] for i in inds])
+    axis_inds = np.argsort(inds)
+    bl_ax, time_ax, freq_ax, src_ax = axis_inds
+
+    Ntasks = np.prod(tasks_shape)
     Neach_section, extras = divmod(Ntasks, Npus)
     if rank < extras:
         length = Neach_section + 1
@@ -383,6 +411,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
         length = Neach_section
         start = extras * (Neach_section + 1) + (rank - extras) * length
         end = start + length
+
     task_ids = six.moves.range(start, end)
 
     # Find the first and last index of each axis
@@ -404,10 +433,10 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
 
     Ntasks_local = (end - start)
 
-    local_task_iter = uvdata_to_task_iter(task_ids, input_uv, catalog, beam_models, beam_dict)
+    local_task_iter = uvdata_to_task_iter(task_ids, input_uv, sky, beam_models, beam_dict,
+                                          tasks_shape, axis_inds)
 
     summed_task_dict = {}
-
     if rank == 0:
         tot = Ntasks
         print("Tasks: ", tot)
@@ -440,7 +469,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
     for task in summed_local_task_list:
         del task.time
         del task.freq
-        del task.source
+        del task.sources
         del task.baseline
         del task.telescope
 
@@ -471,7 +500,7 @@ def run_uvsim(params, return_uv=False):
 
     mpi.start_mpi()
     rank = mpi.get_rank()
-    comm = mpi.get_comm()
+    comm, _, _ = mpi.get_comm()  # only need world_comm
 
     input_uv = UVData()
     beam_list = None
@@ -486,7 +515,7 @@ def run_uvsim(params, return_uv=False):
     input_uv = comm.bcast(input_uv, root=0)
     beam_list = comm.bcast(beam_list, root=0)
     beam_dict = comm.bcast(beam_dict, root=0)
-    catalog = comm.bcast(catalog, root=0)
+    catalog = mpi.shared_mem_bcast(catalog, root=0)
 
     uv_out = run_uvdata_uvsim(input_uv, beam_list, beam_dict=beam_dict, catalog=catalog, source_list_name=source_list_name)
 
