@@ -230,7 +230,7 @@ class SkyModel(object):
                                                                 self.coherency_radec[:,:,polarized_sources],
                                                                 rotation_matrix)
         # Zero coherency on sources below horizon.
-        coherency_local[:,:,self.horizon_mask] *= 0.0
+        coherency_local[:, :, self.horizon_mask] *= 0.0
 
         return coherency_local
 
@@ -276,7 +276,7 @@ class SkyModel(object):
         self.time = time
         alt_az = np.array([source_altaz.alt.rad, source_altaz.az.rad])
         if alt_az.ndim == 1:
-            alt_az = alt_az[:,None]
+            alt_az = alt_az[:, None]
 
         self.alt_az = alt_az
 

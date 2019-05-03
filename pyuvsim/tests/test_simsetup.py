@@ -92,8 +92,8 @@ def test_catalog_from_params():
                          message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
 
     source_dict = {}
-
     simtest.assert_raises_message(KeyError, 'No catalog defined.', pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
+    nt.assert_raises(KeyError, pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
     arrloc = '{:.5f},{:.5f},{:.5f}'.format(*hera_uv.telescope_location_lat_lon_alt_degrees)
     source_dict = {'catalog': 'mock', 'mock_arrangement': 'zenith', 'Nsrcs': 5, 'time': hera_uv.time_array[0]}
     uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [{'sources': source_dict}],
@@ -108,7 +108,7 @@ def test_catalog_from_params():
                                   pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
     catalog_str, srclistname2 = uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [{'sources': source_dict}, hera_uv],
                                                      message="Warning: No julian date given for mock catalog. Defaulting to first time step.")
-
+    catalog_str = pyuvsim.simsetup.array_to_skymodel(catalog_str)
     nt.assert_true(np.all(catalog_str == catalog_uv))
 
 

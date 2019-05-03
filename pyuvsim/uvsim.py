@@ -425,7 +425,6 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
     else:
         src_inds = six.moves.range(src_ind0, src_ind1)
 
-    # TODO The shared memory array made to be read-only on all ranks. Include a test that will error if you try to write to it.
     sky = simsetup.array_to_skymodel(catalog[list(src_inds)])
 
     # Construct beam objects from strings
