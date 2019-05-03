@@ -462,7 +462,7 @@ def test_param_select_bls():
 
 
 def test_param_select_redundant():
-    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
+    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
 
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
 
