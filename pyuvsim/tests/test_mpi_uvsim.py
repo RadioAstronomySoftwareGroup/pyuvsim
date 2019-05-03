@@ -78,7 +78,6 @@ def test_run_param_uvsim():
     os.remove(tempfilename)
 
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
-
     uvtest.checkWarnings(pyuvsim.uvsim.run_uvsim, [param_filename],
                          nwarnings=11,
                          message=([SIM_DATA_PATH] * 10
@@ -93,7 +92,7 @@ def test_run_param_uvsim():
     uv_new_txt.history = uv_ref.history  # History includes irrelevant info for comparison
     uv_new_vot.history = uv_ref.history
     uv_new_txt.object_name = uv_ref.object_name
-    uv_new_vot.object_name = uv_ref.object_name
+    nt.assert_equal(uv_new_txt, uv_new_vot)
     nt.assert_equal(uv_new_txt, uv_ref)
     nt.assert_equal(uv_new_vot, uv_ref)
 
@@ -103,3 +102,21 @@ def test_mpi_funcs():
     nt.assert_true(mpi.get_rank() == 0)
     nt.assert_true(mpi.get_Npus() == 1)
     nt.assert_true(isinstance(mpi.get_comm(), MPI.Intracomm))
+
+
+def test_shared_mem():
+    mpi.start_mpi()
+    N = 200
+    shape = (20, 10)
+    A = np.arange(N, dtype=float).reshape(shape)
+
+    sA = mpi.shared_mem_bcast(A)
+
+    # Equivalent to original
+    nt.assert_true(np.all(sA == A))
+
+    # Not the original object:
+    nt.assert_true(hex(id(sA)) != hex(id(A)))
+
+    # Shared array should be read-only
+    nt.assert_raises(ValueError, sA.itemset, 0, 3.0)

@@ -214,13 +214,12 @@ def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}, re
 
     fieldnames = ['GLEAM', 'RAJ2000', 'DEJ2000', 'Fintwide']
     newnames = ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency']
-
     data = table[fieldnames]
     Nsrcs = len(data)
     freq = 200e6
     for t in data.colnames:
         i = fieldnames.index(t)
-        data[t] = data[t].squeeze()
+        data[t] = data[t]
         data[t].name = newnames[i]
     data.add_column(table.Column(np.ones(Nsrcs) * freq, name='frequency'))
     data = data.as_array().data
