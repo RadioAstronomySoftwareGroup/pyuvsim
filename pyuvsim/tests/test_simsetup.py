@@ -149,7 +149,7 @@ def check_param_reader(config_num):
     beam_list = [beam0, beam1, beam2, beam3]
 
     beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2, 'ANT4': 3}
-    Ntasks = hera_uv.Nblts * hera_uv.Nfreqs * len(sources)
+    Ntasks = hera_uv.Nblts * hera_uv.Nfreqs
     taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources,
                                            beam_list, beam_dict=beam_dict)
     expected_uvtask_list = uvtest.checkWarnings(list, [taskiter],
@@ -206,8 +206,8 @@ def check_param_reader(config_num):
     print(ofilename, expected_ofilepath)
     nt.assert_equal(ofilename, expected_ofilepath)
 
-    Ntasks = uv_obj.Nblts * uv_obj.Nfreqs * len(sources)
-    taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), uv_obj, sources,
+    Ntasks = uv_obj.Nblts * uv_obj.Nfreqs
+    taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources,
                                            beam_list, beam_dict=beam_dict)
     uvtask_list = uvtest.checkWarnings(list, [taskiter],
                                        message='The default for the `center` keyword has changed',

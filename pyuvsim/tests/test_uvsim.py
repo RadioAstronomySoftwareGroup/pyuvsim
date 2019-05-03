@@ -415,7 +415,7 @@ def test_file_to_tasks():
     Nfreqs = hera_uv.Nfreqs
     Nsrcs = len(sources)
 
-    Ntasks = Nblts * Nfreqs * Nsrcs
+    Ntasks = Nblts * Nfreqs
     beam_dict = None
 
     taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
@@ -423,7 +423,6 @@ def test_file_to_tasks():
                                        message=['The default for the `center` keyword has changed'],
                                        category=DeprecationWarning)
 
-    Ntasks //= Nsrcs
     tlist = copy.deepcopy(uvtask_list)
     # Test task comparisons
     tlist.sort()
@@ -534,9 +533,8 @@ def test_gather():
     Nfreqs = hera_uv.Nfreqs
     Nsrcs = len(sources)
 
-    Ntasks = Nblts * Nfreqs * Nsrcs
+    Ntasks = Nblts * Nfreqs
     beam_dict = dict(zip(hera_uv.antenna_names, [0] * hera_uv.Nants_data))
-
     taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
     uvtask_list = uvtest.checkWarnings(list, [taskiter],
                                        message=['The default for the `center` keyword has changed'],

@@ -13,50 +13,6 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from . import utils as simutils
 
 
-class _view_source(object):
-    """
-    Interface for accessing a subset of sources in a source list.
-
-    This is returned by SkyModel.__getitem__ and should not be used directly.
-    """
-
-    def __init__(self, sourcelist, index):
-        self.slice = index
-        self.sourcelist = sourcelist
-
-    def __getattr__(self, key):
-
-        if key in self.sourcelist._Ncomp_attrs:
-            val = getattr(self.sourcelist, key)
-            if val is None:
-                return val
-            val = val[..., self.slice]
-            if isinstance(val, np.ndarray):
-                # Turn length 0 arrays into scalars
-                if val.size == 1:
-                    val = val.flatten()[0]
-            return val
-        elif key in self.sourcelist._scalar_attrs:
-            return getattr(self.sourcelist, key)
-        elif key in self.sourcelist._member_funcs:
-            func = getattr(self.sourcelist, key)
-            return lambda *x: func(*x, src_inds=self.slice)
-
-    def copy(self):
-        """
-        Copy this selected segment as a new SkyModel object.
-        """
-        src_obj = SkyModel(None, None, None, None, None)
-        attrs = self.sourcelist._Ncomp_attrs + self.sourcelist._scalar_attrs
-        for key in attrs:
-            if hasattr(self.sourcelist, key):
-                val = copy.copy(self.__getattr__(key))
-                setattr(src_obj, key, val)
-
-        src_obj.Ncomponents = src_obj.ra.size
-        return src_obj
-
-
 class SkyModel(object):
     """
     Defines a set of point source components at given ICRS ra/dec coordinates, with a
@@ -109,11 +65,6 @@ class SkyModel(object):
             pos_tol: float, defaults to minimum float in numpy
                 position tolerance in degrees
         """
-
-        if stokes is None:
-            if np.all([None] * 4 == [name, ra, dec, freq]):
-                # Not initializing here.
-                return
 
         if not isinstance(ra, Angle):
             raise ValueError('ra must be an astropy Angle object. '
@@ -184,7 +135,7 @@ class SkyModel(object):
         return self.Ncomponents
 
     def next(self):
-         # For python 2 compatibility
+        # For python 2 compatibility
         return self.__next__()
 
     def coherency_calc(self, telescope_location, src_inds=slice(None)):
@@ -275,8 +226,6 @@ class SkyModel(object):
 
         self.time = time
         alt_az = np.array([source_altaz.alt.rad, source_altaz.az.rad])
-        if alt_az.ndim == 1:
-            alt_az = alt_az[:, None]
 
         self.alt_az = alt_az
 

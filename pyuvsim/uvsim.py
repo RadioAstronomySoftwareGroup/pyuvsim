@@ -10,6 +10,7 @@ import sys
 import copy
 import six
 import yaml
+import itertools
 from six.moves import map, range, zip
 import warnings
 import astropy.constants as const
@@ -137,7 +138,6 @@ class UVEngine(object):
         uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
         vij = self.apparent_coherency * fringe
-
         # Sum over source component axis:
         vij = np.sum(vij, axis=2)
 
@@ -152,7 +152,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict,
     Generate local tasks, reusing quantities where possible.
 
     Args:
-        task_ids (numpy.ndarray of ints): Task index in the full flattened meshgrid of parameters.
+        task_ids: (range iterator) Task index in the full flattened meshgrid of parameters.
         input_uv (UVData): UVData object to use
         catalog: a SkyModel object
         beam_list: list of UVBeam or AnalyticBeam objects
@@ -187,12 +187,12 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict,
     Nbls = input_uv.Nbls
 
     if axis_inds is None:
-        axis_inds = range(4)
-        if not tasks_shape is None:
+        axis_inds = range(3)
+        if tasks_shape is not None:
             raise ValueError("tasks_shape and axis_inds must both be provided")
-        tasks_shape = (Nbls, Ntimes, Nfreqs, Nsrcs)
+        tasks_shape = (Nbls, Ntimes, Nfreqs)
 
-    bl_ax, time_ax, freq_ax, src_ax = axis_inds
+    bl_ax, time_ax, freq_ax = axis_inds
 
     telescope = Telescope(input_uv.telescope_name,
                           EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
@@ -201,17 +201,13 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict,
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
 
-    prev_bltfi = None
-    # Shape indicates slowest to fastest index. (time is slowest, baselines is fastest).
     for task_index in task_ids:
-        unrav_ind = np.unravel_index(task_index, tasks_shape)
-        bl_i = unrav_ind[bl_ax]
-        time_i = unrav_ind[time_ax]
-        freq_i = unrav_ind[freq_ax]
-        src_i = unrav_ind[src_ax]
-        if prev_bltfi == (bl_i, time_i, freq_i):
-            continue
-        prev_bltfi = (bl_i, time_i, freq_i)
+        # Shape indicates slowest to fastest index.
+        if not isinstance(task_index, tuple):
+            task_index = np.unravel_index(task_index, tasks_shape)  # Some tests use raveled indices.
+        bl_i = task_index[bl_ax]
+        time_i = task_index[time_ax]
+        freq_i = task_index[freq_ax]
 
         blti = bl_i + time_i * Nbls   # baseline is the fast axis
 
@@ -384,8 +380,6 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
     comm, _, _ = mpi.get_comm()
     Npus = mpi.get_Npus()
 
-    # Ensure all ranks have finished setup.
-    # comm.Barrier()
     Nblts = input_uv.Nblts
     Nbls = input_uv.Nbls
     Ntimes = input_uv.Ntimes
@@ -399,7 +393,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
     axis_labels = [axis_labels[i] for i in inds]
     tasks_shape = tuple([axis_values[i] for i in inds])
     axis_inds = np.argsort(inds)
-    bl_ax, time_ax, freq_ax, src_ax = axis_inds
+    src_ax = axis_inds[-1]
 
     Ntasks = np.prod(tasks_shape)
     Neach_section, extras = divmod(Ntasks, Npus)
@@ -424,13 +418,32 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
         srcs_inds = itertools.chain(six.moves.range(src_ind0, Nsrcs), six.moves.range(0, src_ind1))
     else:
         src_inds = six.moves.range(src_ind0, src_ind1)
-
     sky = simsetup.array_to_skymodel(catalog[list(src_inds)])
 
     # Construct beam objects from strings
     beam_models = [simsetup.beam_string_to_object(bm) for bm in beam_list]
 
-    Ntasks_local = (end - start)
+    Ntasks_local = (end - start) / Nsrcs
+
+    # The task_ids still includes the source axis, which will be separated from the main task loop.
+    # Remove this from the tasks_shape, axis_inds, and task index iterator.
+
+    # Redefining task ids
+    ranges = []
+    for i, (start, end) in enumerate(minmax):
+        if i == src_ax:
+            continue
+        if end < start:
+            ranges.append(itertools.chain(six.moves.range(start, tasks_shape[i]), six.moves.range(0, end + 1)))
+        else:
+            ranges.append(six.moves.range(start, end + 1))
+    task_ids = itertools.product(*ranges)
+
+    # Redefine tasks_shape and axis_inds.
+    axis_values = [Nbls, Ntimes, Nfreqs]
+    inds = np.argsort(axis_values)[::-1]            # Largest axis first.
+    tasks_shape = tuple([axis_values[i] for i in inds])
+    axis_inds = np.argsort(inds)
 
     local_task_iter = uvdata_to_task_iter(task_ids, input_uv, sky, beam_models, beam_dict,
                                           tasks_shape, axis_inds)
