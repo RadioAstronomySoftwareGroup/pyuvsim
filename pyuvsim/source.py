@@ -6,11 +6,30 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import copy
+import sys
+
 from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
 from . import utils as simutils
+
+
+def _skymodel_basesize():
+    """
+    Estimate the memory footprint of a SkyModel with a single source.
+
+    Sum the sizes of the data types that go into SkyModel
+    """
+    attrs = ['',
+             Quantity(1.0, 'Hz'),
+             [0.0] * 4,
+             Angle(np.pi, 'rad'),
+             Angle(np.pi, 'rad'),
+             [1.5] * 4,
+             [0.3] * 2,
+             [0.0] * 3]
+    return np.sum([sys.getsizeof(a) for a in attrs])
 
 
 class SkyModel(object):
@@ -32,6 +51,8 @@ class SkyModel(object):
     coherency_radec = None
     alt_az = None
     pos_lmn = None
+
+    _basesize = _skymodel_basesize()
 
     _Ncomp_attrs = ['ra', 'dec', 'coherency_radec', 'coherency_local',
                     'stokes', 'alt_az', 'rise_lst', 'set_lst', 'freq',
@@ -248,3 +269,9 @@ class SkyModel(object):
                 and np.allclose(self.stokes, other.stokes)
                 and np.all(self.name == other.name)
                 and np.all(self.freq == other.freq))
+
+    def get_size(self):
+        """
+        Estimate the SkyModel memory footprint in bytes
+        """
+        return self.Ncomponents * self._basesize

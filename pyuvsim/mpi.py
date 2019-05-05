@@ -114,3 +114,11 @@ def get_comm():
         world_comm : Communicator for all PUs
     """
     return world_comm
+
+
+def get_node_comm():
+    """
+    Returns:
+        node_comm : Communicator for all PUs on current node.
+    """
+    return node_comm
