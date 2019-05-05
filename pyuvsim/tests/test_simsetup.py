@@ -224,10 +224,9 @@ def check_param_reader(config_num):
 
 def test_param_reader():
     """
-    Tests initialize_uvdata_from_params for six different parameter files.
-        Each file has a different arrangement of parameters that should yield the same uvdata object, so this
-        checks that the various configurations all work consistently, and that if insufficient information is
-        provided that the function errors appropriately.
+    Tests initialize_uvdata_from_params for a parameter file.
+        The separate tests test_freq_parser and test_time_parser check the different valid configurations of
+        parameters. This test looks at the task of reading parameters from file.
     """
     for n in [0]:
         yield (check_param_reader, n)

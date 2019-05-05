@@ -601,3 +601,61 @@ def test_pol_error():
     hera_uv.select(polarizations=['xx'])
 
     simtest.assert_raises_message(ValueError, 'input_uv must have XX,YY,XY,YX polarization', pyuvsim.run_uvdata_uvsim, hera_uv, ['beamlist'])
+
+
+def test_task_coverage():
+    """
+    Check that the task ids generated in different scenarios
+    cover all combinations of baseline/time/frequency and source.
+    """
+
+    Npus_list = [1, 5, 13, 19]
+    for Npus in Npus_list:
+
+        # Case 1 -- (Npus < Nbltf)
+
+        print(Npus)
+        Nbls = 4
+        Ntimes = 3
+        Nfreqs = 1
+        Nsrcs = 10
+
+        Nbltf = Nbls * Ntimes * Nfreqs
+
+        # List of pairs -- (bl/t/f index, source index)
+        srci, bltfi = map(np.ndarray.flatten, np.meshgrid(np.arange(Nsrcs), np.arange(Nbltf)))
+        tasks_expected = np.column_stack((bltfi, srci))
+        tasks_all = []
+        for rank in range(Npus):
+            task_inds, src_inds, Ntasks_local, Nsrcs_local = pyuvsim.uvsim._make_task_inds(Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus)
+            tasks = itertools.product(task_inds, src_inds)
+            tasks_all.append(tasks)
+        tasks_all = itertools.chain(*tasks_all)
+        tasks = np.array(list(tasks_all))
+        nt.assert_true(np.all(tasks == tasks_expected))
+
+        # Case 2 -- (Nbltf < Npus and Nsrcs > Npus)
+        if Npus == 1:
+            continue   # case 2 won't work for 1 pu
+
+        Nbls = 2
+        Ntimes = 1
+        Nfreqs = 2
+        Nsrcs = 100
+
+        Nbltf = Nbls * Ntimes * Nfreqs
+
+        bltfi, srci = map(np.ndarray.flatten, np.meshgrid(np.arange(Nbltf), np.arange(Nsrcs)))
+
+        tasks_expected = np.column_stack((bltfi, srci))
+        tasks_all = []
+        for rank in range(Npus):
+            task_inds, src_inds, Ntasks_local, Nsrcs_local = pyuvsim.uvsim._make_task_inds(Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus)
+            tasks = itertools.product(task_inds, src_inds)
+            tasks_all.append(tasks)
+        tasks_all = itertools.chain(*tasks_all)
+        tasks = np.array(list(tasks_all))
+
+        # Returned task indices are out of order, compared with the meshgrid.
+        inds = np.lexsort((tasks[:, 0], tasks[:, 1]), axis=0)
+        nt.assert_true(np.all(tasks[inds] == tasks_expected))

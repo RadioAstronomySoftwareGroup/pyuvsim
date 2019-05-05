@@ -7,7 +7,9 @@ from __future__ import absolute_import, division, print_function
 import time as pytime
 import sys
 import os
+import psutil
 import numpy as np
+from six.moves import range
 from astropy import _erfa as erfa
 from astropy.coordinates import Angle
 from astropy.time import Time
@@ -240,3 +242,22 @@ def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_fo
             raise ValueError("Invalid output format. Options are \" uvfits\", \"uvh5\", or \"miriad\"")
     if return_filename:
         return outfile_name
+
+
+def get_avail_memory():
+    """
+    Method for estimating the virtual memory available (in bytes)
+    on the current node to a running process.
+
+    Currently only supports the SLURM array scheduler.
+
+    If this is not called from within a SLURM task, it will estimate
+    using psutils methods.
+    """
+
+    slurm_key = 'SLURM_MEM_PER_NODE'
+
+    if slurm_key in os.environ:
+        return float(os.environ[slurm_key]) / 1e6  # MB -> B
+
+    return psutil.virtual_memory().available
