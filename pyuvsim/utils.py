@@ -261,3 +261,25 @@ def get_avail_memory():
         return float(os.environ[slurm_key]) / 1e6  # MB -> B
 
     return psutil.virtual_memory().available
+
+
+def iter_array_split(part_index, N, M):
+    """
+    Returns an iterator giving the indices of `part` below:
+        part = np.array_split(np.arange(N), M)[part_index]
+
+    This mimics the behavior of array_split without having to make
+    the whole array that will be split.
+    """
+
+    Neach_section, extras = divmod(N, M)
+    if part_index < extras:
+        length = Neach_section + 1
+        start = part_index * (length)
+        end = start + length
+    else:
+        length = Neach_section
+        start = extras * (Neach_section + 1) + (part_index - extras) * length
+        end = start + length
+
+    return range(start, end), end - start
