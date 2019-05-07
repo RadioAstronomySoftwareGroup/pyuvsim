@@ -29,9 +29,10 @@ pyuvsim's two primary goals are interferometer simulation accuracy at the level 
 * To install the development version: Clone the repository using `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`, navigate into the pyuvsim directory and run
 ```
 pip install -r requirements.txt
+pip install pyuvdata
 pip install .
 ```
-* `pyuvsim` is mainly intended to run on clusters running the linux operating system.
+* `pyuvsim` is intended to run on clusters running the linux operating system.
 
 
 **Note**
@@ -44,6 +45,7 @@ conda install -c conda-forge mpi4py
 ## Dependencies
 * `numpy`, `astropy`, `scipy`, `mpi4py`, `pyyaml`, `six`, `pyuvdata`
 * optionally `line_profiler` if you want to do profiling (support for profiling is built in)
+* `h5py` is required to support the new `uvh5` data format.
 
 # Inputs
 
