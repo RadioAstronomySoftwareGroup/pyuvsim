@@ -102,7 +102,7 @@ def test_file_namer():
     """
     fnames = []
     for i in range(111):
-        fname = os.path.join(simtestTESTDATA_PATH, 'file_' + str(i))
+        fname = os.path.join(simtest, TESTDATA_PATH, 'file_' + str(i))
         with open(fname, 'w') as f:
             f.write(' ')
         fnames.append(fname)
@@ -147,12 +147,12 @@ def test_write_uvdata():
     nt.assert_raises(ValueError, simutils.write_uvdata, uv, filing_dict, return_filename=True, out_format='')
 
     try:
-        import h5py
+        import h5py     # noqa
         filing_dict['output_format'] = 'uvh5'
         expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True)
         nt.assert_equal(ofname + '.uvh5', expected_ofname)
     except ImportError:
-        pass # No h5py
+        pass  # No h5py
 
     os.remove(ofname + '.uvh5')
     os.remove(ofname + '.uvfits')
