@@ -20,6 +20,7 @@ from pyuvdata import UVBeam, UVData
 import pyuvdata.tests as uvtest
 
 import pyuvsim
+import pyuvsim.tests as simtest
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim.tests as simtest
 
@@ -623,7 +624,7 @@ def test_mock_catalogs():
 def test_catalog_file_writer():
     time = Time(2458098.27471265, scale='utc', format='jd')
     mock_zenith, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, 'zenith')
-    fname = 'temp_cat.txt'
+    fname = os.path.join(simtest.TESTDATA_PATH, 'temp_cat.txt')
     pyuvsim.simsetup.write_catalog_to_file(fname, mock_zenith)
     mock_zenith_loop = pyuvsim.simsetup.read_text_catalog(fname)
     nt.assert_true(np.all(mock_zenith_loop == mock_zenith))

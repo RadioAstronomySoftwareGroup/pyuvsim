@@ -39,8 +39,8 @@ def test_run_uvsim():
     hera_uv.read_uvfits(EW_uvfits_file)
 
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
-    beam.write_beamfits("temp.uvbeam")
-    beamfile = os.path.join(os.getcwd(), "temp.uvbeam")
+    beamfile = os.path.join(simtest.TESTDATA_PATH, "temp.uvbeam")
+    beam.write_beamfits(beamfile)
 
     beam_list = [beamfile]
     mock_keywords = {"Nsrcs": 3}
