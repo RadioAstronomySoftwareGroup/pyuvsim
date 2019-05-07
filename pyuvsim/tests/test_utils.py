@@ -102,7 +102,7 @@ def test_file_namer():
     """
     fnames = []
     for i in range(111):
-        fname = os.path.join(simtest, TESTDATA_PATH, 'file_' + str(i))
+        fname = os.path.join(simtest.TESTDATA_PATH, 'file_' + str(i))
         with open(fname, 'w') as f:
             f.write(' ')
         fnames.append(fname)
