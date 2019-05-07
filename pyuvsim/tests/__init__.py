@@ -6,9 +6,26 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import os
+import shutil
 
 from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
+
+TESTDATA_PATH = 'temporary_test_data'
+
+def setup_package():
+    """
+    Make a directory for test data.
+    """
+    os.mkdir(TESTDATA_PATH)
+
+
+def teardown_package():
+    """
+    Clean up test files.
+    """
+    shutil.rmtree(TESTDATA_PATH)
+
 
 # functions used by many tests
 
