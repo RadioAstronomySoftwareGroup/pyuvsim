@@ -45,7 +45,7 @@ conda install -c conda-forge mpi4py
 ## Dependencies
 * `numpy`, `astropy`, `scipy`, `mpi4py`, `pyyaml`, `six`, `pyuvdata`
 * optionally `line_profiler` if you want to do profiling (support for profiling is built in)
-* `h5py` is required to support the new `uvh5` data format.
+* optionally, `h5py` is needed to support writing to the new `uvh5` file format.
 
 # Inputs
 
