@@ -139,7 +139,7 @@ def check_param_reader(config_num):
         hera_uv.select(bls=[(0, 1), (1, 2)])
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
+    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_table=True)
 
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
@@ -225,7 +225,7 @@ def check_param_reader(config_num):
 def test_param_reader():
     """
     Tests initialize_uvdata_from_params for a parameter file.
-        The separate tests test_freq_parser and test_time_parser check the different valid configurations of
+        The separate tests test_freq_parser and test_time_parser check the different valid configurations of 
         parameters. This test looks at the task of reading parameters from file.
     """
     for n in [0]:
@@ -256,7 +256,7 @@ def test_tele_parser():
 
 def test_freq_parser():
     """
-    Check a variety of cases for the frequency parser.
+    Check all valid input parameter cases for frequencies.
     """
 
     fdict_base = dict(

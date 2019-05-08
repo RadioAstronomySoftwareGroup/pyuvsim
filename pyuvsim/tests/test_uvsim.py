@@ -8,6 +8,7 @@ import os
 import numpy as np
 import nose.tools as nt
 import copy
+import itertools
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy import units
@@ -404,7 +405,7 @@ def test_file_to_tasks():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', Nsrcs=5)
+    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', Nsrcs=5, return_table=True)
 
     beam = simtest.make_cst_beams()
     beam_list = [beam]
@@ -469,12 +470,14 @@ def test_file_to_tasks():
         index = np.where(hera_uv.antenna_numbers == antnum)[0][0]
         antennas2.append(antennas[index])
 
+    sources = pyuvsim.array_to_skymodel(sources)
     for idx, antenna1 in enumerate(antennas1):
         antenna2 = antennas2[idx]
         baseline = pyuvsim.Baseline(antenna1, antenna2)
-        task = pyuvsim.UVTask(sources[0], time.jd, hera_uv.freq_array[0, 0], baseline, telescope)
+        task = pyuvsim.UVTask(sources, time.jd, hera_uv.freq_array[0, 0], baseline, telescope)
         task.uvdata_index = (idx, 0, 0)
         expected_task_list.append(task)
+
     expected_task_list.sort()
     for idx, task in enumerate(uvtask_list):
         exp_task = expected_task_list[idx]
@@ -522,7 +525,7 @@ def test_gather():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
+    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_table=True)
 
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
@@ -557,7 +560,7 @@ def test_local_task_gen():
     hera_uv.read_uvfits(EW_uvfits_10time10chan)
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, kwds = pyuvsim.create_mock_catalog(time, arrangement='random', Nsrcs=5)
+    sources, kwds = pyuvsim.create_mock_catalog(time, arrangement='random', Nsrcs=5, return_table=True)
 
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
@@ -611,7 +614,6 @@ def test_task_coverage():
 
     Npus_list = [1, 5, 13, 19]
     for Npus in Npus_list:
-
         # Case 1 -- (Npus < Nbltf)
 
         print(Npus)
@@ -624,6 +626,7 @@ def test_task_coverage():
 
         # List of pairs -- (bl/t/f index, source index)
         srci, bltfi = map(np.ndarray.flatten, np.meshgrid(np.arange(Nsrcs), np.arange(Nbltf)))
+        #bltfi, srci = map(np.ndarray.flatten, np.meshgrid(np.arange(Nbltf), np.arange(Nsrcs)))
         tasks_expected = np.column_stack((bltfi, srci))
         tasks_all = []
         for rank in range(Npus):
@@ -635,6 +638,7 @@ def test_task_coverage():
         nt.assert_true(np.all(tasks == tasks_expected))
 
         # Case 2 -- (Nbltf < Npus and Nsrcs > Npus)
+
         if Npus == 1:
             continue   # case 2 won't work for 1 pu
 

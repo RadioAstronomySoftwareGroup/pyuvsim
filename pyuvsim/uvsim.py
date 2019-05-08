@@ -205,7 +205,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict,
     # Total memory footprint will be \approx Npus (on node) * (size of skymodel)
     Nsrcs_total = len(catalog)
     mem_avail = simutils.get_avail_memory()
-    Npus_node = mpi.get_node_comm().Get_size()
+    Npus_node = mpi.Npus_node
     skymodel_mem_footprint = SkyModel._basesize * Nsrcs_total * Npus_node
 
     if skymodel_mem_footprint > mem_avail:

@@ -12,6 +12,7 @@ from mpi4py import MPI
 
 rank = 0    # COMM_WORLD rank
 Npus = 1
+Npus_node = 1
 world_comm = None
 node_comm = None
 rank_comm = None
@@ -41,6 +42,7 @@ def start_mpi():
     rank_comm = world_comm.Split(color=node_comm.rank)
 
     Npus = world_comm.Get_size()
+    Npus_node = node_comm.Get_size()
     rank = world_comm.Get_rank()
     set_mpi_excepthook(world_comm)
 
