@@ -14,7 +14,7 @@ import six
 import nose.tools as nt
 import astropy
 from astropy.time import Time
-from astropy.coordinates import Angle, SkyCoord, EarthLocation
+from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy import units
 
 from pyuvdata import UVBeam, UVData
@@ -23,7 +23,6 @@ import pyuvdata.tests as uvtest
 import pyuvsim
 import pyuvsim.tests as simtest
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-import pyuvsim.tests as simtest
 
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 
@@ -112,7 +111,7 @@ def test_catalog_from_params():
     nt.assert_true(np.all(catalog_str == catalog_uv))
 
 
-def test_flux_cuts():
+def test_param_flux_cuts():
     # Check that min/max flux limits in test params work.
 
     gleam_path = os.path.join(SIM_DATA_PATH, 'test_config', '..', 'gleam_50srcs.vot')
@@ -649,8 +648,81 @@ def test_point_catalog_reader():
         nt.assert_true(src.stokes[0] in catalog_table['flux_density_I'])
         nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])
 
+    # Check cuts
+    source_select_kwds = {'min_flux': 1.0}
+    catalog = pyuvsim.simsetup.read_text_catalog(catfile, source_select_kwds=source_select_kwds, return_table=True)
+    nt.assert_true(len(catalog) == 2)
 
-def test_horizon_cut():
+
+def test_flux_cuts():
+    uv_in, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(manytimes_config)
+    Nsrcs = 20
+    uv_in.select(times=np.unique(uv_in.time_array)[:50], bls=[(0, 1)], metadata_only=True)
+
+    dt = np.format_parser(['U10', 'f8', 'f8', 'f8', 'f8'],
+                          ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], [])
+
+    minflux = 0.5
+    maxflux = 3.0
+
+    catalog_table = np.recarray(Nsrcs, dtype=dt.dtype)
+    catalog_table['source_id'] = ["src{}".format(i) for i in range(Nsrcs)]
+    catalog_table['ra_j2000'] = np.random.uniform(0, 360., Nsrcs)
+    catalog_table['dec_j2000'] = np.linspace(-90, 90, Nsrcs)
+    catalog_table['flux_density_I'] = np.linspace(minflux, maxflux, Nsrcs)
+    catalog_table['frequency'] = np.ones(Nsrcs) * 200e6
+
+    minI_cut = 1.0
+    maxI_cut = 2.3
+
+    cut_sourcelist = pyuvsim.simsetup.source_cuts(catalog_table, min_flux=minI_cut, max_flux=maxI_cut)
+    nt.assert_true(np.all(cut_sourcelist['flux_density_I'] > minI_cut))
+    nt.assert_true(np.all(cut_sourcelist['flux_density_I'] < maxI_cut))
+
+
+def test_circumpolar_nonrising():
+    # Check that the source_cut function correctly identifies sources that are circumpolar or won't rise.
+    # Working with an observatory at the HERA latitude
+
+    lat = -31.0
+    lon = 0.0
+
+    Ntimes = 100
+    Nsrcs = 50
+
+    j2000 = 2451545.0
+    times = Time(np.linspace(j2000 - 0.5, j2000 + 0.5, Ntimes), format='jd', scale='utc')
+
+    ra = np.zeros(Nsrcs)
+    dec = np.linspace(-90, 90, Nsrcs)
+
+    ra = Angle(ra, units.deg)
+    dec = Angle(dec, units.deg)
+
+    coord = SkyCoord(ra=ra, dec=dec, frame='icrs')
+    alts = []
+    azs = []
+
+    loc = EarthLocation.from_geodetic(lat=lat, lon=lon)
+    for i in range(Ntimes):
+        altaz = coord.transform_to(AltAz(obstime=times[i], location=loc))
+        alts.append(altaz.alt.deg)
+        azs.append(altaz.az.deg)
+    alts = np.array(alts)
+    azs = np.array(azs)
+
+    nonrising = np.where(np.all(alts < 0, axis=0))[0]
+    circumpolar = np.where(np.all(alts > 0, axis=0))[0]
+
+    tans = np.tan(np.radians(lat)) * np.tan(dec.rad)
+    nonrising_check = np.where(tans < -1)
+    circumpolar_check = np.where(tans > 1)
+    nt.assert_true(np.all(circumpolar_check == circumpolar))
+    nt.assert_true(np.all(nonrising_check == nonrising))
+
+
+def test_coarse_horizon_cut():
+    # Passes trivially for now, until the coarse horizon cut is restored.
     # Check that the coarse horizon cut doesn't remove sources that are actually up.
     uv_in, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(manytimes_config)
     Nsrcs = 20
@@ -663,7 +735,7 @@ def test_horizon_cut():
     catalog_table = np.recarray(Nsrcs, dtype=dt.dtype)
     catalog_table['source_id'] = ["src{}".format(i) for i in range(Nsrcs)]
     catalog_table['ra_j2000'] = np.random.uniform(0, 360., Nsrcs)
-    catalog_table['dec_j2000'] = np.random.uniform(-90, 90, Nsrcs)
+    catalog_table['dec_j2000'] = np.linspace(-90, 90, Nsrcs)
     catalog_table['flux_density_I'] = np.ones(Nsrcs)
     catalog_table['frequency'] = np.ones(Nsrcs) * 200e6
 
@@ -672,9 +744,9 @@ def test_horizon_cut():
                          message="It looks like you want to do a coarse horizon cut, but you're missing keywords", nwarnings=1)
 
     cut_sourcelist = pyuvsim.simsetup.array_to_skymodel(catalog_table)
-    cut_sourcelist = pyuvsim.simsetup.source_cuts(catalog_table, input_uv=uv_in)  # lst_array=uv_in.lst_array, latitude_deg=uv_in.telescope_location_lat_lon_alt_degrees[0])
+    cut_sourcelist = pyuvsim.simsetup.source_cuts(catalog_table, input_uv=uv_in)
 
-    selected_source_names = cut_sourcelist['source_id']  # [s.name for s in cut_sourcelist]
+    selected_source_names = cut_sourcelist['source_id']
 
     full_sourcelist = pyuvsim.simsetup.array_to_skymodel(catalog_table)  # No cuts
 
@@ -704,14 +776,22 @@ def test_horizon_cut():
 
 
 def test_read_gleam():
-
-    # sourcelist = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot)
     sourcelist = uvtest.checkWarnings(pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
                                       message=GLEAM_vot, nwarnings=11,
                                       category=[astropy.io.votable.exceptions.W27]
                                       + [astropy.io.votable.exceptions.W50] * 10)
 
     nt.assert_equal(len(sourcelist), 50)
+
+    # Check cuts
+    source_select_kwds = {'min_flux': 1.0}
+    catalog = uvtest.checkWarnings(pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
+                                   dict(source_select_kwds=source_select_kwds, return_table=True),
+                                   message=GLEAM_vot, nwarnings=11,
+                                   category=[astropy.io.votable.exceptions.W27]
+                                   + [astropy.io.votable.exceptions.W50] * 10)
+
+    nt.assert_true(len(catalog) < sourcelist.Ncomponents)
 
 
 def test_mock_catalogs():

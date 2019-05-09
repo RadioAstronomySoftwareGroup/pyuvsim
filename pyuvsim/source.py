@@ -32,6 +32,54 @@ def _skymodel_basesize():
     return np.sum([sys.getsizeof(a) for a in attrs])
 
 
+class _array_wrap(object):
+    array = None
+
+    def __init__(self, arr, selected=slice(None)):
+        self.array = arr
+        self.selected = selected
+
+    def isset(self):
+        return self.array is not None
+
+    def __getitem__(self, ind):
+        if self.isset():
+            arr = self.array[..., self.selected]
+            return arr[ind]
+
+    def __setitem__(self, ind, value):
+        if self.isset():
+            arr = self.array[..., self.selected]
+            arr[ind] = value
+            self.array[..., self.selected] = arr
+
+    def __len__(self):
+        if self.isset():
+            return len(self.array[..., self.selected])
+
+    def __getattr__(self, attr):
+        if self.isset():
+            return getattr(self.array[..., self.selected], attr)
+
+    def __eq__(self, other):
+        return self.array.__eq__(other.array)
+
+    @property
+    def size(self):
+        if self.isset():
+            return self.array[..., self.selected].size
+
+    @property
+    def shape(self):
+        if self.isset():
+            return self.array[..., self.selected].shape
+
+    def __repr__(self):
+        if self.isset():
+            return repr(self.array[..., self.selected])
+        return repr(None)
+
+
 class SkyModel(object):
     """
     Defines a set of point source components at given ICRS ra/dec coordinates, with a
@@ -43,14 +91,16 @@ class SkyModel(object):
 
     Ncomponents = None      # Number of point source components represented here.
 
-    name = None
-    freq = None
-    stokes = None
-    ra = None
-    dec = None
-    coherency_radec = None
-    alt_az = None
-    pos_lmn = None
+    selected = slice(None)
+
+    _name = None
+    _freq = None
+    _stokes = None
+    _ra = None
+    _dec = None
+    _coherency_radec = None
+    _alt_az = None
+    _pos_lmn = None
 
     _basesize = _skymodel_basesize()
 
@@ -60,6 +110,21 @@ class SkyModel(object):
     _scalar_attrs = ['Ncomponents', 'time', 'pos_tol']
 
     _member_funcs = ['coherency_calc', 'update_positions']
+
+    def prop_fget(self, param):
+        def fget(self):
+            this_param = _array_wrap(getattr(self, '_' + param))
+            this_param.selected = self.selected
+            return this_param
+        return fget
+
+    def prop_fset(self, param):
+        def fset(self, value):
+            this_param = _array_wrap(getattr(self, '_' + param))
+            this_param.selected = self.selected
+            this_param = value
+            setattr(self, '_' + param, this_param)
+        return fset
 
     def __init__(self, name, ra, dec, freq, stokes,
                  rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
@@ -99,7 +164,15 @@ class SkyModel(object):
             raise ValueError('freq must be an astropy Quantity object. '
                              'value was: {f}'.format(f=freq))
 
+        for attr in self._Ncomp_attrs:
+            if not hasattr(self, '_' + attr):
+                setattr(self, '_' + attr, None)
+            setattr(self.__class__, attr, property(self.prop_fget(attr), self.prop_fset(attr)))
+
         self.Ncomponents = ra.size
+
+        if self.selected is None:
+            self.selected = np.arange(self.Ncomponents)
 
         # If rise/set lsts are not passed in they should be Ncomponent arrays of NaN
         if rise_lst is None:
@@ -116,7 +189,6 @@ class SkyModel(object):
         self.time = None
         self.rise_lst = np.asarray(rise_lst)
         self.set_lst = np.asarray(set_lst)
-
         if self.Ncomponents == 1:
             self.stokes = self.stokes.reshape(4, 1)
 
@@ -254,7 +326,7 @@ class SkyModel(object):
         pos_m = np.cos(alt_az[1, :]) * np.cos(alt_az[0, :])
         pos_n = np.sin(alt_az[0, :])
 
-        if self.pos_lmn is None:
+        if not self.pos_lmn.isset():
             self.pos_lmn = np.array([np.zeros(self.Ncomponents)] * 3)
 
         self.pos_lmn[0, src_inds] = pos_l

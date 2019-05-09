@@ -295,6 +295,7 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}, return_
 
     if len(source_select_kwds) > 0:
         catalog_table = source_cuts(catalog_table, input_uv=input_uv, **source_select_kwds)
+
     if return_table:
         return catalog_table
 
