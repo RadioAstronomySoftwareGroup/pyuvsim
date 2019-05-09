@@ -256,9 +256,8 @@ def get_avail_memory():
     """
 
     slurm_key = 'SLURM_MEM_PER_NODE'
-
     if slurm_key in os.environ:
-        return float(os.environ[slurm_key]) / 1e6  # MB -> B
+        return float(os.environ[slurm_key]) * 1e6  # MB -> B
 
     return psutil.virtual_memory().available
 

@@ -167,11 +167,11 @@ def _make_task_inds(Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus):
 
     if split_srcs:
         src_inds, Nsrcs_local = simutils.iter_array_split(rank, Nsrcs, Npus)
-        task_inds = six.moves.range(Nbltf)
+        task_inds = range(Nbltf)
         Ntasks_local = Nbltf
     else:
         task_inds, Ntasks_local = simutils.iter_array_split(rank, Nbltf, Npus)
-        src_inds = six.moves.range(Nsrcs)
+        src_inds = range(Nsrcs)
         Nsrcs_local = Nsrcs
 
     return task_inds, src_inds, Ntasks_local, Nsrcs_local
@@ -207,11 +207,10 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict,
     mem_avail = simutils.get_avail_memory()
     Npus_node = mpi.Npus_node
     skymodel_mem_footprint = SkyModel._basesize * Nsrcs_total * Npus_node
-
     if skymodel_mem_footprint > mem_avail:
         Nsky_parts = np.ceil(skymodel_mem_footprint / float(mem_avail))
-        partsize = int(np.ceil(Nsrcs / Nsky_parts))
-        src_iter = [six.moves.range(s, s + partsize) for s in range(0, Nsrcs_total, partsize)]
+        partsize = int(np.floor(Nsrcs_total / Nsky_parts))
+        src_iter = [range(s, s + partsize) for s in range(0, Nsrcs_total, partsize)]
     else:
         Nsky_parts = 1
         src_iter = [slice(None)]

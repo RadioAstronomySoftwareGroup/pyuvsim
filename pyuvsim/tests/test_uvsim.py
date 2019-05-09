@@ -663,3 +663,54 @@ def test_task_coverage():
         # Returned task indices are out of order, compared with the meshgrid.
         inds = np.lexsort((tasks[:, 0], tasks[:, 1]), axis=0)
         nt.assert_true(np.all(tasks[inds] == tasks_expected))
+
+
+def test_source_splitting():
+    # Check that if the available memory is less than the expected size of the source catalog,
+    # then the task iterator will loop over chunks of the source array.
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_10time10chan)
+    hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    sources, kwds = pyuvsim.create_mock_catalog(time, arrangement='random', Nsrcs=30, return_table=True)
+
+    # Spoof environmental parameters.
+    # Choose an absurdlly large number of Npus per node and very small available memory
+    # to trigger the source splitting condition in uvdata_to_task_iter
+    # The alternative would be to make a very large source catalog, but that's not ideal in a test.
+    Npus_node = 2000
+    pyuvsim.mpi.Npus_node = Npus_node                 # Absurdly large
+    os.environ['SLURM_MEM_PER_NODE'] = str(4.0)  # Only 4MB of memory
+
+    beam = pyuvsim.analyticbeam.AnalyticBeam('uniform')
+    beam_list = [beam]
+
+    Nblts = hera_uv.Nblts
+    Nbls = hera_uv.Nbls
+    Ntimes = hera_uv.Ntimes
+    Nfreqs = hera_uv.Nfreqs
+    Nsrcs = len(sources)
+    Ntasks = Nblts * Nfreqs
+    beam_dict = None
+
+    taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
+    uvtask_list = uvtest.checkWarnings(list, [taskiter], category=DeprecationWarning)
+
+    skymodel = pyuvsim.array_to_skymodel(sources)
+    skymodel_mem_footprint = skymodel.get_size() * Npus_node
+    mem_avail = pyuvsim.utils.get_avail_memory()
+
+    Nsky_parts = np.ceil(skymodel_mem_footprint / float(mem_avail))
+    partsize = int(np.floor(Nsrcs / Nsky_parts))
+    src_iter = [range(s, s + partsize) for s in range(0, Nsrcs, partsize)]
+
+    nt.assert_true(partsize * pyuvsim.SkyModel._basesize * Npus_node < mem_avail)
+    print(skymodel_mem_footprint / 1e6, partsize * pyuvsim.SkyModel._basesize * Npus_node / 1e6, mem_avail / 1e6)
+
+    # Normally, the number of tasks is Nbls * Ntimes * Nfreqs (partsize = Nsrcs)
+    # If the source list is split within the task iterator, then it will be larger.
+    nt.assert_equal(len(uvtask_list), Ntasks * Nsrcs / partsize)
+
+    # Reset spoofed parameters.
+    del os.environ['SLURM_MEM_PER_NODE']
+    pyuvsim.mpi.Npus_node = 1
