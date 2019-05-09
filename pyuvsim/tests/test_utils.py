@@ -153,8 +153,7 @@ def test_write_uvdata():
         os.remove(ofname + '.uvh5')
     except ImportError:
         pass  # No h5py
-    
+
     # Cleanup
     os.remove(ofname + '.uvfits')
     shutil.rmtree(ofname)
-
