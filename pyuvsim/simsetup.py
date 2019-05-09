@@ -153,8 +153,6 @@ def source_cuts(catalog_table, input_uv=None, lst_array=None, latitude_deg=None,
             latitude_deg = input_uv.telescope_location_lat_lon_alt_degrees[0]
 
     sourcelist = []
-    if len(catalog_table.shape) == 0:
-        catalog_table = catalog_table.reshape((1))
     Nsrcs = catalog_table.shape[0]
     coarse_kwds = [lst_array, latitude_deg]
     coarse_horizon_cut = all([k is not None for k in coarse_kwds])
@@ -187,9 +185,6 @@ def source_cuts(catalog_table, input_uv=None, lst_array=None, latitude_deg=None,
 
     ids = catalog_table['source_id']
     freqs = catalog_table['frequency']
-
-    if not np.all([np.isscalar(f) for f in catalog_table['flux_density_I']]):
-        raise ValueError("Error in source array")
 
     if coarse_horizon_cut:
         circumpolar = tans >= 1      # These will have rise/set lst set to nan
@@ -295,6 +290,8 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}, return_
 
     catalog_table = np.genfromtxt(catalog_csv, autostrip=True, skip_header=1,
                                   dtype=dt.dtype)
+
+    catalog_table = np.atleast_1d(catalog_table)
 
     if len(source_select_kwds) > 0:
         catalog_table = source_cuts(catalog_table, input_uv=input_uv, **source_select_kwds)

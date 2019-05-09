@@ -177,8 +177,7 @@ def _make_task_inds(Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus):
     return task_inds, src_inds, Ntasks_local, Nsrcs_local
 
 
-def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict,
-                        tasks_shape=None, axis_inds=None):
+def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     """
     Generate local tasks, reusing quantities where possible.
 
@@ -188,8 +187,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict,
         catalog: a recarray of source components
         beam_list: list of UVBeam or AnalyticBeam objects
         beam_dict: dict mapping antenna number to beam index in beam_list
-        tasks_shape: Shape of the unraveled task array.
-        axis_inds: list giving the index of (time, freqs, baseline) in tasks_shape
     Yields:
         Iterable of task objects to be done on current rank.
     """
@@ -231,13 +228,8 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict,
     Nfreqs = input_uv.Nfreqs
     Nbls = input_uv.Nbls
 
-    if axis_inds is None:
-        axis_inds = range(3)
-        if tasks_shape is not None:
-            raise ValueError("tasks_shape and axis_inds must both be provided")
-        tasks_shape = (Ntimes, Nfreqs, Nbls)
-
-    time_ax, freq_ax, bl_ax = axis_inds
+    tasks_shape = (Ntimes, Nfreqs, Nbls)
+    time_ax, freq_ax, bl_ax = range(3)
 
     telescope = Telescope(input_uv.telescope_name,
                           EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),

@@ -101,6 +101,7 @@ def test_mpi_funcs():
     nt.assert_true(mpi.get_rank() == 0)
     nt.assert_true(mpi.get_Npus() == 1)
     nt.assert_true(isinstance(mpi.get_comm(), MPI.Intracomm))
+    nt.assert_true(isinstance(mpi.get_node_comm(), MPI.Intracomm))
 
 
 def test_shared_mem():
