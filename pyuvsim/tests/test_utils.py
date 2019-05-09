@@ -145,15 +145,15 @@ def test_write_uvdata():
     expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='miriad')
     nt.assert_equal(ofname, expected_ofname)
     nt.assert_raises(ValueError, simutils.write_uvdata, uv, filing_dict, return_filename=True, out_format='')
-
     try:
         import h5py     # noqa
         filing_dict['output_format'] = 'uvh5'
         expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True)
         nt.assert_equal(ofname + '.uvh5', expected_ofname)
+        os.remove(ofname + '.uvh5')
     except ImportError:
         pass  # No h5py
 
-    os.remove(ofname + '.uvh5')
+    # Cleanup
     os.remove(ofname + '.uvfits')
     shutil.rmtree(ofname)
