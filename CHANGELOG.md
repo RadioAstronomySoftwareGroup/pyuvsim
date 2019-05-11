@@ -1,8 +1,9 @@
 # Changelog
 
-## [Unreleased]
+## [1.0.0] - 2019-5-10
 
 ### Added
+- More detailed comparison to other simulators in the documentation.
 - Option to convert analytic beams from efield to pstokes
 - Enabled Gaussian beams to be defined with power law widths.
 - Enabled Gaussian beams to be defined from antenna diameter and have chromaticity
@@ -10,6 +11,10 @@
 
 ### Changed
 - Pending deprecation of gaussian beams defined from sigma parameter
+
+### Fixed
+- pip installation instructions
+
 
 ## [0.2.3] - 2019-2-17
 
