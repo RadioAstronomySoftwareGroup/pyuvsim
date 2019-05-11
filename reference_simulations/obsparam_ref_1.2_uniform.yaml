@@ -1,6 +1,7 @@
 filing:
   outdir: "./simulation_results/"
   outfile_name: 'ref_1.2_uniform'
+  output_format: 'uvh5'
 freq:
   Nfreqs: 1
   channel_width: 80000.0
