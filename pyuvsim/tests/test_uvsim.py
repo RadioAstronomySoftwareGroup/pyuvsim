@@ -145,7 +145,7 @@ def test_visibility_single_zenith_source_uvdata():
     antpos = hera_uv.antenna_positions[0:2, :] + hera_uv.telescope_location
     lat, lon, alt = hera_uv.telescope_location_lat_lon_alt
     antpos = uvtest.checkWarnings(uvutils.ENU_from_ECEF, [antpos.T, lat, lon, alt],
-                                  category=PendingDeprecationWarning)
+                                  category=DeprecationWarning)
     antpos = antpos.T
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
@@ -338,7 +338,7 @@ def test_offzenith_source_multibl_uvfits():
 
     # get antennas positions into ENU
     antpos, ants = uvtest.checkWarnings(hera_uv.get_ENU_antpos,
-                                        category=[DeprecationWarning, PendingDeprecationWarning],
+                                        category=DeprecationWarning,
                                         nwarnings=2)
     antenna1 = pyuvsim.Antenna('ant1', ants[0], np.array(antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna('ant2', ants[1], np.array(antpos[1, :]), 0)
