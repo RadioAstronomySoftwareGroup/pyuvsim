@@ -460,7 +460,7 @@ def test_uvfits_to_config():
         uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_telescope_config,
                              [uv0, herabeam_default], dict(path_out=opath, return_names=True),
                              nwarnings=2,
-                             category=[DeprecationWarning, PendingDeprecationWarning],
+                             category=DeprecationWarning,
                              message=warningmessages)
     uv0.integration_time[-1] += 2  # Test case of non-uniform integration times
     uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_config_file, [uv0], dict(
@@ -475,7 +475,7 @@ def test_uvfits_to_config():
     orig_param_dict = copy.deepcopy(param_dict)   # The parameter dictionary gets modified in the function below.
     uv1, new_beam_list, new_beam_dict = \
         uvtest.checkWarnings(pyuvsim.initialize_uvdata_from_params, [param_dict],
-                             category=PendingDeprecationWarning,
+                             category=DeprecationWarning,
                              nwarnings=2)
     # Generate parameters from new uvfits and compare with old.
     path, telescope_config, layout_fname = \
@@ -483,7 +483,7 @@ def test_uvfits_to_config():
                              dict(telescope_config_name=telescope_config,
                                   layout_csv_name=layout_fname,
                                   path_out=opath, return_names=True),
-                             category=[DeprecationWarning, PendingDeprecationWarning],
+                             category=DeprecationWarning,
                              nwarnings=2,
                              message=warningmessages)
     pyuvsim.simsetup.uvdata_to_config_file(uv1, param_filename=second_param_filename,
