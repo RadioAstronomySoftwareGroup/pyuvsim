@@ -58,7 +58,8 @@ def test_run_param_uvsim():
     # Test vot and txt catalogs for parameter simulation
 
     uv_ref = UVData()
-    uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
+    uvtest.checkWarnings(uv_ref.read_uvfits, [os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits')],
+                         nwarnings=1, message='antenna_diameters is not set')
     uv_ref.unphase_to_drift(use_ant_pos=True)
 
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
@@ -69,7 +70,9 @@ def test_run_param_uvsim():
     tempfilename = params_dict['filing']['outfile_name']
     # This test obsparam file has "single_source.txt" as its catalog.
 
-    pyuvsim.uvsim.run_uvsim(param_filename)
+    uvtest.checkWarnings(pyuvsim.uvsim.run_uvsim, [param_filename], nwarnings=1,
+                         message=['The default for the `center` keyword has changed'],
+                         category=DeprecationWarning)
     uv_new_txt = UVData()
     uvtest.checkWarnings(uv_new_txt.read_uvfits, [tempfilename], message='antenna_diameters is not set')
     uv_new_txt.unphase_to_drift(use_ant_pos=True)
@@ -79,7 +82,10 @@ def test_run_param_uvsim():
 
     uvtest.checkWarnings(pyuvsim.uvsim.run_uvsim, [param_filename],
                          nwarnings=11,
-                         category=[astropy.io.votable.exceptions.W50] * 10 + [DeprecationWarning])
+                         message=([SIM_DATA_PATH] * 10
+                                  + ['The default for the `center` keyword has changed']),
+                         category=([astropy.io.votable.exceptions.W50] * 10
+                                   + [DeprecationWarning]))
 
     uv_new_vot = UVData()
     uvtest.checkWarnings(uv_new_vot.read_uvfits, [tempfilename], message='antenna_diameters is not set')
