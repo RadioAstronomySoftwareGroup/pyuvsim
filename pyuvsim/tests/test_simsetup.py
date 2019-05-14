@@ -145,8 +145,11 @@ def check_param_reader(config_num):
 
     beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2, 'ANT4': 3}
     Ntasks = hera_uv.Nblts * hera_uv.Nfreqs * len(sources)
-    taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources, beam_list, beam_dict=beam_dict)
-    expected_uvtask_list = uvtest.checkWarnings(list, [taskiter], category=DeprecationWarning)
+    taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources,
+                                           beam_list, beam_dict=beam_dict)
+    expected_uvtask_list = uvtest.checkWarnings(list, [taskiter],
+                                                message='The default for the `center` keyword has changed',
+                                                category=DeprecationWarning)
 
     # Check error conditions:
     if config_num == 0:
@@ -194,8 +197,11 @@ def check_param_reader(config_num):
     nt.assert_equal(ofilename, expected_ofilepath)
 
     Ntasks = uv_obj.Nblts * uv_obj.Nfreqs * len(sources)
-    taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources, beam_list, beam_dict=beam_dict)
-    uvtask_list = uvtest.checkWarnings(list, [taskiter], category=DeprecationWarning)
+    taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources,
+                                           beam_list, beam_dict=beam_dict)
+    uvtask_list = uvtest.checkWarnings(list, [taskiter],
+                                       message='The default for the `center` keyword has changed',
+                                       category=DeprecationWarning)
 
     # Tasks are not ordered in UVTask lists, so need to sort them.
     uvtask_list = sorted(uvtask_list)
@@ -476,7 +482,8 @@ def test_uvfits_to_config():
     uv1, new_beam_list, new_beam_dict = \
         uvtest.checkWarnings(pyuvsim.initialize_uvdata_from_params, [param_dict],
                              category=DeprecationWarning,
-                             nwarnings=2)
+                             nwarnings=2, message=['The enu array in ECEF_from_ENU is being interpreted',
+                                                   'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'])
     # Generate parameters from new uvfits and compare with old.
     path, telescope_config, layout_fname = \
         uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_telescope_config, [uv1, herabeam_default],
@@ -565,9 +572,13 @@ def test_horizon_cut():
     beam_list = ['analytic_uniform']  # Simplify with a single uniform beam model
     kwds = dict(source_list_name='random', obs_param_file='', telescope_config_file='', antenna_location_file='')
     kwds['catalog'] = cut_sourcelist
-    uv_select = uvtest.checkWarnings(pyuvsim.run_uvdata_uvsim, [uv_in, beam_list], kwds, category=DeprecationWarning)
+    uv_select = uvtest.checkWarnings(pyuvsim.run_uvdata_uvsim, [uv_in, beam_list],
+                                     kwds, category=DeprecationWarning,
+                                     message='The default for the `center` keyword has changed')
     kwds['catalog'] = full_sourcelist
-    uv_full = uvtest.checkWarnings(pyuvsim.run_uvdata_uvsim, [uv_in, beam_list], kwds, category=DeprecationWarning)
+    uv_full = uvtest.checkWarnings(pyuvsim.run_uvdata_uvsim, [uv_in, beam_list],
+                                   kwds, category=DeprecationWarning,
+                                   message='The default for the `center` keyword has changed')
     nt.assert_equal(uv_full, uv_select)
 
 

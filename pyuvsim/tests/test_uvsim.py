@@ -144,9 +144,7 @@ def test_visibility_single_zenith_source_uvdata():
     # get antennas positions into ENU
     antpos = hera_uv.antenna_positions[0:2, :] + hera_uv.telescope_location
     lat, lon, alt = hera_uv.telescope_location_lat_lon_alt
-    antpos = uvtest.checkWarnings(uvutils.ENU_from_ECEF, [antpos.T, lat, lon, alt],
-                                  category=DeprecationWarning)
-    antpos = antpos.T
+    antpos = uvutils.ENU_from_ECEF(antpos, lat, lon, alt)
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
@@ -338,7 +336,9 @@ def test_offzenith_source_multibl_uvfits():
 
     # get antennas positions into ENU
     antpos, ants = uvtest.checkWarnings(hera_uv.get_ENU_antpos,
-                                        category=DeprecationWarning,
+                                        category=[DeprecationWarning],
+                                        message=['The default for the `center` keyword has changed',
+                                                 'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'],
                                         nwarnings=2)
     antenna1 = pyuvsim.Antenna('ant1', ants[0], np.array(antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna('ant2', ants[1], np.array(antpos[1, :]), 0)
@@ -412,7 +412,9 @@ def test_file_to_tasks():
     beam_dict = None
 
     taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
-    uvtask_list = uvtest.checkWarnings(list, [taskiter], category=DeprecationWarning)
+    uvtask_list = uvtest.checkWarnings(list, [taskiter],
+                                       message=['The default for the `center` keyword has changed'],
+                                       category=DeprecationWarning)
 
     tlist = copy.deepcopy(uvtask_list)
 
@@ -529,7 +531,9 @@ def test_gather():
     beam_dict = dict(zip(hera_uv.antenna_names, [0] * hera_uv.Nants_data))
 
     taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
-    uvtask_list = uvtest.checkWarnings(list, [taskiter], category=DeprecationWarning)
+    uvtask_list = uvtest.checkWarnings(list, [taskiter],
+                                       message=['The default for the `center` keyword has changed'],
+                                       category=DeprecationWarning)
 
     uv_out = pyuvsim.init_uvdata_out(hera_uv, 'zenith_source',
                                      obs_param_file='', telescope_config_file='', antenna_location_file='')
@@ -563,7 +567,9 @@ def test_local_task_gen():
 
     # Copy sources and beams so we don't accidentally reuse quantities.
     taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
-    uvtask_list = uvtest.checkWarnings(list, [taskiter], category=DeprecationWarning)
+    uvtask_list = uvtest.checkWarnings(list, [taskiter],
+                                       message=['The default for the `center` keyword has changed'],
+                                       category=DeprecationWarning)
     uvtask_iter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, copy.deepcopy(sources), copy.deepcopy(beam_list), beam_dict)
 
     # Check error conditions
