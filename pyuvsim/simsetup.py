@@ -164,14 +164,14 @@ def source_cuts(catalog_table, input_uv=None, lst_array=None, latitude_deg=None,
         lat_rad = np.radians(latitude_deg)
         buff = horizon_buffer
 
-    ra = Angle(catalog_table['ra_j2000'], units.deg)
-    dec = Angle(catalog_table['dec_j2000'], units.deg)
-
     if min_flux:
         catalog_table = catalog_table[catalog_table['flux_density_I'] > min_flux]
 
     if max_flux:
         catalog_table = catalog_table[catalog_table['flux_density_I'] < max_flux]
+
+    ra = Angle(catalog_table['ra_j2000'], units.deg)
+    dec = Angle(catalog_table['dec_j2000'], units.deg)
 
     if coarse_horizon_cut:
         tans = np.tan(lat_rad) * np.tan(dec.rad)
