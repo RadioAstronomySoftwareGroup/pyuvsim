@@ -8,6 +8,8 @@ import os
 import numpy as np
 import yaml
 import nose.tools as nt
+import mpi4py
+mpi4py.rc.initialize = False    # noqa
 from mpi4py import MPI
 import astropy
 
@@ -61,13 +63,12 @@ def test_run_param_uvsim():
     uv_ref.unphase_to_drift(use_ant_pos=True)
 
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
-
     with open(param_filename) as pfile:
         params_dict = yaml.safe_load(pfile)
 
     tempfilename = params_dict['filing']['outfile_name']
-    # This test obsparam file has "single_source.txt" as its catalog.
 
+    # This test obsparam file has "single_source.txt" as its catalog.
     uvtest.checkWarnings(pyuvsim.uvsim.run_uvsim, [param_filename], nwarnings=1,
                          message=['The default for the `center` keyword'],
                          category=[DeprecationWarning])
@@ -120,3 +121,15 @@ def test_shared_mem():
 
     # Shared array should be read-only
     nt.assert_raises(ValueError, sA.itemset, 0, 3.0)
+
+
+def test_mpi_counter():
+    # This test should be run in parallel to check likely bug sources.
+    mpi.start_mpi()
+
+    count = mpi.Counter()
+    N = 20
+    for i in range(N):
+        c = count.next()
+    nt.assert_equal(count.current_value(), N)
+    count.free()
