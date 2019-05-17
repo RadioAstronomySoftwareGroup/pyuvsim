@@ -61,8 +61,35 @@ class _array_wrap(object):
         if self.isset():
             return getattr(self.array[..., self.selected], attr)
 
+    def __add__(self, other):
+        if self.isset():
+            return self.array[..., self.selected] + other
+        else:
+            raise ValueError('Array is not set.')
+
+    def __radd__(self, other):
+        return self.__add__(self, other)
+
+    def __sub__(self, other):
+        if self.isset():
+            return self.array[..., self.selected].__sub__(other)
+        else:
+            raise ValueError('Array is not set')
+
+    def __rsub__(self, other):
+        return (-1) * self.__sub__(other)
+
+    def __mul__(self, factor):
+        if self.isset():
+            return self.array[..., self.selected] * factor
+        else:
+            raise ValueError('Array is not set.')
+
     def __eq__(self, other):
         return self.array.__eq__(other.array)
+
+    def __get__(self):
+        return self.array[..., self.selected]
 
     @property
     def size(self):

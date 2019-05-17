@@ -19,14 +19,16 @@ def setup_package():
     """
     Make a directory for test data.
     """
-    os.mkdir(TESTDATA_PATH)
+    if not os.path.exists(TESTDATA_PATH):
+        os.mkdir(TESTDATA_PATH)
 
 
 def teardown_package():
     """
     Clean up test files.
     """
-    shutil.rmtree(TESTDATA_PATH)
+    if os.path.exists(TESTDATA_PATH):
+        shutil.rmtree(TESTDATA_PATH)
 
 
 # functions used by many tests
