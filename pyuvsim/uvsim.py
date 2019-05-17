@@ -240,12 +240,13 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
 
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
+
     for src_i in src_iter:
         sky = simsetup.array_to_skymodel(catalog[src_i])
         for task_index in task_ids:
             # Shape indicates slowest to fastest index.
             if not isinstance(task_index, tuple):
-                task_index = np.unravel_index(task_index, tasks_shape)  # Some tests use raveled indices.
+                task_index = np.unravel_index(task_index, tasks_shape)
             bl_i = task_index[bl_ax]
             time_i = task_index[time_ax]
             freq_i = task_index[freq_ax]
@@ -263,26 +264,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
             time = time_array[blti]
             bl = baselines[bl_i]
             freq = freq_array[0, freq_i]  # 0 = spw axis
-
-            # TODO Replace the rise/set coarse horizon logic.
-
-    #        if np.isfinite(source.rise_lst + source.set_lst):
-    #            r_lst = source.rise_lst
-    #            s_lst = source.set_lst
-    #            now_lst = input_uv.lst_array[blti]
-    #
-    #            # Compare time since rise to time between rise and set,
-    #            # properly accounting for phase wrap.
-    #            dt0 = now_lst - r_lst       # radians since rise time.
-    #            if dt0 < 0:
-    #                dt0 += 2 * np.pi
-    #
-    #            dt1 = s_lst - r_lst         # radians between rise and set
-    #            if dt1 < 0:
-    #                dt1 += 2 * np.pi
-    #
-    #            if dt1 < dt0:
-    #                continue
 
             task = UVTask(sky, time, freq, bl, telescope)
             task.uvdata_index = (blti, 0, freq_i)    # 0 = spectral window index

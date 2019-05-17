@@ -69,25 +69,3 @@ def test_sources_equal():
     src1, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
     src2, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
     nt.assert_equal(src1, src2)
-
-
-def test_skymodel_subselect():
-
-    Nsrcs = 20
-    time = Time('J2000')
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', Nsrcs=Nsrcs)
-
-    stride = 2
-    source_arr.selected = np.arange(0, Nsrcs, stride)
-
-    # Check that sources are selected appropriately.
-    for attr in source_arr._Ncomp_attrs:
-        at = getattr(source_arr, attr)
-        if at.isset():
-            nt.assert_true(at.shape[-1] == Nsrcs / stride)
-
-    # Check that assigning a value will stick.
-    testval = np.pi
-
-    source_arr.stokes[1, :] = testval
-    nt.assert_true(np.all(source_arr.stokes[1, :] == testval))

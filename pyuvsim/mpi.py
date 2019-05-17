@@ -121,6 +121,7 @@ class Counter(object):
         rank = self.comm.Get_rank()
         if rank == 0:
             self.thread = Thread(target=self._counter_thread)
+            self.thread.daemon = True
             self.thread.start()
 
     def _counter_thread(self):

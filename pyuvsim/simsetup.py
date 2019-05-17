@@ -131,7 +131,7 @@ def source_cuts(catalog_table, input_uv=None, lst_array=None, latitude_deg=None,
         lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
         latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
         horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
-                        SkyModel whose calculated altitude is less than -horizon_buffer are excluded by the catalog read.
+                        SkyModel components whose calculated altitude is less than -horizon_buffer are excluded.
 
                         Caution! The altitude calculation does not account for precession/nutation of the Earth. The buffer angle
                         is needed to ensure that the horizon cut doesn't exclude sources near but above the horizon.
@@ -192,8 +192,11 @@ def source_cuts(catalog_table, input_uv=None, lst_array=None, latitude_deg=None,
             warnings.simplefilter('ignore', RuntimeWarning)
             rise_lst = ra.rad - np.arccos((-1) * tans) - buff
             set_lst = ra.rad + np.arccos((-1) * tans) + buff
+
             rise_lst[rise_lst < 0] += 2 * np.pi
-            set_lst[set_lst < 0] -= 2 * np.pi
+            set_lst[set_lst < 0] += 2 * np.pi
+            rise_lst[rise_lst > 2 * np.pi] -= 2 * np.pi
+            set_lst[set_lst > 2 * np.pi] -= 2 * np.pi
 
         catalog_table = recfunctions.append_fields(catalog_table, ['rise_lst', 'set_lst'], [rise_lst, set_lst], usemask=False)
 
@@ -1024,7 +1027,6 @@ def initialize_uvdata_from_params(obs_params):
         tloc = EarthLocation.from_geocentric(*uvparam_dict['telescope_location'], unit='m')
         time = Time(uvparam_dict['time_array'][0], scale='utc', format='jd')
         src, _ = create_mock_catalog(time, arrangement='zenith', array_location=tloc)
-        src = src[0]
         if 'sources' in param_dict:
             source_file_name = os.path.basename(param_dict['sources']['catalog'])
             uvparam_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(source_file_name, src.ra.deg[0], src.dec.deg[0])

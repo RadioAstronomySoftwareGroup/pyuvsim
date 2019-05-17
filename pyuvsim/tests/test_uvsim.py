@@ -47,8 +47,7 @@ def test_visibility_single_zenith_source():
     time.location = array_location
 
     freq = (150e6 * units.Hz)
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
-    source = source_arr[0]
+    source, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
     source.update_positions(time, array_location)
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
@@ -157,8 +156,7 @@ def test_visibility_single_zenith_source_uvdata():
     # setup the things that don't come from pyuvdata:
     # make a source at zenith
     time.location = array_location
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
-    source = source_arr[0]
+    source, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
@@ -201,8 +199,7 @@ def test_redundant_baselines():
     # setup the things that don't come from pyuvdata:
     # make a source off zenith
     time.location = array_location
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
-    source = source_arr[0]
+    source, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
 
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
@@ -256,8 +253,7 @@ def test_single_offzenith_source_uvfits():
     # make a source off zenith
     time.location = array_location
     # create_mock_catalog uses azimuth of 90
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
-    source = source_arr[0]
+    source, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
 
     source.update_positions(time, array_location)
     src_alt_az = source.alt_az
@@ -356,8 +352,7 @@ def test_offzenith_source_multibl_uvfits():
     # make a source off zenith
     time.location = array_location
     # create_mock_catalog uses azimuth of 90
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
-    source = source_arr[0]
+    source, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
 
     beam = pyuvsim.AnalyticBeam('uniform')
 
@@ -692,9 +687,8 @@ def test_source_splitting():
     Nsrcs = len(sources)
     Ntasks = Nblts * Nfreqs
     beam_dict = None
-
     taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
-    uvtask_list = uvtest.checkWarnings(list, [taskiter], category=DeprecationWarning)
+    uvtask_list = uvtest.checkWarnings(list, [taskiter], message='The default for the `center` keyword has changed.', category=DeprecationWarning)
 
     skymodel = pyuvsim.array_to_skymodel(sources)
     skymodel_mem_footprint = skymodel.get_size() * Npus_node

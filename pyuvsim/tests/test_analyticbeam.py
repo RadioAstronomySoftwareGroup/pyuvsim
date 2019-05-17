@@ -32,7 +32,7 @@ def test_uniform_beam():
                                    height=1073.)
     sources, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
 
-    nsrcs = len(sources)
+    nsrcs = sources.Ncomponents
     az_vals = []
     za_vals = []
     freq_vals = []
@@ -63,7 +63,7 @@ def test_airy_beam_values():
                                    height=1073.)
     sources, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
 
-    nsrcs = len(sources)
+    nsrcs = sources.Ncomponents
     az_vals = []
     za_vals = []
     freq_vals = []
@@ -138,7 +138,7 @@ def test_achromatic_gaussian_beam():
                                    height=1073.)
     sources, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
 
-    nsrcs = len(sources)
+    nsrcs = sources.Ncomponents
     az_vals = []
     za_vals = []
     freq_vals = []
@@ -186,6 +186,7 @@ def test_gaussbeam_values():
     catalog, mock_keywords = pyuvsim.create_mock_catalog(time=time, arrangement='long-line', Nsrcs=41,
                                                          min_alt=80., array_location=array_location)
 
+    catalog.update_positions(time, array_location)
     beam = pyuvsim.AnalyticBeam('gaussian', sigma=sigma)
     array = pyuvsim.Telescope('telescope_name', array_location, [beam])
 

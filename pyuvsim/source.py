@@ -32,81 +32,6 @@ def _skymodel_basesize():
     return np.sum([sys.getsizeof(a) for a in attrs])
 
 
-class _array_wrap(object):
-    array = None
-
-    def __init__(self, arr, selected=slice(None)):
-        self.array = arr
-        self.selected = selected
-
-    def isset(self):
-        return self.array is not None
-
-    def __getitem__(self, ind):
-        if self.isset():
-            arr = self.array[..., self.selected]
-            return arr[ind]
-
-    def __setitem__(self, ind, value):
-        if self.isset():
-            arr = self.array[..., self.selected]
-            arr[ind] = value
-            self.array[..., self.selected] = arr
-
-    def __len__(self):
-        if self.isset():
-            return len(self.array[..., self.selected])
-
-    def __getattr__(self, attr):
-        if self.isset():
-            return getattr(self.array[..., self.selected], attr)
-
-    def __add__(self, other):
-        if self.isset():
-            return self.array[..., self.selected] + other
-        else:
-            raise ValueError('Array is not set.')
-
-    def __radd__(self, other):
-        return self.__add__(self, other)
-
-    def __sub__(self, other):
-        if self.isset():
-            return self.array[..., self.selected].__sub__(other)
-        else:
-            raise ValueError('Array is not set')
-
-    def __rsub__(self, other):
-        return (-1) * self.__sub__(other)
-
-    def __mul__(self, factor):
-        if self.isset():
-            return self.array[..., self.selected] * factor
-        else:
-            raise ValueError('Array is not set.')
-
-    def __eq__(self, other):
-        return self.array.__eq__(other.array)
-
-    def __get__(self):
-        return self.array[..., self.selected]
-
-    @property
-    def size(self):
-        if self.isset():
-            return self.array[..., self.selected].size
-
-    @property
-    def shape(self):
-        if self.isset():
-            return self.array[..., self.selected].shape
-
-    def __repr__(self):
-        if self.isset():
-            return repr(self.array[..., self.selected])
-        return repr(None)
-
-
 class SkyModel(object):
     """
     Defines a set of point source components at given ICRS ra/dec coordinates, with a
@@ -118,40 +43,14 @@ class SkyModel(object):
 
     Ncomponents = None      # Number of point source components represented here.
 
-    selected = slice(None)
-
-    _name = None
-    _freq = None
-    _stokes = None
-    _ra = None
-    _dec = None
-    _coherency_radec = None
-    _alt_az = None
-    _pos_lmn = None
-
     _basesize = _skymodel_basesize()
 
     _Ncomp_attrs = ['ra', 'dec', 'coherency_radec', 'coherency_local',
                     'stokes', 'alt_az', 'rise_lst', 'set_lst', 'freq',
-                    'pos_lmn', 'name', 'horizon_mask', 'skycoord']
+                    'pos_lmn', 'name', 'horizon_mask']
     _scalar_attrs = ['Ncomponents', 'time', 'pos_tol']
 
     _member_funcs = ['coherency_calc', 'update_positions']
-
-    def prop_fget(self, param):
-        def fget(self):
-            this_param = _array_wrap(getattr(self, '_' + param))
-            this_param.selected = self.selected
-            return this_param
-        return fget
-
-    def prop_fset(self, param):
-        def fset(self, value):
-            this_param = _array_wrap(getattr(self, '_' + param))
-            this_param.selected = self.selected
-            this_param = value
-            setattr(self, '_' + param, this_param)
-        return fset
 
     def __init__(self, name, ra, dec, freq, stokes,
                  rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
@@ -191,40 +90,28 @@ class SkyModel(object):
             raise ValueError('freq must be an astropy Quantity object. '
                              'value was: {f}'.format(f=freq))
 
-        for attr in self._Ncomp_attrs:
-            if not hasattr(self, '_' + attr):
-                setattr(self, '_' + attr, None)
-            setattr(self.__class__, attr, property(self.prop_fget(attr), self.prop_fset(attr)))
-
         self.Ncomponents = ra.size
 
-        if self.selected is None:
-            self.selected = np.arange(self.Ncomponents)
-
-        # If rise/set lsts are not passed in they should be Ncomponent arrays of NaN
-        if rise_lst is None:
-            rise_lst = np.array([np.nan] * self.Ncomponents)
-        if set_lst is None:
-            set_lst = np.array([np.nan] * self.Ncomponents)
-
-        self.name = np.asarray(name)
+        self.name = np.atleast_1d(np.asarray(name))
         self.freq = np.atleast_1d(freq)
         self.stokes = np.asarray(stokes)
         self.ra = np.atleast_1d(ra)
         self.dec = np.atleast_1d(dec)
         self.pos_tol = pos_tol
-        self.time = None
-        self.rise_lst = np.asarray(rise_lst)
-        self.set_lst = np.asarray(set_lst)
-        if self.Ncomponents == 1:
-            self.stokes = self.stokes.reshape(4, 1)
 
-        assert np.all([self.Ncomponents == l for l in
-                       [self.ra.size, self.dec.size, self.freq.size, self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
+        self.has_rise_set_lsts = False
+        if (rise_lst is not None) and (set_lst is not None):
+            self.rise_lst = np.asarray(rise_lst)
+            self.set_lst = np.asarray(set_lst)
+            self.has_rise_set_lsts = True
 
-        self.skycoord = SkyCoord(self.ra, self.dec, frame='icrs')
+        self.alt_az = np.zeros((2, self.Ncomponents), dtype=float)
+        self.pos_lmn = np.zeros((3, self.Ncomponents), dtype=float)
 
         self.horizon_mask = np.zeros(self.Ncomponents).astype(bool)     # If true, source component is below horizon.
+
+        if self.Ncomponents == 1:
+            self.stokes = self.stokes.reshape(4, 1)
 
         # The coherency is a 2x2 matrix giving electric field correlation in Jy.
         # Multiply by .5 to ensure that Trace sums to I not 2*I
@@ -234,31 +121,12 @@ class SkyModel(object):
                                               [self.stokes[2, :] + 1j * self.stokes[3, :],
                                                self.stokes[0, :] - self.stokes[1, :]]])
 
-    def __getitem__(self, i):
-        # i = valid index object
-        self._select = i
-        return self
+        self.time = None
 
-    def __iter__(self):
-        self._counter = 0
-        return self
+        assert np.all([self.Ncomponents == l for l in
+                       [self.ra.size, self.dec.size, self.freq.size, self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
 
-    def __next__(self):
-        if self._counter < self.Ncomponents:
-            i = self._counter
-            self._counter += 1
-            return self[i]
-        else:
-            raise StopIteration
-
-    def __len__(self):
-        return self.Ncomponents
-
-    def next(self):
-        # For python 2 compatibility
-        return self.__next__()
-
-    def coherency_calc(self, telescope_location, src_inds=slice(None)):
+    def coherency_calc(self, telescope_location):
         """
         Calculate the local coherency in alt/az basis for this source at a time & location.
 
@@ -267,7 +135,6 @@ class SkyModel(object):
         but must be rotated into local alt/az.
 
         Args:
-            src_inds: Optionally, only calculate for a subset of sources.
             telescope_location: astropy EarthLocation object
 
         Returns:
@@ -305,7 +172,7 @@ class SkyModel(object):
 
         return coherency_local
 
-    def update_positions(self, time, telescope_location, src_inds=slice(None)):
+    def update_positions(self, time, telescope_location):
         """
         Calculate the altitude/azimuth positions for these sources
         From alt/az, calculate direction cosines (lmn)
@@ -313,7 +180,6 @@ class SkyModel(object):
         Args:
             time: astropy Time object
             telescope_location: astropy EarthLocation object
-            src_inds: Optionally, only calculate for a subset of sources.
 
         Sets:
             self.pos_lmn: (3, Ncomponents)
@@ -332,8 +198,7 @@ class SkyModel(object):
         if self.time == time:  # Don't repeat calculations
             return
 
-        skycoord_use = self.skycoord[src_inds]
-
+        skycoord_use = SkyCoord(self.ra, self.dec, frame='icrs')
         source_altaz = skycoord_use.transform_to(AltAz(obstime=time, location=telescope_location))
 
         time.location = telescope_location
@@ -342,6 +207,7 @@ class SkyModel(object):
         cirs_source_coord = skycoord_use.transform_to('cirs')
         tee_ra = simutils.cirs_to_tee_ra(cirs_source_coord.ra, time)
 
+        self.hour_angle = None
         self.hour_angle = (lst - tee_ra).rad
 
         self.time = time
@@ -353,12 +219,9 @@ class SkyModel(object):
         pos_m = np.cos(alt_az[1, :]) * np.cos(alt_az[0, :])
         pos_n = np.sin(alt_az[0, :])
 
-        if not self.pos_lmn.isset():
-            self.pos_lmn = np.array([np.zeros(self.Ncomponents)] * 3)
-
-        self.pos_lmn[0, src_inds] = pos_l
-        self.pos_lmn[1, src_inds] = pos_m
-        self.pos_lmn[2, src_inds] = pos_n
+        self.pos_lmn[0, :] = pos_l
+        self.pos_lmn[1, :] = pos_m
+        self.pos_lmn[2, :] = pos_n
 
         # Horizon mask:
         self.horizon_mask = self.alt_az[0, :] < 0.0

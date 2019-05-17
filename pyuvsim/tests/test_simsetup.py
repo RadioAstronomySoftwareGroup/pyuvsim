@@ -54,9 +54,8 @@ def test_mock_catalog_zenith_source():
     test_source = pyuvsim.SkyModel('src0', ra, dec, freq, [1, 0, 0, 0])
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith')
-    cat_source = cat[0]
 
-    nt.assert_equal(cat_source, test_source)
+    nt.assert_equal(cat, test_source)
 
 
 def test_mock_catalog_off_zenith_source():
@@ -79,9 +78,8 @@ def test_mock_catalog_off_zenith_source():
     test_source = pyuvsim.SkyModel('src0', ra, dec, freq, [1.0, 0, 0, 0])
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
-    cat_source = cat[0]
 
-    nt.assert_equal(cat_source, test_source)
+    nt.assert_equal(cat, test_source)
 
 
 def test_catalog_from_params():
@@ -630,7 +628,7 @@ def test_uvfits_to_config():
 
 def test_point_catalog_reader():
     catfile = os.path.join(SIM_DATA_PATH, 'test_config', 'pointsource_catalog.txt')
-    catalog = pyuvsim.simsetup.read_text_catalog(catfile)
+    srcs = pyuvsim.simsetup.read_text_catalog(catfile)
 
     with open(catfile, 'r') as fhandle:
         header = fhandle.readline()
@@ -641,12 +639,11 @@ def test_point_catalog_reader():
     catalog_table = np.genfromtxt(catfile, autostrip=True, skip_header=1,
                                   dtype=dt.dtype)
 
-    for src in catalog:
-        nt.assert_true(src.name in catalog_table['source_id'])
-        nt.assert_true(src.ra.deg in catalog_table['ra_j2000'])
-        nt.assert_true(src.dec.deg in catalog_table['dec_j2000'])
-        nt.assert_true(src.stokes[0] in catalog_table['flux_density_I'])
-        nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])
+    nt.assert_equal(sorted(srcs.name), sorted(catalog_table['source_id']))
+    nt.assert_true(srcs.ra.deg in catalog_table['ra_j2000'])
+    nt.assert_true(srcs.dec.deg in catalog_table['dec_j2000'])
+    nt.assert_true(srcs.stokes[0] in catalog_table['flux_density_I'])
+    nt.assert_true(srcs.freq.to("Hz").value in catalog_table['frequency'])
 
     # Check cuts
     source_select_kwds = {'min_flux': 1.0}
@@ -721,67 +718,13 @@ def test_circumpolar_nonrising():
     nt.assert_true(np.all(nonrising_check == nonrising))
 
 
-def test_coarse_horizon_cut():
-    # Passes trivially for now, until the coarse horizon cut is restored.
-    # Check that the coarse horizon cut doesn't remove sources that are actually up.
-    uv_in, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(manytimes_config)
-    Nsrcs = 20
-    uv_in.select(times=np.unique(uv_in.time_array)[:50], bls=[(0, 1)], metadata_only=True)
-    hera_loc = EarthLocation.from_geocentric(*uv_in.telescope_location, unit='m')
-
-    dt = np.format_parser(['U10', 'f8', 'f8', 'f8', 'f8'],
-                          ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], [])
-
-    catalog_table = np.recarray(Nsrcs, dtype=dt.dtype)
-    catalog_table['source_id'] = ["src{}".format(i) for i in range(Nsrcs)]
-    catalog_table['ra_j2000'] = np.random.uniform(0, 360., Nsrcs)
-    catalog_table['dec_j2000'] = np.linspace(-90, 90, Nsrcs)
-    catalog_table['flux_density_I'] = np.ones(Nsrcs)
-    catalog_table['frequency'] = np.ones(Nsrcs) * 200e6
-
-    uvtest.checkWarnings(pyuvsim.simsetup.source_cuts, [catalog_table],
-                         {'lst_array': uv_in.lst_array},
-                         message="It looks like you want to do a coarse horizon cut, but you're missing keywords", nwarnings=1)
-
-    cut_sourcelist = pyuvsim.simsetup.array_to_skymodel(catalog_table)
-    cut_sourcelist = pyuvsim.simsetup.source_cuts(catalog_table, input_uv=uv_in)
-
-    selected_source_names = cut_sourcelist['source_id']
-
-    full_sourcelist = pyuvsim.simsetup.array_to_skymodel(catalog_table)  # No cuts
-
-    # For each source in the full sourcelist, calculate the AltAz for all times.
-    # If Alt > 0 at any time, confirm that the source is in the selection.
-
-    time_arr = Time(uv_in.time_array, scale='utc', format='jd')
-    for t in time_arr:
-        full_sourcelist.update_positions(t, hera_loc)
-        above_horizon = full_sourcelist.alt_az[0] > 0
-        if sum(above_horizon) > 0:
-            nt.assert_true(np.all(np.in1d(full_sourcelist.name[above_horizon], selected_source_names)))
-
-    full_sourcelist = pyuvsim.simsetup.skymodel_to_array(full_sourcelist)
-    # Now check that I get the same visibilities simulating with and without the horizon cut.
-    beam_list = ['analytic_uniform']  # Simplify with a single uniform beam model
-    kwds = dict(source_list_name='random', obs_param_file='', telescope_config_file='', antenna_location_file='')
-    kwds['catalog'] = cut_sourcelist
-    uv_select = uvtest.checkWarnings(pyuvsim.run_uvdata_uvsim, [uv_in, beam_list],
-                                     kwds, category=DeprecationWarning,
-                                     message='The default for the `center` keyword has changed')
-    kwds['catalog'] = full_sourcelist
-    uv_full = uvtest.checkWarnings(pyuvsim.run_uvdata_uvsim, [uv_in, beam_list],
-                                   kwds, category=DeprecationWarning,
-                                   message='The default for the `center` keyword has changed')
-    nt.assert_equal(uv_full, uv_select)
-
-
 def test_read_gleam():
     sourcelist = uvtest.checkWarnings(pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
                                       message=GLEAM_vot, nwarnings=11,
                                       category=[astropy.io.votable.exceptions.W27]
                                       + [astropy.io.votable.exceptions.W50] * 10)
 
-    nt.assert_equal(len(sourcelist), 50)
+    nt.assert_equal(sourcelist.Ncomponents, 50)
 
     # Check cuts
     source_select_kwds = {'min_flux': 1.0}
