@@ -440,13 +440,15 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
 
     summed_task_dict = {}
     if rank == 0:
-        tot = Ntasks_local
-        print("Tasks: ", tot)
+        tot = Ntimes * Nbls * Nfreqs
+        print("Tasks: ", Ntimes * Nbls * Nfreqs)
         sys.stdout.flush()
         pbar = simutils.progsteps(maxval=tot)
 
     engine = UVEngine()
-    for count, task in enumerate(local_task_iter):
+    count = mpi.Counter()
+
+    for task in local_task_iter:
         engine.set_task(task)
         if task.uvdata_index not in summed_task_dict.keys():
             summed_task_dict[task.uvdata_index] = task
@@ -454,8 +456,11 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
             summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
         else:
             summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
+        count.next()
         if rank == 0:
-            pbar.update(count * mpi.get_Npus())
+            pbar.update(count.current_value())
+    comm.Barrier()
+    count.free()
     if rank == 0:
         pbar.finish()
 
