@@ -73,7 +73,7 @@ Example `obsparam` configuration files may be found in the `reference_simulation
 1. Install from github or pip.
 2. Run off of a parameter file with 20 MPI ranks:
 ```
-mpirun -n 20 python run_param_pyuvsim.py reference_simulations/obsparam_1.1.yaml
+mpirun -n 20 run_param_pyuvsim.py reference_simulations/obsparam_1.1.yaml
 ```
 
 # Documentation
