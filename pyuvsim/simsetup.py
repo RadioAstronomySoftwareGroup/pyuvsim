@@ -100,7 +100,6 @@ def skymodel_to_array(sky):
 def array_to_skymodel(catalog_table):
     """
     Make a SkyModel object from a recarray.
-
     """
 
     ra = Angle(catalog_table['ra_j2000'], units.deg)
@@ -124,7 +123,7 @@ def source_cuts(catalog_table, input_uv=None, lst_array=None, latitude_deg=None,
     Performing flux and horizon selections on recarray of source components.
 
     Args:
-        catalog_table: recarray of source catalog information. Must have columns with names
+        catalog_table: recarray of source catalog information. Must have the columns:
                        'source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'
         input_uv: (UVData)
             If not None, can set lst_array and latitude_deg if either or both is missing.
@@ -142,7 +141,6 @@ def source_cuts(catalog_table, input_uv=None, lst_array=None, latitude_deg=None,
         max_flux: Maximum stokes I flux to select [Jy]
     Returns:
         A new recarray of source components, with additional columns for rise and set lst.
-
     """
 
     # Option to pass a UVData object to get telescope-specific parameters
@@ -265,8 +263,8 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}, return_
     Read in a text file of sources.
 
     Args:
-        catalog_csv: csv file with the following expected columns:
-            |  Source_ID: source id as a string of maximum 10 characters
+        catalog_csv: tab separated value file with the following expected columns:
+            |  Source_ID: source name as a string of maximum 10 characters
             |  ra_j2000: right ascension at J2000 epoch, in decimal degrees
             |  dec_j2000: declination at J2000 epoch, in decimal degrees
             |  flux_density_I: Stokes I flux density in Janskys
@@ -1221,10 +1219,12 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
                                telescope_config_name=None,
                                return_names=False, path_out='.'):
     """
-    From a uvfits file, generate telescope parameters files.
-
-    Output config files are written to the current directory, unless path_out is set.
-
+    For a given UVData object, generate telescope parameter files.
+    See documentation for more information on the specification. In short:
+        telescope_config = YAML file with telescope_location and telescope_name
+                           The beam list is spoofed, since that information cannot be found in a UVData object.
+        layout_csv = tab separated value file giving ENU antenna positions/
+                           Beam ID is spoofed as well.
     Args:
         uvdata_in (UVData): object to process
         path_out (str): Target directory for the config file.
@@ -1233,7 +1233,7 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
             csv file (Default <telescope_name>_layout.csv)
         telescope_config_name (str, optional): The name for the telescope config file
             (Default telescope_config_<telescope_name>.yaml)
-        return_names (bool, optional): Return the file names for loopback tests.
+        return_names (bool, optional): Return the file names. Used in tests.
 
     Returns:
         if return_names, returns tuple (path, telescope_config_name, layout_csv_name)

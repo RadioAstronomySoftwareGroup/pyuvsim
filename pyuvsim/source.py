@@ -55,8 +55,6 @@ class SkyModel(object):
     def __init__(self, name, ra, dec, freq, stokes,
                  rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
         """
-        Initialize from source catalog
-
         Args:
             name: Unique identifier for the source.
             ra: astropy Angle object, shape (Ncomponents,)

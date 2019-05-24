@@ -106,11 +106,17 @@ def shared_mem_bcast(arr, root=0):
 
 
 class Counter(object):
-    # A basic parallelized counter class.
-    # Adapted from the mpi4py nxtval-threads.py demo.
-    # https://github.com/mpi4py/mpi4py/blob/master/demo/nxtval/nxtval-threads.py
+    """
+    A basic parallelized counter class.
+
+    Adapted from the mpi4py nxtval-threads.py demo.
+    https://github.com/mpi4py/mpi4py/blob/master/demo/nxtval/nxtval-threads.py
+    """
 
     def __init__(self, comm=None):
+        """
+        Create a new counter, and initialize to 0.
+        """
         # duplicate communicator
         if comm is None:
             comm = world_comm
@@ -148,6 +154,12 @@ class Counter(object):
         self.comm.Free()
 
     def next(self):
+        """
+        Increment counter.
+
+        Returns:
+            next value (integer)
+        """
         incr = array('i', [1])
         ival = array('i', [0])
         self.comm.Send([incr, MPI.INT], 0, 0)
@@ -156,6 +168,10 @@ class Counter(object):
         return nxtval
 
     def current_value(self):
+        """
+        Returns:
+            current value of counter (integer)
+        """
         incr = array('i', [0])
         ival = array('i', [0])
         self.comm.Send([incr, MPI.INT], 0, 0)
@@ -165,24 +181,29 @@ class Counter(object):
 
 
 def get_rank():
+    """
+    Current rank on COMM_WORLD
+
+    """
     return rank
 
 
 def get_Npus():
+    """
+    Number of MPI processes.
+    """
     return Npus
 
 
 def get_comm():
     """
-    Returns:
-        world_comm : Communicator for all PUs
+    world_comm, the communicator for all PUs
     """
     return world_comm
 
 
 def get_node_comm():
     """
-    Returns:
-        node_comm : Communicator for all PUs on current node.
+    node_comm : Communicator for all PUs on current node.
     """
     return node_comm
