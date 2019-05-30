@@ -6,48 +6,82 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import os
-import shutil
-import nose.tools as nt
 
 from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
-
-TESTDATA_PATH = 'temporary_test_data'
-
-
-def setup_package():
-    """
-    Make a directory for test data.
-    """
-    if not os.path.exists(TESTDATA_PATH):
-        os.mkdir(TESTDATA_PATH)
-
-
-def teardown_package():
-    """
-    Clean up test files.
-    """
-    if os.path.exists(TESTDATA_PATH):
-        shutil.rmtree(TESTDATA_PATH)
 
 
 # functions used by many tests
 
 
-def compare_dictionaries(dic1, dic2):
+def compare_dictionaries(d1, d2):
+    """Recursively compare dictionaries.
+
+    Keys of each dict must match.
+    Walks through two input dicts and compares each key.
+    Makes calls to nt.assert_type_equals and np.allclose to compare values.
     """
-        Recursively compare two dictionaries.
-    """
-    compare = True
-    for k in dic1.keys():
-        if isinstance(dic1[k], dict):
-            compare *= compare_dictionaries(dic1[k], dic2[k])
-        else:
-            if isinstance(dic1[k], float):
-                compare *= np.isclose(dic1[k], dic2[k], atol=1e-5)
+    assert set(d1.keys()) == set(d2.keys())
+    for key in d1:
+        if isinstance(d1[key], (list)):
+            assert d1[key] == list(d2[key]), ("key: {key} has type {key1_type} in d1 and {key2_type} in d2\n"
+                                              "d1:  data has type {data1_type} and value {data1_val}\n"
+                                              "d2:  data has type {data2_type} and value {data2_val}\n"
+                                              .format(key1=key,
+                                                      key1_type=type(d1[key]),
+                                                      key2_type=type(d2[key]),
+                                                      data1_type=type(d1[key][0]),
+                                                      data1_val=d1[key],
+                                                      data2_type=type(d2[key][0]),
+                                                      data2_val=d2[key]
+                                                      )
+                                              )
+
+        elif isinstance(d1[key], (np.ndarray)):
+            if np.issubdtype(d1[key].dtype, np.string_):
+                assert np.array_equal(d1[key], np.asarray(d2[key]))
             else:
-                compare *= (dic1[k] == dic2[k])
-    return bool(compare)
+                assert np.allclose(d1[key], np.asarray(d2[key])), ("key: {key} has type {key1_type} in d1 and {key2_type} in d2\n"
+                                                                   "d1:  data has type {data1_type} and value {data1_val}\n"
+                                                                   "d2:  data has type {data2_type} and value {data2_val}\n"
+                                                                   .format(key1=key,
+                                                                           key1_type=type(d1[key]),
+                                                                           key2_type=type(d2[key]),
+                                                                           data1_type=type(d1[key][0]),
+                                                                           data1_val=d1[key],
+                                                                           data2_type=type(d2[key][0]),
+                                                                           data2_val=d2[key]
+                                                                           )
+                                                                   )
+        elif isinstance(d1[key], dict):
+            compare_dictionaries(d1[key], d2[key])
+        elif isinstance(d1[key], (float, np.float, np.float32)):
+            assert np.allclose(d1[key], d2[key]), ("key: {key} has type {key1_type} in d1 and {key2_type} in d2\n"
+                                                   "d1:  data has type {data1_type} and value {data1_val}\n"
+                                                   "d2:  data has type {data2_type} and value {data2_val}\n"
+                                                   .format(key1=key,
+                                                           key1_type=type(d1[key]),
+                                                           key2_type=type(d2[key]),
+                                                           data1_type=type(d1[key][0]),
+                                                           data1_val=d1[key],
+                                                           data2_type=type(d2[key][0]),
+                                                           data2_val=d2[key]
+                                                           )
+                                                   )
+        else:
+            assert d1[key] == d2[key], ("key: {key} has type {key1_type} in d1 and {key2_type} in d2\n"
+                                        "d1:  data has type {data1_type} and value {data1_val}\n"
+                                        "d2:  data has type {data2_type} and value {data2_val}\n"
+                                        .format(key1=key,
+                                                key1_type=type(d1[key]),
+                                                key2_type=type(d2[key]),
+                                                data1_type=type(d1[key][0]),
+                                                data1_val=d1[key],
+                                                data2_type=type(d2[key][0]),
+                                                data2_val=d2[key]
+                                                )
+                                        )
+    return True
 
 
 def make_cst_beams(freqs=None):
