@@ -23,4 +23,5 @@ def setup_and_teardown_package():
     yield
 
     # clean up the test directory after
-    shutil.rmtree(testdir)
+    if os.path.exists(testdir):
+        shutil.rmtree(testdir)
