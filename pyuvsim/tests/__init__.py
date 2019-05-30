@@ -6,10 +6,13 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import os
+import pytest
 
 from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
-import pytest
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+
+TESTDATA_PATH = os.path.join(SIM_DATA_PATH, 'temporary_test_data/')
 
 # functions used by many tests
 
