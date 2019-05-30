@@ -29,7 +29,7 @@ install:
   - conda info -a
 
   # install dependencies
-  - conda install numpy scipy astropy six nose pip pyyaml line_profiler pycodestyle coveralls h5py psutil
+  - conda install numpy scipy astropy six pip pyyaml line_profiler pycodestyle coveralls h5py pytest-cov
   - conda install -c conda-forge mpi4py
   - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
   - python setup.py install
@@ -37,7 +37,7 @@ install:
   - conda list
 
 script:
-  - nosetests pyuvsim --with-coverage --cover-package=pyuvsim
+  - python -m pytest pyuvsim --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --cov-report term
   # unclear why this call needs to be different than in pyuvdata...
   - pycodestyle . --ignore=E501,W503
 
