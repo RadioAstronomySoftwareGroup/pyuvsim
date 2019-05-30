@@ -75,7 +75,7 @@ def test_za_az_to_altaz():
     assert np.allclose(calc_az, np.deg2rad(astropy_azs))
 
 
-def test_za_az_to_altaz():
+def test_single_za_az_to_altaz():
     # 5 degrees off zenith in the East direction
     zas = 5
     # 0=East, 90=North
