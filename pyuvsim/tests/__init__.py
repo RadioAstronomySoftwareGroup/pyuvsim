@@ -9,7 +9,7 @@ import os
 
 from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
-
+import pytest
 
 # functions used by many tests
 
@@ -110,11 +110,11 @@ def assert_raises_message(exception_type, message, func, *args, **kwargs):
     if nocatch:
         func(*args, **kwargs)
 
-    with nt.assert_raises(exception_type) as err:
+    with pytest.raises(exception_type) as err:
         func(*args, **kwargs)
 
     try:
-        nt.assert_true(message in err.exception.args[0])
+        assert str(err.value).startswith(message)
     except AssertionError as excp:
         print("{} != {}".format(message, err.exception.args[0]))
         raise excp
