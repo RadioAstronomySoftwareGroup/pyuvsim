@@ -6,4 +6,6 @@ cd $DIR/..
 python setup.py install
 
 cd pyuvsim/tests
-nosetests --nologcapture --with-coverage --cover-erase --cover-package=pyuvsim --cover-html "$@"
+python -m pytest --cov=pyuvsim --cov-config=../../.coveragerc\
+       --cov-report term --cov-report html:cover \
+       "$@"
