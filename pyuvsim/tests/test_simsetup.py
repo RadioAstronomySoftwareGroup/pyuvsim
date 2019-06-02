@@ -458,8 +458,6 @@ def test_param_select_errors():
     nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, param_dict_pol)
 
     param_dict_antstr_pol = copy.deepcopy(param_dict)
-    param_dict_antstr_pol['select'] = {'ant_str': '41x_42y,42y_43y'}
-    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, param_dict_antstr_pol)
 
     param_dict_bls_pol = copy.deepcopy(param_dict)
     param_dict_bls_pol['select'] = {'bls': [(0, 1, 'xx'), (2, 3, 'yy')]}
@@ -640,7 +638,7 @@ def test_horizon_cut():
     # Check that the coarse horizon cut doesn't remove sources that are actually up.
     uv_in, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(manytimes_config)
     Nsrcs = 20
-    uv_in.select(times=np.unique(uv_in.time_array)[:50], bls=[(0, 1)], metadata_only=False)
+    uv_in.select(times=np.unique(uv_in.time_array)[:50], bls=[(0, 1)], metadata_only=True)
     hera_loc = EarthLocation.from_geocentric(*uv_in.telescope_location, unit='m')
 
     dt = np.format_parser(['U10', 'f8', 'f8', 'f8', 'f8'],
