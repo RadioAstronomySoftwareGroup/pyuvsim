@@ -485,62 +485,62 @@ def test_param_select_redundant():
     nt.assert_equal(uv_obj_red, uv_obj_red2)
 
 
-def test_setup_uvdata():
+def test_uvdata_keyword_init():
+
     # check it runs through
-    uvd = pyuvsim.simsetup.setup_uvdata(array_layout=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
-                                        telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
-                                        telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
-                                        integration_time=100.0, start_time=2458101.0, polarizations=['xx'], no_autos=True,
-                                        fill_blts=True, run_check=True)
+    uvd, _, _ = pyuvsim.simsetup.initialize_uvdata_from_keywords(array_layout=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
+                                                                 telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
+                                                                 telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
+                                                                 integration_time=100.0, start_time=2458101.0, polarizations=['xx'], no_autos=True, write_files=False, run_check=True)
+
     nt.assert_equal(uvd.Nbls, uvd.Nants_data * (uvd.Nants_data - 1) / 2)
 
     # check bls and antenna_nums selections work
     bls = [(0, 1), (0, 2), (0, 3)]
-    uvd = pyuvsim.simsetup.setup_uvdata(array_layout=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
-                                        telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
-                                        telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
-                                        integration_time=100.0, start_time=2458101.0, polarizations=['xx'], bls=bls,
-                                        fill_blts=True, run_check=True)
+    uvd, _, _ = pyuvsim.simsetup.initialize_uvdata_from_keywords(array_layout=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
+                                                                 telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
+                                                                 telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
+                                                                 integration_time=100.0, start_time=2458101.0, polarizations=['xx'], bls=bls,
+                                                                 write_files=False, run_check=True)
     nt.assert_equal(uvd.Nbls, len(bls))
     # also check that '1' gets converted to [1]
-    uvd = pyuvsim.simsetup.setup_uvdata(array_layout=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
-                                        telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
-                                        telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
-                                        integration_time=100.0, start_time=2458101.0, polarizations=['xx', 'yy'], bls=bls,
-                                        fill_blts=True, antenna_nums='1',
-                                        no_autos=False, run_check=True)
+    # Note -- Currently, pyuvdata's selection does not intersect antenna_nums with bls, but joins them.
+    # If/when that is changed, this test should also include the bls selection keyword above.
+    uvd, _, _ = pyuvsim.simsetup.initialize_uvdata_from_keywords(array_layout=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
+                                                                 telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
+                                                                 telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
+                                                                 integration_time=100.0, start_time=2458101.0, polarizations=['xx', 'yy'], antenna_nums='1',
+                                                                 write_files=False, no_autos=False, run_check=True)
     nt.assert_equal(uvd.Nbls, 1)
     nt.assert_equal(uvd.Npols, 2)
 
     # check time and freq array definitions supersede other parameters
-    fa = np.linspace(100, 200, 11)
+    fa = np.linspace(100, 200, 11) * 1e6
     ta = np.linspace(2458101, 2458102, 21)
-    uvd = pyuvsim.simsetup.setup_uvdata(array_layout=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
-                                        telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
-                                        telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, freq_array=fa,
-                                        Ntimes=60, integration_time=100.0, start_time=2458101.0, time_array=ta,
-                                        polarizations=['xx'], no_autos=True, fill_blts=True, run_check=True)
+    uvd, _, _ = pyuvsim.simsetup.initialize_uvdata_from_keywords(array_layout=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
+                                                                 telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
+                                                                 telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, freq_array=fa,
+                                                                 Ntimes=60, integration_time=100.0, start_time=2458101.0, time_array=ta,
+                                                                 polarizations=['xx'], no_autos=True, write_files=False, run_check=True)
     nt.assert_equal(uvd.Ntimes, 21)
     nt.assert_equal(uvd.Nfreqs, 11)
-
-    # test incomplete uvdata setup
-    uvd = pyuvsim.simsetup.setup_uvdata(array_layout=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
-                                        telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
-                                        telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
-                                        integration_time=100.0, start_time=2458101.0, polarizations=['xx'], no_autos=True,
-                                        fill_blts=False, run_check=True)
-    attrs = ['data_array', 'nsample_array', 'flag_array', 'integration_time', 'ant_1_array', 'ant_2_array']
-    for attr in attrs:
-        nt.assert_true(getattr(uvd, attr) is None)
 
     # test feeding array layout as dictionary
     antpos, ants = uvd.get_ENU_antpos()
     antpos_d = dict(zip(ants, antpos))
-    uvd = pyuvsim.simsetup.setup_uvdata(array_layout=antpos_d,
-                                        telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
-                                        telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
-                                        integration_time=100.0, start_time=2458101.0, polarizations=[-5], no_autos=True,
-                                        fill_blts=True, run_check=True)
+    layout_fname = 'temp_layout.csv'
+    obsparam_fname = 'temp_obsparam.yaml'
+    uvd, _, _ = pyuvsim.simsetup.initialize_uvdata_from_keywords(array_layout=antpos_d,
+                                                                 telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
+                                                                 telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
+                                                                 integration_time=100.0, start_time=2458101.0, polarizations=[-5], no_autos=True,
+                                                                 path_out='.', antenna_layout_filename=layout_fname, yaml_filename=obsparam_fname, run_check=True)
+
+    nt.assert_true(os.path.exists(layout_fname))
+    nt.assert_true(os.path.exists(obsparam_fname))
+    os.remove(layout_fname)
+    os.remove(obsparam_fname)
+
     nt.assert_equal(uvd.Nbls, 6)
     nt.assert_equal(uvd.Nants_data, 4)
     ap, a = uvd.get_ENU_antpos()
