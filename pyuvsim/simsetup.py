@@ -573,25 +573,24 @@ def parse_telescope_params(tele_params, config_path=''):
         tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
 
     # get array layout
-    if 'array_layout' not in tele_params:
-        raise KeyError("array_layout required in tele_params")
-    layout_csv = tele_params['array_layout']
-    # if array layout is a str, parse it as .csv filepath
-    if isinstance(layout_csv, (str, np.str)):
-        if not os.path.exists(layout_csv):
-            layout_csv = os.path.join(config_path, layout_csv)
+    if 'antenna_layout_filename' in tele_params:
+        layout_csv = tele_params['antenna_layout_filename']
+        # if array layout is a str, parse it as .csv filepath
+        if isinstance(layout_csv, (str, np.str)):
             if not os.path.exists(layout_csv):
-                raise ValueError('layout_csv file {} from yaml does not exist'.format(layout_csv))
-        ant_layout = _parse_layout_csv(layout_csv)
-        E, N, U = ant_layout['e'], ant_layout['n'], ant_layout['u']
-        antnames = ant_layout['name']
-        antnums = np.array(ant_layout['number'])
-
+                layout_csv = os.path.join(config_path, layout_csv)
+                if not os.path.exists(layout_csv):
+                    raise ValueError('layout_csv file {} from yaml does not exist'.format(layout_csv))
+            ant_layout = _parse_layout_csv(layout_csv)
+            E, N, U = ant_layout['e'], ant_layout['n'], ant_layout['u']
+            antnames = ant_layout['name']
+            antnums = np.array(ant_layout['number'])
     # otherwise interpret as a dictionary
-    else:
-        antnums = np.array(sorted(layout_csv.keys()))
-        antnames = np.array(["ANT{}".format(an + 1) for an in antnums])
-        E, N, U = np.array([layout_csv[an] for an in antnums]).T
+    elif 'layout' in tele_params:
+        antnums = tele_params['layout'].pop('antenna_numbers']
+        antnames = tele_params['layout'].pop('antenna_names']
+        layout_dict = tele_params['layout'].pop('array_layout')
+        E, N, U = np.array([layout_dict[an] for an in antnums]).T
         layout_csv = 'user-fed dict'
 
     # fill in outputs with just array info
@@ -1094,19 +1093,18 @@ def initialize_uvdata_from_keywords(yaml_filename=None, antenna_layout_filename=
             antenna_names = antenna_number.astype('str')
         if antenna_layout_filename is None:
             antenna_layout_filename = check_file_exists_and_increment('antenna_layout.csv')
-        _write_layout_csv(antenna_layout_filename, antpos_enu, antenna_names, antenna_numbers)
 
     freq_params = {'Nfreqs' : Nfreqs, 'start_freq' : start_freq, 'end_freq' : end_freq, 'bandwidth' : bandwidth, 'freq_array' : freq_array, 'channel_width' : channel_width}
     time_params = {'Ntimes' : Ntimes, 'start_time' : start_time, 'end_time' : end_time, 'integration_time' : integration_time, 'time_array' : time_array}
     selection_params = {'bls' : bls, 'redundant_threshold' : redundant_threshold, 'antenna_number' : antenna_number_select, 'polarizations' : polarizations, 'no_autos' : no_autos}
     tele_params = {'telescope_location' : telescope_location, 'telescope_name' : telescope_name}
-
-    tele_params['array_layout'] = antenna_layout_filename
+    layout_params = {'antenna_names' : antenna_names, 'antenna_numbers' : antenna_numbers, 'array_layout' : array_layout}
 
     freq_params = {k : v for k,v in six.iteritems(freq_params) if v is not None}
     time_params = {k : v for k,v in six.iteritems(time_params) if v is not None}
     selection_params = {k : v for k,v in six.iteritems(selection_params) if v is not None}
     tele_params = {k : v for k,v in six.iteritems(tele_params) if v is not None}
+    layout_params = {k : v for k,v in six.iteritems(layout_params) if v is not None}
 
     uv_obj = UVData()
 
@@ -1122,9 +1120,14 @@ def initialize_uvdata_from_keywords(yaml_filename=None, antenna_layout_filename=
             }
 
     if write_files:
+        _write_layout_csv(antenna_layout_filename, antpos_enu, antenna_names, antenna_numbers)
+        tele_params['antenna_layout_filename'] = antenna_layout_filename
         with open(os.path.join(path_out, yaml_filename), 'w') as yfile:
             yaml.dump(param_dict, yfile, default_flow_style=False)
 
+    # If layout and telescope config yaml files are not written out, this will be used
+    # to set the antenna names/numbers/positions.
+    param_dict['layout'] = layout_params
     uv_obj = initialize_uvdata_from_params(param_dict)
 
     return uv_obj
