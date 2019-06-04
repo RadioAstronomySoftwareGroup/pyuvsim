@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+- Function to generate UVData object from keywords, optionally saving config files.
+- Optionally, can skip having telescope_config file if there is no beam list.
+
+### Fixed
+- parameter dicts are not modified by functions using them.
+
+### Changed
+- Polarization selection is now allowed in setup. Will break if incorrect polarization is used in pyuvsim.
+
 ## [1.0.0] - 2019-5-10
 
 ### Added
