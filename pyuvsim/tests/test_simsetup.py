@@ -562,8 +562,8 @@ def test_uvfits_to_config():
     uv1, new_beam_list, new_beam_dict = \
         uvtest.checkWarnings(pyuvsim.initialize_uvdata_from_params, [param_dict],
                              category=[DeprecationWarning] * 4,
-                             nwarnings=4, message= ['The enu array in ECEF_from_ENU is being interpreted'] * 2
-                                                   + ['The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'] * 2)
+                             nwarnings=4, message=['The enu array in ECEF_from_ENU is being interpreted'] * 2
+                             + ['The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'] * 2)
     # Generate parameters from new uvfits and compare with old.
     path, telescope_config, layout_fname = \
         uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_telescope_config, [uv1, herabeam_default],

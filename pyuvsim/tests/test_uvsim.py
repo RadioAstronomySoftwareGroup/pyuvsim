@@ -585,6 +585,7 @@ def test_local_task_gen():
         engine0.set_task(task0)
         nt.assert_true(np.allclose(engine1.make_visibility(), engine0.make_visibility()))
 
+
 def test_pol_error():
     # Check that running with a uvdata object without the proper polarizations will fail.
 
