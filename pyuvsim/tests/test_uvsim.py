@@ -584,3 +584,13 @@ def test_local_task_gen():
         engine1 = pyuvsim.UVEngine(task1, reuse_spline=True)
         engine0.set_task(task0)
         nt.assert_true(np.allclose(engine1.make_visibility(), engine0.make_visibility()))
+
+def test_pol_error():
+    # Check that running with a uvdata object without the proper polarizations will fail.
+
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_file)
+
+    hera_uv.select(polarizations=['xx'])
+
+    nt.assert_raises(ValueError, pyuvsim.run_uvdata_uvsim, hera_uv, ['beamlist'])
