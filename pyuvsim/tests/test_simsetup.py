@@ -440,29 +440,6 @@ def test_param_select_bls():
     uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
     nt.assert_equal(uv_obj_full.object_name, 'foo')
 
-    # check exceptions
-    pdict = copy.deepcopy(param_dict)
-    pdict['select']['bls'] = '[(40, 41, "xx")]'
-    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, pdict)
-
-
-def test_param_select_errors():
-    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
-
-    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-
-    uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
-
-    param_dict_pol = copy.deepcopy(param_dict)
-    param_dict_pol['select'] = {'polarizations': [-8]}
-    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, param_dict_pol)
-
-    param_dict_antstr_pol = copy.deepcopy(param_dict)
-
-    param_dict_bls_pol = copy.deepcopy(param_dict)
-    param_dict_bls_pol['select'] = {'bls': [(0, 1, 'xx'), (2, 3, 'yy')]}
-    nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, param_dict_bls_pol)
-
 
 def test_param_select_redundant():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
@@ -584,10 +561,9 @@ def test_uvfits_to_config():
     orig_param_dict = copy.deepcopy(param_dict)   # The parameter dictionary gets modified in the function below.
     uv1, new_beam_list, new_beam_dict = \
         uvtest.checkWarnings(pyuvsim.initialize_uvdata_from_params, [param_dict],
-                             category=[DeprecationWarning] * 4 + [UserWarning] * 3,
-                             nwarnings=7, message= ['The enu array in ECEF_from_ENU is being interpreted'] * 2
-                                                   + ['The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'] * 2
-                                                   + ['key '] * 3)
+                             category=[DeprecationWarning] * 4,
+                             nwarnings=4, message= ['The enu array in ECEF_from_ENU is being interpreted'] * 2
+                                                   + ['The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'] * 2)
     # Generate parameters from new uvfits and compare with old.
     path, telescope_config, layout_fname = \
         uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_telescope_config, [uv1, herabeam_default],
