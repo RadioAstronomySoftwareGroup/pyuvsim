@@ -130,8 +130,11 @@ def test_file_namer_extensions():
     assert new_filepath.endswith("_111.ext")
 
 
-def test_write_uvdata():
+@pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5'])
+def test_write_uvdata(save_format):
     """ Test function that defines filenames from parameter dict """
+    if save_format == 'uvh5':
+        pytest.importorskip('h5py')
 
     uv = UVData()
     uvtest.checkWarnings(uv.read_uvfits, [triangle_uvfits_file],
@@ -139,25 +142,45 @@ def test_write_uvdata():
 
     ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
     filing_dict = {'outfile_name': ofname}
-    expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True)
+    expected_ofname = simutils.write_uvdata(uv, filing_dict,
+                                            return_filename=True,
+                                            out_format=save_format)
     ofname = os.path.join('.', ofname)
 
-    assert ofname + '.uvfits' == expected_ofname
-
-    expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='miriad')
-
-    assert ofname == expected_ofname
-    simtest.assert_raises_message(ValueError, 'Invalid output format. Options are " uvfits", "uvh5", or "miriad"',
-                                  simutils.write_uvdata, uv, filing_dict, return_filename=True, out_format='')
-    try:
-        import h5py     # noqa
-        filing_dict['output_format'] = 'uvh5'
-        expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True)
+    if save_format == 'uvfits' or save_format is None:
+        assert ofname + '.uvfits' == expected_ofname
+        os.remove(ofname + '.uvfits')
+    elif save_format == 'uvh5':
         assert ofname + '.uvh5' == expected_ofname
         os.remove(ofname + '.uvh5')
-    except ImportError:
-        pass  # No h5py
+    else:
+        assert ofname == expected_ofname
+        shutil.rmtree(ofname)
+
+
+def test_write_error_with_no_format():
+    """Test wirte_uvdata will error if no format is given."""
+    uv = UVData()
+    uvtest.checkWarnings(uv.read_uvfits, [triangle_uvfits_file],
+                         message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
+
+    ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
+    filing_dict = {'outfile_name': ofname}
+    simtest.assert_raises_message(ValueError, 'Invalid output format. Options are " uvfits", "uvh5", or "miriad"',
+                                  simutils.write_uvdata, uv, filing_dict, return_filename=True, out_format='')
+
+
+def test_file_forma_in_filing_dict():
+    """Test file is written out when output_format is set in filing dict."""
+    uv = UVData()
+    uvtest.checkWarnings(uv.read_uvfits, [triangle_uvfits_file],
+                         message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
+
+    ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
+    filing_dict = {'outfile_name': ofname}
+    filing_dict['output_format'] = 'uvfits'
+    expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True)
+    assert ofname + '.uvfits' == expected_ofname
 
     # Cleanup
     os.remove(ofname + '.uvfits')
-    shutil.rmtree(ofname)
