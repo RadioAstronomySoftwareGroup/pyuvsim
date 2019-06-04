@@ -1111,7 +1111,7 @@ def initialize_uvdata_from_keywords(yaml_filename=None, antenna_layout_filename=
 
     antenna_numbers = None
     if isinstance(array_layout, dict):
-        antenna_numbers = np.array(array_layout.keys())
+        antenna_numbers = np.fromiter(six.viewkeys(array_layout), dtype=int)
         antpos_enu = array_layout.values()
         if antenna_names is None:
             antenna_names = antenna_numbers.astype('str')
