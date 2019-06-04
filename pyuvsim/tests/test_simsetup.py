@@ -561,9 +561,8 @@ def test_uvfits_to_config():
     orig_param_dict = copy.deepcopy(param_dict)   # The parameter dictionary gets modified in the function below.
     uv1, new_beam_list, new_beam_dict = \
         uvtest.checkWarnings(pyuvsim.initialize_uvdata_from_params, [param_dict],
-                             category=[DeprecationWarning] * 4,
-                             nwarnings=4, message=['The enu array in ECEF_from_ENU is being interpreted'] * 2
-                             + ['The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'] * 2)
+                             category=[DeprecationWarning] * 2,
+                             nwarnings=2, message=['The enu array in ECEF_from_ENU is being interpreted', 'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'])
     # Generate parameters from new uvfits and compare with old.
     path, telescope_config, layout_fname = \
         uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_telescope_config, [uv1, herabeam_default],
@@ -720,3 +719,27 @@ def test_catalog_file_writer():
     mock_zenith_loop = pyuvsim.simsetup.read_text_catalog(fname)
     nt.assert_true(np.all(mock_zenith_loop == mock_zenith))
     os.remove(fname)
+
+
+def test_keyword_param_loop():
+    # Check that yaml/csv files made by intialize_uvdata_from_keywords will work
+    # on their own.
+
+    layout_fname = 'temp_layout.csv'
+    obsparam_fname = 'temp_obsparam.yaml'
+    path_out = simtest.TESTDATA_PATH
+    antpos_enu = np.ones(30).reshape((10, 3))
+    antnums = np.arange(10)
+    antpos_d = dict(zip(antnums, antpos_enu))
+    uvd, _, _ = pyuvsim.simsetup.initialize_uvdata_from_keywords(array_layout=antpos_d,
+                                                                 telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
+                                                                 telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
+                                                                 integration_time=100.0, start_time=2458101.0, polarizations=[-5], no_autos=True,
+                                                                 path_out=path_out, antenna_layout_filename=layout_fname, yaml_filename=obsparam_fname)
+
+    uv2, _, _ = pyuvsim.simsetup.initialize_uvdata_from_params(os.path.join(path_out, obsparam_fname))
+
+    uv2.extra_keywords = {}
+    uvd.extra_keywords = {}  # These will not match
+
+    nt.assert_equal(uv2, uvd)
