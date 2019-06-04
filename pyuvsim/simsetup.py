@@ -942,8 +942,9 @@ def initialize_uvdata_from_params(obs_params):
     extra_keywords['param_file'] = param_dict['param_file']
     for key in ['telescope_config_name', 'array_layout']:
         if key in tele_dict:
-            if isinstance(key, six.string_types):
-                extra_keywords[key] = tele_dict[key]
+            val = tele_dict[key]
+            if isinstance(val, six.string_types):
+                extra_keywords[key] = val
 
     uvparam_dict['extra_keywords'] = extra_keywords
 
@@ -1101,9 +1102,12 @@ def initialize_uvdata_from_keywords(yaml_filename=None, antenna_layout_filename=
     if path_out is None:
         path_out = '.'
     if yaml_filename is None:
-        yaml_filename = check_file_exists_and_increment(os.path.join(path_out, 'obsparam.yaml'))
+        yaml_filename = 'obsparam.yaml'
     if antenna_layout_filename is None:
-        antenna_layout_filename = check_file_exists_and_increment(os.path.join(path_out, 'antenna_layout.csv'))
+        antenna_layout_filename = 'antenna_layout.csv'
+
+    yaml_filename = check_file_exists_and_increment(os.path.join(path_out, yaml_filename))
+    antenna_layout_filename = check_file_exists_and_increment(os.path.join(path_out, antenna_layout_filename))
 
     antenna_numbers = None
     if isinstance(array_layout, dict):
