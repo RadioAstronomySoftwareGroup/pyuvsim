@@ -142,7 +142,7 @@ Telescope Configuration
 
     The figure below shows the array created by these configurations, with beam type indicated by color.
 
-    .. image:: baseline_lite.png
+    .. image:: Images/baseline_lite.png
 	    :width: 600
 	    :alt: Graphical depiction of the example antenna layout.
 
