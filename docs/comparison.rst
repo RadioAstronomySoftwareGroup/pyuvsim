@@ -53,7 +53,7 @@ Disadvantages:
 4. Primary beam motion on the sky is limited to the "snapshot" size, not the time step size.
 5. Much slower for simulating complex spectral structure.
 
-.. image:: fhd_uvsim_compare.png
+.. image:: Images/fhd_uvsim_compare.png
     :width: 600
     :alt: Delay-spectrum comparison of FHD and pyuvsim point source simulations.
 
