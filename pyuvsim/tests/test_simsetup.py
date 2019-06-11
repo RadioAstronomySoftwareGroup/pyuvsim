@@ -453,7 +453,6 @@ def test_param_select_redundant():
 
     uv_obj_red, new_beam_list, new_beam_dict = \
         pyuvsim.initialize_uvdata_from_params(param_dict)
-    nt.assert_true(uv_obj_red.Nbls < uv_obj_full.Nbls)
 
     uv_obj_red2 = uv_obj_full.compress_by_redundancy(tol=0.1, inplace=False, metadata_only=True)
 
