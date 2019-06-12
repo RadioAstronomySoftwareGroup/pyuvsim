@@ -144,7 +144,7 @@ def test_write_uvdata():
     nt.assert_equal(ofname + '.uvfits', expected_ofname)
     expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='miriad')
     nt.assert_equal(ofname, expected_ofname)
-    simtest.assert_raises_message(ValueError, 'Invalid output format. Options are " uvfits", "uvh5", or "miriad"',\
+    simtest.assert_raises_message(ValueError, 'Invalid output format. Options are " uvfits", "uvh5", or "miriad"',
                                   simutils.write_uvdata, uv, filing_dict, return_filename=True, out_format='')
     try:
         import h5py     # noqa

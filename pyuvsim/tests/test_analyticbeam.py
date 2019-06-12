@@ -270,7 +270,7 @@ def test_chromatic_gaussian():
 
     # Error if trying to define chromatic beam without a reference frequency
 
-    simtest.assert_raises_message(ValueError, 'ref_freq must be set for nonzero gaussian beam spectral index',\
+    simtest.assert_raises_message(ValueError, 'ref_freq must be set for nonzero gaussian beam spectral index',
                                   pyuvsim.AnalyticBeam, 'gaussian', sigma=sigma, spectral_index=alpha)
     A = pyuvsim.AnalyticBeam('gaussian', sigma=sigma, ref_freq=freqs[0], spectral_index=alpha)
 
@@ -322,7 +322,7 @@ def test_beamerrs():
     """
     Error cases.
     """
-    simtest.assert_raises_message(ValueError,'type not recognized', pyuvsim.AnalyticBeam, 'unsupported_type')
+    simtest.assert_raises_message(ValueError, 'type not recognized', pyuvsim.AnalyticBeam, 'unsupported_type')
     beam = pyuvsim.AnalyticBeam('gaussian')
     az, za = np.random.uniform(0.0, np.pi, (2, 5))
     freq_arr = np.linspace(1e8, 1.5e8, 10)
