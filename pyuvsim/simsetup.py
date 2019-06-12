@@ -516,6 +516,8 @@ def parse_telescope_params(tele_params, config_path=''):
     Args:
         tele_params: Dictionary of telescope parameters
             See pyuvsim documentation for allowable keys.
+            https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#telescope-configuration
+
         config_path: path to directory holding configuration and
             layout files.
 
@@ -550,12 +552,12 @@ def parse_telescope_params(tele_params, config_path=''):
                 raise ValueError('telescope_config_name file from yaml does not exist')
         with open(telescope_config_name, 'r') as yf:
             telconfig = yaml.safe_load(yf)
-            telescope_location_latlonalt = ast.literal_eval(telconfig['telescope_location'])
-            telescope_location = list(telescope_location_latlonalt)
-            telescope_location[0] *= np.pi / 180.
-            telescope_location[1] *= np.pi / 180.   # Convert to radians
-            tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
-            telescope_name = telconfig['telescope_name']
+        telescope_location_latlonalt = ast.literal_eval(telconfig['telescope_location'])
+        telescope_location = list(telescope_location_latlonalt)
+        telescope_location[0] *= np.pi / 180.
+        telescope_location[1] *= np.pi / 180.   # Convert to radians
+        tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
+        telescope_name = telconfig['telescope_name']
 
     else:
         # if not provided, get bare-minumum keys from tele_params
@@ -666,6 +668,7 @@ def parse_frequency_params(freq_params):
     Args:
         freq_params: Dictionary of frequency parameters.
             See pyuvsim documentation for examples of allowable key combinations.
+            https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#frequency
 
     Returns:
         dict of array properties:
@@ -760,6 +763,7 @@ def parse_time_params(time_params):
     Args:
         time_params: Dictionary of time parameters
             See pyuvsim documentation for examples of allowable key combinations.
+            https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#time
 
     Returns:
         dict of array properties:
@@ -921,6 +925,8 @@ def initialize_uvdata_from_params(obs_params):
 
     The parameter dictionary may contain any valid UVData attributes as well.
 
+    If the polarization array is not specified, it defaults to (XX, XY, YX, YY).
+
     Args:
         obs_params: Either an obs_param file name or a dictionary of parameters read in.
                     Any uvdata parameters may be passed in through here.
@@ -962,7 +968,7 @@ def initialize_uvdata_from_params(obs_params):
     if 'polarization_array' not in uvparam_dict:
         uvparam_dict['polarization_array'] = np.array([-5, -6, -7, -8])
     if 'Npols' not in uvparam_dict:
-        uvparam_dict['Npols'] = 4
+        uvparam_dict['Npols'] = len(uvparam_dict['polarization_array'])
 
     if 'object_name' not in param_dict:
         tloc = EarthLocation.from_geocentric(*uvparam_dict['telescope_location'], unit='m')
@@ -1153,8 +1159,6 @@ def initialize_uvdata_from_keywords(yaml_filename=None, antenna_layout_filename=
         with open(yaml_filename, 'w') as yfile:
             yaml.dump(param_dict, yfile, default_flow_style=False)
 
-    # If layout and telescope config yaml files are not written out, this will be used
-    # to set the antenna names/numbers/positions.
     param_dict['telescope'].update(layout_params)
     uv_obj = initialize_uvdata_from_params(param_dict)
 
