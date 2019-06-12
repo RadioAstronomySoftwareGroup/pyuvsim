@@ -297,7 +297,7 @@ def test_freq_parser():
                  ('start_freq', 'end_freq')]
     err_mess = ['Either start or end frequency must be specified: bandwidth',
                 'Either bandwidth or channel width must be specified: Nfreqs, start_freq',
-                'Either bandwidth or band edges must be specified: start_freq, channel_width',
+                'Either bandwidth or band edges must be specified: channel_width, start_freq',
                 'Either channel_width or Nfreqs  must be included in parameters:end_freq, start_freq']
     for ei, er in enumerate(err_cases):
         subdict = {key: fdict_base[key] for key in er}
@@ -369,9 +369,9 @@ def test_time_parser():
                  ('start_time', 'integration_time'),
                  ('start_time', 'end_time')]
     err_mess = ['Start or end time must be specified: duration_hours',
-                'Either duration or integration time must be specified: start_time, Ntimes',
-                'Either duration or time bounds must be specified: start_time, integration_time',
-                'Either integration_time or Ntimes must be included in parameters:start_time, end_time']
+                'Either duration or integration time must be specified: Ntimes, start_time',
+                'Either duration or time bounds must be specified: integration_time, start_time',
+                'Either integration_time or Ntimes must be included in parameters: end_time, start_time']
 
     for ei, er in enumerate(err_cases):
         subdict = {key: tdict_base[key] for key in er}

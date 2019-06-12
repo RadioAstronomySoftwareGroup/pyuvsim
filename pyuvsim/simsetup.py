@@ -679,7 +679,7 @@ def parse_frequency_params(freq_params):
     freq_keywords = ['freq_array', 'start_freq', 'end_freq', 'Nfreqs',
                      'channel_width', 'bandwidth']
     fa, sf, ef, nf, cw, bw = [fk in freq_params for fk in freq_keywords]
-    kws_used = ", ".join(freq_params.keys())
+    kws_used = ", ".join(sorted(freq_params.keys()))
     freq_params = copy.deepcopy(freq_params)
     init_freq_params = copy.deepcopy(freq_params)
 
@@ -780,7 +780,7 @@ def parse_time_params(time_params):
     time_keywords = ['time_array', 'start_time', 'end_time', 'Ntimes', 'integration_time',
                      'duration_hours', 'duration_days']
     ta, st, et, nt, it, dh, dd = [tk in time_params for tk in time_keywords]
-    kws_used = ", ".join(time_params.keys())
+    kws_used = ", ".join(sorted(time_params.keys()))
     daysperhour = 1 / 24.
     hourspersec = 1 / 60.**2
     dayspersec = daysperhour * hourspersec
@@ -803,7 +803,7 @@ def parse_time_params(time_params):
         if not nt:
             if not it:
                 raise ValueError("Either integration_time or Ntimes must be "
-                                 "included in parameters:" + kws_used)
+                                 "included in parameters: " + kws_used)
             if st and et:
                 time_params['duration'] = time_params['end_time'] - time_params['start_time'] + time_params['integration_time'] * dayspersec
                 dd = True
