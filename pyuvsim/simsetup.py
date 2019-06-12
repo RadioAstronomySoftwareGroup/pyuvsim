@@ -576,7 +576,7 @@ def parse_telescope_params(tele_params, config_path=''):
 
     # get array layout
     if 'array_layout' not in tele_params:
-        raise KeyError('array_layout must provided')
+        raise KeyError('array_layout must be provided.')
     array_layout = tele_params.pop('array_layout')
     if isinstance(array_layout, six.string_types):
         # Interpet as file path to layout csv file.

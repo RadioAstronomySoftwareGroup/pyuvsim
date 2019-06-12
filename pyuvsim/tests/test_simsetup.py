@@ -250,7 +250,7 @@ def test_tele_parser():
     nt.assert_equal(bdict, {})
 
     tdict.pop('array_layout')
-    simtest.assert_raises_message(KeyError, 'array_layout must provided.', pyuvsim.simsetup.parse_telescope_params, tdict)
+    simtest.assert_raises_message(KeyError, 'array_layout must be provided.', pyuvsim.simsetup.parse_telescope_params, tdict)
 
 
 def test_freq_parser():
