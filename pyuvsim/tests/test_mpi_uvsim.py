@@ -44,7 +44,7 @@ def test_run_uvsim():
 
     beam_list = [beamfile]
     mock_keywords = {"Nsrcs": 3}
-    nt.assert_raises(TypeError, pyuvsim.run_uvdata_uvsim, 'not_uvdata', beam_list)
+    simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', pyuvsim.run_uvdata_uvsim, 'not_uvdata', beam_list)
     mpi.start_mpi()
     catalog, mock_kwds = pyuvsim.simsetup.create_mock_catalog(hera_uv.time_array[0], **mock_keywords)
     uv_out = pyuvsim.run_uvdata_uvsim(hera_uv, beam_list, catalog=catalog, source_list_name='mock', obs_param_file='', telescope_config_file='', antenna_location_file='')
