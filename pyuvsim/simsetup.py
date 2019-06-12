@@ -573,6 +573,8 @@ def parse_telescope_params(tele_params, config_path=''):
         tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
 
     # get array layout
+    if 'array_layout' not in tele_params:
+        raise KeyError('array_layout must provided')
     array_layout = tele_params.pop('array_layout')
     if isinstance(array_layout, six.string_types):
         # Interpet as file path to layout csv file.

@@ -93,7 +93,7 @@ def test_catalog_from_params():
 
     source_dict = {}
 
-    nt.assert_raises(KeyError, pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
+    simtest.assert_raises_message(KeyError, 'No catalog defined.', pyuvsim.simsetup.initialize_catalog_from_params, {'sources' : source_dict})
     arrloc = '{:.5f},{:.5f},{:.5f}'.format(*hera_uv.telescope_location_lat_lon_alt_degrees)
     source_dict = {'catalog': 'mock', 'mock_arrangement': 'zenith', 'Nsrcs': 5, 'time': hera_uv.time_array[0]}
     uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [{'sources': source_dict}],
@@ -101,8 +101,10 @@ def test_catalog_from_params():
     catalog_uv, srclistname = pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict}, hera_uv)
     source_dict['array_location'] = arrloc
     del source_dict['time']
-    nt.assert_raises(TypeError, pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict}, input_uv='not_uvdata')
-    nt.assert_raises(ValueError, pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
+
+    simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict}, input_uv='not_uvdata')
+    simtest.assert_raises_message(ValueError, 'input_uv must be supplied if using mock catalog without specified julian date',\
+            pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
     catalog_str, srclistname2 = uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [{'sources': source_dict}, hera_uv],
                                                      message="Warning: No julian date given for mock catalog. Defaulting to first time step.")
 
@@ -159,12 +161,14 @@ def check_param_reader(config_num):
 
         # Missing config file info
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, 'nonexistent_directory', 'nonexistent_file')
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+        simtest.assert_raises_message(ValueError, 'nonexistent_directory is not a directory', pyuvsim.initialize_uvdata_from_params, params_bad)
+
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
         params_bad['telescope']['array_layout'] = 'nonexistent_file'
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+        simtest.assert_raises_message(ValueError, 'nonexistent_file from yaml does not exist', pyuvsim.initialize_uvdata_from_params, params_bad)
+
         params_bad['telescope']['telescope_config_name'] = 'nonexistent_file'
-        nt.assert_raises(ValueError, pyuvsim.initialize_uvdata_from_params, params_bad)
+        simtest.assert_raises_message(ValueError, 'telescope_config_name file from yaml does not exist', pyuvsim.initialize_uvdata_from_params, params_bad)
 
         # Missing beam keywords
         params_bad = copy.deepcopy(bak_params_bad)
@@ -173,11 +177,14 @@ def check_param_reader(config_num):
 
         params_bad = copy.deepcopy(bak_params_bad)
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_gaussnoshape.yaml')
-        nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, params_bad)
+        simtest.assert_raises_message(KeyError, 'Missing shape parameter for gaussian beam (diameter or sigma).',\
+                                        pyuvsim.initialize_uvdata_from_params, params_bad)
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml')
-        nt.assert_raises(KeyError, pyuvsim.initialize_uvdata_from_params, params_bad)
+        simtest.assert_raises_message(KeyError, 'Missing diameter for airy beam.',\
+                                        pyuvsim.initialize_uvdata_from_params, params_bad)
         params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml')
-        nt.assert_raises(OSError, pyuvsim.initialize_uvdata_from_params, params_bad)
+        simtest.assert_raises_message(OSError, 'Could not find file',\
+                                        pyuvsim.initialize_uvdata_from_params, params_bad)
 
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_filename)
@@ -230,9 +237,12 @@ def test_tele_parser():
     """
     # check no tele config passed
     tdict = dict(array_layout=os.path.join(SIM_DATA_PATH, 'test_layout_6ant.csv'))
-    nt.assert_raises(KeyError, pyuvsim.simsetup.parse_telescope_params, tdict)
+    tel_error = 'If telescope_config_name not provided in `telescope` obsparam section, you must provide telescope_location'
+    simtest.assert_raises_message(KeyError, tel_error, pyuvsim.simsetup.parse_telescope_params, tdict)
     tdict['telescope_location'] = '(-30.72152777777791, 21.428305555555557, 1073.0000000093132)'
-    nt.assert_raises(KeyError, pyuvsim.simsetup.parse_telescope_params, tdict)
+    tel_error = 'If telescope_config_name not provided in `telescope` obsparam section, you must provide telescope_name'
+    simtest.assert_raises_message(KeyError, tel_error, pyuvsim.simsetup.parse_telescope_params, tdict)
+
     tdict['telescope_name'] = 'tele'
     tpars, blist, bdict = pyuvsim.simsetup.parse_telescope_params(tdict)
     nt.assert_equal(tpars['Nants_data'], 6)
@@ -240,7 +250,7 @@ def test_tele_parser():
     nt.assert_equal(bdict, {})
 
     tdict.pop('array_layout')
-    nt.assert_raises(KeyError, pyuvsim.simsetup.parse_telescope_params, tdict)
+    simtest.assert_raises_message(KeyError, 'array_layout must provided.', pyuvsim.simsetup.parse_telescope_params, tdict)
 
 
 def test_freq_parser():
@@ -285,28 +295,28 @@ def test_freq_parser():
                  ('start_freq', 'Nfreqs'),
                  ('start_freq', 'channel_width'),
                  ('start_freq', 'end_freq')]
-    for er in err_cases:
+    err_mess = ['Either start or end frequency must be specified: bandwidth',
+                'Either bandwidth or channel width must be specified: Nfreqs, start_freq',
+                'Either bandwidth or band edges must be specified: start_freq, channel_width',
+                'Either channel_width or Nfreqs  must be included in parameters:end_freq, start_freq']
+    for ei, er in enumerate(err_cases):
         subdict = {key: fdict_base[key] for key in er}
-        nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
-        try:
-            pyuvsim.parse_frequency_params(subdict)
-        except ValueError as ve:
-            print(ve)
-            pass
+        simtest.assert_raises_message(ValueError,err_mess[ei], pyuvsim.parse_frequency_params, subdict)
 
     subdict = {'freq_array': freq_array[0]}
-    nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
+    simtest.assert_raises_message(ValueError,'Channel width must be specified if freq_arr has length 1', pyuvsim.parse_frequency_params, subdict)
 
     subdict = {'freq_array': np.random.choice(freq_array, 4, replace=False)}
-    nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
+    simtest.assert_raises_message(ValueError, 'Spacing in frequency array is uneven.', pyuvsim.parse_frequency_params, subdict)
 
     subdict = {'channel_width': 3.14, 'start_freq': 1.0, 'end_freq': 8.3}
-    nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
+    simtest.assert_raises_message(ValueError, 'end_freq - start_freq must be evenly divisible by channel_width', pyuvsim.parse_frequency_params, subdict)
 
     subdict = fdict_base.copy()
     subdict['Nfreqs'] = 7
     del subdict['freq_array']
-    nt.assert_raises(ValueError, pyuvsim.parse_frequency_params, subdict)
+    simtest.assert_raises_message(ValueError, 'Frequency array spacings are not equal to channel width.',\
+                                  pyuvsim.parse_frequency_params, subdict)
 
 
 def test_time_parser():
@@ -358,17 +368,24 @@ def test_time_parser():
                  ('start_time', 'Ntimes'),
                  ('start_time', 'integration_time'),
                  ('start_time', 'end_time')]
-    for er in err_cases:
+    err_mess = ['Start or end time must be specified: duration_hours',
+                'Either duration or integration time must be specified: start_time, Ntimes',
+                'Either duration or time bounds must be specified: start_time, integration_time',
+                'Either integration_time or Ntimes must be included in parameters:start_time, end_time']
+
+    for ei, er in enumerate(err_cases):
         subdict = {key: tdict_base[key] for key in er}
-        nt.assert_raises(ValueError, pyuvsim.parse_time_params, subdict)
+        simtest.assert_raises_message(ValueError, err_mess[ei], pyuvsim.parse_time_params, subdict)
 
     subdict = {'integration_time': 3.14, 'start_time': 10000.0, 'end_time': 80000.3, 'Ntimes': 30}
-    nt.assert_raises(ValueError, pyuvsim.parse_time_params, subdict)
+    simtest.assert_raises_message(ValueError, 'Calculated time array is not consistent with set integration_time',\
+                                  pyuvsim.parse_time_params, subdict)
 
     subdict = tdict_base.copy()
     subdict['Ntimes'] = 7
     del subdict['time_array']
-    nt.assert_raises(ValueError, pyuvsim.parse_time_params, subdict)
+    simtest.assert_raises_message(ValueError, 'Calculated time array is not consistent with set integration_time.',\
+                                  pyuvsim.parse_time_params, subdict)
 
 
 def test_freq_time_params():
@@ -716,7 +733,8 @@ def test_mock_catalogs():
                      'triangle': 'mock_triangle_2458098.27471.txt',
                      'random': 'mock_random_2458098.27471.txt',
                      'zenith': 'mock_zenith_2458098.27471.txt'}
-    nt.assert_raises(KeyError, pyuvsim.simsetup.create_mock_catalog, time, 'invalid_catalog_name')
+    simtest.assert_raises_message(KeyError,"Invalid mock catalog arrangement: invalid_catalog_name",\
+                                  pyuvsim.simsetup.create_mock_catalog, time, 'invalid_catalog_name')
 
     for arr in arrangements:
         radec_catalog = pyuvsim.simsetup.read_text_catalog(os.path.join(SIM_DATA_PATH,
