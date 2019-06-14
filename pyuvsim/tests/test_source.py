@@ -41,7 +41,7 @@ def test_source_zenith_from_icrs():
                                   pyuvsim.SkyModel, 'icrs_zen', ra, dec.rad, freq.value, [1, 0, 0, 0])
     simtest.assert_raises_message(ValueError, 'freq must be an astropy Quantity object. value was: 150000000.0',
                                   pyuvsim.SkyModel, 'icrs_zen', ra, dec, freq.value, [1, 0, 0, 0])
-    zenith_source = pyuvsim.Source('icrs_zen', ra, dec, freq, [1, 0, 0, 0])
+    zenith_source = pyuvsim.SkyModel('icrs_zen', ra, dec, freq, [1, 0, 0, 0])
 
     zenith_source.update_positions(time, array_location)
     zenith_source_lmn = zenith_source.pos_lmn.squeeze()

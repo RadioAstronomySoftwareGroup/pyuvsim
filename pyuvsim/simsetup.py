@@ -1304,6 +1304,9 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
     tdict = time_array_to_params(time_array)
     fdict = freq_array_to_params(freq_array)
 
+    if 'time_array' in tdict:
+        tdict.pop('time_array')
+
     param_dict = dict(
         time=tdict,
         freq=fdict,

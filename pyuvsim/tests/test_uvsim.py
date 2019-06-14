@@ -572,7 +572,7 @@ def test_local_task_gen():
     uv_iter0 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), 'not_uvdata', sources, beam_list, beam_dict)
     simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', next, uv_iter0)
     uv_iter1 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, 'not_ndarray', beam_list, beam_dict)
-    simtest.assert_raises_message(TypeError, 'sources must be a numpy array', next, uv_iter1)
+    simtest.assert_raises_message(TypeError, 'catalog must be a record array', next, uv_iter1)
 
     # Copy sources and beams so we don't accidentally reuse quantities.
     taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
