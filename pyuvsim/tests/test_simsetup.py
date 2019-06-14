@@ -387,6 +387,10 @@ def test_time_parser():
 
 
 def test_freq_time_params():
+
+    time_dict = pyuvsim.simsetup.time_array_to_params([1.0])
+    nt.assert_true(time_dict['integration_time'] == 1.0)
+
     freqs = np.linspace(100, 200, 1024)
     times = np.linspace(2458570, 2458570 + 0.5, 239)
     time_dict = pyuvsim.simsetup.time_array_to_params(times)

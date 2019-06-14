@@ -199,6 +199,7 @@ def test_gaussbeam_values():
     task = pyuvsim.UVTask(catalog, time, freq, baseline, array)
 
     engine = pyuvsim.UVEngine(task)
+    task.sources.alt_az = None
     engine.apply_beam()
     altitudes = task.sources.alt_az[0]   # In radians.
     coherencies = np.real(engine.apparent_coherency[0, 0] + engine.apparent_coherency[1, 1]).astype(float)  # All four components should be identical

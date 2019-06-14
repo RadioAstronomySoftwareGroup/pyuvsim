@@ -75,7 +75,7 @@ def _config_str_to_dict(config_str):
         param_dict = yaml.safe_load(pfile)
 
     param_dict['config_path'] = os.path.dirname(config_str)
-    param_dict['param_file'] = os.path.basename(config_str)
+    param_dict['obs_param_file'] = os.path.basename(config_str)
 
     return param_dict
 
@@ -118,7 +118,7 @@ def array_to_skymodel(catalog_table):
     return sourcelist
 
 
-def source_cuts(catalog_table, input_uv=None, lst_array=None, latitude_deg=None, horizon_buffer=0.04364, min_flux=None, max_flux=None):
+def source_cuts(catalog_table, input_uv=None, latitude_deg=None, horizon_buffer=0.04364, min_flux=None, max_flux=None):
     """
     Performing flux and horizon selections on recarray of source components.
 
@@ -127,8 +127,7 @@ def source_cuts(catalog_table, input_uv=None, lst_array=None, latitude_deg=None,
                        'source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'
         input_uv: (UVData)
             If not None, can set lst_array and latitude_deg if either or both is missing.
-        lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
-        latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
+        latitude_deg: Latitude of telescope in degrees. Used to estimate rise/set lst.
         horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
                         SkyModel components whose calculated altitude is less than -horizon_buffer are excluded.
 
@@ -145,18 +144,12 @@ def source_cuts(catalog_table, input_uv=None, lst_array=None, latitude_deg=None,
 
     # Option to pass a UVData object to get telescope-specific parameters
     if input_uv:
-        if lst_array is None:
-            lst_array, inds = np.unique(input_uv.lst_array, return_index=True)
         if latitude_deg is None:
             latitude_deg = input_uv.telescope_location_lat_lon_alt_degrees[0]
 
     sourcelist = []
     Nsrcs = catalog_table.shape[0]
-    coarse_kwds = [lst_array, latitude_deg]
-    coarse_horizon_cut = all([k is not None for k in coarse_kwds])
-
-    if (not coarse_horizon_cut) and any([k is not None for k in coarse_kwds]):
-        warnings.warn("It looks like you want to do a coarse horizon cut, but you're missing keywords!")
+    coarse_horizon_cut = latitude_deg is not None
 
     if coarse_horizon_cut:
         lat_rad = np.radians(latitude_deg)
@@ -950,14 +943,12 @@ def time_array_to_params(time_array):
         tdict['start_time'] = time_array.item(0)
         return tdict
 
-    if time_array.size > 1:
-        dt = np.diff(np.unique(time_array))[0]
-    else:
-        dt = 1.0 / (24. * 3600.)
+    dt = np.min(np.diff(time_array)).item()
+
     if not np.allclose(np.diff(time_array), np.ones(time_array.size - 1) * dt):
         tdict['time_array'] = time_array.tolist()
 
-    tdict['integration_time'] = np.min(np.diff(time_array)).item() * (24. * 3600.)
+    tdict['integration_time'] = dt * (24. * 3600.)
     tdict['Ntimes'] = Ntimes_uniq
     tdict['duration_days'] = tdict['integration_time'] * tdict['Ntimes'] / (24. * 3600.)
     tdict['start_time'] = time_array.item(0)
@@ -998,7 +989,7 @@ def initialize_uvdata_from_params(obs_params):
 
     # Use extra_keywords to pass along required paths for file history.
     extra_keywords = {}
-    extra_keywords['param_file'] = param_dict['param_file']
+    extra_keywords['obs_param_file'] = param_dict['obs_param_file']
     for key in ['telescope_config_name', 'array_layout']:
         if key in tele_dict:
             val = tele_dict[key]
@@ -1202,7 +1193,7 @@ def initialize_uvdata_from_keywords(yaml_filename=None, antenna_layout_filename=
     }
 
     param_dict['config_path'] = path_out
-    param_dict['param_file'] = os.path.basename(yaml_filename)
+    param_dict['obs_param_file'] = os.path.basename(yaml_filename)
 
     if write_files:
         tele_params['array_layout'] = antenna_layout_filename

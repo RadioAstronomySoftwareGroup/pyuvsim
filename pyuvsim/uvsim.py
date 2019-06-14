@@ -272,8 +272,8 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
 
 
 def init_uvdata_out(uv_in, source_list_name,
-                    obs_param_file=None, telescope_config_file=None,
-                    antenna_location_file=None):
+                    obs_param_file='', telescope_config_file='',
+                    antenna_location_file=''):
     """
     Initialize an empty uvdata object to fill with simulated data.
     Args:
@@ -395,11 +395,10 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
         print('Ntimes:', input_uv.Ntimes)
         print('Nfreqs:', input_uv.Nfreqs)
         print('Nsrcs:', len(catalog))
-
         if 'obs_param_file' in input_uv.extra_keywords:
             obs_param_file = input_uv.extra_keywords['obs_param_file']
-            telescope_config_file = input_uv.extra_keywords['telescope_config_file']
-            antenna_location_file = input_uv.extra_keywords['antenna_location_file']
+            telescope_config_file = input_uv.extra_keywords['telescope_config_name']
+            antenna_location_file = input_uv.extra_keywords['array_layout']
         else:
             obs_param_file = ''
             telescope_config_file = ''
