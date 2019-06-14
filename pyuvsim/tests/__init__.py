@@ -22,7 +22,7 @@ def compare_dictionaries(d1, d2):
 
     Keys of each dict must match.
     Walks through two input dicts and compares each key.
-    Makes calls to nt.assert_type_equals and np.allclose to compare values.
+    Makes calls to assert statements and np.allclose to compare values.
     """
     assert set(d1.keys()) == set(d2.keys())
     for key in d1:
@@ -117,7 +117,7 @@ def assert_raises_message(exception_type, message, func, *args, **kwargs):
         func(*args, **kwargs)
 
     try:
-        assert str(err.value).startswith(message)
+        assert message in str(err.value)
     except AssertionError as excp:
-        print("{} != {}".format(message, err.exception.args[0]))
+        print("{} not in {}".format(message, str(err.value)))
         raise excp

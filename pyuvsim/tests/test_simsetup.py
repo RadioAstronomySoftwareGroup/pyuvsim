@@ -88,8 +88,8 @@ def test_catalog_from_params():
                          message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
 
     source_dict = {}
-    simtest.assert_raises_message(KeyError, 'No catalog defined.', pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
-    nt.assert_raises(KeyError, pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
+    simtest.assert_raises_message(KeyError, "No catalog defined.", pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
+    pytest.raises(KeyError, pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
     arrloc = '{:.5f},{:.5f},{:.5f}'.format(*hera_uv.telescope_location_lat_lon_alt_degrees)
     source_dict = {'catalog': 'mock', 'mock_arrangement': 'zenith', 'Nsrcs': 5, 'time': hera_uv.time_array[0]}
     uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [{'sources': source_dict}],
@@ -230,9 +230,9 @@ def test_tele_parser():
 
     tdict['telescope_name'] = 'tele'
     tpars, blist, bdict = pyuvsim.simsetup.parse_telescope_params(tdict)
-    nt.assert_equal(tpars['Nants_data'], 6)
-    nt.assert_equal(blist, [])
-    nt.assert_equal(bdict, {})
+    assert tpars['Nants_data'] == 6
+    assert blist == []
+    assert bdict == {}
 
     tdict.pop('array_layout')
     simtest.assert_raises_message(KeyError, 'array_layout must be provided.', pyuvsim.simsetup.parse_telescope_params, tdict)
@@ -398,11 +398,11 @@ def test_freq_time_params():
     # check Ntimes = 1 and Nfreqs = 1 case
     times = np.linspace(2458570, 2458570.5, 1)
     tdict = pyuvsim.simsetup.time_array_to_params(times)
-    nt.assert_equal(tdict['Ntimes'], 1)
+    assert tdict['Ntimes'] == 1
 
     freqs = np.linspace(100, 200, 1)
     fdict = pyuvsim.simsetup.freq_array_to_params(freqs)
-    nt.assert_equal(fdict['Nfreqs'], 1)
+    assert fdict['Nfreqs'] == 1
 
 
 def test_param_select_cross():
@@ -442,29 +442,6 @@ def test_param_select_bls():
     assert uv_obj_bls == uv_obj_bls2
 
 
-def test_param_select_errors():
-    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
-
-    nt.assert_equal(uv_obj_bls, uv_obj_bls2)
-
-    # check kwargs passed
-    param_dict['object_name'] = 'foo'
-    uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
-    nt.assert_equal(uv_obj_full.object_name, 'foo')
-
-    param_dict_pol = copy.deepcopy(param_dict)
-    param_dict_pol['select'] = {'polarizations': [-8]}
-    pytest.raises(ValueError, pyuvsim.initialize_uvdata_from_params, param_dict_pol)
-
-    param_dict_antstr_pol = copy.deepcopy(param_dict)
-    param_dict_antstr_pol['select'] = {'ant_str': '41x_42y,42y_43y'}
-    pytest.raises(ValueError, pyuvsim.initialize_uvdata_from_params, param_dict_antstr_pol)
-
-    param_dict_bls_pol = copy.deepcopy(param_dict)
-    param_dict_bls_pol['select'] = {'bls': [(0, 1, 'xx'), (2, 3, 'yy')]}
-    pytest.raises(ValueError, pyuvsim.initialize_uvdata_from_params, param_dict_bls_pol)
-
-
 def test_param_select_redundant():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
 
@@ -482,14 +459,11 @@ def test_param_select_redundant():
 
     uv_obj_red.history, uv_obj_red2.history = '', ''
 
-    nt.assert_equal(uv_obj_red, uv_obj_red2)
+    assert uv_obj_red == uv_obj_red2
     assert uv_obj_red.Nbls < uv_obj_full.Nbls
 
-    uv_obj_red2 = uv_obj_full.compress_by_redundancy(tol=0.1, inplace=False, metadata_only=True)
 
-    assert uv_obj_red == uv_obj_red2
-
-
+@pytest.mark.parametrize('case', np.arange(6))
 def check_uvdata_keyword_init(case):
     base_kwargs = dict(
         antenna_layout_filepath=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
@@ -502,15 +476,15 @@ def check_uvdata_keyword_init(case):
     if case == 0:
         # check it runs through
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**base_kwargs)
-        nt.assert_true(np.allclose(base_kwargs['telescope_location'], uvd.telescope_location_lat_lon_alt_degrees))
-        nt.assert_true(np.allclose(base_kwargs['integration_time'], uvd.integration_time))
-        nt.assert_equal(base_kwargs['telescope_name'], uvd.telescope_name)
-        nt.assert_equal(base_kwargs['start_freq'], uvd.freq_array[0, 0])
-        nt.assert_equal(base_kwargs['start_time'], uvd.time_array[0])
-        nt.assert_equal(base_kwargs['Ntimes'], uvd.Ntimes)
-        nt.assert_equal(base_kwargs['Nfreqs'], uvd.Nfreqs)
-        nt.assert_equal(base_kwargs['polarization_array'], uvd.get_pols())
-        nt.assert_false(np.any(uvd.ant_1_array == uvd.ant_2_array))
+        assert np.allclose(base_kwargs['telescope_location'], uvd.telescope_location_lat_lon_alt_degrees)
+        assert np.allclose(base_kwargs['integration_time'], uvd.integration_time)
+        assert base_kwargs['telescope_name'] == uvd.telescope_name
+        assert base_kwargs['start_freq'] == uvd.freq_array[0, 0]
+        assert base_kwargs['start_time'] == uvd.time_array[0]
+        assert base_kwargs['Ntimes'] == uvd.Ntimes
+        assert base_kwargs['Nfreqs'] == uvd.Nfreqs
+        assert base_kwargs['polarizations'] == uvd.get_pols()
+        assert not np.any(uvd.ant_1_array == uvd.ant_2_array)
 
     elif case == 1:
         # check bls and antenna_nums selections work
@@ -519,7 +493,7 @@ def check_uvdata_keyword_init(case):
         new_kwargs['bls'] = bls
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
         antpairs = uvd.get_antpairs()
-        nt.assert_equal(antpairs, bls)
+        assert antpairs == bls
 
     elif case == 2:
         # also check that '1' gets converted to [1]
@@ -531,8 +505,8 @@ def check_uvdata_keyword_init(case):
         new_kwargs['antenna_nums'] = '1'
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
 
-        nt.assert_equal(uvd.Nbls, 1)
-        nt.assert_equal(uvd.get_pols(), new_kwargs['polarization_array'])
+        assert uvd.Nbls == 1
+        assert uvd.get_pols() == new_kwargs['polarizations']
     elif case == 3:
         # check time and freq array definitions supersede other parameters
         fa = np.linspace(100, 200, 11) * 1e6
@@ -542,8 +516,8 @@ def check_uvdata_keyword_init(case):
         new_kwargs['time_array'] = ta
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
 
-        nt.assert_true(np.allclose(uvd.time_array[::uvd.Nbls], ta))
-        nt.assert_true(np.allclose(uvd.freq_array[0], fa))
+        assert np.allclose(uvd.time_array[::uvd.Nbls], ta)
+        assert np.allclose(uvd.freq_array[0], fa)
     elif case == 4:
         # test feeding array layout as dictionary
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**base_kwargs)
@@ -562,14 +536,14 @@ def check_uvdata_keyword_init(case):
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
         layout_path = os.path.join(simtest.TESTDATA_PATH, layout_fname)
         obsparam_path = os.path.join(simtest.TESTDATA_PATH, obsparam_fname)
-        nt.assert_true(os.path.exists(layout_path))
-        nt.assert_true(os.path.exists(obsparam_path))
+        assert os.path.exists(layout_fname)
+        assert os.path.exists(obsparam_fname)
 
-        nt.assert_equal(uvd.Nbls, 6)
-        nt.assert_equal(uvd.Nants_data, 4)
+        assert uvd.Nbls == 6
+        assert uvd.Nants_data == 4
         ap, a = uvd.get_ENU_antpos()
         apd = dict(zip(a, ap))
-        nt.assert_true(np.all([np.isclose(antpos_d[a], apd[a]) for a in ants]))
+        assert np.all([np.isclose(antpos_d[a], apd[a]) for a in ants])
 
     elif case == 5:
         # Check defaults when writing to file.
@@ -584,8 +558,8 @@ def check_uvdata_keyword_init(case):
         new_kwargs['write_files'] = True
 
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
-        nt.assert_true(os.path.exists(layout_fname))
-        nt.assert_true(os.path.exists(obsparam_fname))
+        assert os.path.exists(layout_fname)
+        assert os.path.exists(obsparam_fname)
 
         os.remove(layout_fname)
         os.remove(obsparam_fname)
@@ -597,19 +571,11 @@ def check_uvdata_keyword_init(case):
         new_kwargs['complete'] = True
 
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
-        nt.assert_true(os.path.exists(layout_fname))
-        nt.assert_true(os.path.exists(obsparam_fname))
+        assert os.path.exists(layout_fname)
+        assert os.path.exists(obsparam_fname)
 
         os.remove(layout_fname)
         os.remove(obsparam_fname)
-
-
-def test_kwarg_uv_init():
-    """
-    Tests different forms of UVData setup from keyword arguments.
-    """
-    for i in range(6):
-        yield (check_uvdata_keyword_init, i)
 
 
 def test_uvfits_to_config():
@@ -857,4 +823,4 @@ def test_keyword_param_loop():
     uv2.extra_keywords = {}
     uvd.extra_keywords = {}  # These will not match
 
-    nt.assert_equal(uv2, uvd)
+    assert uv2 == uvd
