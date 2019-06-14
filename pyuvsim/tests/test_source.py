@@ -5,7 +5,7 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-import pytest
+import pyuvsim.tests as simtest
 from astropy.time import Time
 from astropy.coordinates import SkyCoord, EarthLocation
 from astropy import units
