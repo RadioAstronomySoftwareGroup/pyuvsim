@@ -507,13 +507,9 @@ def test_uvdata_init_errors():
     hera_uv.read_uvfits(EW_uvfits_file)
 
     simtest.assert_raises_message(ValueError, "source_list_name must be a string", pyuvsim.init_uvdata_out, hera_uv, 1.0)
-    simtest.assert_raises_message(ValueError, "obs_param_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str')
     simtest.assert_raises_message(ValueError, "obs_param_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file=1.0)
-    simtest.assert_raises_message(ValueError, "obs_param_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', telescope_config_file=1.0)
-    simtest.assert_raises_message(ValueError, "obs_param_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', antenna_location_file=1.0)
-    simtest.assert_raises_message(ValueError, "telescope_config_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string')
-    simtest.assert_raises_message(ValueError, "antenna_location_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string', telescope_config_file='string')
-    simtest.assert_raises_message(ValueError, "telescope_config_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string', telescope_config_file=1.0)
+    simtest.assert_raises_message(ValueError, "telescope_config_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', telescope_config_file=1.0)
+    simtest.assert_raises_message(ValueError, "antenna_location_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', antenna_location_file=1.0)
 
 
 def test_gather():

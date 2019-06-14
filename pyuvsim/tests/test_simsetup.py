@@ -624,9 +624,9 @@ def test_uvfits_to_config():
 
     param_dict = pyuvsim.simsetup._config_str_to_dict(os.path.join(opath, second_param_filename))
     shutil.rmtree(opath)
-    nt.assert_true(param_dict['param_file'] == second_param_filename)
-    nt.assert_true(orig_param_dict['param_file'] == param_filename)
-    orig_param_dict['param_file'] = second_param_filename
+    nt.assert_true(param_dict['obs_param_file'] == second_param_filename)
+    nt.assert_true(orig_param_dict['obs_param_file'] == param_filename)
+    orig_param_dict['obs_param_file'] = second_param_filename
     nt.assert_true(simtest.compare_dictionaries(param_dict, orig_param_dict))
 
 
