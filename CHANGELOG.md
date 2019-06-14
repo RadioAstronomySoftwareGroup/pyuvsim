@@ -9,6 +9,7 @@
 - Optionally, can skip having telescope_config file if there is no beam list.
 
 ## Changed
+- UVBeam frequency interpolation is cubic spline by default, not linear.
 - Tasks are split over time, frequency, and baseline only (in that order).
 - Tasks are split over the source axis if the estimated memory footprint exceeds available resources.
 - The source class is replaced with SkyModel, which supports vectorized coordinate transformation and beam interpolation.

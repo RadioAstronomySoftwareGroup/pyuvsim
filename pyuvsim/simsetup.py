@@ -1349,5 +1349,5 @@ def beam_string_to_object(beam_model):
     uvb = UVBeam()
     uvb.read_beamfits(path)
     if uvb.freq_interp_kind is None:
-        uvb.freq_interp_kind = 'linear'
+        uvb.freq_interp_kind = 'cubic'
     return uvb
