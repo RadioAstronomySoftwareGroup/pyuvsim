@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.1.0] - 2019-6-14
 
 ## Added
 - A parallelized counter that can track progress across all ranks.
