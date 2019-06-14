@@ -339,6 +339,10 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
     rank = mpi.get_rank()
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
+
+    if not ((input_uv.Npols == 4) and (input_uv.polarization_array.tolist() == [-5, -6, -7, -8])):
+        raise ValueError("input_uv must have XX,YY,XY,YX polarization")
+
     # The Head node will initialize our simulation
     # Read input file and make uvtask list
     if rank == 0:

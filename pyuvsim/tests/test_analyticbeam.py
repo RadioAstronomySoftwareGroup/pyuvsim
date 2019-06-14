@@ -16,6 +16,7 @@ from pyuvdata import UVData
 
 import pyuvsim
 import pyuvsim.utils as simutils
+import pyuvsim.tests as simtest
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
@@ -268,7 +269,9 @@ def test_chromatic_gaussian():
     za = np.linspace(0, np.pi / 2., Npix)
 
     # Error if trying to define chromatic beam without a reference frequency
-    nt.assert_raises(ValueError, pyuvsim.AnalyticBeam, 'gaussian', sigma=sigma, spectral_index=alpha)
+
+    simtest.assert_raises_message(ValueError, 'ref_freq must be set for nonzero gaussian beam spectral index',
+                                  pyuvsim.AnalyticBeam, 'gaussian', sigma=sigma, spectral_index=alpha)
     A = pyuvsim.AnalyticBeam('gaussian', sigma=sigma, ref_freq=freqs[0], spectral_index=alpha)
 
     # Get the widths at each frequency.
@@ -319,15 +322,15 @@ def test_beamerrs():
     """
     Error cases.
     """
-    nt.assert_raises(ValueError, pyuvsim.AnalyticBeam, 'unsupported_type')
+    simtest.assert_raises_message(ValueError, 'type not recognized', pyuvsim.AnalyticBeam, 'unsupported_type')
     beam = pyuvsim.AnalyticBeam('gaussian')
     az, za = np.random.uniform(0.0, np.pi, (2, 5))
     freq_arr = np.linspace(1e8, 1.5e8, 10)
-    nt.assert_raises(ValueError, beam.interp, az, za, freq_arr)
+    simtest.assert_raises_message(ValueError, 'Dish diameter needed for gaussian beam -- units: meters', beam.interp, az, za, freq_arr)
     beam.type = 'airy'
-    nt.assert_raises(ValueError, beam.interp, az, za, freq_arr)
-    beam.type = 'noninterpretable'
-    nt.assert_raises(ValueError, beam.interp, az, za, freq_arr)
+    simtest.assert_raises_message(ValueError, 'Dish diameter needed for airy beam -- units: meters', beam.interp, az, za, freq_arr)
+    beam.type = 'noninterpolable'
+    simtest.assert_raises_message(ValueError, 'no interp for this type: noninterpolable', beam.interp, az, za, freq_arr)
 
 
 def test_diameter_to_sigma():

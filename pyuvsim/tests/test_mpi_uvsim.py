@@ -44,7 +44,7 @@ def test_run_uvsim():
 
     beam_list = [beamfile]
     mock_keywords = {"Nsrcs": 3}
-    nt.assert_raises(TypeError, pyuvsim.run_uvdata_uvsim, 'not_uvdata', beam_list)
+    simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', pyuvsim.run_uvdata_uvsim, 'not_uvdata', beam_list)
     mpi.start_mpi()
     catalog, mock_kwds = pyuvsim.simsetup.create_mock_catalog(hera_uv.time_array[0], **mock_keywords)
     uv_out = pyuvsim.run_uvdata_uvsim(hera_uv, beam_list, catalog=catalog, source_list_name='mock', obs_param_file='', telescope_config_file='', antenna_location_file='')
@@ -58,8 +58,7 @@ def test_run_param_uvsim():
     # Test vot and txt catalogs for parameter simulation
 
     uv_ref = UVData()
-    uvtest.checkWarnings(uv_ref.read_uvfits, [os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits')],
-                         nwarnings=1, message='antenna_diameters is not set')
+    uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
     uv_ref.unphase_to_drift(use_ant_pos=True)
 
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
@@ -71,8 +70,8 @@ def test_run_param_uvsim():
     # This test obsparam file has "single_source.txt" as its catalog.
 
     uvtest.checkWarnings(pyuvsim.uvsim.run_uvsim, [param_filename], nwarnings=1,
-                         message=['The default for the `center` keyword has changed'],
-                         category=DeprecationWarning)
+                         message=['The default for the `center` keyword'],
+                         category=[DeprecationWarning])
     uv_new_txt = UVData()
     uvtest.checkWarnings(uv_new_txt.read_uvfits, [tempfilename], message='antenna_diameters is not set')
     uv_new_txt.unphase_to_drift(use_ant_pos=True)
@@ -88,12 +87,13 @@ def test_run_param_uvsim():
                                    + [DeprecationWarning]))
 
     uv_new_vot = UVData()
-    uvtest.checkWarnings(uv_new_vot.read_uvfits, [tempfilename], message='antenna_diameters is not set')
+    uvtest.checkWarnings(uv_new_vot.read_uvfits, [tempfilename], nwarnings=1, category=[UserWarning], message=['antenna_diameters is not set'])
     uv_new_vot.unphase_to_drift(use_ant_pos=True)
     os.remove(tempfilename)
     uv_new_txt.history = uv_ref.history  # History includes irrelevant info for comparison
     uv_new_vot.history = uv_ref.history
     uv_new_txt.object_name = uv_ref.object_name
+    uv_new_vot.object_name = uv_ref.object_name
     nt.assert_equal(uv_new_txt, uv_ref)
     nt.assert_equal(uv_new_vot, uv_ref)
 

@@ -92,8 +92,8 @@ def test_za_az_to_altaz():
 
 
 def test_altaz_za_az_errors():
-    nt.assert_raises(ValueError, simutils.altaz_to_zenithangle_azimuth, 0, [0, np.pi / 2])
-    nt.assert_raises(ValueError, simutils.zenithangle_azimuth_to_altaz, 0, [0, np.pi / 2])
+    simtest.assert_raises_message(ValueError, 'number of altitude and azimuth values must match.', simutils.altaz_to_zenithangle_azimuth, 0, [0, np.pi / 2])
+    simtest.assert_raises_message(ValueError, 'number of zenith_angle and azimuth values must match.', simutils.zenithangle_azimuth_to_altaz, 0, [0, np.pi / 2])
 
 
 def test_file_namer():
@@ -144,7 +144,8 @@ def test_write_uvdata():
     nt.assert_equal(ofname + '.uvfits', expected_ofname)
     expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='miriad')
     nt.assert_equal(ofname, expected_ofname)
-    nt.assert_raises(ValueError, simutils.write_uvdata, uv, filing_dict, return_filename=True, out_format='')
+    simtest.assert_raises_message(ValueError, 'Invalid output format. Options are " uvfits", "uvh5", or "miriad"',
+                                  simutils.write_uvdata, uv, filing_dict, return_filename=True, out_format='')
     try:
         import h5py     # noqa
         filing_dict['output_format'] = 'uvh5'

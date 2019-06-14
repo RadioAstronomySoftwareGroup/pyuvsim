@@ -502,14 +502,14 @@ def test_uvdata_init_errors():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
 
-    nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 1.0)
-    nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str')
-    nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file=1.0)
-    nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', telescope_config_file=1.0)
-    nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', antenna_location_file=1.0)
-    nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string')
-    nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string', telescope_config_file='string')
-    nt.assert_raises(ValueError, pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string', telescope_config_file=1.0)
+    simtest.assert_raises_message(ValueError, "source_list_name must be a string", pyuvsim.init_uvdata_out, hera_uv, 1.0)
+    simtest.assert_raises_message(ValueError, "obs_param_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str')
+    simtest.assert_raises_message(ValueError, "obs_param_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file=1.0)
+    simtest.assert_raises_message(ValueError, "obs_param_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', telescope_config_file=1.0)
+    simtest.assert_raises_message(ValueError, "obs_param_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', antenna_location_file=1.0)
+    simtest.assert_raises_message(ValueError, "telescope_config_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string')
+    simtest.assert_raises_message(ValueError, "antenna_location_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string', telescope_config_file='string')
+    simtest.assert_raises_message(ValueError, "telescope_config_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string', telescope_config_file=1.0)
 
 
 def test_gather():
@@ -574,9 +574,9 @@ def test_local_task_gen():
 
     # Check error conditions
     uv_iter0 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), 'not_uvdata', sources, beam_list, beam_dict)
-    nt.assert_raises(TypeError, next, uv_iter0)
+    simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', next, uv_iter0)
     uv_iter1 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, 'not_ndarray', beam_list, beam_dict)
-    nt.assert_raises(TypeError, next, uv_iter1)
+    simtest.assert_raises_message(TypeError, 'sources must be a numpy array', next, uv_iter1)
 
     engine0 = pyuvsim.UVEngine(reuse_spline=False)
     for tki, task0 in enumerate(uvtask_iter):
@@ -584,3 +584,14 @@ def test_local_task_gen():
         engine1 = pyuvsim.UVEngine(task1, reuse_spline=True)
         engine0.set_task(task0)
         nt.assert_true(np.allclose(engine1.make_visibility(), engine0.make_visibility()))
+
+
+def test_pol_error():
+    # Check that running with a uvdata object without the proper polarizations will fail.
+
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_file)
+
+    hera_uv.select(polarizations=['xx'])
+
+    simtest.assert_raises_message(ValueError, 'input_uv must have XX,YY,XY,YX polarization', pyuvsim.run_uvdata_uvsim, hera_uv, ['beamlist'])

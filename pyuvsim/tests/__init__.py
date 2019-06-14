@@ -7,6 +7,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import os
 import shutil
+import nose.tools as nt
 
 from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
@@ -63,3 +64,21 @@ def make_cst_beams(freqs=None):
                        model_version='1.0')
 
     return beam
+
+
+def assert_raises_message(exception_type, message, func, *args, **kwargs):
+    """
+    Check that the correct error message is raised.
+    """
+    nocatch = kwargs.pop('nocatch', False)
+    if nocatch:
+        func(*args, **kwargs)
+
+    with nt.assert_raises(exception_type) as err:
+        func(*args, **kwargs)
+
+    try:
+        nt.assert_true(message in err.exception.args[0])
+    except AssertionError as excp:
+        print("{} != {}".format(message, err.exception.args[0]))
+        raise excp
