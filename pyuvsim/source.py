@@ -361,9 +361,9 @@ def read_hdf5(hdf5_filename, freq_ind):
         freq_ind: index of the frequency, for which you want to get the healpix map
     """
     f = h5py.File(hdf5_filename)
-    hpmap = f['data'][0,:,freq_ind]
+    hpmap = f['data'][0, :, freq_ind]
     indices = f['indices'][()]
-    freqs = f['freqs'][freq_ind]*np.ones(len(inds),)
+    freqs = f['freqs'][freq_ind]*np.ones(len(inds),)  
     return hpmap, inds, freqs
 
 
@@ -378,9 +378,9 @@ def healpix_to_sky(hpmap, indices, freqs):
         freqs: frequencies from a hdf5 file
     """
     Nside = hp.npix2nside(hpmap.size)
-    dec, ra = hp.pix2ang(Nside, indices, lonlat=True)
-    dec = Angle(dec, unit=astropy.units.deg)
-    ra = Angle(ra, unit=astropy.units.deg)
+    dec, ra = hp.pix2ang(Nside, indices, lonlat = True)
+    dec = Angle(dec, unit = astropy.units.deg)
+    ra = Angle(ra, unit = astropy.units.deg)
     freq = freqs*astropy.units.hertz
     stokes = np.zeros((4, len(indices)))
     stokes[0] = hpmap
