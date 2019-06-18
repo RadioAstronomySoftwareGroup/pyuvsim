@@ -249,7 +249,7 @@ class SkyModel(object):
 def read_hdf5(hdf5_filename, freq_ind):
     """
     Read hdf5 files using h5py and get a healpix map, indices and frequencies
-    
+
     Args:
         hdf5_filename: path and name of the hdf5 file to read
         freq_ind: index of the frequency, for which you want to get the healpix map
@@ -257,7 +257,7 @@ def read_hdf5(hdf5_filename, freq_ind):
     f = h5py.File(hdf5_filename)
     hpmap = f['data'][0, :, freq_ind]
     indices = f['indices'][()]
-    freqs = f['freqs'][freq_ind]*np.ones(len(inds),)  
+    freqs = f['freqs'][freq_ind] * np.ones(len(inds),)
     return hpmap, inds, freqs
 
 
@@ -265,17 +265,17 @@ def healpix_to_sky(hpmap, indices, freqs):
     """
     Convert a healpix map to a set of point source components at given ICRS ra/dec coordinates, with a
     flux densities defined by stokes parameters.
-    
+
     Args:
         hpmap: healpix map that you get from reading hdf5 file
         indices: indices from a hdf5 file
         freqs: frequencies from a hdf5 file
     """
     Nside = hp.npix2nside(hpmap.size)
-    dec, ra = hp.pix2ang(Nside, indices, lonlat = True)
-    dec = Angle(dec, unit = astropy.units.deg)
-    ra = Angle(ra, unit = astropy.units.deg)
-    freq = freqs*astropy.units.hertz
+    dec, ra = hp.pix2ang(Nside, indices, lonlat=True)
+    dec = Angle(dec, unit=astropy.units.deg)
+    ra = Angle(ra, unit=astropy.units.deg)
+    freq = freqs * astropy.units.hertz
     stokes = np.zeros((4, len(indices)))
     stokes[0] = hpmap
     sky = SkyModel(inds.astype('str'), ra, dec, freq, stokes)
