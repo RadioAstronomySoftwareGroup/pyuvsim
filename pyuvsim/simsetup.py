@@ -180,7 +180,7 @@ def source_cuts(catalog_table, input_uv=None, latitude_deg=None, horizon_buffer=
     if coarse_horizon_cut:
         circumpolar = tans >= 1      # These will have rise/set lst set to nan
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore', RuntimeWarning)
+            warnings.filterwarnings('ignore', message='invalid value encountered', category=RuntimeWarning)
             rise_lst = ra.rad - np.arccos((-1) * tans) - buff
             set_lst = ra.rad + np.arccos((-1) * tans) + buff
 
