@@ -62,7 +62,7 @@ class SkyModel(object):
             dec: astropy Angle object, shape (Ncomponents,)
                 source Dec in J2000 (or ICRS) coordinates
             stokes:
-                shape (Ncomponents,4)
+                shape (4, Ncomponents)
                 4 element vector giving the source [I, Q, U, V]
             freq: astropy quantity, shape (Ncomponents,)
                 reference frequencies of flux values
