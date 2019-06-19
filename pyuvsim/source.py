@@ -154,7 +154,8 @@ class SkyModel(object):
             # First need to calculate the sin & cos of the parallactic angle
             # See Meeus's astronomical algorithms eq 14.1
             # also see Astroplan.observer.parallactic_angle method
-            polarized_sources = np.where(~Ionly_mask)
+
+            polarized_sources = np.where(~Ionly_mask)[0]
             sinX = np.sin(self.hour_angle)
             cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(self.hour_angle)
 
