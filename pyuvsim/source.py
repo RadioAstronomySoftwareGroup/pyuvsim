@@ -157,14 +157,15 @@ class SkyModel(object):
             polarized_sources = np.where(~Ionly_mask)
             sinX = np.sin(self.hour_angle)
             cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(self.hour_angle)
-    
+
             rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]]).astype(float)       # (2, 2, Ncomponents)
             rotation_matrix = rotation_matrix[..., polarized_sources]
 
             rotation_matrix_T = np.swapaxes(rotation_matrix, 0, 1)
-            coherency_local[:,:,polarized_sources] = np.einsum('abx,bcx,cdx->adx', rotation_matrix_T,
-                                                                self.coherency_radec[:,:,polarized_sources],
-                                                                rotation_matrix)
+            coherency_local[:, :, polarized_sources] = np.einsum('abx,bcx,cdx->adx', rotation_matrix_T,
+                                                                 self.coherency_radec[:, :, polarized_sources],
+                                                                 rotation_matrix)
+
         # Zero coherency on sources below horizon.
         coherency_local[:, :, self.horizon_mask] *= 0.0
 
@@ -225,9 +226,13 @@ class SkyModel(object):
         self.horizon_mask = self.alt_az[0, :] < 0.0
 
     def __eq__(self, other):
+        time_check = (self.time is None and other.time is None)
+        if not time_check:
+            time_check = np.isclose(self.time, other.time)
         return (np.allclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)
                 and np.allclose(self.stokes, other.stokes)
                 and np.all(self.name == other.name)
+                and time_check
                 and np.all(self.freq == other.freq))
 
     def get_size(self):

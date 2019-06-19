@@ -676,7 +676,7 @@ def test_flux_cuts():
     minI_cut = 1.0
     maxI_cut = 2.3
 
-    cut_sourcelist = pyuvsim.simsetup.source_cuts(catalog_table, min_flux=minI_cut, max_flux=maxI_cut)
+    cut_sourcelist = pyuvsim.simsetup.source_cuts(catalog_table, input_uv=uv_in, min_flux=minI_cut, max_flux=maxI_cut)
     nt.assert_true(np.all(cut_sourcelist['flux_density_I'] > minI_cut))
     nt.assert_true(np.all(cut_sourcelist['flux_density_I'] < maxI_cut))
 
