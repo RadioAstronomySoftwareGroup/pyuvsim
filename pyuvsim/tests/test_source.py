@@ -5,14 +5,21 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+import healpy as hp
+import h5py
+import os
 from astropy import units
 from astropy.coordinates import SkyCoord, EarthLocation, Angle
 from astropy.time import Time
 
 import pyuvsim
 import pyuvsim.tests as simtest
+<<<<<<< HEAD
 import pyuvsim.utils as simutils
 
+=======
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+>>>>>>> 5b1f657... Added tests for healpix_to_sky and read_hdf5 functions
 
 def test_source_zenith_from_icrs():
     """Test single source position at zenith constructed using icrs."""
@@ -297,3 +304,36 @@ def test_polarized_source_smooth_visibilities():
         assert np.max(np.abs(real_derivative_diff)) < 1e-6
         imag_stokes = stokes_instr_local[pol_i, :].imag
         assert np.all(imag_stokes == 0)
+
+
+def test_read_hdf5():
+    Nside = 32
+    Npix = hp.nside2npix(Nside)
+    vec = hp.ang2vec(np.pi / 2, np.pi * 3 / 4)
+    ipix_disc = hp.query_disc(nside=32, vec=vec, radius=np.radians(10))
+    m = np.arange(Npix)
+    m[ipix_disc] = m.max()
+
+    indices = np.arange(Npix)
+
+    frequencies = 100000000*np.ones(len(indices))
+
+    hpmap, inds, freqs = pyuvsim.source.read_hdf5(os.path.join(SIM_DATA_PATH,'test_file.hdf5'), 0)
+
+    nt.assert_true(np.allclose(hpmap, m))
+    nt.assert_true(np.allclose(inds, indices))
+    nt.assert_true(np.allclose(freqs, frequencies))
+    
+    
+def test_healpix_to_sky():
+    Nside = 32
+    Npix = hp.nside2npix(Nside)
+    vec = hp.ang2vec(np.pi / 2, np.pi * 3 / 4)
+    ipix_disc = hp.query_disc(nside=32, vec=vec, radius=np.radians(10))
+    m = np.arange(Npix)
+    m[ipix_disc] = m.max()
+    
+    hpmap, inds, freqs = pyuvsim.source.read_hdf5(os.path.join(SIM_DATA_PATH,'test_file.hdf5'), 0)
+    sky = pyuvsim.source.healpix_to_sky(hpmap, inds, freqs)
+    
+    nt.assert_true(np.allclose(sky.stokes[0], m))
