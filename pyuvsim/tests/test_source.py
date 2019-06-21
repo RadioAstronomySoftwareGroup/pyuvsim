@@ -16,6 +16,7 @@ import pyuvsim
 import pyuvsim.tests as simtest
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
+
 def test_source_zenith_from_icrs():
     """Test single source position at zenith constructed using icrs."""
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
@@ -119,15 +120,15 @@ def test_read_hdf5():
 
     indices = np.arange(Npix)
 
-    frequencies = 100000000*np.ones(len(indices))
+    frequencies = 100000000 * np.ones(len(indices))
 
-    hpmap, inds, freqs = pyuvsim.source.read_hdf5(os.path.join(SIM_DATA_PATH,'test_file.hdf5'), 0)
+    hpmap, inds, freqs = pyuvsim.source.read_hdf5(os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
 
-    nt.assert_true(np.allclose(hpmap, m))
-    nt.assert_true(np.allclose(inds, indices))
-    nt.assert_true(np.allclose(freqs, frequencies))
-    
-    
+    assert np.allclose(hpmap, m)
+    assert np.allclose(inds, indices)
+    assert np.allclose(freqs, frequencies)
+
+
 def test_healpix_to_sky():
     Nside = 32
     Npix = hp.nside2npix(Nside)
@@ -135,8 +136,7 @@ def test_healpix_to_sky():
     ipix_disc = hp.query_disc(nside=32, vec=vec, radius=np.radians(10))
     m = np.arange(Npix)
     m[ipix_disc] = m.max()
-    
-    hpmap, inds, freqs = pyuvsim.source.read_hdf5(os.path.join(SIM_DATA_PATH,'test_file.hdf5'), 0)
+
+    hpmap, inds, freqs = pyuvsim.source.read_hdf5(os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
     sky = pyuvsim.source.healpix_to_sky(hpmap, inds, freqs)
-    
-    nt.assert_true(np.allclose(sky.stokes[0], m))
+    assert np.allclose(sky.stokes[0], m)
