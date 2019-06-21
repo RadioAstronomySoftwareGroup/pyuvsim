@@ -13,6 +13,7 @@ dependencies:
   - pip
   - psutil
   - line_profiler
+  - healpy
   - h5py
   - pyuvdata
   - pytest
