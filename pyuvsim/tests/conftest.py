@@ -28,12 +28,10 @@ def setup_and_teardown_package():
     except(urllib.error.URLError):
         iers.conf.auto_max_age = None
 
+    # yield to allow tests to run
     yield
 
     iers.conf.auto_max_age = 30
-
-    # yield to allow tests to run
-    yield
 
     # clean up the test directory after
     if os.path.exists(testdir):
