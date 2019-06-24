@@ -8,6 +8,8 @@ from __future__ import absolute_import, division, print_function
 import os
 import pytest
 import shutil
+import six.moves.urllib as urllib
+from astropy.utils import iers
 from pyuvsim.data import DATA_PATH
 
 
@@ -18,6 +20,17 @@ def setup_and_teardown_package():
     if not os.path.exists(testdir):
         print('making test directory')
         os.mkdir(testdir)
+
+    # try to download the iers table. If it fails, turn off auto downloading for the tests
+    # and turn it back on in teardown_package (done by extending auto_max_age)
+    try:
+        iers_a = iers.IERS_A.open(iers.IERS_A_URL)
+    except(urllib.error.URLError):
+        iers.conf.auto_max_age = None
+
+    yield
+
+    iers.conf.auto_max_age = 30
 
     # yield to allow tests to run
     yield
