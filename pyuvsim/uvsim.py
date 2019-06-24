@@ -492,7 +492,7 @@ def run_uvsim(params, return_uv=False):
 
     mpi.start_mpi()
     rank = mpi.get_rank()
-    comm, _, _ = mpi.get_comm()  # only need world_comm
+    comm = mpi.get_comm()
 
     input_uv = UVData()
     beam_list = None

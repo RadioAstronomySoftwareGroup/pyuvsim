@@ -617,7 +617,7 @@ def test_task_coverage():
 
         # List of pairs -- (bl/t/f index, source index)
         srci, bltfi = map(np.ndarray.flatten, np.meshgrid(np.arange(Nsrcs), np.arange(Nbltf)))
-        #bltfi, srci = map(np.ndarray.flatten, np.meshgrid(np.arange(Nbltf), np.arange(Nsrcs)))
+
         tasks_expected = np.column_stack((bltfi, srci))
         tasks_all = []
         for rank in range(Npus):

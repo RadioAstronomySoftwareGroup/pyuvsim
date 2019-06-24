@@ -222,7 +222,7 @@ def check_param_reader(config_num):
 def test_param_reader():
     """
     Tests initialize_uvdata_from_params for a parameter file.
-        The separate tests test_freq_parser and test_time_parser check the different valid configurations of 
+        The separate tests test_freq_parser and test_time_parser check the different valid configurations of
         parameters. This test looks at the task of reading parameters from file.
     """
     for n in [0]:
