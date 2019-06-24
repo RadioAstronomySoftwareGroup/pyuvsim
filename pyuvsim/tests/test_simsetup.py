@@ -373,13 +373,25 @@ def test_time_parser():
                                   pyuvsim.parse_time_params, subdict)
 
 
-def test_freq_time_params():
 
-    time_dict = pyuvsim.simsetup.time_array_to_params([1.0])
-    nt.assert_true(time_dict['integration_time'] == 1.0)
+def test_single_input_time():
+    time_dict = pyuvsim.simsetup.time_array_to_arams([1.0])
+    assert time_dict['integration_time'] == 1.0
 
+
+@pytest.fixture(scope='module')
+def times_and_freqs():
     freqs = np.linspace(100, 200, 1024)
     times = np.linspace(2458570, 2458570 + 0.5, 239)
+    # yield the time and frequency arrays to the tests
+    # then delete after
+    yield times, freqs
+
+    del(times, freqs)
+
+
+def test_freq_time_params_match(times_and_freqs):
+    times, freqs = times_and_freqs
     time_dict = pyuvsim.simsetup.time_array_to_params(times)
     freq_dict = pyuvsim.simsetup.freq_array_to_params(freqs)
     ftest = pyuvsim.simsetup.parse_frequency_params(freq_dict)
@@ -387,22 +399,32 @@ def test_freq_time_params():
     assert np.allclose(ftest['freq_array'], freqs)
     assert np.allclose(ttest['time_array'], times)
 
-    # Check that this works for unevenly-spaced times
 
+def test_uneven_time_array_to_params(times_and_freqs):
+    times, freqs = times_and_freqs
+    # Check that this works for unevenly-spaced times
     times = np.random.choice(times, 150, replace=False)
     times.sort()
     time_dict = pyuvsim.simsetup.time_array_to_params(times)
     ttest = pyuvsim.simsetup.parse_time_params(time_dict)
     assert np.allclose(ttest['time_array'], times)
 
+
+def test_single_time_array_to_params(times_and_freqs):
+    times, freqs = times_and_freqs
     # check Ntimes = 1 and Nfreqs = 1 case
     times = np.linspace(2458570, 2458570.5, 1)
     tdict = pyuvsim.simsetup.time_array_to_params(times)
     assert tdict['Ntimes'] == 1
+    assert tdict['start_time'] == times
 
+
+def test_single_freq_array_to_params(times_and_freqs):
+    times, freqs = times_and_freqs
     freqs = np.linspace(100, 200, 1)
     fdict = pyuvsim.simsetup.freq_array_to_params(freqs)
     assert fdict['Nfreqs'] == 1
+    assert fdict['start_freq'] == freqs
 
 
 def test_param_select_cross():
