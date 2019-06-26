@@ -482,14 +482,17 @@ def test_param_select_redundant():
 
 
 def check_uvdata_keyword_init(case):
-    base_kwargs = dict(array_layout=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
-                       telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
-                       telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
-                       integration_time=100.0, start_time=2458101.0, polarizations=['xx'], no_autos=True, write_files=False, run_check=True)
+    base_kwargs = dict(
+        array_layout=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
+        telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
+        telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
+        integration_time=100.0, start_time=2458101.0, polarization_array=['xx'],
+        no_autos=True, write_files=False, run_check=True
+    )
 
     if case == 0:
         # check it runs through
-        uvd, _, _ = pyuvsim.simsetup.initialize_uvdata_from_keywords(**base_kwargs)
+        uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**base_kwargs)
         nt.assert_true(np.allclose(base_kwargs['telescope_location'], uvd.telescope_location_lat_lon_alt_degrees))
         nt.assert_true(np.allclose(base_kwargs['integration_time'], uvd.integration_time))
         nt.assert_equal(base_kwargs['telescope_name'], uvd.telescope_name)
@@ -497,7 +500,7 @@ def check_uvdata_keyword_init(case):
         nt.assert_equal(base_kwargs['start_time'], uvd.time_array[0])
         nt.assert_equal(base_kwargs['Ntimes'], uvd.Ntimes)
         nt.assert_equal(base_kwargs['Nfreqs'], uvd.Nfreqs)
-        nt.assert_equal(base_kwargs['polarizations'], uvd.get_pols())
+        nt.assert_equal(base_kwargs['polarization_array'], uvd.get_pols())
         nt.assert_false(np.any(uvd.ant_1_array == uvd.ant_2_array))
 
     elif case == 1:
@@ -505,7 +508,7 @@ def check_uvdata_keyword_init(case):
         bls = [(1, 0), (2, 0), (3, 0)]
         new_kwargs = copy.deepcopy(base_kwargs)
         new_kwargs['bls'] = bls
-        uvd, _, _ = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
+        uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
         antpairs = uvd.get_antpairs()
         nt.assert_equal(antpairs, bls)
 
@@ -514,13 +517,13 @@ def check_uvdata_keyword_init(case):
         # Note -- Currently, pyuvdata's selection does not intersect antenna_nums with bls, but joins them.
         # If/when that is changed, this test should also include the bls selection keyword above.
         new_kwargs = copy.deepcopy(base_kwargs)
-        new_kwargs['polarizations'] = ['xx', 'yy']
+        new_kwargs['polarization_array'] = ['xx', 'yy']
         new_kwargs['no_autos'] = False
         new_kwargs['antenna_nums'] = '1'
-        uvd, _, _ = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
+        uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
 
         nt.assert_equal(uvd.Nbls, 1)
-        nt.assert_equal(uvd.get_pols(), new_kwargs['polarizations'])
+        nt.assert_equal(uvd.get_pols(), new_kwargs['polarization_array'])
     elif case == 3:
         # check time and freq array definitions supersede other parameters
         fa = np.linspace(100, 200, 11) * 1e6
@@ -528,13 +531,13 @@ def check_uvdata_keyword_init(case):
         new_kwargs = copy.deepcopy(base_kwargs)
         new_kwargs['freq_array'] = fa
         new_kwargs['time_array'] = ta
-        uvd, _, _ = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
+        uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
 
         nt.assert_true(np.allclose(uvd.time_array[::uvd.Nbls], ta))
         nt.assert_true(np.allclose(uvd.freq_array[0], fa))
     elif case == 4:
         # test feeding array layout as dictionary
-        uvd, _, _ = pyuvsim.simsetup.initialize_uvdata_from_keywords(**base_kwargs)
+        uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**base_kwargs)
         antpos, ants = uvd.get_ENU_antpos()
         antpos_d = dict(zip(ants, antpos))
         layout_fname = 'temp_layout.csv'
@@ -546,7 +549,7 @@ def check_uvdata_keyword_init(case):
         new_kwargs['array_layout'] = antpos_d
         new_kwargs['path_out'] = '.'
         new_kwargs['write_files'] = True
-        uvd, _, _ = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
+        uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
 
         nt.assert_true(os.path.exists(layout_fname))
         nt.assert_true(os.path.exists(obsparam_fname))
@@ -801,11 +804,13 @@ def test_keyword_param_loop():
     antpos_enu = np.ones(30).reshape((10, 3))
     antnums = np.arange(10)
     antpos_d = dict(zip(antnums, antpos_enu))
-    uvd, _, _ = pyuvsim.simsetup.initialize_uvdata_from_keywords(array_layout=antpos_d,
-                                                                 telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
-                                                                 telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
-                                                                 integration_time=100.0, start_time=2458101.0, polarizations=[-5], no_autos=True,
-                                                                 path_out=path_out, antenna_layout_filename=layout_fname, yaml_filename=obsparam_fname)
+    uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(
+        array_layout=antpos_d,
+        telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
+        telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
+        integration_time=100.0, start_time=2458101.0, no_autos=True,
+        path_out=path_out, antenna_layout_filename=layout_fname, yaml_filename=obsparam_fname
+    )
 
     uv2, _, _ = pyuvsim.simsetup.initialize_uvdata_from_params(os.path.join(path_out, obsparam_fname))
 

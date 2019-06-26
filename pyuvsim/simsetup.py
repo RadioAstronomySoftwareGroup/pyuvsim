@@ -1006,8 +1006,13 @@ def initialize_uvdata_from_params(obs_params):
     time_dict = param_dict['time']
     uvparam_dict.update(parse_time_params(time_dict))
 
+    # There does not seem to be any way to get polarization_array into uvparam_dict, so
+    # let's add it explicitly.
+    if "polarization_array" in param_dict:
+        uvparam_dict['polarization_array'] = param_dict['polarization_array']
+
     # Parse polarizations
-    if 'polarization_array' not in uvparam_dict:
+    if uvparam_dict.get('polarization_array', None) is None:
         uvparam_dict['polarization_array'] = np.array([-5, -6, -7, -8])
     if 'Npols' not in uvparam_dict:
         uvparam_dict['Npols'] = len(uvparam_dict['polarization_array'])
@@ -1088,7 +1093,7 @@ def initialize_uvdata_from_keywords(
         telescope_location=None, telescope_name=None, Nfreqs=None, start_freq=None,
         bandwidth=None, freq_array=None, channel_width=None, Ntimes=None,
         integration_time=None, start_time=None, time_array=None, bls=None,
-        antenna_nums=None, antenna_names=None, polarizations=None, no_autos=False,
+        antenna_nums=None, antenna_names=None, polarization_array=None, no_autos=False,
         redundant_threshold=None, write_files=True, path_out=None, complete=False,
         **kwargs):
     """
@@ -1136,8 +1141,8 @@ def initialize_uvdata_from_keywords(
         Redundant baseline selection tolerance for selection [meters]
     antenna_nums : list
         List of antenna numbers to keep in array
-    polarizations : list
-        List of polarization strings to insert into object
+    polarization_array : list
+        List of polarization strings (or ints) to insert into object
     no_autos : bool
         If True, eliminate all auto correlations
     write_files : bool
@@ -1180,8 +1185,7 @@ def initialize_uvdata_from_keywords(
     time_params = {'Ntimes': Ntimes, 'start_time': start_time,
                    'integration_time': integration_time, 'time_array': time_array}
     selection_params = {'bls': bls, 'redundant_threshold': redundant_threshold,
-                        'antenna_nums': antenna_nums, 'polarizations': polarizations,
-                        'no_autos': no_autos}
+                        'antenna_nums': antenna_nums,'no_autos': no_autos}
     tele_params = {'telescope_location': repr(telescope_location),
                    'telescope_name': telescope_name}
     layout_params = {'antenna_names': antenna_names, 'antenna_numbers': antenna_numbers,
@@ -1199,13 +1203,22 @@ def initialize_uvdata_from_keywords(
 
     extra_kwds = {k: v for k, v in six.iteritems(kwargs) if k in valid_param_names}
 
+    # Strangely enough, the initialize_uvdata_from_params doesn't set the polarizations.
+    # This is probably because they were previously hardcoded into the complete_uvdata
+    # function. However, it doesn't really make sense to put them there, so we put
+    # them here.
+    if polarization_array is not None:
+        if type(polarization_array[0]) is not int:
+            polarization_array = np.array(uvutils.polstr2num(polarization_array))
+
     param_dict = {
         'time': time_params,
         'freq': freq_params,
         'select': selection_params,
         'telescope': tele_params,
         'config_path': path_out,
-        'param_file': os.path.basename(yaml_filename)
+        'param_file': os.path.basename(yaml_filename),
+        'polarization_array': polarization_array
     }
 
     param_dict.update(**extra_kwds)
@@ -1216,7 +1229,7 @@ def initialize_uvdata_from_keywords(
             yaml.dump(param_dict, yfile, default_flow_style=False)
 
     param_dict['telescope'].update(layout_params)
-    uv_obj = initialize_uvdata_from_params(param_dict)
+    uv_obj, _, _ = initialize_uvdata_from_params(param_dict)
 
     if complete:
         complete_uvdata(uv_obj, inplace=True)
@@ -1367,7 +1380,6 @@ def complete_uvdata(uv_in, inplace=False):
     uv_obj.vis_units = 'Jy'
 
     uv_obj.instrument = uv_obj.telescope_name
-    uv_obj.polarization_array = np.array([-5, -6, -7, -8])
     uv_obj.set_lsts_from_time_array()
     uv_obj.spw_array = np.array([0])
     if uv_obj.Nfreqs == 1:
@@ -1389,8 +1401,6 @@ def complete_uvdata(uv_in, inplace=False):
 
     uv_obj.extra_keywords = {}
 
-    # TODO: this needs to be fixed in the original metadata setter
-    # uv_obj.telescope_location = list(uv_obj.telescope_location)
     uv_obj.check()
 
     return uv_obj
