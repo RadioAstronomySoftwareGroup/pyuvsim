@@ -1328,14 +1328,17 @@ def complete_uvdata(uv_in, inplace=False):
     """Fill out all required parameters of a :class:~`pyuvdata.UVData` object such that
     it passes the :func:~`pyuvdata.UVData.check()`.
 
-    Args:
-        uv_in: The input UVData object. Usually an incomplete object, containing only
-               metadata.
-        inplace: bool, whether to perform the filling on the passed object, or a copy.
+    Arguments
+    ---------
+    uv_in : :class:~`pyuvdata.UVData` instance
+        Usually an incomplete object, containing only metadata.
+    inplace : bool, optional
+        Whether to perform the filling on the passed object, or a copy.
 
-    Returns:
-        uv_out: A filled UVData object (if `inplace` is `True`, it is
-                the modified input)
+    Returns
+    -------
+    :class:~`pyuvdata.UVData` : filled/completed object (if `inplace` is `True`, it is
+        the modified input)
     """
     if not inplace:
         uv_obj = copy.deepcopy(uv_in)
