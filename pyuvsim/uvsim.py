@@ -304,37 +304,13 @@ def init_uvdata_out(uv_in, source_list_name,
 
     history += ' Npus = ' + str(mpi.Npus) + '.'
 
-    uv_obj = copy.deepcopy(uv_in)
+    uv_obj = simsetup.complete_uvdata(uv_in, inplace=False)
 
-    uv_obj.set_drift()
-    uv_obj.vis_units = 'Jy'
-    uv_obj.polarization_array = np.array([-5, -6, -7, -8])
-    uv_obj.instrument = uv_obj.telescope_name
-    uv_obj.set_lsts_from_time_array()
-    uv_obj.spw_array = np.array([0])
-    if uv_obj.Nfreqs == 1:
-        uv_obj.channel_width = 1.  # Hz
-    else:
-        uv_obj.channel_width = np.diff(uv_obj.freq_array[0])[0]
-    uv_obj.set_uvws_from_antenna_positions()
-    if uv_obj.Ntimes == 1:
-        uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
-    else:
-        # Note: currently only support a constant spacing of times
-        uv_obj.integration_time = (np.ones_like(uv_obj.time_array, dtype=np.float64)
-                                   * np.diff(np.unique(uv_obj.time_array))[0] * (24. * 60**2))  # Seconds
     # add pyuvdata version info
     history += uv_obj.pyuvdata_version_str
 
     # Clear existing data, if any
-    uv_obj.data_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=np.complex)
-    uv_obj.flag_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=bool)
-    uv_obj.nsample_array = np.ones_like(uv_obj.data_array, dtype=float)
     uv_obj.history = history
-
-    uv_obj.extra_keywords = {}
-    uv_obj.check()
-
     return uv_obj
 
 
