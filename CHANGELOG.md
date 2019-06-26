@@ -24,6 +24,7 @@
 - parameter dicts are not modified by functions using them.
 - unit tests check error messages raised.
 - Polarization selection is now allowed in setup. Will break if incorrect polarization is used in pyuvsim.
+- init_uvdata_out function is more modular.
 
 ### Deprecated
 - Coarse horizon cuts are no longer performed. Should be restored in a future version.

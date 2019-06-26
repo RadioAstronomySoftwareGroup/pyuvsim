@@ -1083,69 +1083,77 @@ def initialize_uvdata_from_params(obs_params):
     return uv_obj, beam_list, beam_dict
 
 
-def initialize_uvdata_from_keywords(yaml_filename=None, antenna_layout_filename=None, array_layout=None, telescope_location=None,
-                                    telescope_name=None, Nfreqs=None, start_freq=None, bandwidth=None, freq_array=None, channel_width=None,
-                                    Ntimes=None, integration_time=None, start_time=None, time_array=None,
-                                    bls=None, antenna_nums=None, antenna_names=None, polarizations=None, no_autos=False,
-                                    redundant_threshold=None, run_check=True, write_files=True, path_out=None, **kwargs):
+def initialize_uvdata_from_keywords(
+        yaml_filename=None, antenna_layout_filename=None, array_layout=None,
+        telescope_location=None, telescope_name=None, Nfreqs=None, start_freq=None,
+        bandwidth=None, freq_array=None, channel_width=None, Ntimes=None,
+        integration_time=None, start_time=None, time_array=None, bls=None,
+        antenna_nums=None, antenna_names=None, polarizations=None, no_autos=False,
+        redundant_threshold=None, write_files=True, path_out=None, complete=False,
+        **kwargs):
     """
     Setup a UVData object from keywords.
 
-    Args:
-        yaml_filename : str (optional)
-            Specify filename for yaml file to write out.
-            Defaults to obsparam.yaml
-        antenna_layout_filename : str (optional)
-            Path to csv file of antenna positions (see documentation for details).
-            Will not overwrite existing files.
-            Defaults to antenna_layout.csv
-        array_layout : dictionary (required if antenna_layout_filename not given)
-            dictionary, keys are integer antenna numbers, values are len-3 antenna positions
-            in ENU coordinates [meters].
-        antenna_names : list of str (optional)
-            If unset, antenna names are assigned as "%s" % antnum.
-        telescope_location : len-3 tuple
-            Telescope location on Earth in LatLonAlt coordinates [deg, deg, meters]
-        telescope_name : str
-            Name of telescope
-        Nfreqs : int
-            Number of frequency channels
-        start_freq : float
-            Starting frequency [Hz]
-        bandwidth : float
-            Total frequency bandwidth of spectral window [Hz]
-        channel_width: float
-            Frequency channel spacing [Hz]
-        freq_array : ndarray
-            frequency array [Hz], if this is specified, it supersedes Nfreqs, start_freq, bandwidth
-        Ntimes : int
-            Number of integration bins
-        integration_time : float
-            Width of time bins [seconds]
-        start_time : float
-            Time of the first integration bin [Julian Date]
-        time_array : ndarray
-            time array [Julian Date]. If this is specified it supersedes values of Ntimes, start_time and integration_time
-        bls : list
-            List of antenna-pair tuples for baseline selection
-        redundant_threshold: float
-            Redundant baseline selection tolerance for selection [meters]
-        antenna_nums : list
-            List of antenna numbers to keep in array
-        polarizations : list
-            List of polarization strings to insert into object
-        no_autos : bool
-            If True, eliminate all auto correlations
-        write_files : bool
-            If True, write out the parameter information to yaml files.
-        path_out : str (optional)
-            Path in which to place generated configuration files, if write_files is True.
-            Defaults to current directory.
-        kwargs : dictionary
-            Any additional valid UVData attribute to assign to object.
+    Parameters
+    ----------
+    yaml_filename : str (optional)
+        Specify filename for yaml file to write out.
+        Defaults to obsparam.yaml
+    antenna_layout_filename : str (optional)
+        Path to csv file of antenna positions (see documentation for details).
+        Will not overwrite existing files.
+        Defaults to antenna_layout.csv
+    array_layout : dictionary (required if antenna_layout_filename not given)
+        dictionary, keys are integer antenna numbers, values are len-3 antenna positions
+        in ENU coordinates [meters].
+    antenna_names : list of str (optional)
+        If unset, antenna names are assigned as "%s" % antnum.
+    telescope_location : len-3 tuple
+        Telescope location on Earth in LatLonAlt coordinates [deg, deg, meters]
+    telescope_name : str
+        Name of telescope
+    Nfreqs : int
+        Number of frequency channels
+    start_freq : float
+        Starting frequency [Hz]
+    bandwidth : float
+        Total frequency bandwidth of spectral window [Hz]
+    channel_width: float
+        Frequency channel spacing [Hz]
+    freq_array : ndarray
+        frequency array [Hz], if this is specified, it supersedes Nfreqs, start_freq, bandwidth
+    Ntimes : int
+        Number of integration bins
+    integration_time : float
+        Width of time bins [seconds]
+    start_time : float
+        Time of the first integration bin [Julian Date]
+    time_array : ndarray
+        time array [Julian Date]. If this is specified it supersedes values of Ntimes, start_time and integration_time
+    bls : list
+        List of antenna-pair tuples for baseline selection
+    redundant_threshold: float
+        Redundant baseline selection tolerance for selection [meters]
+    antenna_nums : list
+        List of antenna numbers to keep in array
+    polarizations : list
+        List of polarization strings to insert into object
+    no_autos : bool
+        If True, eliminate all auto correlations
+    write_files : bool
+        If True, write out the parameter information to yaml files.
+    path_out : str (optional)
+        Path in which to place generated configuration files, if write_files is True.
+        Defaults to current directory.
+    complete : bool (optional)
+        Whether to fill out the uvdata object with its requisite data arrays, and
+        check if it's all consistent.
+    kwargs : dictionary
+        Any additional valid UVData attribute to assign to object.
 
-    Returns:
-        UVData object with zeroed data_array
+    Returns
+    -------
+    UVData object with zeroed data_array
     """
 
     if path_out is None:
@@ -1167,11 +1175,17 @@ def initialize_uvdata_from_keywords(yaml_filename=None, antenna_layout_filename=
         if write_files:
             _write_layout_csv(antenna_layout_filename, antpos_enu, antenna_names, antenna_numbers)
 
-    freq_params = {'Nfreqs': Nfreqs, 'start_freq': start_freq, 'bandwidth': bandwidth, 'freq_array': freq_array, 'channel_width': channel_width}
-    time_params = {'Ntimes': Ntimes, 'start_time': start_time, 'integration_time': integration_time, 'time_array': time_array}
-    selection_params = {'bls': bls, 'redundant_threshold': redundant_threshold, 'antenna_nums': antenna_nums, 'polarizations': polarizations, 'no_autos': no_autos}
-    tele_params = {'telescope_location': repr(telescope_location), 'telescope_name': telescope_name}
-    layout_params = {'antenna_names': antenna_names, 'antenna_numbers': antenna_numbers, 'array_layout': array_layout}
+    freq_params = {'Nfreqs': Nfreqs, 'start_freq': start_freq, 'bandwidth': bandwidth,
+                   'freq_array': freq_array, 'channel_width': channel_width}
+    time_params = {'Ntimes': Ntimes, 'start_time': start_time,
+                   'integration_time': integration_time, 'time_array': time_array}
+    selection_params = {'bls': bls, 'redundant_threshold': redundant_threshold,
+                        'antenna_nums': antenna_nums, 'polarizations': polarizations,
+                        'no_autos': no_autos}
+    tele_params = {'telescope_location': repr(telescope_location),
+                   'telescope_name': telescope_name}
+    layout_params = {'antenna_names': antenna_names, 'antenna_numbers': antenna_numbers,
+                     'array_layout': array_layout}
 
     freq_params = {k: v for k, v in six.iteritems(freq_params) if v is not None}
     time_params = {k: v for k, v in six.iteritems(time_params) if v is not None}
@@ -1189,11 +1203,12 @@ def initialize_uvdata_from_keywords(yaml_filename=None, antenna_layout_filename=
         'time': time_params,
         'freq': freq_params,
         'select': selection_params,
-        'telescope': tele_params
+        'telescope': tele_params,
+        'config_path': path_out,
+        'param_file': os.path.basename(yaml_filename)
     }
 
-    param_dict['config_path'] = path_out
-    param_dict['obs_param_file'] = os.path.basename(yaml_filename)
+    param_dict.update(**extra_kwds)
 
     if write_files:
         tele_params['array_layout'] = antenna_layout_filename
@@ -1202,6 +1217,9 @@ def initialize_uvdata_from_keywords(yaml_filename=None, antenna_layout_filename=
 
     param_dict['telescope'].update(layout_params)
     uv_obj = initialize_uvdata_from_params(param_dict)
+
+    if complete:
+        complete_uvdata(uv_obj, inplace=True)
 
     return uv_obj
 
