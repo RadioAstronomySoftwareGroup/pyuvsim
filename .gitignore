@@ -112,3 +112,5 @@ docs/index.rst
 
 # exclude project specific files
 pyuvsim/GIT_INFO
+
+\.idea/

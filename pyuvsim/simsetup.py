@@ -1324,6 +1324,57 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
         yaml.dump(param_dict, yfile, default_flow_style=False)
 
 
+def complete_uvdata(uv_in, inplace=False):
+    """Fill out all required parameters of a :class:~`pyuvdata.UVData` object such that
+    it passes the :func:~`pyuvdata.UVData.check()`.
+
+    Args:
+        uv_in: The input UVData object. Usually an incomplete object, containing only
+               metadata.
+        inplace: bool, whether to perform the filling on the passed object, or a copy.
+
+    Returns:
+        uv_out: A filled UVData object (if `inplace` is `True`, it is
+                the modified input)
+    """
+    if not inplace:
+        uv_obj = copy.deepcopy(uv_in)
+    else:
+        uv_obj = uv_in
+
+    uv_obj.set_drift()
+    uv_obj.vis_units = 'Jy'
+
+    uv_obj.instrument = uv_obj.telescope_name
+    uv_obj.polarization_array = np.array([-5, -6, -7, -8])
+    uv_obj.set_lsts_from_time_array()
+    uv_obj.spw_array = np.array([0])
+    if uv_obj.Nfreqs == 1:
+        uv_obj.channel_width = 1.  # Hz
+    else:
+        uv_obj.channel_width = np.diff(uv_obj.freq_array[0])[0]
+    uv_obj.set_uvws_from_antenna_positions()
+    if uv_obj.Ntimes == 1:
+        uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
+    else:
+        # Note: currently only support a constant spacing of times
+        uv_obj.integration_time = (np.ones_like(uv_obj.time_array, dtype=np.float64)
+                                   * np.diff(np.unique(uv_obj.time_array))[0] * (24. * 60**2))  # Seconds
+
+    # Clear existing data, if any
+    uv_obj.data_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=np.complex)
+    uv_obj.flag_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=bool)
+    uv_obj.nsample_array = np.ones_like(uv_obj.data_array, dtype=float)
+
+    uv_obj.extra_keywords = {}
+
+    # TODO: this needs to be fixed in the original metadata setter
+    # uv_obj.telescope_location = list(uv_obj.telescope_location)
+    uv_obj.check()
+
+    return uv_obj
+
+
 def beam_string_to_object(beam_model):
     """
         Make a beam object given an identifying string.
