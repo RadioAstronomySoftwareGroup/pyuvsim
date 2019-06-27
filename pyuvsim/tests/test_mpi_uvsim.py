@@ -8,6 +8,8 @@ import os
 import numpy as np
 import yaml
 import nose.tools as nt
+import mpi4py
+mpi4py.rc.initialize = False    # noqa
 from mpi4py import MPI
 import astropy
 
@@ -37,7 +39,6 @@ def test_mpi_version():
 def test_run_uvsim():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
-
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beamfile = os.path.join(simtest.TESTDATA_PATH, "temp.uvbeam")
     beam.write_beamfits(beamfile)
@@ -46,7 +47,7 @@ def test_run_uvsim():
     mock_keywords = {"Nsrcs": 3}
     simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', pyuvsim.run_uvdata_uvsim, 'not_uvdata', beam_list)
     mpi.start_mpi()
-    catalog, mock_kwds = pyuvsim.simsetup.create_mock_catalog(hera_uv.time_array[0], **mock_keywords)
+    catalog, mock_kwds = pyuvsim.simsetup.create_mock_catalog(hera_uv.time_array[0], return_table=True, **mock_keywords)
     uv_out = pyuvsim.run_uvdata_uvsim(hera_uv, beam_list, catalog=catalog, source_list_name='mock', obs_param_file='', telescope_config_file='', antenna_location_file='')
     rank = mpi.get_rank()
     if rank == 0:
@@ -62,13 +63,12 @@ def test_run_param_uvsim():
     uv_ref.unphase_to_drift(use_ant_pos=True)
 
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
-
     with open(param_filename) as pfile:
         params_dict = yaml.safe_load(pfile)
 
     tempfilename = params_dict['filing']['outfile_name']
-    # This test obsparam file has "single_source.txt" as its catalog.
 
+    # This test obsparam file has "single_source.txt" as its catalog.
     uvtest.checkWarnings(pyuvsim.uvsim.run_uvsim, [param_filename], nwarnings=1,
                          message=['The default for the `center` keyword'],
                          category=[DeprecationWarning])
@@ -78,7 +78,6 @@ def test_run_param_uvsim():
     os.remove(tempfilename)
 
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
-
     uvtest.checkWarnings(pyuvsim.uvsim.run_uvsim, [param_filename],
                          nwarnings=11,
                          message=([SIM_DATA_PATH] * 10
@@ -93,7 +92,7 @@ def test_run_param_uvsim():
     uv_new_txt.history = uv_ref.history  # History includes irrelevant info for comparison
     uv_new_vot.history = uv_ref.history
     uv_new_txt.object_name = uv_ref.object_name
-    uv_new_vot.object_name = uv_ref.object_name
+    nt.assert_equal(uv_new_txt, uv_new_vot)
     nt.assert_equal(uv_new_txt, uv_ref)
     nt.assert_equal(uv_new_vot, uv_ref)
 
@@ -103,3 +102,34 @@ def test_mpi_funcs():
     nt.assert_true(mpi.get_rank() == 0)
     nt.assert_true(mpi.get_Npus() == 1)
     nt.assert_true(isinstance(mpi.get_comm(), MPI.Intracomm))
+    nt.assert_true(isinstance(mpi.get_node_comm(), MPI.Intracomm))
+
+
+def test_shared_mem():
+    mpi.start_mpi()
+    N = 200
+    shape = (20, 10)
+    A = np.arange(N, dtype=float).reshape(shape)
+
+    sA = mpi.shared_mem_bcast(A)
+
+    # Equivalent to original
+    nt.assert_true(np.all(sA == A))
+
+    # Not the original object:
+    nt.assert_true(hex(id(sA)) != hex(id(A)))
+
+    # Shared array should be read-only
+    nt.assert_raises(ValueError, sA.itemset, 0, 3.0)
+
+
+def test_mpi_counter():
+    # This test should be run in parallel to check likely bug sources.
+    mpi.start_mpi()
+
+    count = mpi.Counter()
+    N = 20
+    for i in range(N):
+        c = count.next()
+    nt.assert_equal(count.current_value(), N)
+    count.free()

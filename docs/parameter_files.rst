@@ -34,7 +34,7 @@ Passed into ``run_param_pyuvsim.py``
           1.0064e+08, 1.0072e+08]
       bandwidth: 800000.0
     sources:
-      catalog: 'mock'       #Choice of catalog file name (or specify mock to use builtin catalogs).
+      catalog: 'mock'       #Choice of catalog file name (or specify 'mock' to use a builtin catalog).
       mock_arrangement: 'zenith'    # Choosing a mock layout
     telescope:
       array_layout: 'triangle_bl_layout.csv'    # Antenna layout csv file

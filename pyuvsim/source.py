@@ -5,50 +5,77 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+import copy
+import sys
+
 from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
+from . import utils as simutils
 
-class Source(object):
+
+def _skymodel_basesize():
     """
-    Defines a single point source at a given ICRS ra/dec coordinate, with a
-    flux density defined by stokes parameters.
+    Estimate the memory footprint of a SkyModel with a single source.
+
+    Sum the sizes of the data types that go into SkyModel
+    """
+    attrs = ['',
+             Quantity(1.0, 'Hz'),
+             [0.0] * 4,
+             Angle(np.pi, 'rad'),
+             Angle(np.pi, 'rad'),
+             [1.5] * 4,
+             [0.3] * 2,
+             [0.0] * 3]
+    return np.sum([sys.getsizeof(a) for a in attrs])
+
+
+class SkyModel(object):
+    """
+    Defines a set of point source components at given ICRS ra/dec coordinates, with a
+    flux densities defined by stokes parameters.
 
     Used to calculate local coherency matrix for source brightness in AltAz
     frame at a specified time.
     """
-    name = None
-    freq = None
-    stokes = None
-    ra = None
-    dec = None
-    coherency_radec = None
-    alt_az = None
 
-    def __init__(self, name, ra, dec, freq, stokes, rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
+    Ncomponents = None      # Number of point source components represented here.
+
+    _basesize = _skymodel_basesize()
+
+    _Ncomp_attrs = ['ra', 'dec', 'coherency_radec', 'coherency_local',
+                    'stokes', 'alt_az', 'rise_lst', 'set_lst', 'freq',
+                    'pos_lmn', 'name', 'horizon_mask']
+    _scalar_attrs = ['Ncomponents', 'time', 'pos_tol']
+
+    _member_funcs = ['coherency_calc', 'update_positions']
+
+    def __init__(self, name, ra, dec, freq, stokes,
+                 rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
         """
-        Initialize from source catalog
-
         Args:
             name: Unique identifier for the source.
-            ra: astropy Angle object
+            ra: astropy Angle object, shape (Ncomponents,)
                 source RA in J2000 (or ICRS) coordinates
-            dec: astropy Angle object
+            dec: astropy Angle object, shape (Ncomponents,)
                 source Dec in J2000 (or ICRS) coordinates
             stokes:
+                shape (4, Ncomponents)
                 4 element vector giving the source [I, Q, U, V]
-            freq: astropy quantity
-                frequency of source catalog value
-            rise_lst: (float)
+            freq: astropy quantity, shape (Ncomponents,)
+                reference frequencies of flux values
+            rise_lst: (float), shape (Ncomponents,)
                 Approximate lst (radians) when the source rises. Set by coarse horizon cut in simsetup.
-                Default is None, meaning the source never rises.
-            set_lst: (float)
+                Default is nan, meaning the source never rises.
+            set_lst: (float), shape (Ncomponents,)
                 Approximate lst (radians) when the source sets.
                 Default is None, meaning the source never sets.
             pos_tol: float, defaults to minimum float in numpy
                 position tolerance in degrees
         """
+
         if not isinstance(ra, Angle):
             raise ValueError('ra must be an astropy Angle object. '
                              'value was: {ra}'.format(ra=ra))
@@ -61,26 +88,43 @@ class Source(object):
             raise ValueError('freq must be an astropy Quantity object. '
                              'value was: {f}'.format(f=freq))
 
-        self.name = name
-        self.freq = freq
-        self.stokes = stokes
-        self.ra = ra
-        self.dec = dec
-        self.pos_tol = pos_tol
-        self.time = None
-        self.rise_lst = rise_lst
-        self.set_lst = set_lst
+        self.Ncomponents = ra.size
 
-        self.skycoord = SkyCoord(self.ra, self.dec, frame='icrs')
+        self.name = np.atleast_1d(np.asarray(name))
+        self.freq = np.atleast_1d(freq)
+        self.stokes = np.asarray(stokes)
+        self.ra = np.atleast_1d(ra)
+        self.dec = np.atleast_1d(dec)
+        self.pos_tol = pos_tol
+
+        self.has_rise_set_lsts = False
+        if (rise_lst is not None) and (set_lst is not None):
+            self.rise_lst = np.asarray(rise_lst)
+            self.set_lst = np.asarray(set_lst)
+            self.has_rise_set_lsts = True
+
+        self.alt_az = np.zeros((2, self.Ncomponents), dtype=float)
+        self.pos_lmn = np.zeros((3, self.Ncomponents), dtype=float)
+
+        self.horizon_mask = np.zeros(self.Ncomponents).astype(bool)     # If true, source component is below horizon.
+
+        if self.Ncomponents == 1:
+            self.stokes = self.stokes.reshape(4, 1)
 
         # The coherency is a 2x2 matrix giving electric field correlation in Jy.
         # Multiply by .5 to ensure that Trace sums to I not 2*I
-        self.coherency_radec = .5 * np.array([[self.stokes[0] + self.stokes[1],
-                                               self.stokes[2] - 1j * self.stokes[3]],
-                                              [self.stokes[2] + 1j * self.stokes[3],
-                                               self.stokes[0] - self.stokes[1]]])
+        # Shape = (2,2,Ncomponents)
+        self.coherency_radec = .5 * np.array([[self.stokes[0, :] + self.stokes[1, :],
+                                               self.stokes[2, :] - 1j * self.stokes[3, :]],
+                                              [self.stokes[2, :] + 1j * self.stokes[3, :],
+                                               self.stokes[0, :] - self.stokes[1, :]]])
 
-    def coherency_calc(self, time, telescope_location):
+        self.time = None
+
+        assert np.all([self.Ncomponents == l for l in
+                       [self.ra.size, self.dec.size, self.freq.size, self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
+
+    def coherency_calc(self, telescope_location):
         """
         Calculate the local coherency in alt/az basis for this source at a time & location.
 
@@ -89,54 +133,60 @@ class Source(object):
         but must be rotated into local alt/az.
 
         Args:
-            time: astropy Time object
             telescope_location: astropy EarthLocation object
 
         Returns:
             local coherency in alt/az basis
         """
-        if not isinstance(time, Time):
-            raise ValueError('time must be an astropy Time object. '
-                             'value was: {t}'.format(t=time))
-
         if not isinstance(telescope_location, EarthLocation):
             raise ValueError('telescope_location must be an astropy EarthLocation object. '
                              'value was: {al}'.format(al=telescope_location))
 
-        if np.sum(np.abs(self.stokes[1:])) == 0:
-            rotation_matrix = np.array([[1, 0], [0, 1]])
-        else:
+        Ionly_mask = np.sum(self.stokes[1:, :], axis=0) == 0.0
+        NstokesI = np.sum(Ionly_mask)   # Number of unpolarized sources
+
+        # For unpolarized sources, there's no need to rotate the coherency matrix.
+        coherency_local = self.coherency_radec.copy()
+
+        if NstokesI < self.Ncomponents:
+            # If there are any polarized sources, do rotation.
+
             # First need to calculate the sin & cos of the parallactic angle
             # See Meeus's astronomical algorithms eq 14.1
             # also see Astroplan.observer.parallactic_angle method
-            time.location = telescope_location
-            lst = time.sidereal_time('apparent')
 
-            cirs_source_coord = self.skycoord.transform_to('cirs')
-            tee_ra = simutils.cirs_to_tee_ra(cirs_source_coord.ra, time)
+            polarized_sources = np.where(~Ionly_mask)[0]
+            sinX = np.sin(self.hour_angle)
+            cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(self.hour_angle)
 
-            hour_angle = (lst - tee_ra).rad
-            sinX = np.sin(hour_angle)
-            cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(hour_angle)
+            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]]).astype(float)       # (2, 2, Ncomponents)
+            rotation_matrix = rotation_matrix[..., polarized_sources]
 
-            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]])
+            rotation_matrix_T = np.swapaxes(rotation_matrix, 0, 1)
+            coherency_local[:, :, polarized_sources] = np.einsum('abx,bcx,cdx->adx', rotation_matrix_T,
+                                                                 self.coherency_radec[:, :, polarized_sources],
+                                                                 rotation_matrix)
 
-        coherency_local = np.einsum('ab,bc,cd->ad', rotation_matrix.T,
-                                    self.coherency_radec, rotation_matrix)
+        # Zero coherency on sources below horizon.
+        coherency_local[:, :, self.horizon_mask] *= 0.0
 
         return coherency_local
 
-    def alt_az_calc(self, time, telescope_location):
+    def update_positions(self, time, telescope_location):
         """
-        calculate the altitude & azimuth for this source at a time & location
+        Calculate the altitude/azimuth positions for these sources
+        From alt/az, calculate direction cosines (lmn)
 
         Args:
             time: astropy Time object
             telescope_location: astropy EarthLocation object
 
-        Returns:
-            (altitude, azimuth) in radians
+        Sets:
+            self.pos_lmn: (3, Ncomponents)
+            self.alt_az: (2, Ncomponents)
+            self.time: (1,) Time object
         """
+
         if not isinstance(time, Time):
             raise ValueError('time must be an astropy Time object. '
                              'value was: {t}'.format(t=time))
@@ -145,48 +195,49 @@ class Source(object):
             raise ValueError('telescope_location must be an astropy EarthLocation object. '
                              'value was: {al}'.format(al=telescope_location))
 
-        source_altaz = self.skycoord.transform_to(AltAz(obstime=time, location=telescope_location))
+        if self.time == time:  # Don't repeat calculations
+            return
 
-        alt_az = (source_altaz.alt.rad, source_altaz.az.rad)
+        skycoord_use = SkyCoord(self.ra, self.dec, frame='icrs')
+        source_altaz = skycoord_use.transform_to(AltAz(obstime=time, location=telescope_location))
+
+        time.location = telescope_location
+        lst = time.sidereal_time('apparent')
+
+        cirs_source_coord = skycoord_use.transform_to('cirs')
+        tee_ra = simutils.cirs_to_tee_ra(cirs_source_coord.ra, time)
+
+        self.hour_angle = None
+        self.hour_angle = (lst - tee_ra).rad
+
         self.time = time
+        alt_az = np.array([source_altaz.alt.rad, source_altaz.az.rad])
+
         self.alt_az = alt_az
-        return alt_az
 
-    def get_alt_az(self, time, telescope_location):
-        """ Reuse alt_az if already calculated """
-        if (self.alt_az is None) or (not time == self.time):
-            return self.alt_az_calc(time, telescope_location)
-        else:
-            return self.alt_az
+        pos_l = np.sin(alt_az[1, :]) * np.cos(alt_az[0, :])
+        pos_m = np.cos(alt_az[1, :]) * np.cos(alt_az[0, :])
+        pos_n = np.sin(alt_az[0, :])
 
-    def pos_lmn(self, time, telescope_location):
-        """
-        calculate the direction cosines of this source at a time & location
+        self.pos_lmn[0, :] = pos_l
+        self.pos_lmn[1, :] = pos_m
+        self.pos_lmn[2, :] = pos_n
 
-        Args:
-            time: astropy Time object
-            telescope_location: astropy EarthLocation object
-
-        Returns:
-            (l, m, n) direction cosine values
-        """
-        # calculate direction cosines of source at current time and array location
-        # Will only do the calculation if time has changed
-        alt_az = self.get_alt_az(time, telescope_location)
-
-        # Horizon Mask
-        if alt_az[0] < 0:
-            return None
-
-        pos_l = np.sin(alt_az[1]) * np.cos(alt_az[0])
-        pos_m = np.cos(alt_az[1]) * np.cos(alt_az[0])
-        pos_n = np.sin(alt_az[0])
-
-        return (pos_l, pos_m, pos_n)
+        # Horizon mask:
+        self.horizon_mask = self.alt_az[0, :] < 0.0
 
     def __eq__(self, other):
-        return (np.isclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)
-                and np.isclose(self.dec.deg, other.dec.deg, atol=self.pos_tol)
-                and np.all(self.stokes == other.stokes)
-                and (self.name == other.name)
-                and (self.freq == other.freq))
+        time_check = (self.time is None and other.time is None)
+        if not time_check:
+            time_check = np.isclose(self.time, other.time)
+        return (np.allclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)
+                and np.allclose(self.stokes, other.stokes)
+                and np.all(self.name == other.name)
+                and time_check
+                and np.all(self.freq == other.freq))
+
+    def get_size(self):
+        """
+        Estimate the SkyModel memory footprint in bytes
+        """
+        return self.Ncomponents * self._basesize

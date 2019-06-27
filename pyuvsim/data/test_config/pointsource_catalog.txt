@@ -1,4 +1,4 @@
 Source_ID   RA_J2000    Dec_J2000   Flux_Density_I_Jy  Frequency
-src1        01.00       -30.00      5.0                1e6
-src2        01.30       -31.00      5.0                1e6
+src1        01.00       -30.00      0.5                1e6
+src2        01.30       -31.00      2.0                1e6
 src3        01.35       -32.00      5.0                1e6

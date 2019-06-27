@@ -8,6 +8,7 @@ import os
 import numpy as np
 import nose.tools as nt
 import copy
+import itertools
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy import units
@@ -33,6 +34,12 @@ longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfit
 
 def test_visibility_single_zenith_source():
     """Test single zenith source."""
+
+    beam0 = simtest.make_cst_beams()
+    beam1 = pyuvsim.AnalyticBeam('uniform')
+    beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=np.radians(10.0))
+    beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.0)
+
     time = Time('2018-03-01 00:00:00', scale='utc')
 
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
@@ -40,26 +47,24 @@ def test_visibility_single_zenith_source():
     time.location = array_location
 
     freq = (150e6 * units.Hz)
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
-    source = source_arr[0]
+    source, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
+    source.update_positions(time, array_location)
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
-    beam = simtest.make_cst_beams()
+    for beam in [beam0, beam1, beam2, beam3]:
+        beam_list = [beam]
+        array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
 
-    beam_list = [beam]
-    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+        task = pyuvsim.UVTask(source, time, freq, baseline, array)
 
-    task = pyuvsim.UVTask(source, time, freq, baseline, array)
+        engine = pyuvsim.UVEngine(task)
 
-    engine = pyuvsim.UVEngine(task)
-
-    visibility = engine.make_visibility()
-
-    nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3))
+        visibility = engine.make_visibility()
+        nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3))
 
 
 def test_visibility_source_below_horizon():
@@ -74,7 +79,6 @@ def test_visibility_source_below_horizon():
     src_alt = Angle('-40d')
 
     source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
-    source = source_arr[0]
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
@@ -86,7 +90,7 @@ def test_visibility_source_below_horizon():
     beam_list = [beam]
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
 
-    task = pyuvsim.UVTask(source, time, freq, baseline, array)
+    task = pyuvsim.UVTask(source_arr, time, freq, baseline, array)
 
     engine = pyuvsim.UVEngine(task)
 
@@ -107,8 +111,8 @@ def test_visibility_source_below_horizon_radec():
     source_coord = SkyCoord(ra=Angle('13h20m'), dec=Angle('-30d43m17.5s'),
                             obstime=time, frame='icrs', location=array_location)
 
-    source = pyuvsim.Source('src_down', source_coord.ra, source_coord.dec, freq,
-                            [1.0, 0, 0, 0])
+    source = pyuvsim.SkyModel('src_down', source_coord.ra, source_coord.dec, freq,
+                              np.array([1.0, 0, 0, 0]).reshape(4, 1))
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
@@ -152,8 +156,7 @@ def test_visibility_single_zenith_source_uvdata():
     # setup the things that don't come from pyuvdata:
     # make a source at zenith
     time.location = array_location
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
-    source = source_arr[0]
+    source, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
@@ -196,8 +199,7 @@ def test_redundant_baselines():
     # setup the things that don't come from pyuvdata:
     # make a source off zenith
     time.location = array_location
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
-    source = source_arr[0]
+    source, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
 
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
@@ -251,14 +253,14 @@ def test_single_offzenith_source_uvfits():
     # make a source off zenith
     time.location = array_location
     # create_mock_catalog uses azimuth of 90
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
-    source = source_arr[0]
+    source, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
 
-    src_alt_az = source.alt_az_calc(time, array_location)
+    source.update_positions(time, array_location)
+    src_alt_az = source.alt_az
     nt.assert_true(np.isclose(src_alt_az[0], src_alt.rad))
     nt.assert_true(np.isclose(src_alt_az[1], src_az.rad))
 
-    src_lmn = source.pos_lmn(time, array_location)
+    src_lmn = source.pos_lmn
     nt.assert_true(np.isclose(src_lmn[0], src_l))
     nt.assert_true(np.isclose(src_lmn[1], src_m))
     nt.assert_true(np.isclose(src_lmn[2], src_n))
@@ -286,7 +288,7 @@ def test_single_offzenith_source_uvfits():
     interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([beam_az]),
                                                          za_array=np.array([beam_za]),
                                                          freq_array=np.array([freq.to('Hz').value]))
-    jones = np.zeros((2, 2), dtype=np.complex64)
+    jones = np.zeros((2, 2, 1), dtype=np.complex64)
     jones[0, 0] = interpolated_beam[1, 0, 0, 0, 0]
     jones[1, 1] = interpolated_beam[0, 0, 1, 0, 0]
     jones[1, 0] = interpolated_beam[1, 0, 1, 0, 0]
@@ -299,7 +301,9 @@ def test_single_offzenith_source_uvfits():
     nt.assert_true(np.allclose(beam_jones, jones))
 
     uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
-
+    jones_T = np.swapaxes(jones, 0, 1)
+    # Remove source axis from jones matrix
+    jones = jones.squeeze()
     vis_analytic = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(2j * np.pi * (uvw_wavelength_array[0, 0] * src_l + uvw_wavelength_array[0, 1] * src_m + uvw_wavelength_array[0, 2] * src_n))
     vis_analytic = np.array([vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[0, 1], vis_analytic[1, 0]])
 
@@ -348,8 +352,7 @@ def test_offzenith_source_multibl_uvfits():
     # make a source off zenith
     time.location = array_location
     # create_mock_catalog uses azimuth of 90
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
-    source = source_arr[0]
+    source, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
 
     beam = pyuvsim.AnalyticBeam('uniform')
 
@@ -397,7 +400,7 @@ def test_file_to_tasks():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
+    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', Nsrcs=5, return_table=True)
 
     beam = simtest.make_cst_beams()
     beam_list = [beam]
@@ -408,7 +411,7 @@ def test_file_to_tasks():
     Nfreqs = hera_uv.Nfreqs
     Nsrcs = len(sources)
 
-    Ntasks = Nblts * Nfreqs * Nsrcs
+    Ntasks = Nblts * Nfreqs
     beam_dict = None
 
     taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
@@ -417,7 +420,6 @@ def test_file_to_tasks():
                                        category=DeprecationWarning)
 
     tlist = copy.deepcopy(uvtask_list)
-
     # Test task comparisons
     tlist.sort()
     nt.assert_true(np.all([tlist[i + 1] > tlist[i] for i in range(Ntasks - 1)]))
@@ -463,12 +465,14 @@ def test_file_to_tasks():
         index = np.where(hera_uv.antenna_numbers == antnum)[0][0]
         antennas2.append(antennas[index])
 
+    sources = pyuvsim.array_to_skymodel(sources)
     for idx, antenna1 in enumerate(antennas1):
         antenna2 = antennas2[idx]
         baseline = pyuvsim.Baseline(antenna1, antenna2)
-        task = pyuvsim.UVTask(sources[0], time.jd, hera_uv.freq_array[0, 0], baseline, telescope)
+        task = pyuvsim.UVTask(sources, time.jd, hera_uv.freq_array[0, 0], baseline, telescope)
         task.uvdata_index = (idx, 0, 0)
         expected_task_list.append(task)
+
     expected_task_list.sort()
     for idx, task in enumerate(uvtask_list):
         exp_task = expected_task_list[idx]
@@ -503,20 +507,16 @@ def test_uvdata_init_errors():
     hera_uv.read_uvfits(EW_uvfits_file)
 
     simtest.assert_raises_message(ValueError, "source_list_name must be a string", pyuvsim.init_uvdata_out, hera_uv, 1.0)
-    simtest.assert_raises_message(ValueError, "obs_param_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str')
     simtest.assert_raises_message(ValueError, "obs_param_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file=1.0)
-    simtest.assert_raises_message(ValueError, "obs_param_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', telescope_config_file=1.0)
-    simtest.assert_raises_message(ValueError, "obs_param_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', antenna_location_file=1.0)
-    simtest.assert_raises_message(ValueError, "telescope_config_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string')
-    simtest.assert_raises_message(ValueError, "antenna_location_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string', telescope_config_file='string')
-    simtest.assert_raises_message(ValueError, "telescope_config_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file='string', telescope_config_file=1.0)
+    simtest.assert_raises_message(ValueError, "telescope_config_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', telescope_config_file=1.0)
+    simtest.assert_raises_message(ValueError, "antenna_location_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', antenna_location_file=1.0)
 
 
 def test_gather():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
+    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_table=True)
 
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
@@ -527,9 +527,8 @@ def test_gather():
     Nfreqs = hera_uv.Nfreqs
     Nsrcs = len(sources)
 
-    Ntasks = Nblts * Nfreqs * Nsrcs
+    Ntasks = Nblts * Nfreqs
     beam_dict = dict(zip(hera_uv.antenna_names, [0] * hera_uv.Nants_data))
-
     taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
     uvtask_list = uvtest.checkWarnings(list, [taskiter],
                                        message=['The default for the `center` keyword has changed'],
@@ -552,7 +551,7 @@ def test_local_task_gen():
     hera_uv.read_uvfits(EW_uvfits_10time10chan)
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, kwds = pyuvsim.create_mock_catalog(time, arrangement='random', Nsrcs=5)
+    sources, kwds = pyuvsim.create_mock_catalog(time, arrangement='random', Nsrcs=5, return_table=True)
 
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
@@ -562,8 +561,14 @@ def test_local_task_gen():
     Ntimes = hera_uv.Ntimes
     Nfreqs = hera_uv.Nfreqs
     Nsrcs = len(sources)
-    Ntasks = Nblts * Nfreqs * Nsrcs
+    Ntasks = Nblts * Nfreqs
     beam_dict = None
+
+    # Check error conditions
+    uv_iter0 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), 'not_uvdata', sources, beam_list, beam_dict)
+    simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', next, uv_iter0)
+    uv_iter1 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, 'not_ndarray', beam_list, beam_dict)
+    simtest.assert_raises_message(TypeError, 'catalog must be a record array', next, uv_iter1)
 
     # Copy sources and beams so we don't accidentally reuse quantities.
     taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
@@ -572,13 +577,8 @@ def test_local_task_gen():
                                        category=DeprecationWarning)
     uvtask_iter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, copy.deepcopy(sources), copy.deepcopy(beam_list), beam_dict)
 
-    # Check error conditions
-    uv_iter0 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), 'not_uvdata', sources, beam_list, beam_dict)
-    simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', next, uv_iter0)
-    uv_iter1 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, 'not_ndarray', beam_list, beam_dict)
-    simtest.assert_raises_message(TypeError, 'sources must be a numpy array', next, uv_iter1)
-
     engine0 = pyuvsim.UVEngine(reuse_spline=False)
+
     for tki, task0 in enumerate(uvtask_iter):
         task1 = uvtask_list[tki]
         engine1 = pyuvsim.UVEngine(task1, reuse_spline=True)
@@ -595,3 +595,112 @@ def test_pol_error():
     hera_uv.select(polarizations=['xx'])
 
     simtest.assert_raises_message(ValueError, 'input_uv must have XX,YY,XY,YX polarization', pyuvsim.run_uvdata_uvsim, hera_uv, ['beamlist'])
+
+
+def test_task_coverage():
+    """
+    Check that the task ids generated in different scenarios
+    cover all combinations of baseline/time/frequency and source.
+    """
+
+    Npus_list = [1, 5, 13, 19]
+    for Npus in Npus_list:
+        # Case 1 -- (Npus < Nbltf)
+
+        print(Npus)
+        Nbls = 4
+        Ntimes = 3
+        Nfreqs = 1
+        Nsrcs = 10
+
+        Nbltf = Nbls * Ntimes * Nfreqs
+
+        # List of pairs -- (bl/t/f index, source index)
+        srci, bltfi = map(np.ndarray.flatten, np.meshgrid(np.arange(Nsrcs), np.arange(Nbltf)))
+
+        tasks_expected = np.column_stack((bltfi, srci))
+        tasks_all = []
+        for rank in range(Npus):
+            task_inds, src_inds, Ntasks_local, Nsrcs_local = pyuvsim.uvsim._make_task_inds(Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus)
+            tasks = itertools.product(task_inds, src_inds)
+            tasks_all.append(tasks)
+        tasks_all = itertools.chain(*tasks_all)
+        tasks = np.array(list(tasks_all))
+        nt.assert_true(np.all(tasks == tasks_expected))
+
+        # Case 2 -- (Nbltf < Npus and Nsrcs > Npus)
+
+        if Npus == 1:
+            continue   # case 2 won't work for 1 pu
+
+        Nbls = 2
+        Ntimes = 1
+        Nfreqs = 2
+        Nsrcs = 100
+
+        Nbltf = Nbls * Ntimes * Nfreqs
+
+        bltfi, srci = map(np.ndarray.flatten, np.meshgrid(np.arange(Nbltf), np.arange(Nsrcs)))
+
+        tasks_expected = np.column_stack((bltfi, srci))
+        tasks_all = []
+        for rank in range(Npus):
+            task_inds, src_inds, Ntasks_local, Nsrcs_local = pyuvsim.uvsim._make_task_inds(Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus)
+            tasks = itertools.product(task_inds, src_inds)
+            tasks_all.append(tasks)
+        tasks_all = itertools.chain(*tasks_all)
+        tasks = np.array(list(tasks_all))
+
+        # Returned task indices are out of order, compared with the meshgrid.
+        inds = np.lexsort((tasks[:, 0], tasks[:, 1]), axis=0)
+        nt.assert_true(np.all(tasks[inds] == tasks_expected))
+
+
+def test_source_splitting():
+    # Check that if the available memory is less than the expected size of the source catalog,
+    # then the task iterator will loop over chunks of the source array.
+    hera_uv = UVData()
+    hera_uv.read_uvfits(EW_uvfits_10time10chan)
+    hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    sources, kwds = pyuvsim.create_mock_catalog(time, arrangement='random', Nsrcs=30, return_table=True)
+
+    # Spoof environmental parameters.
+    # Choose an absurdlly large number of Npus per node and very small available memory
+    # to trigger the source splitting condition in uvdata_to_task_iter
+    # The alternative would be to make a very large source catalog, but that's not ideal in a test.
+    Npus_node = 2000
+    pyuvsim.mpi.Npus_node = Npus_node                 # Absurdly large
+    os.environ['SLURM_MEM_PER_NODE'] = str(4.0)  # Only 4MB of memory
+
+    beam = pyuvsim.analyticbeam.AnalyticBeam('uniform')
+    beam_list = [beam]
+
+    Nblts = hera_uv.Nblts
+    Nbls = hera_uv.Nbls
+    Ntimes = hera_uv.Ntimes
+    Nfreqs = hera_uv.Nfreqs
+    Nsrcs = len(sources)
+    Ntasks = Nblts * Nfreqs
+    beam_dict = None
+    taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict)
+    uvtask_list = uvtest.checkWarnings(list, [taskiter], message='The default for the `center` keyword has changed.', category=DeprecationWarning)
+
+    skymodel = pyuvsim.array_to_skymodel(sources)
+    skymodel_mem_footprint = skymodel.get_size() * Npus_node
+    mem_avail = pyuvsim.utils.get_avail_memory()
+
+    Nsky_parts = np.ceil(skymodel_mem_footprint / float(mem_avail))
+    partsize = int(np.floor(Nsrcs / Nsky_parts))
+    src_iter = [range(s, s + partsize) for s in range(0, Nsrcs, partsize)]
+
+    nt.assert_true(partsize * pyuvsim.SkyModel._basesize * Npus_node < mem_avail)
+    print(skymodel_mem_footprint / 1e6, partsize * pyuvsim.SkyModel._basesize * Npus_node / 1e6, mem_avail / 1e6)
+
+    # Normally, the number of tasks is Nbls * Ntimes * Nfreqs (partsize = Nsrcs)
+    # If the source list is split within the task iterator, then it will be larger.
+    nt.assert_equal(len(uvtask_list), Ntasks * Nsrcs / partsize)
+
+    # Reset spoofed parameters.
+    del os.environ['SLURM_MEM_PER_NODE']
+    pyuvsim.mpi.Npus_node = 1

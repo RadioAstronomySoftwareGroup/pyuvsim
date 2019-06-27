@@ -7,7 +7,9 @@ from __future__ import absolute_import, division, print_function
 import time as pytime
 import sys
 import os
+import psutil
 import numpy as np
+from six.moves import range
 from astropy import _erfa as erfa
 from astropy.coordinates import Angle
 from astropy.time import Time
@@ -43,7 +45,7 @@ class progsteps:
         self.curval = -1
 
     def update(self, count):
-        if count % self.step == 0:
+        if count >= self.curval + self.step:
             doprint = False
             if not self.curval == count:
                 doprint = True
@@ -51,7 +53,7 @@ class progsteps:
             if doprint:
                 print("{:0.2f}% completed. {:0.3f} minutes elapsed \n".format(
                       (count / self.maxval) * 100., (pytime.time() - self.t0) / 60.))
-        sys.stdout.flush()
+            sys.stdout.flush()
 
     def finish(self):
         self.update(self.maxval)
@@ -240,3 +242,43 @@ def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_fo
             raise ValueError("Invalid output format. Options are \" uvfits\", \"uvh5\", or \"miriad\"")
     if return_filename:
         return outfile_name
+
+
+def get_avail_memory():
+    """
+    Method for estimating the virtual memory available (in bytes)
+    on the current node to a running process.
+
+    Currently only supports the SLURM array scheduler.
+
+    If this is not called from within a SLURM task, it will estimate
+    using psutils methods.
+    """
+
+    slurm_key = 'SLURM_MEM_PER_NODE'
+    if slurm_key in os.environ:
+        return float(os.environ[slurm_key]) * 1e6  # MB -> B
+
+    return psutil.virtual_memory().available
+
+
+def iter_array_split(part_index, N, M):
+    """
+    Returns an iterator giving the indices of `part` below:
+        part = np.array_split(np.arange(N), M)[part_index]
+
+    This mimics the behavior of array_split without having to make
+    the whole array that will be split.
+    """
+
+    Neach_section, extras = divmod(N, M)
+    if part_index < extras:
+        length = Neach_section + 1
+        start = part_index * (length)
+        end = start + length
+    else:
+        length = Neach_section
+        start = extras * (Neach_section + 1) + (part_index - extras) * length
+        end = start + length
+
+    return range(start, end), end - start

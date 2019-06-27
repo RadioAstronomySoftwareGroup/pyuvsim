@@ -51,7 +51,16 @@ Shared properties of all antennas, such as array center location and primary bea
 UV Simulation functions
 -----------------------
 
-Methods for setting up the simulation, handling concurrent MPI processes, and saving computed visibilities.
+Methods for running simulations.
 
 .. automodule:: pyuvsim.uvsim
+    :members:
+
+
+MPI Tools
+---------
+
+Tools to initialize MPI and share data among processors.
+
+.. automodule:: pyuvsim.mpi
     :members:

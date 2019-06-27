@@ -103,7 +103,7 @@ class AnalyticBeam(object):
         pol_strings = ['XX', 'XY', 'YX', 'YY']
         self.polarization_array = np.array([uvutils.polstr2num(ps.upper()) for ps in pol_strings])
 
-    def interp(self, az_array, za_array, freq_array, reuse_spline=None):
+    def interp(self, az_array, za_array, freq_array, reuse_spline=None, freq_interp_kind=None):
         """
         Evaluate the primary beam at given az, za locations (in radians).
 
@@ -115,6 +115,7 @@ class AnalyticBeam(object):
             za_array: za values to evaluate at in radians (same length as az_array)
             freq_array: frequency values to evaluate at
             reuse_spline: Does nothing for analytic beams. Here for compatibility with UVBeam.
+            freq_interp_kind: Does nothing for analytic beams. Here for compatibility with UVBeam.
 
         Returns:
             an array of beam values, shape (Naxes_vec, Nspws, Nfeeds or Npols,
@@ -129,8 +130,8 @@ class AnalyticBeam(object):
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
             interp_data[1, 0, 0, :, :] = 1
             interp_data[0, 0, 1, :, :] = 1
-            interp_data[1, 0, 1, :, :] = 1
-            interp_data[0, 0, 0, :, :] = 1
+            interp_data[1, 0, 1, :, :] = 0
+            interp_data[0, 0, 0, :, :] = 0
             interp_basis_vector = None
         elif self.type == 'gaussian':
             if (self.diameter is None) and (self.sigma is None):
@@ -146,8 +147,6 @@ class AnalyticBeam(object):
             values = np.exp(-(za_array[np.newaxis, ...]**2) / (2 * sigmas[:, np.newaxis]**2))
             interp_data[1, 0, 0, :, :] = values
             interp_data[0, 0, 1, :, :] = values
-            interp_data[1, 0, 1, :, :] = values
-            interp_data[0, 0, 0, :, :] = values
             interp_basis_vector = None
         elif self.type == 'airy':
             if self.diameter is None:
@@ -162,8 +161,6 @@ class AnalyticBeam(object):
             values[ze] = 1.
             interp_data[1, 0, 0, :, :] = values
             interp_data[0, 0, 1, :, :] = values
-            interp_data[1, 0, 1, :, :] = values
-            interp_data[0, 0, 0, :, :] = values
             interp_basis_vector = None
         else:
             raise ValueError('no interp for this type: {}'.format(self.type))

@@ -2,16 +2,31 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2019-6-14
+
 ### Added
+- A parallelized counter that can track progress across all ranks.
+- shared memory broadcast, which will create a shared memory window for a given object on each node
 - Function to generate UVData object from keywords, optionally saving config files.
 - Optionally, can skip having telescope_config file if there is no beam list.
 
-### Fixed
-- parameter dicts are not modified by functions using them.
-
 ### Changed
+- UVBeam frequency interpolation is cubic spline by default, not linear.
+- Tasks are split over time, frequency, and baseline only (in that order).
+- Tasks are split over the source axis if the estimated memory footprint exceeds available resources.
+- The source class is replaced with SkyModel, which supports vectorized coordinate transformation and beam interpolation.
+
+### Fixed
+- MPI.Init -> MPI.Init_thread(), for threaded applications.
+- Progress steps now update in real time, accurately reflecting job progress.
+- Analytic visibility calculation tests now also check analytic beams.
+- Analytic beams are redefined so that off-diagonal Jones matrix terms are zero.
+- parameter dicts are not modified by functions using them.
 - unit tests check error messages raised.
 - Polarization selection is now allowed in setup. Will break if incorrect polarization is used in pyuvsim.
+
+### Deprecated
+- Coarse horizon cuts are no longer performed. Should be restored in a future version.
 
 ## [1.0.0] - 2019-5-10
 

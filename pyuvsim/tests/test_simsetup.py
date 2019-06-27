@@ -14,7 +14,7 @@ import six
 import nose.tools as nt
 import astropy
 from astropy.time import Time
-from astropy.coordinates import Angle, SkyCoord, EarthLocation
+from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy import units
 
 from pyuvdata import UVBeam, UVData
@@ -23,7 +23,6 @@ import pyuvdata.tests as uvtest
 import pyuvsim
 import pyuvsim.tests as simtest
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-import pyuvsim.tests as simtest
 
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 
@@ -52,12 +51,11 @@ def test_mock_catalog_zenith_source():
     ra = icrs_coord.ra
     dec = icrs_coord.dec
 
-    test_source = pyuvsim.Source('src0', ra, dec, freq, [1, 0, 0, 0])
+    test_source = pyuvsim.SkyModel('src0', ra, dec, freq, [1, 0, 0, 0])
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith')
-    cat_source = cat[0]
 
-    nt.assert_equal(cat_source, test_source)
+    nt.assert_equal(cat, test_source)
 
 
 def test_mock_catalog_off_zenith_source():
@@ -77,12 +75,11 @@ def test_mock_catalog_off_zenith_source():
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    test_source = pyuvsim.Source('src0', ra, dec, freq, [1.0, 0, 0, 0])
+    test_source = pyuvsim.SkyModel('src0', ra, dec, freq, [1.0, 0, 0, 0])
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
-    cat_source = cat[0]
 
-    nt.assert_equal(cat_source, test_source)
+    nt.assert_equal(cat, test_source)
 
 
 def test_catalog_from_params():
@@ -92,13 +89,14 @@ def test_catalog_from_params():
                          message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
 
     source_dict = {}
-
     simtest.assert_raises_message(KeyError, 'No catalog defined.', pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
+    nt.assert_raises(KeyError, pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
     arrloc = '{:.5f},{:.5f},{:.5f}'.format(*hera_uv.telescope_location_lat_lon_alt_degrees)
     source_dict = {'catalog': 'mock', 'mock_arrangement': 'zenith', 'Nsrcs': 5, 'time': hera_uv.time_array[0]}
     uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [{'sources': source_dict}],
                          message="No array_location specified. Defaulting to the HERA site.")
     catalog_uv, srclistname = pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict}, hera_uv)
+    catalog_uv = pyuvsim.simsetup.array_to_skymodel(catalog_uv)
     source_dict['array_location'] = arrloc
     del source_dict['time']
 
@@ -107,11 +105,11 @@ def test_catalog_from_params():
                                   pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
     catalog_str, srclistname2 = uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [{'sources': source_dict}, hera_uv],
                                                      message="Warning: No julian date given for mock catalog. Defaulting to first time step.")
-
+    catalog_str = pyuvsim.simsetup.array_to_skymodel(catalog_str)
     nt.assert_true(np.all(catalog_str == catalog_uv))
 
 
-def test_flux_cuts():
+def test_param_flux_cuts():
     # Check that min/max flux limits in test params work.
 
     gleam_path = os.path.join(SIM_DATA_PATH, 'test_config', '..', 'gleam_50srcs.vot')
@@ -119,8 +117,9 @@ def test_flux_cuts():
                                                 message=gleam_path, nwarnings=11,
                                                 category=[astropy.io.votable.exceptions.W27]
                                                 + [astropy.io.votable.exceptions.W50] * 10)
-    for src in catalog:
-        nt.assert_true(0.2 < src.stokes[0] < 1.5)
+    catalog = pyuvsim.simsetup.array_to_skymodel(catalog)
+    for sI in catalog.stokes[0, :]:
+        nt.assert_true(np.all(0.2 < sI < 1.5))
 
 
 def check_param_reader(config_num):
@@ -137,7 +136,7 @@ def check_param_reader(config_num):
         hera_uv.select(bls=[(0, 1), (1, 2)])
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
+    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_table=True)
 
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
@@ -147,7 +146,7 @@ def check_param_reader(config_num):
     beam_list = [beam0, beam1, beam2, beam3]
 
     beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2, 'ANT4': 3}
-    Ntasks = hera_uv.Nblts * hera_uv.Nfreqs * len(sources)
+    Ntasks = hera_uv.Nblts * hera_uv.Nfreqs
     taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources,
                                            beam_list, beam_dict=beam_dict)
     expected_uvtask_list = uvtest.checkWarnings(list, [taskiter],
@@ -204,8 +203,8 @@ def check_param_reader(config_num):
     print(ofilename, expected_ofilepath)
     nt.assert_equal(ofilename, expected_ofilepath)
 
-    Ntasks = uv_obj.Nblts * uv_obj.Nfreqs * len(sources)
-    taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), uv_obj, sources,
+    Ntasks = uv_obj.Nblts * uv_obj.Nfreqs
+    taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources,
                                            beam_list, beam_dict=beam_dict)
     uvtask_list = uvtest.checkWarnings(list, [taskiter],
                                        message='The default for the `center` keyword has changed',
@@ -222,10 +221,9 @@ def check_param_reader(config_num):
 
 def test_param_reader():
     """
-    Tests initialize_uvdata_from_params for six different parameter files.
-        Each file has a different arrangement of parameters that should yield the same uvdata object, so this
-        checks that the various configurations all work consistently, and that if insufficient information is
-        provided that the function errors appropriately.
+    Tests initialize_uvdata_from_params for a parameter file.
+        The separate tests test_freq_parser and test_time_parser check the different valid configurations of
+        parameters. This test looks at the task of reading parameters from file.
     """
     for n in [0]:
         yield (check_param_reader, n)
@@ -255,7 +253,7 @@ def test_tele_parser():
 
 def test_freq_parser():
     """
-    Check a variety of cases for the frequency parser.
+    Check all valid input parameter cases for frequencies.
     """
 
     fdict_base = dict(
@@ -389,6 +387,10 @@ def test_time_parser():
 
 
 def test_freq_time_params():
+
+    time_dict = pyuvsim.simsetup.time_array_to_params([1.0])
+    nt.assert_true(time_dict['integration_time'] == 1.0)
+
     freqs = np.linspace(100, 200, 1024)
     times = np.linspace(2458570, 2458570 + 0.5, 239)
     time_dict = pyuvsim.simsetup.time_array_to_params(times)
@@ -460,7 +462,7 @@ def test_param_select_bls():
 
 
 def test_param_select_redundant():
-    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
+    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
 
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
 
@@ -622,15 +624,15 @@ def test_uvfits_to_config():
 
     param_dict = pyuvsim.simsetup._config_str_to_dict(os.path.join(opath, second_param_filename))
     shutil.rmtree(opath)
-    nt.assert_true(param_dict['param_file'] == second_param_filename)
-    nt.assert_true(orig_param_dict['param_file'] == param_filename)
-    orig_param_dict['param_file'] = second_param_filename
+    nt.assert_true(param_dict['obs_param_file'] == second_param_filename)
+    nt.assert_true(orig_param_dict['obs_param_file'] == param_filename)
+    orig_param_dict['obs_param_file'] = second_param_filename
     nt.assert_true(simtest.compare_dictionaries(param_dict, orig_param_dict))
 
 
 def test_point_catalog_reader():
     catfile = os.path.join(SIM_DATA_PATH, 'test_config', 'pointsource_catalog.txt')
-    catalog = pyuvsim.simsetup.read_text_catalog(catfile)
+    srcs = pyuvsim.simsetup.read_text_catalog(catfile)
 
     with open(catfile, 'r') as fhandle:
         header = fhandle.readline()
@@ -641,76 +643,102 @@ def test_point_catalog_reader():
     catalog_table = np.genfromtxt(catfile, autostrip=True, skip_header=1,
                                   dtype=dt.dtype)
 
-    for src in catalog:
-        nt.assert_true(src.name in catalog_table['source_id'])
-        nt.assert_true(src.ra.deg in catalog_table['ra_j2000'])
-        nt.assert_true(src.dec.deg in catalog_table['dec_j2000'])
-        nt.assert_true(src.stokes[0] in catalog_table['flux_density_I'])
-        nt.assert_true(src.freq.to("Hz").value in catalog_table['frequency'])
-    # shouldn't this also test the values?
+    nt.assert_equal(sorted(srcs.name), sorted(catalog_table['source_id']))
+    nt.assert_true(srcs.ra.deg in catalog_table['ra_j2000'])
+    nt.assert_true(srcs.dec.deg in catalog_table['dec_j2000'])
+    nt.assert_true(srcs.stokes[0] in catalog_table['flux_density_I'])
+    nt.assert_true(srcs.freq.to("Hz").value in catalog_table['frequency'])
+
+    # Check cuts
+    source_select_kwds = {'min_flux': 1.0}
+    catalog = pyuvsim.simsetup.read_text_catalog(catfile, source_select_kwds=source_select_kwds, return_table=True)
+    nt.assert_true(len(catalog) == 2)
 
 
-def test_horizon_cut():
-    # Check that the coarse horizon cut doesn't remove sources that are actually up.
+def test_flux_cuts():
     uv_in, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(manytimes_config)
     Nsrcs = 20
     uv_in.select(times=np.unique(uv_in.time_array)[:50], bls=[(0, 1)], metadata_only=True)
-    hera_loc = EarthLocation.from_geocentric(*uv_in.telescope_location, unit='m')
 
     dt = np.format_parser(['U10', 'f8', 'f8', 'f8', 'f8'],
                           ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], [])
 
+    minflux = 0.5
+    maxflux = 3.0
+
     catalog_table = np.recarray(Nsrcs, dtype=dt.dtype)
     catalog_table['source_id'] = ["src{}".format(i) for i in range(Nsrcs)]
     catalog_table['ra_j2000'] = np.random.uniform(0, 360., Nsrcs)
-    catalog_table['dec_j2000'] = np.random.uniform(-90, 90, Nsrcs)
-    catalog_table['flux_density_I'] = np.ones(Nsrcs)
+    catalog_table['dec_j2000'] = np.linspace(-90, 90, Nsrcs)
+    catalog_table['flux_density_I'] = np.linspace(minflux, maxflux, Nsrcs)
     catalog_table['frequency'] = np.ones(Nsrcs) * 200e6
 
-    uvtest.checkWarnings(pyuvsim.simsetup.array_to_sourcelist, [catalog_table],
-                         {'lst_array': uv_in.lst_array},
-                         message="It looks like you want to do a coarse horizon cut, but you're missing keywords", nwarnings=1)
+    minI_cut = 1.0
+    maxI_cut = 2.3
 
-    cut_sourcelist = pyuvsim.simsetup.array_to_sourcelist(catalog_table, lst_array=uv_in.lst_array,
-                                                          latitude_deg=uv_in.telescope_location_lat_lon_alt_degrees[0])
+    cut_sourcelist = pyuvsim.simsetup.source_cuts(catalog_table, input_uv=uv_in, min_flux=minI_cut, max_flux=maxI_cut)
+    nt.assert_true(np.all(cut_sourcelist['flux_density_I'] > minI_cut))
+    nt.assert_true(np.all(cut_sourcelist['flux_density_I'] < maxI_cut))
 
-    selected_source_names = [s.name for s in cut_sourcelist]
 
-    full_sourcelist = pyuvsim.simsetup.array_to_sourcelist(catalog_table)  # No cuts
+def test_circumpolar_nonrising():
+    # Check that the source_cut function correctly identifies sources that are circumpolar or won't rise.
+    # Working with an observatory at the HERA latitude
 
-    # For each source in the full sourcelist, calculate the AltAz for all times.
-    # If Alt > 0 at any time, confirm that the source is in the selection.
+    lat = -31.0
+    lon = 0.0
 
-    time_arr = Time(uv_in.time_array, scale='utc', format='jd')
-    for src in full_sourcelist:
-        alt, az = src.alt_az_calc(time_arr, hera_loc)
-        src.alt_az = None
-        if np.any(alt > 0):
-            nt.assert_true(src.name in selected_source_names)
+    Ntimes = 100
+    Nsrcs = 50
 
-    # Now check that I get the same visibilities simulating with and without the horizon cut.
-    beam_list = ['analytic_uniform']  # Simplify with a single uniform beam model
-    kwds = dict(source_list_name='random', obs_param_file='', telescope_config_file='', antenna_location_file='')
-    kwds['catalog'] = cut_sourcelist
-    uv_select = uvtest.checkWarnings(pyuvsim.run_uvdata_uvsim, [uv_in, beam_list],
-                                     kwds, category=DeprecationWarning,
-                                     message='The default for the `center` keyword has changed')
-    kwds['catalog'] = full_sourcelist
-    uv_full = uvtest.checkWarnings(pyuvsim.run_uvdata_uvsim, [uv_in, beam_list],
-                                   kwds, category=DeprecationWarning,
-                                   message='The default for the `center` keyword has changed')
-    nt.assert_equal(uv_full, uv_select)
+    j2000 = 2451545.0
+    times = Time(np.linspace(j2000 - 0.5, j2000 + 0.5, Ntimes), format='jd', scale='utc')
+
+    ra = np.zeros(Nsrcs)
+    dec = np.linspace(-90, 90, Nsrcs)
+
+    ra = Angle(ra, units.deg)
+    dec = Angle(dec, units.deg)
+
+    coord = SkyCoord(ra=ra, dec=dec, frame='icrs')
+    alts = []
+    azs = []
+
+    loc = EarthLocation.from_geodetic(lat=lat, lon=lon)
+    for i in range(Ntimes):
+        altaz = coord.transform_to(AltAz(obstime=times[i], location=loc))
+        alts.append(altaz.alt.deg)
+        azs.append(altaz.az.deg)
+    alts = np.array(alts)
+    azs = np.array(azs)
+
+    nonrising = np.where(np.all(alts < 0, axis=0))[0]
+    circumpolar = np.where(np.all(alts > 0, axis=0))[0]
+
+    tans = np.tan(np.radians(lat)) * np.tan(dec.rad)
+    nonrising_check = np.where(tans < -1)
+    circumpolar_check = np.where(tans > 1)
+    nt.assert_true(np.all(circumpolar_check == circumpolar))
+    nt.assert_true(np.all(nonrising_check == nonrising))
 
 
 def test_read_gleam():
-
-    # sourcelist = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot)
     sourcelist = uvtest.checkWarnings(pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
                                       message=GLEAM_vot, nwarnings=11,
                                       category=[astropy.io.votable.exceptions.W27]
                                       + [astropy.io.votable.exceptions.W50] * 10)
 
-    nt.assert_equal(len(sourcelist), 50)
+    nt.assert_equal(sourcelist.Ncomponents, 50)
+
+    # Check cuts
+    source_select_kwds = {'min_flux': 1.0}
+    catalog = uvtest.checkWarnings(pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
+                                   dict(source_select_kwds=source_select_kwds, return_table=True),
+                                   message=GLEAM_vot, nwarnings=11,
+                                   category=[astropy.io.votable.exceptions.W27]
+                                   + [astropy.io.votable.exceptions.W50] * 10)
+
+    nt.assert_true(len(catalog) < sourcelist.Ncomponents)
 
 
 def test_mock_catalogs():
@@ -746,10 +774,10 @@ def test_mock_catalogs():
     loc = EarthLocation.from_geodetic(loc[1], loc[0], loc[2])    # Lon, Lat, alt
     fname = 'mock_catalog_random.npz'
     alts_reload = np.load(fname)['alts']
-    for i, src in enumerate(cat):
-        alt, az = src.alt_az_calc(time, loc)
-        nt.assert_true(np.degrees(alt) > 30.)
-        nt.assert_true(np.isclose(alts_reload[i], np.degrees(alt)))
+    cat.update_positions(time, loc)
+    alt, az = cat.alt_az
+    nt.assert_true(np.all(alt > np.radians(30.)))
+    nt.assert_true(np.allclose(alts_reload, np.degrees(alt)))
     os.remove(fname)
 
 
