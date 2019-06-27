@@ -14,12 +14,10 @@ from astropy.time import Time
 
 import pyuvsim
 import pyuvsim.tests as simtest
-<<<<<<< HEAD
 import pyuvsim.utils as simutils
 
-=======
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
->>>>>>> 5b1f657... Added tests for healpix_to_sky and read_hdf5 functions
+
 
 
 def test_source_zenith_from_icrs():
@@ -307,7 +305,8 @@ def test_polarized_source_smooth_visibilities():
         assert np.all(imag_stokes == 0)
 
 
-def test_read_hdf5():
+
+def test_read_healpix_hdf5():
     Nside = 32
     Npix = hp.nside2npix(Nside)
     vec = hp.ang2vec(np.pi / 2, np.pi * 3 / 4)
@@ -319,7 +318,7 @@ def test_read_hdf5():
 
     frequencies = 100000000 * np.ones(len(indices))
 
-    hpmap, inds, freqs = pyuvsim.source.read_hdf5(os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
+    hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
 
     assert np.allclose(hpmap, m)
     assert np.allclose(inds, indices)
@@ -334,6 +333,6 @@ def test_healpix_to_sky():
     m = np.arange(Npix)
     m[ipix_disc] = m.max()
 
-    hpmap, inds, freqs = pyuvsim.source.read_hdf5(os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
+    hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
     sky = pyuvsim.source.healpix_to_sky(hpmap, inds, freqs)
     assert np.allclose(sky.stokes[0], m)
