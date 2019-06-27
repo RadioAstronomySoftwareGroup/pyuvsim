@@ -1058,7 +1058,7 @@ def initialize_uvdata_from_params(obs_params):
     uv_obj.history = ''
 
     # select on object
-    valid_select_keys = ['antenna_nums', 'antenna_names', 'ant_str', 'bls', 'frequencies', 'freq_chans', 'times', 'polarizations', 'blt_inds']
+    valid_select_keys = ['antenna_nums', 'antenna_names', 'ant_str', 'bls', 'frequencies', 'freq_chans', 'times', 'blt_inds']
 
     # downselect baselines (or anything that can be passed to pyuvdata's select method)
     # Note: polarization selection is allowed here, but will cause an error if the incorrect pols are passed to pyuvsim.
@@ -1185,7 +1185,7 @@ def initialize_uvdata_from_keywords(
     time_params = {'Ntimes': Ntimes, 'start_time': start_time,
                    'integration_time': integration_time, 'time_array': time_array}
     selection_params = {'bls': bls, 'redundant_threshold': redundant_threshold,
-                        'antenna_nums': antenna_nums,'no_autos': no_autos}
+                        'antenna_nums': antenna_nums, 'no_autos': no_autos}
     tele_params = {'telescope_location': repr(telescope_location),
                    'telescope_name': telescope_name}
     layout_params = {'antenna_names': antenna_names, 'antenna_numbers': antenna_numbers,
@@ -1203,10 +1203,7 @@ def initialize_uvdata_from_keywords(
 
     extra_kwds = {k: v for k, v in six.iteritems(kwargs) if k in valid_param_names}
 
-    # Strangely enough, the initialize_uvdata_from_params doesn't set the polarizations.
-    # This is probably because they were previously hardcoded into the complete_uvdata
-    # function. However, it doesn't really make sense to put them there, so we put
-    # them here.
+    # Convert str polarization array to int.
     if polarization_array is not None:
         if type(polarization_array[0]) is not int:
             polarization_array = np.array(uvutils.polstr2num(polarization_array))
