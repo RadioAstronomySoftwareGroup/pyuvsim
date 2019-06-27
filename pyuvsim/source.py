@@ -352,7 +352,7 @@ class SkyModel(object):
         return self.Ncomponents * self._basesize
 
 
-def read_hdf5(hdf5_healpix_filename, freq_ind):
+def read_healpix_hdf5(hdf5_filename, freq_ind):
     """
     Read hdf5 files using h5py and get a healpix map, indices and frequencies
 
