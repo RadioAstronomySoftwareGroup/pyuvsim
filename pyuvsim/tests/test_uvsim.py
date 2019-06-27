@@ -478,40 +478,6 @@ def test_file_to_tasks():
         exp_task = expected_task_list[idx]
         nt.assert_equal(task, exp_task)
 
-
-def test_uvdata_init():
-    hera_uv = UVData()
-    hera_uv.read_uvfits(EW_uvfits_10time10chan)
-    hera_uv.unphase_to_drift(use_ant_pos=True)
-    uvdata_out = pyuvsim.init_uvdata_out(hera_uv, 'zenith_source',
-                                         obs_param_file='', telescope_config_file='', antenna_location_file='')
-
-    hera_uv.data_array = np.zeros_like(hera_uv.data_array, dtype=np.complex)
-    hera_uv.flag_array = np.zeros_like(hera_uv.data_array, dtype=bool)
-    hera_uv.nsample_array = np.ones_like(hera_uv.data_array)
-    obs_param_file = ''
-    telescope_config_file = ''
-    antenna_location_file = ''
-    hera_uv.history = (pyuvsim.get_version_string()
-                       + 'Sources from source list: zenith_source. '
-                       + ' Based on config files: ' + obs_param_file + ', '
-                       + telescope_config_file + ', ' + antenna_location_file + ' Npus = 1.'
-                       + hera_uv.pyuvdata_version_str)
-    hera_uv.instrument = hera_uv.telescope_name
-    nt.assert_true(np.allclose(hera_uv.antenna_positions, uvdata_out.antenna_positions))
-    nt.assert_true(uvdata_out.__eq__(hera_uv, check_extra=False))
-
-
-def test_uvdata_init_errors():
-    hera_uv = UVData()
-    hera_uv.read_uvfits(EW_uvfits_file)
-
-    simtest.assert_raises_message(ValueError, "source_list_name must be a string", pyuvsim.init_uvdata_out, hera_uv, 1.0)
-    simtest.assert_raises_message(ValueError, "obs_param_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', obs_param_file=1.0)
-    simtest.assert_raises_message(ValueError, "telescope_config_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', telescope_config_file=1.0)
-    simtest.assert_raises_message(ValueError, "antenna_location_file must be a string", pyuvsim.init_uvdata_out, hera_uv, 'source_list_str', antenna_location_file=1.0)
-
-
 def test_gather():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
@@ -534,8 +500,7 @@ def test_gather():
                                        message=['The default for the `center` keyword has changed'],
                                        category=DeprecationWarning)
 
-    uv_out = pyuvsim.init_uvdata_out(hera_uv, 'zenith_source',
-                                     obs_param_file='', telescope_config_file='', antenna_location_file='')
+    uv_out = pyuvsim.complete_uvdata(hera_uv, inplace=False)
     for task in uvtask_list:
         engine = pyuvsim.UVEngine(task)
         task.visibility_vector = engine.make_visibility()
