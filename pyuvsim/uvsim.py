@@ -31,7 +31,7 @@ from . import utils as simutils
 from . import simsetup
 from . import mpi
 
-__all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim', 'init_uvdata_out', 'serial_gather']
+__all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim', 'serial_gather']
 
 
 class UVTask(object):
@@ -270,50 +270,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
 
             yield task
 
-
-def init_uvdata_out(uv_in, source_list_name,
-                    obs_param_file='', telescope_config_file='',
-                    antenna_location_file=''):
-    """
-    Initialize an empty uvdata object to fill with simulated data.
-    Args:
-        uv_in: The input uvdata object.
-               This is usually an incomplete object, containing only metadata.
-        source_list_name: Name of source list file or mock catalog.
-        obs_param_file: Name of observation parameter config file
-        telescope_config_file: Name of telescope config file
-        antenna_location_file: Name of antenna location file
-    """
-    if not isinstance(source_list_name, str):
-        raise ValueError('source_list_name must be a string')
-
-    if not isinstance(obs_param_file, str):
-        raise ValueError('obs_param_file must be a string')
-    if not isinstance(telescope_config_file, str):
-        raise ValueError('telescope_config_file must be a string')
-    if not isinstance(antenna_location_file, str):
-        raise ValueError('antenna_location_file must be a string')
-
-    # Version string to add to history
-    history = simutils.get_version_string()
-
-    history += ' Sources from source list: ' + source_list_name + '.'
-
-    history += (' Based on config files: ' + obs_param_file + ', '
-                + telescope_config_file + ', ' + antenna_location_file)
-
-    history += ' Npus = ' + str(mpi.Npus) + '.'
-
-    uv_obj = simsetup.complete_uvdata(uv_in, inplace=False)
-
-    # add pyuvdata version info
-    history += uv_obj.pyuvdata_version_str
-
-    # Clear existing data, if any
-    uv_obj.history = history
-    return uv_obj
-
-
 def serial_gather(uvtask_list, uv_out):
     """
         Loop over uvtask list, acquire visibilities and add to uvdata object.
@@ -325,9 +281,7 @@ def serial_gather(uvtask_list, uv_out):
     return uv_out
 
 
-def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_list_name=None,
-                     obs_param_file=None,
-                     telescope_config_file=None, antenna_location_file=None):
+def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     """
     Run uvsim from UVData object.
 
@@ -342,16 +296,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
             {antenna_name : beam_id}, where beam_id is an index in
                    the beam_list. This is used to assign beams to antennas.
                    Default: All antennas get the 0th beam in the beam_list.
-        source_list_name: string
-            Name of the catalog
-        catalog: np.ndarray in shared memory
-            Immutable source parameters
-        obs_param_file: string
-            Parameter filename if running from config files.
-        telescope_config_file: string
-            Telescope configuration file if running from config files.
-        antenna_location_file: string
-            antenna_location file if running from config files.
+        catalog: array of source.Source objects
     """
     mpi.start_mpi()
     rank = mpi.get_rank()
@@ -371,19 +316,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, source_l
         print('Ntimes:', input_uv.Ntimes)
         print('Nfreqs:', input_uv.Nfreqs)
         print('Nsrcs:', len(catalog))
-        if 'obs_param_file' in input_uv.extra_keywords:
-            obs_param_file = input_uv.extra_keywords['obs_param_file']
-            telescope_config_file = input_uv.extra_keywords['telescope_config_name']
-            antenna_location_file = input_uv.extra_keywords['array_layout']
-        else:
-            obs_param_file = ''
-            telescope_config_file = ''
-            antenna_location_file = ''
-
-        uv_container = init_uvdata_out(input_uv, source_list_name,
-                                       obs_param_file=obs_param_file,
-                                       telescope_config_file=telescope_config_file,
-                                       antenna_location_file=antenna_location_file)
+        uv_container = simsetup.complete_uvdata(input_uv, inplace=False)
 
     Nbls = input_uv.Nbls
     Ntimes = input_uv.Ntimes
@@ -474,7 +407,6 @@ def run_uvsim(params, return_uv=False):
     beam_list = None
     beam_dict = None
     catalog = None
-    source_list_name = None
 
     if rank == 0:
         input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(params)
@@ -485,12 +417,36 @@ def run_uvsim(params, return_uv=False):
     beam_dict = comm.bcast(beam_dict, root=0)
     catalog = mpi.shared_mem_bcast(catalog, root=0)
 
-    uv_out = run_uvdata_uvsim(input_uv, beam_list, beam_dict=beam_dict, catalog=catalog, source_list_name=source_list_name)
+    uv_out = run_uvdata_uvsim(input_uv, beam_list, beam_dict=beam_dict, catalog=catalog)
 
     if rank == 0:
         with open(params, 'r') as pfile:
             param_dict = yaml.safe_load(pfile)
+
+        if 'obs_param_file' in input_uv.extra_keywords:
+            obs_param_file = input_uv.extra_keywords['obs_param_file']
+            telescope_config_file = input_uv.extra_keywords['telescope_config_file']
+            antenna_location_file = input_uv.extra_keywords['antenna_location_file']
+        else:
+            obs_param_file = ''
+            telescope_config_file = ''
+            antenna_location_file = ''
+
+        # Updating file history.
+        history = simutils.get_version_string()
+        history += ' Sources from source list: ' + source_list_name + '.'
+        history += (' Based on config files: ' + obs_param_file + ', '
+                    + telescope_config_file + ', ' + antenna_location_file)
+        history += ' Npus = ' + str(mpi.Npus) + '.'
+
+        # add pyuvdata version info
+        history += uv_out.pyuvdata_version_str
+
+        uv_out.history = history
+
         simutils.write_uvdata(uv_out, param_dict, dryrun=return_uv)
+
     if return_uv:
         return uv_out
+
     comm.Barrier()
