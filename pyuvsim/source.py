@@ -5,8 +5,6 @@
 from __future__ import absolute_import, division, print_function
 
 import sys
-import h5py
-import healpy as hp
 
 import numpy as np
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
@@ -248,7 +246,7 @@ class SkyModel(object):
         return self.Ncomponents * self._basesize
 
 
-def read_hdf5(hdf5_filename, freq_ind):
+def read_hdf5(hdf5_healpix_filename, freq_ind):
     """
     Read hdf5 files using h5py and get a healpix map, indices and frequencies
 
@@ -256,6 +254,7 @@ def read_hdf5(hdf5_filename, freq_ind):
         hdf5_filename: path and name of the hdf5 file to read
         freq_ind: index of the frequency, for which you want to get the healpix map
     """
+    import h5py
     f = h5py.File(hdf5_filename)
     hpmap = f['data'][0, :, freq_ind]
     indices = f['indices'][()]
@@ -273,6 +272,7 @@ def healpix_to_sky(hpmap, indices, freqs):
         indices: indices from a hdf5 file
         freqs: frequencies from a hdf5 file
     """
+    import healpy as hp
     Nside = hp.npix2nside(hpmap.size)
     dec, ra = hp.pix2ang(Nside, indices, lonlat=True)
     dec = Angle(dec, unit='deg')
