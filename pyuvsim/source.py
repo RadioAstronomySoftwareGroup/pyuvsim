@@ -385,6 +385,6 @@ def healpix_to_sky(hpmap, indices, freqs):
     ra = Angle(ra, unit='deg')
     freq = Quantity(freqs, 'hertz')
     stokes = np.zeros((4, len(indices)))
-    stokes[0] = hpmap
+    stokes[0] = hpmap / simutils.jy2Tsr(freq, bm=hp.nside2pixarea(Nside), mK=True)
     sky = SkyModel(indices.astype('str'), ra, dec, freq, stokes)
     return sky

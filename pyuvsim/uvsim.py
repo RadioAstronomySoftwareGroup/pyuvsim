@@ -4,14 +4,13 @@
 
 from __future__ import absolute_import, division, print_function
 
-import sys
-
-import astropy.constants as const
-import astropy.units as units
 import numpy as np
+import sys
 import six
 import yaml
 from astropy.coordinates import EarthLocation
+import astropy.constants as const
+import astropy.units as units
 from astropy.time import Time
 from astropy.units import Quantity
 from pyuvdata import UVData
@@ -140,7 +139,7 @@ class UVEngine(object):
         self.apply_beam()
 
         # need to convert uvws from meters to wavelengths
-        uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
+        uvw_wavelength = self.task.baseline.uvw / simutils.c * self.task.freq.to('1/s')
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
         vij = self.apparent_coherency * fringe
         # Sum over source component axis:
