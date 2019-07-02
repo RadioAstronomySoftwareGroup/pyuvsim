@@ -15,6 +15,7 @@ from astropy.time import Time
 import pyuvsim
 import pyuvsim.tests as simtest
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+from . import utils as simutils
 
 
 def test_source_zenith_from_icrs():
@@ -136,6 +137,7 @@ def test_healpix_to_sky():
     ipix_disc = hp.query_disc(nside=32, vec=vec, radius=np.radians(10))
     m = np.arange(Npix)
     m[ipix_disc] = m.max()
+    m = m // simutils.jy2Tsr(freq, bm=hp.nside2pixarea(Nside), mK=True)
 
     hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
     sky = pyuvsim.source.healpix_to_sky(hpmap, inds, freqs)
