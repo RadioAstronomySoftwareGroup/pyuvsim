@@ -47,7 +47,7 @@ def test_run_uvsim():
     mock_keywords = {"Nsrcs": 3}
     simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', pyuvsim.run_uvdata_uvsim, 'not_uvdata', beam_list)
     mpi.start_mpi()
-    catalog, mock_kwds = pyuvsim.simsetup.create_mock_catalog(hera_uv.time_array[0], **mock_keywords)
+    catalog, mock_kwds = pyuvsim.simsetup.create_mock_catalog(hera_uv.time_array[0], return_table=True, **mock_keywords)
     uv_out = pyuvsim.run_uvdata_uvsim(hera_uv, beam_list, catalog=catalog)
     rank = mpi.get_rank()
     if rank == 0:
@@ -65,7 +65,6 @@ def test_run_param_uvsim():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
     with open(param_filename) as pfile:
         params_dict = yaml.safe_load(pfile)
-
     tempfilename = params_dict['filing']['outfile_name']
 
     # This test obsparam file has "single_source.txt" as its catalog.

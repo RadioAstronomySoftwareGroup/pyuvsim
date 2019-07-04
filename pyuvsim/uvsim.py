@@ -270,6 +270,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
 
             yield task
 
+
 def serial_gather(uvtask_list, uv_out):
     """
         Loop over uvtask list, acquire visibilities and add to uvdata object.
@@ -425,8 +426,8 @@ def run_uvsim(params, return_uv=False):
 
         if 'obs_param_file' in input_uv.extra_keywords:
             obs_param_file = input_uv.extra_keywords['obs_param_file']
-            telescope_config_file = input_uv.extra_keywords['telescope_config_file']
-            antenna_location_file = input_uv.extra_keywords['antenna_location_file']
+            telescope_config_file = input_uv.extra_keywords['telescope_config_name']
+            antenna_location_file = input_uv.extra_keywords['array_layout']
         else:
             obs_param_file = ''
             telescope_config_file = ''

@@ -22,7 +22,7 @@ except ImportError:   # pragma: no cover
         return None
 
 
-default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params', 'coherency_calc', 'update_positions', 'apply_beam', 'make_visibility', 'uvdata_to_task_iter', 'init_uvdata_out', 'run_uvsim']
+default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params', 'coherency_calc', 'update_positions', 'apply_beam', 'make_visibility', 'uvdata_to_task_iter', 'run_uvsim']
 
 
 def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_profile.out', dump_raw=False):
