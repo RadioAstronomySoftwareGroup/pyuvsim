@@ -478,6 +478,7 @@ def test_file_to_tasks():
         exp_task = expected_task_list[idx]
         nt.assert_equal(task, exp_task)
 
+
 def test_gather():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)

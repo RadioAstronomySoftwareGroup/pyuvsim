@@ -989,8 +989,7 @@ def initialize_uvdata_from_params(obs_params):
 
     # Use extra_keywords to pass along required paths for file history.
     extra_keywords = {}
-    extra_keywords['obs_param_file'] = param_dict['obs_param_file']
-    for key in ['telescope_config_name', 'array_layout']:
+    for key in ['obs_param_file', 'telescope_config_name', 'array_layout']:
         if key in tele_dict:
             val = tele_dict[key]
             if isinstance(val, six.string_types):
