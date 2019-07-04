@@ -8,6 +8,7 @@ import numpy as np
 from numpy.lib import recfunctions
 import yaml
 import os
+import shutil
 import warnings
 import six
 import ast
@@ -975,9 +976,9 @@ def initialize_uvdata_from_params(obs_params):
     Returns:
         uv_obj, beam_list, beam_dict
     """
-    uvparam_dict = {}
+    uvparam_dict = {}       # Parameters that will go into UVData
     if isinstance(obs_params, str):
-        param_dict = _config_str_to_dict(obs_params)
+        param_dict = _config_str_to_dict(obs_params)        # Container for received settings.
     else:
         param_dict = copy.deepcopy(obs_params)
 
@@ -989,11 +990,13 @@ def initialize_uvdata_from_params(obs_params):
 
     # Use extra_keywords to pass along required paths for file history.
     extra_keywords = {}
-    for key in ['obs_param_file', 'telescope_config_name', 'array_layout']:
-        if key in tele_dict:
-            val = tele_dict[key]
-            if isinstance(val, six.string_types):
-                extra_keywords[key] = val
+    if 'obs_param_file' in param_dict:
+        extra_keywords['obs_param_file'] = param_dict['obs_param_file']
+        for key in ['telescope_config_name', 'array_layout']:
+            if key in tele_dict:
+                val = tele_dict[key]
+                if isinstance(val, six.string_types):
+                    extra_keywords[key] = val
 
     uvparam_dict['extra_keywords'] = extra_keywords
 
@@ -1088,7 +1091,7 @@ def initialize_uvdata_from_params(obs_params):
 
 
 def initialize_uvdata_from_keywords(
-        yaml_filename=None, antenna_layout_filename=None, array_layout=None,
+        yaml_filename=None, antenna_layout_filepath=None, output_layout_filename=None, array_layout=None,
         telescope_location=None, telescope_name=None, Nfreqs=None, start_freq=None,
         bandwidth=None, freq_array=None, channel_width=None, Ntimes=None,
         integration_time=None, start_time=None, time_array=None, bls=None,
@@ -1103,11 +1106,14 @@ def initialize_uvdata_from_keywords(
     yaml_filename : str (optional)
         Specify filename for yaml file to write out.
         Defaults to obsparam.yaml
-    antenna_layout_filename : str (optional)
+    antenna_layout_filepath : str (optional)
         Path to csv file of antenna positions (see documentation for details).
+    output_layout_filename : str (optional)
+        File name for antenna layout if writing files out.
+        If unspecified, defaults to the basename of the antenna_layout_filepath.
+        If that is not given, it defaults to "antenna_layout.csv"
         Will not overwrite existing files.
-        Defaults to antenna_layout.csv
-    array_layout : dictionary (required if antenna_layout_filename not given)
+    array_layout : dictionary (required if antenna_layout_filepath not given)
         dictionary, keys are integer antenna numbers, values are len-3 antenna positions
         in ENU coordinates [meters].
     antenna_names : list of str (optional)
@@ -1160,15 +1166,32 @@ def initialize_uvdata_from_keywords(
     UVData object with zeroed data_array
     """
 
-    if path_out is None:
-        path_out = '.'
-    if yaml_filename is None:
-        yaml_filename = 'obsparam.yaml'
-    if antenna_layout_filename is None:
-        antenna_layout_filename = 'antenna_layout.csv'
+    arrdict = array_layout is not None
+    arrfile = antenna_layout_filepath is not None
+    outfile = output_layout_filename is not None
 
-    yaml_filename = check_file_exists_and_increment(os.path.join(path_out, yaml_filename))
-    antenna_layout_filename = check_file_exists_and_increment(os.path.join(path_out, antenna_layout_filename))
+    if write_files:
+        if path_out is None:
+            path_out = '.'
+        if not outfile:
+            if not arrfile:
+                output_layout_filename = 'antenna_layout.csv'
+            else:
+                output_layout_filename = os.path.basename(antenna_layout_filepath)
+            outfile = True
+
+        # Increment name appropriately:
+        output_layout_filepath = os.path.join(path_out, output_layout_filename)
+        output_layout_filename = os.path.basename(check_file_exists_and_increment(output_layout_filepath, 'csv'))
+
+        if yaml_filename is None:
+            yaml_filename = 'obsparam.yaml'
+        yaml_filename = check_file_exists_and_increment(os.path.join(path_out, yaml_filename), 'yaml')
+
+        if antenna_layout_filepath is not None:
+            # Copying original file to new place, if it exists
+            if os.path.exists(antenna_layout_filepath):
+                shutil.copyfile(antenna_layout_filepath, os.path.join(path_out, output_layout_filename))
 
     antenna_numbers = None
     if isinstance(array_layout, dict):
@@ -1177,7 +1200,13 @@ def initialize_uvdata_from_keywords(
         if antenna_names is None:
             antenna_names = antenna_numbers.astype('str')
         if write_files:
-            _write_layout_csv(antenna_layout_filename, antpos_enu, antenna_names, antenna_numbers)
+            _write_layout_csv(output_layout_filepath, antpos_enu, antenna_names, antenna_numbers)
+
+    if array_layout is None:
+        if outfile:
+            array_layout = output_layout_filename
+        else:
+            array_layout = antenna_layout_filepath
 
     freq_params = {'Nfreqs': Nfreqs, 'start_freq': start_freq, 'bandwidth': bandwidth,
                    'freq_array': freq_array, 'channel_width': channel_width}
@@ -1207,23 +1236,30 @@ def initialize_uvdata_from_keywords(
         if type(polarization_array[0]) is not int:
             polarization_array = np.array(uvutils.polstr2num(polarization_array))
 
+    if yaml_filename is None:
+        yaml_filename = ''
+
     param_dict = {
         'time': time_params,
         'freq': freq_params,
         'select': selection_params,
         'telescope': tele_params,
         'config_path': path_out,
-        'param_file': os.path.basename(yaml_filename),
         'polarization_array': polarization_array
     }
 
     param_dict.update(**extra_kwds)
 
     if write_files:
-        tele_params['array_layout'] = antenna_layout_filename
+        tele_params['array_layout'] = antenna_layout_filepath
+        param_dict['telescope'] = tele_params
+        writeable_param_dict = copy.deepcopy(param_dict)
+        if polarization_array is not None:
+            writeable_param_dict['polarization_array'] = polarization_array.tolist()
         with open(yaml_filename, 'w') as yfile:
-            yaml.dump(param_dict, yfile, default_flow_style=False)
+            yaml.dump(writeable_param_dict, yfile, default_flow_style=False)
 
+    param_dict['obs_param_file'] = os.path.basename(yaml_filename)
     param_dict['telescope'].update(layout_params)
     uv_obj, _, _ = initialize_uvdata_from_params(param_dict)
 

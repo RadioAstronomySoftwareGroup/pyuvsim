@@ -42,7 +42,6 @@ def test_run_uvsim():
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beamfile = os.path.join(simtest.TESTDATA_PATH, "temp.uvbeam")
     beam.write_beamfits(beamfile)
-
     beam_list = [beamfile]
     mock_keywords = {"Nsrcs": 3}
     simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', pyuvsim.run_uvdata_uvsim, 'not_uvdata', beam_list)
@@ -55,7 +54,7 @@ def test_run_uvsim():
     os.remove(beamfile)
 
 
-def test_run_param_uvsim():
+def test_run_paramfile_uvsim():
     # Test vot and txt catalogs for parameter simulation
 
     uv_ref = UVData()
@@ -94,6 +93,14 @@ def test_run_param_uvsim():
     nt.assert_equal(uv_new_txt, uv_new_vot)
     nt.assert_equal(uv_new_txt, uv_ref)
     nt.assert_equal(uv_new_vot, uv_ref)
+
+
+def test_run_paramdict_uvsim():
+    # Running a simulation from parameter dictionary.
+
+    params = pyuvsim.simsetup._config_str_to_dict(os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml'))
+
+    uv_out = pyuvsim.run_uvsim(params, return_uv=True)
 
 
 def test_mpi_funcs():

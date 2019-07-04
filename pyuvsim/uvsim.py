@@ -421,8 +421,11 @@ def run_uvsim(params, return_uv=False):
     uv_out = run_uvdata_uvsim(input_uv, beam_list, beam_dict=beam_dict, catalog=catalog)
 
     if rank == 0:
-        with open(params, 'r') as pfile:
-            param_dict = yaml.safe_load(pfile)
+        if isinstance(params, six.string_types):
+            with open(params, 'r') as pfile:
+                param_dict = yaml.safe_load(pfile)
+        else:
+            param_dict = params
 
         if 'obs_param_file' in input_uv.extra_keywords:
             obs_param_file = input_uv.extra_keywords['obs_param_file']
