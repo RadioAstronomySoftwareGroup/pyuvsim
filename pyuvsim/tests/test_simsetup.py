@@ -483,7 +483,7 @@ def test_param_select_redundant():
 
 def check_uvdata_keyword_init(case):
     base_kwargs = dict(
-        array_layout=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
+        antenna_layout_filepath=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
         telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
         telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
         integration_time=100.0, start_time=2458101.0, polarization_array=['xx'],
@@ -544,17 +544,17 @@ def check_uvdata_keyword_init(case):
         obsparam_fname = 'temp_obsparam.yaml'
 
         new_kwargs = copy.deepcopy(base_kwargs)
-        new_kwargs['antenna_layout_filename'] = layout_fname
+        new_kwargs['output_layout_filename'] = layout_fname
         new_kwargs['yaml_filename'] = obsparam_fname
         new_kwargs['array_layout'] = antpos_d
-        new_kwargs['path_out'] = '.'
+        new_kwargs['path_out'] = simtest.TESTDATA_PATH
         new_kwargs['write_files'] = True
-        uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
 
-        nt.assert_true(os.path.exists(layout_fname))
-        nt.assert_true(os.path.exists(obsparam_fname))
-        os.remove(layout_fname)
-        os.remove(obsparam_fname)
+        uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
+        layout_path = os.path.join(simtest.TESTDATA_PATH, layout_fname)
+        obsparam_path = os.path.join(simtest.TESTDATA_PATH, obsparam_fname)
+        nt.assert_true(os.path.exists(layout_path))
+        nt.assert_true(os.path.exists(obsparam_path))
 
         nt.assert_equal(uvd.Nbls, 6)
         nt.assert_equal(uvd.Nants_data, 4)
@@ -562,12 +562,44 @@ def check_uvdata_keyword_init(case):
         apd = dict(zip(a, ap))
         nt.assert_true(np.all([np.isclose(antpos_d[a], apd[a]) for a in ants]))
 
+    elif case == 5:
+        # Check defaults when writing to file.
+        uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**base_kwargs)
+        antpos, ants = uvd.get_ENU_antpos()
+        antpos_d = dict(zip(ants, antpos))
+        # Checking -- Default to a copy of the original layout, if layout is provided.
+        layout_fname = 'triangle_bl_layout.csv'
+        obsparam_fname = 'obsparam.yaml'
+
+        new_kwargs = copy.deepcopy(base_kwargs)
+        new_kwargs['write_files'] = True
+
+        uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
+        nt.assert_true(os.path.exists(layout_fname))
+        nt.assert_true(os.path.exists(obsparam_fname))
+
+        os.remove(layout_fname)
+        os.remove(obsparam_fname)
+
+        # Default if no antenna_layout_filepath is provided.
+        layout_fname = 'antenna_layout.csv'
+        new_kwargs.pop('antenna_layout_filepath')
+        new_kwargs['array_layout'] = antpos_d
+        new_kwargs['complete'] = True
+
+        uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
+        nt.assert_true(os.path.exists(layout_fname))
+        nt.assert_true(os.path.exists(obsparam_fname))
+
+        os.remove(layout_fname)
+        os.remove(obsparam_fname)
+
 
 def test_kwarg_uv_init():
     """
     Tests different forms of UVData setup from keyword arguments.
     """
-    for i in range(5):
+    for i in range(6):
         yield (check_uvdata_keyword_init, i)
 
 
@@ -797,9 +829,8 @@ def test_catalog_file_writer():
 def test_keyword_param_loop():
     # Check that yaml/csv files made by intialize_uvdata_from_keywords will work
     # on their own.
-
-    layout_fname = 'temp_layout.csv'
-    obsparam_fname = 'temp_obsparam.yaml'
+    layout_fname = 'temp_layout_kwdloop.csv'
+    obsparam_fname = 'temp_obsparam_kwdloop.yaml'
     path_out = simtest.TESTDATA_PATH
     antpos_enu = np.ones(30).reshape((10, 3))
     antnums = np.arange(10)
@@ -809,7 +840,7 @@ def test_keyword_param_loop():
         telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
         telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
         integration_time=100.0, start_time=2458101.0, no_autos=True,
-        path_out=path_out, antenna_layout_filename=layout_fname, yaml_filename=obsparam_fname
+        path_out=path_out, antenna_layout_filepath=layout_fname, yaml_filename=obsparam_fname
     )
 
     uv2, _, _ = pyuvsim.simsetup.initialize_uvdata_from_params(os.path.join(path_out, obsparam_fname))
