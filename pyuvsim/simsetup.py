@@ -1091,7 +1091,8 @@ def initialize_uvdata_from_params(obs_params):
 
 
 def initialize_uvdata_from_keywords(
-        yaml_filename=None, antenna_layout_filepath=None, output_layout_filename=None, array_layout=None,
+        yaml_filename=None, antenna_layout_filepath=None, output_layout_filename=None,
+        array_layout=None,
         telescope_location=None, telescope_name=None, Nfreqs=None, start_freq=None,
         bandwidth=None, freq_array=None, channel_width=None, Ntimes=None,
         integration_time=None, start_time=None, time_array=None, bls=None,
@@ -1114,7 +1115,7 @@ def initialize_uvdata_from_keywords(
         If that is not given, it defaults to "antenna_layout.csv"
         Will not overwrite existing files.
     array_layout : dictionary (required if antenna_layout_filepath not given)
-        dictionary, keys are integer antenna numbers, values are len-3 antenna positions
+        keys are integer antenna numbers, values are len-3 antenna positions
         in ENU coordinates [meters].
     antenna_names : list of str (optional)
         If unset, antenna names are assigned as "%s" % antnum.
