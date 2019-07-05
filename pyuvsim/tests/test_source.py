@@ -15,7 +15,7 @@ from astropy.time import Time
 import pyuvsim
 import pyuvsim.tests as simtest
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-from . import utils as simutils
+from pyuvsim import utils as simutils
 
 
 def test_source_zenith_from_icrs():
