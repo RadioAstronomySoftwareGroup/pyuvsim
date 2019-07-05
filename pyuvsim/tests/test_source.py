@@ -17,7 +17,7 @@ import pyuvsim.tests as simtest
 import pyuvsim.utils as simutils
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-from . import utils as simutils
+from pyuvsim import utils as simutils
 
 
 
