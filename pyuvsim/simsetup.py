@@ -835,6 +835,7 @@ def parse_time_params(time_params):
         time_arr = time_params['time_array']
         time_params['Ntimes'] = len(time_arr)
         time_params['start_time'] = np.min(time_arr)
+        time_params['integration_time'] = np.mean(np.diff(time_arr))
 
     else:
         if not (st or et):
@@ -886,8 +887,7 @@ def parse_time_params(time_params):
                 raise ValueError("Calculated time array is not consistent with set integration_time."
                                  + "\nInput parameters are: {}".format(str(init_time_params)))
 
-        return_dict['integration_time'] = (np.ones_like(time_arr, dtype=np.float64)
-                                           * time_params['integration_time'])
+    return_dict['integration_time'] = time_params['integration_time']
     return_dict['time_array'] = time_arr
     return_dict['Ntimes'] = time_params['Ntimes']
     return_dict['start_time'] = time_params['start_time']
@@ -1413,7 +1413,8 @@ def complete_uvdata(uv_in, inplace=False):
     uv_obj.vis_units = 'Jy'
 
     uv_obj.instrument = uv_obj.telescope_name
-    uv_obj.set_lsts_from_time_array()
+    if uv_obj.lst_array is None:
+        uv_obj.set_lsts_from_time_array()
     uv_obj.spw_array = np.array([0])
     if uv_obj.Nfreqs == 1:
         uv_obj.channel_width = 1.  # Hz

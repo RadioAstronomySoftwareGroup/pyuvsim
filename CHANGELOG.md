@@ -8,6 +8,9 @@
 - unit tests check error messages raised.
 - Polarization selection is now allowed in setup. Will break if incorrect polarization is used in pyuvsim.
 
+### Fixed
+- Bug in how integration_time array is set in setup
+
 
 ## [1.1.0] - 2019-6-14
 
