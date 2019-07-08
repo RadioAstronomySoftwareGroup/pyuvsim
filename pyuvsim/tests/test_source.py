@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import pyuvsim.tests as simtest
 from astropy.time import Time
-from astropy.coordinates import SkyCoord, EarthLocation
+from astropy.coordinates import SkyCoord, EarthLocation, Angle
 from astropy import units
 
 import pyuvsim
@@ -42,7 +42,7 @@ def test_source_zenith_from_icrs():
                                   pyuvsim.SkyModel, 'icrs_zen', ra, dec, freq.value, [1, 0, 0, 0])
     zenith_source = pyuvsim.SkyModel('icrs_zen', ra, dec, freq, [1, 0, 0, 0])
 
-    zenith_source_lmn = zenith_source.pos_lmn(time, array_location)
+    zenith_source.update_positions(time, array_location)
     zenith_source_lmn = zenith_source.pos_lmn.squeeze()
     assert np.allclose(zenith_source_lmn, np.array([0, 0, 1]), atol=1e-5)
 
@@ -95,7 +95,7 @@ def test_pol_coherency_calc():
     pol_srcs_up = (sky.alt_az[0] > 0) * inds
     unpol_srcs_up = (sky.alt_az[0] > 0) * (~inds)
 
-    nt.assert_true(np.allclose(coh_loc[0, 0, unpol_srcs_up], 0.5))
-    nt.assert_true(np.allclose(coh_loc[1, 1, unpol_srcs_up], 0.5))
-    nt.assert_true(np.allclose(coh_loc[1, 0, unpol_srcs_up], 0.0))
-    nt.assert_true(np.allclose(coh_loc[0, 1, unpol_srcs_up], 0.0))
+    assert np.allclose(coh_loc[0, 0, unpol_srcs_up], 0.5)
+    assert np.allclose(coh_loc[1, 1, unpol_srcs_up], 0.5)
+    assert np.allclose(coh_loc[1, 0, unpol_srcs_up], 0.0)
+    assert np.allclose(coh_loc[0, 1, unpol_srcs_up], 0.0)
