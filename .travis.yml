@@ -29,7 +29,7 @@ install:
   - conda info -a
 
   # install dependencies
-  - conda install numpy scipy astropy six pip pyyaml line_profiler pycodestyle coveralls h5py pytest-cov
+  - conda install numpy scipy astropy six pip pyyaml line_profiler pycodestyle coveralls h5py pytest-cov psutil
   - conda install -c conda-forge mpi4py
   - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
   - python setup.py install
