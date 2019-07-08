@@ -54,7 +54,7 @@ def test_mock_catalog_zenith_source():
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
-    assert cat_source == test_source
+    assert cat == test_source
 
 
 def test_mock_catalog_off_zenith_source():
@@ -78,7 +78,7 @@ def test_mock_catalog_off_zenith_source():
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
 
-    assert cat_source == test_source
+    assert cat == test_source
 
 
 def test_catalog_from_params():
@@ -373,9 +373,8 @@ def test_time_parser():
                                   pyuvsim.parse_time_params, subdict)
 
 
-
 def test_single_input_time():
-    time_dict = pyuvsim.simsetup.time_array_to_arams([1.0])
+    time_dict = pyuvsim.simsetup.time_array_to_params([1.0])
     assert time_dict['integration_time'] == 1.0
 
 
@@ -656,9 +655,9 @@ def test_uvfits_to_config():
 
     param_dict = pyuvsim.simsetup._config_str_to_dict(os.path.join(opath, second_param_filename))
     shutil.rmtree(opath)
-    assert param_dict['param_file'] == second_param_filename
-    assert orig_param_dict['param_file'] == param_filename
-    orig_param_dict['param_file'] = second_param_filename
+    assert param_dict['obs_param_file'] == second_param_filename
+    assert orig_param_dict['obs_param_file'] == param_filename
+    orig_param_dict['obs_param_file'] = second_param_filename
     assert simtest.compare_dictionaries(param_dict, orig_param_dict)
 
 
@@ -684,7 +683,7 @@ def test_point_catalog_reader():
     # Check cuts
     source_select_kwds = {'min_flux': 1.0}
     catalog = pyuvsim.simsetup.read_text_catalog(catfile, source_select_kwds=source_select_kwds, return_table=True)
-    nt.assert_true(len(catalog) == 2)
+    assert len(catalog) == 2
 
 
 def test_flux_cuts():
@@ -709,8 +708,8 @@ def test_flux_cuts():
     maxI_cut = 2.3
 
     cut_sourcelist = pyuvsim.simsetup.source_cuts(catalog_table, input_uv=uv_in, min_flux=minI_cut, max_flux=maxI_cut)
-    nt.assert_true(np.all(cut_sourcelist['flux_density_I'] > minI_cut))
-    nt.assert_true(np.all(cut_sourcelist['flux_density_I'] < maxI_cut))
+    assert np.all(cut_sourcelist['flux_density_I'] > minI_cut)
+    assert np.all(cut_sourcelist['flux_density_I'] < maxI_cut)
 
 
 def test_circumpolar_nonrising():
@@ -750,8 +749,8 @@ def test_circumpolar_nonrising():
     tans = np.tan(np.radians(lat)) * np.tan(dec.rad)
     nonrising_check = np.where(tans < -1)
     circumpolar_check = np.where(tans > 1)
-    nt.assert_true(np.all(circumpolar_check == circumpolar))
-    nt.assert_true(np.all(nonrising_check == nonrising))
+    assert np.all(circumpolar_check == circumpolar)
+    assert np.all(nonrising_check == nonrising)
 
 
 def test_read_gleam():
@@ -760,7 +759,7 @@ def test_read_gleam():
                                       category=[astropy.io.votable.exceptions.W27]
                                       + [astropy.io.votable.exceptions.W50] * 10)
 
-    assert len(sourcelist) == 50
+    assert sourcelist.Ncomponents == 50
 
     # Check cuts
     source_select_kwds = {'min_flux': 1.0}
@@ -770,7 +769,7 @@ def test_read_gleam():
                                    category=[astropy.io.votable.exceptions.W27]
                                    + [astropy.io.votable.exceptions.W50] * 10)
 
-    nt.assert_true(len(catalog) < sourcelist.Ncomponents)
+    assert len(catalog) < sourcelist.Ncomponents
 
 
 def test_mock_catalogs():
