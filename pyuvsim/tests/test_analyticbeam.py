@@ -49,8 +49,8 @@ def test_uniform_beam():
     expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=np.float)
     expected_data[1, 0, 0, :, :] = 1
     expected_data[0, 0, 1, :, :] = 1
-    expected_data[1, 0, 1, :, :] = 1
-    expected_data[0, 0, 0, :, :] = 1
+    # expected_data[1, 0, 1, :, :] = 1
+    # expected_data[0, 0, 0, :, :] = 1
     assert np.allclose(interpolated_beam, expected_data)
 
 
@@ -91,10 +91,6 @@ def test_airy_beam_values():
     expected_data[1, 0, 0, :, :] = airy_values
     expected_data[0, 0, 1, :, :] = airy_values
 
-    expected_data[1, 0, 0, :, :] = airy_vals
-    expected_data[0, 0, 1, :, :] = airy_vals
-    expected_data[1, 0, 1, :, :] = airy_vals
-    expected_data[0, 0, 0, :, :] = airy_vals
     assert np.allclose(interpolated_beam, expected_data)
 
 
@@ -264,9 +260,8 @@ def test_power_analytic_beam():
     pb.efield_to_power()
     evals = eb.interp(az, za, freqs)[0][0, 0, 1]
     pvals = pb.interp(az, za, freqs)[0][0, 0, 0]
-    nt.assert_true(np.allclose(evals**2, pvals))
+    assert np.allclose(evals**2, pvals)
 
-    assert np.allclose(evals**2, pvals / 2.)
 
 def test_comparison():
     """
