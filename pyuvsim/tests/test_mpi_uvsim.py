@@ -121,13 +121,13 @@ def test_shared_mem():
     sA = mpi.shared_mem_bcast(A)
 
     # Equivalent to original
-    nt.assert_true(np.all(sA == A))
+    assert np.all(sA == A)
 
     # Not the original object:
-    nt.assert_true(hex(id(sA)) != hex(id(A)))
+    assert hex(id(sA)) != hex(id(A))
 
     # Shared array should be read-only
-    nt.assert_raises(ValueError, sA.itemset, 0, 3.0)
+    pytest.raises(ValueError, sA.itemset, 0, 3.0)
 
 
 def test_mpi_counter():
@@ -138,5 +138,5 @@ def test_mpi_counter():
     N = 20
     for i in range(N):
         c = count.next()
-    nt.assert_equal(count.current_value(), N)
+    assert count.current_value() == N
     count.free()
