@@ -6,7 +6,6 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import numpy as np
-import pytest
 import copy
 import itertools
 from astropy.time import Time
@@ -298,7 +297,6 @@ def test_single_offzenith_source_uvfits():
     assert np.allclose(beam_jones, jones)
 
     uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
-    jones_T = np.swapaxes(jones, 0, 1)
     # Remove source axis from jones matrix
     jones = jones.squeeze()
     vis_analytic = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(2j * np.pi * (uvw_wavelength_array[0, 0] * src_l + uvw_wavelength_array[0, 1] * src_m + uvw_wavelength_array[0, 2] * src_n))
@@ -401,7 +399,6 @@ def test_file_to_tasks():
 
     Nblts = hera_uv.Nblts
     Nfreqs = hera_uv.Nfreqs
-    Nsrcs = len(sources)
 
     Ntasks = Nblts * Nfreqs
     beam_dict = None
@@ -418,8 +415,6 @@ def test_file_to_tasks():
     assert np.all([tlist[i + 1] >= tlist[i] for i in range(Ntasks - 1)])
     task0 = copy.deepcopy(tlist[0])
     task1 = copy.deepcopy(tlist[1])
-    uvind0 = copy.copy(task0.uvdata_index)
-    uvind1 = copy.copy(task1.uvdata_index)
     task0.baseline = task1.baseline
     task0.uvdata_index = (0, 0, 0)
     task1.uvdata_index = (1, 0, 0)
@@ -482,7 +477,6 @@ def test_gather():
 
     Nblts = hera_uv.Nblts
     Nfreqs = hera_uv.Nfreqs
-    Nsrcs = len(sources)
 
     Ntasks = Nblts * Nfreqs
     beam_dict = dict(zip(hera_uv.antenna_names, [0] * hera_uv.Nants_data))
@@ -514,7 +508,6 @@ def test_local_task_gen():
 
     Nblts = hera_uv.Nblts
     Nfreqs = hera_uv.Nfreqs
-    Nsrcs = len(sources)
     Ntasks = Nblts * Nfreqs
     beam_dict = None
 
@@ -580,7 +573,7 @@ def test_task_coverage():
             tasks_all.append(tasks)
         tasks_all = itertools.chain(*tasks_all)
         tasks = np.array(list(tasks_all))
-        nt.assert_true(np.all(tasks == tasks_expected))
+        assert np.all(tasks == tasks_expected)
 
         # Case 2 -- (Nbltf < Npus and Nsrcs > Npus)
 
@@ -607,7 +600,7 @@ def test_task_coverage():
 
         # Returned task indices are out of order, compared with the meshgrid.
         inds = np.lexsort((tasks[:, 0], tasks[:, 1]), axis=0)
-        nt.assert_true(np.all(tasks[inds] == tasks_expected))
+        assert np.all(tasks[inds] == tasks_expected)
 
 
 def test_source_splitting():
@@ -631,8 +624,6 @@ def test_source_splitting():
     beam_list = [beam]
 
     Nblts = hera_uv.Nblts
-    Nbls = hera_uv.Nbls
-    Ntimes = hera_uv.Ntimes
     Nfreqs = hera_uv.Nfreqs
     Nsrcs = len(sources)
     Ntasks = Nblts * Nfreqs
@@ -646,14 +637,13 @@ def test_source_splitting():
 
     Nsky_parts = np.ceil(skymodel_mem_footprint / float(mem_avail))
     partsize = int(np.floor(Nsrcs / Nsky_parts))
-    src_iter = [range(s, s + partsize) for s in range(0, Nsrcs, partsize)]
 
-    nt.assert_true(partsize * pyuvsim.SkyModel._basesize * Npus_node < mem_avail)
+    assert partsize * pyuvsim.SkyModel._basesize * Npus_node < mem_avail
     print(skymodel_mem_footprint / 1e6, partsize * pyuvsim.SkyModel._basesize * Npus_node / 1e6, mem_avail / 1e6)
 
     # Normally, the number of tasks is Nbls * Ntimes * Nfreqs (partsize = Nsrcs)
     # If the source list is split within the task iterator, then it will be larger.
-    nt.assert_equal(len(uvtask_list), Ntasks * Nsrcs / partsize)
+    assert len(uvtask_list) == Ntasks * Nsrcs / partsize
 
     # Reset spoofed parameters.
     del os.environ['SLURM_MEM_PER_NODE']
