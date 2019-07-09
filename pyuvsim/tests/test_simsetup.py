@@ -545,7 +545,7 @@ def check_uvdata_keyword_init(case):
 
         new_kwargs = copy.deepcopy(base_kwargs)
         new_kwargs['output_layout_filename'] = layout_fname
-        new_kwargs['yaml_filename'] = obsparam_fname
+        new_kwargs['output_yaml_filename'] = obsparam_fname
         new_kwargs['array_layout'] = antpos_d
         new_kwargs['path_out'] = simtest.TESTDATA_PATH
         new_kwargs['write_files'] = True
@@ -840,7 +840,7 @@ def test_keyword_param_loop():
         telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
         telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
         integration_time=100.0, start_time=2458101.0, no_autos=True,
-        path_out=path_out, antenna_layout_filepath=layout_fname, yaml_filename=obsparam_fname
+        path_out=path_out, antenna_layout_filepath=layout_fname, output_yaml_filename=obsparam_fname
     )
 
     uv2, _, _ = pyuvsim.simsetup.initialize_uvdata_from_params(os.path.join(path_out, obsparam_fname))
