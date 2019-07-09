@@ -321,7 +321,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
         print('Ntimes:', input_uv.Ntimes)
         print('Nfreqs:', input_uv.Nfreqs)
         print('Nsrcs:', len(catalog))
-        uv_container = simsetup.complete_uvdata(input_uv, inplace=False)
+        uv_container = simsetup._complete_uvdata(input_uv, inplace=False)
 
     Nbls = input_uv.Nbls
     Ntimes = input_uv.Ntimes
