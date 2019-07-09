@@ -501,7 +501,7 @@ def test_gather():
                                        message=['The default for the `center` keyword has changed'],
                                        category=DeprecationWarning)
 
-    uv_out = pyuvsim.complete_uvdata(hera_uv, inplace=False)
+    uv_out = pyuvsim._complete_uvdata(hera_uv, inplace=False)
     for task in uvtask_list:
         engine = pyuvsim.UVEngine(task)
         task.visibility_vector = engine.make_visibility()

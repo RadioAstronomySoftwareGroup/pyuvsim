@@ -1268,7 +1268,7 @@ def initialize_uvdata_from_keywords(
     uv_obj, _, _ = initialize_uvdata_from_params(param_dict)
 
     if complete:
-        complete_uvdata(uv_obj, inplace=True)
+        _complete_uvdata(uv_obj, inplace=True)
 
     return uv_obj
 
@@ -1391,9 +1391,11 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
         yaml.dump(param_dict, yfile, default_flow_style=False)
 
 
-def complete_uvdata(uv_in, inplace=False):
+def _complete_uvdata(uv_in, inplace=False):
     """Fill out all required parameters of a :class:~`pyuvdata.UVData` object such that
     it passes the :func:~`pyuvdata.UVData.check()`.
+
+    This will overwrite existing data in `uv_in`!
 
     Arguments
     ---------
@@ -1431,7 +1433,7 @@ def complete_uvdata(uv_in, inplace=False):
         uv_obj.integration_time = (np.ones_like(uv_obj.time_array, dtype=np.float64)
                                    * np.diff(np.unique(uv_obj.time_array))[0] * (24. * 60**2))  # Seconds
 
-    # Clear existing data, if any
+    # Clear existing data, if any.
     uv_obj.data_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=np.complex)
     uv_obj.flag_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=bool)
     uv_obj.nsample_array = np.ones_like(uv_obj.data_array, dtype=float)
