@@ -1091,7 +1091,7 @@ def initialize_uvdata_from_params(obs_params):
 
 
 def initialize_uvdata_from_keywords(
-        yaml_filename=None, antenna_layout_filepath=None, output_layout_filename=None,
+        output_yaml_filename=None, antenna_layout_filepath=None, output_layout_filename=None,
         array_layout=None,
         telescope_location=None, telescope_name=None, Nfreqs=None, start_freq=None,
         bandwidth=None, freq_array=None, channel_width=None, Ntimes=None,
@@ -1100,11 +1100,14 @@ def initialize_uvdata_from_keywords(
         redundant_threshold=None, write_files=True, path_out=None, complete=False,
         **kwargs):
     """
-    Setup a UVData object from keywords.
+    Setup a UVData object from keyword arguments.
+
+    Optionally, write out the configuration to YAML and CSV files such that
+    `initialize_uvdata_from_params` will produce the same UVData object.
 
     Parameters
     ----------
-    yaml_filename : str (optional)
+    output_yaml_filename : str (optional)
         Specify filename for yaml file to write out.
         Defaults to obsparam.yaml
     antenna_layout_filepath : str (optional)
@@ -1185,9 +1188,9 @@ def initialize_uvdata_from_keywords(
         output_layout_filepath = os.path.join(path_out, output_layout_filename)
         output_layout_filename = os.path.basename(check_file_exists_and_increment(output_layout_filepath, 'csv'))
 
-        if yaml_filename is None:
-            yaml_filename = 'obsparam.yaml'
-        yaml_filename = check_file_exists_and_increment(os.path.join(path_out, yaml_filename), 'yaml')
+        if output_yaml_filename is None:
+            output_yaml_filename = 'obsparam.yaml'
+        output_yaml_filename = check_file_exists_and_increment(os.path.join(path_out, output_yaml_filename), 'yaml')
 
         if antenna_layout_filepath is not None:
             # Copying original file to new place, if it exists
@@ -1237,8 +1240,8 @@ def initialize_uvdata_from_keywords(
         if type(polarization_array[0]) is not int:
             polarization_array = np.array(uvutils.polstr2num(polarization_array))
 
-    if yaml_filename is None:
-        yaml_filename = ''
+    if output_yaml_filename is None:
+        output_yaml_filename = ''
 
     param_dict = {
         'time': time_params,
@@ -1257,10 +1260,10 @@ def initialize_uvdata_from_keywords(
         writeable_param_dict = copy.deepcopy(param_dict)
         if polarization_array is not None:
             writeable_param_dict['polarization_array'] = polarization_array.tolist()
-        with open(yaml_filename, 'w') as yfile:
+        with open(output_yaml_filename, 'w') as yfile:
             yaml.dump(writeable_param_dict, yfile, default_flow_style=False)
 
-    param_dict['obs_param_file'] = os.path.basename(yaml_filename)
+    param_dict['obs_param_file'] = os.path.basename(output_yaml_filename)
     param_dict['telescope'].update(layout_params)
     uv_obj, _, _ = initialize_uvdata_from_params(param_dict)
 
