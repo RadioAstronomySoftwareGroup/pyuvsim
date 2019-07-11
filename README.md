@@ -29,7 +29,7 @@ A user-installation is achieved simply with `pip install pyuvsim`, or to get the
 bleeding-edge: `pip install https://github.com/RadioAstronomySoftwareGroup/pyuvsim`. 
 This will install all dependencies. 
 
-If you wish to manage dependencies manually, or are developing `pyuvsum` yourself, read
+If you wish to manage dependencies manually, or are developing `pyuvsim` yourself, read
 on.
 
 Note that `pyuvsim` is intended to run on clusters running the linux operating system.
