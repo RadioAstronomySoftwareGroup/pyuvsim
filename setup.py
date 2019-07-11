@@ -2,12 +2,16 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-from setuptools import setup
 import glob
-import os
 import io
 import json
-from pyuvsim import version
+import os
+import sys
+
+from setuptools import setup
+
+sys.path.append("pyuvsim")
+import version  # noqa
 
 data = [version.git_origin, version.git_hash, version.git_description, version.git_branch]
 with open(os.path.join('pyuvsim', 'GIT_INFO'), 'w') as outfile:
@@ -15,7 +19,6 @@ with open(os.path.join('pyuvsim', 'GIT_INFO'), 'w') as outfile:
 
 with io.open('README.md', 'r', encoding='utf-8') as readme_file:
     readme = readme_file.read()
-
 
 setup_args = {
     'name': 'pyuvsim',

@@ -4,14 +4,15 @@
 
 from __future__ import absolute_import, division, print_function
 
-import os
-import six
-import subprocess
 import json
+import os
+import subprocess
+import sys
 
 # This must only be before MPI.INIT()
-
 pyuvsim_dir = os.path.dirname(os.path.realpath(__file__))
+
+PY2 = sys.version_info < (3, 0)
 
 
 def _get_git_output(args, capture_stderr=False):
@@ -25,7 +26,7 @@ def _get_git_output(args, capture_stderr=False):
 
     data = data.strip()
 
-    if six.PY2:
+    if PY2:
         return data
     return data.decode('utf8')
 
@@ -47,13 +48,12 @@ def _get_gitinfo_file(git_file=None):
 
 
 def _unicode_to_str(u):
-    if six.PY2:
+    if PY2:
         return u.encode('utf8')
     return u
 
 
 def construct_version_info():
-
     version_file = os.path.join(pyuvsim_dir, 'VERSION')
     with open(version_file) as f:
         version = f.read().strip()
