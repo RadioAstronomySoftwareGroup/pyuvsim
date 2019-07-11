@@ -10,7 +10,7 @@
 
 ### Fixed
 - Bug in how integration_time array is set in setup
-
+- Circular-installation bug
 
 ## [1.1.0] - 2019-6-14
 
