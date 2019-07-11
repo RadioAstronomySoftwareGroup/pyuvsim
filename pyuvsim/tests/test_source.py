@@ -335,7 +335,7 @@ def test_healpix_to_sky():
     m[ipix_disc] = m.max()
 
     hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
-    m = m / simutils.jy2Tsr(freqs, bm=hp.nside2pixarea(Nside), mK=True)
+    m = m / simutils.jy2Tsr(freqs, bm=hp.nside2pixarea(Nside), mK=False)
     sky = pyuvsim.source.healpix_to_sky(hpmap, inds, freqs)
     assert np.allclose(sky.stokes[0], m)
 
@@ -345,7 +345,7 @@ def test_units_healpix_to_sky():
     beam_area = hp.pixelfunc.nside2pixarea(Nside) * units.sr
     hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
     freqs = freqs * units.Hz
-    stokes = (hpmap * units.K).to(units.Jy / beam_area, units.brightness_temperature(freqs, beam_area=beam_area))
+    stokes = (hpmap * units.K).to(units.Jy, units.brightness_temperature(beam_area, freqs))
     sky = pyuvsim.source.healpix_to_sky(hpmap, inds, freqs)
 
-    assert np.allclose(sky.stokes[0], stokes)
+    assert np.allclose(sky.stokes[0], stokes.value)
