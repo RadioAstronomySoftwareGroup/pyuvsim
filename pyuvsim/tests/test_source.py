@@ -146,7 +146,7 @@ def test_healpix_to_sky():
 
 def test_units_healpix_to_sky():
     Nside = 32
-    beam_area = hp.pixelfunc.nside2pixarea(Nside)
+    beam_area = hp.pixelfunc.nside2pixarea(Nside) * units.sr
     hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
     freqs = freqs * units.Hz
     stokes = (hpmap * units.K).to(units.Jy / beam_area, units.brightness_temperature(freqs, beam_area=beam_area))
