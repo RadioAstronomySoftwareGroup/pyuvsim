@@ -20,6 +20,9 @@ with open(os.path.join('pyuvsim', 'GIT_INFO'), 'w') as outfile:
 with io.open('README.md', 'r', encoding='utf-8') as readme_file:
     readme = readme_file.read()
 
+with io.open("requirements.txt", 'r') as req_file:
+    reqs = list(req_file.readlines())
+
 setup_args = {
     'name': 'pyuvsim',
     'author': 'Radio Astronomy Software Group',
@@ -35,8 +38,7 @@ setup_args = {
     'include_package_data': True,
     'test_suite': 'nose.collector',
     'test_requires': ['nose', 'h5py'],
-    'install_requires': ['numpy>=1.15', 'astropy>=2.0', 'scipy>1.0.1', 'mpi4py>=3.0.0',
-                         'pyyaml>=5.1', 'six>=1.11', 'pyuvdata>=1.3.7'],
+    'install_requires': reqs,
     'classifiers': ['Development Status :: 3 - Alpha',
                     'Intended Audience :: Science/Research',
                     'License :: OSI Approved :: BSD License',
