@@ -10,6 +10,7 @@ import pytest
 import shutil
 import six.moves.urllib as urllib
 from astropy.utils import iers
+from astropy.time import Time
 from pyuvsim.data import DATA_PATH
 
 
@@ -25,6 +26,8 @@ def setup_and_teardown_package():
     # and turn it back on in teardown_package (done by extending auto_max_age)
     try:
         iers_a = iers.IERS_A.open(iers.IERS_A_URL)
+        t1 = Time.now()
+        t1.ut1
     except(urllib.error.URLError):
         iers.conf.auto_max_age = None
 
