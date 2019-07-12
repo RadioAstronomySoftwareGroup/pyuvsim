@@ -35,6 +35,8 @@ beam = ','.join(map(str, beam))
 mem = '80G'
 time = '48:00:00'
 print("Meshgrid?: ", meshgrid)
+array_size = np.min([Nconfigs, 100])
+
 for n in Ncores:
     script = 'batch_profile_job.sh'
     if meshgrid:
