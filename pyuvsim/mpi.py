@@ -118,11 +118,12 @@ class Counter(object):
     https://github.com/mpi4py/mpi4py/blob/master/demo/nxtval/nxtval-threads.py
     """
 
-    def __init__(self, comm=None):
+    def __init__(self, comm=None, count_rank=0):
         """
         Create a new counter, and initialize to 0.
         """
         # duplicate communicator
+        self.count_rank = count_rank
         if comm is None:
             comm = world_comm
         assert not comm.Is_inter()
@@ -130,7 +131,7 @@ class Counter(object):
         # start counter thread
         self.thread = None
         rank = self.comm.Get_rank()
-        if rank == 0:
+        if rank == self.count_rank:
             self.thread = Thread(target=self._counter_thread)
             self.thread.daemon = True
             self.thread.start()
@@ -146,15 +147,15 @@ class Counter(object):
             if status.Get_tag() == 1:
                 return
             self.comm.Send([ival, MPI.INT],
-                           status.Get_source(), 0)
+                           status.Get_source(), self.count_rank)
             ival[0] += incr[0]
 
     def free(self):
         self.comm.Barrier()
         # stop counter thread
         rank = self.comm.Get_rank()
-        if rank == 0:
-            self.comm.Send([None, MPI.INT], 0, 1)
+        if rank == self.count_rank:
+            self.comm.Send([None, MPI.INT], self.count_rank, 1)
             self.thread.join()
         self.comm.Free()
 
@@ -167,8 +168,8 @@ class Counter(object):
         """
         incr = array('i', [1])
         ival = array('i', [0])
-        self.comm.Send([incr, MPI.INT], 0, 0)
-        self.comm.Recv([ival, MPI.INT], 0, 0)
+        self.comm.Send([incr, MPI.INT], self.count_rank, 0)
+        self.comm.Recv([ival, MPI.INT], self.count_rank, 0)
         nxtval = ival[0]
         return nxtval
 
@@ -179,8 +180,8 @@ class Counter(object):
         """
         incr = array('i', [0])
         ival = array('i', [0])
-        self.comm.Send([incr, MPI.INT], 0, 0)
-        self.comm.Recv([ival, MPI.INT], 0, 0)
+        self.comm.Send([incr, MPI.INT], self.count_rank, 0)
+        self.comm.Recv([ival, MPI.INT], self.count_rank, 0)
         val = ival[0]
         return val
 
