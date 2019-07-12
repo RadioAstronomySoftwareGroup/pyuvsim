@@ -30,7 +30,7 @@ def compare_dictionaries(d1, d2):
             assert d1[key] == list(d2[key]), ("key: {key} has type {key1_type} in d1 and {key2_type} in d2\n"
                                               "d1:  data has type {data1_type} and value {data1_val}\n"
                                               "d2:  data has type {data2_type} and value {data2_val}\n"
-                                              .format(key1=key,
+                                              .format(key=key,
                                                       key1_type=type(d1[key]),
                                                       key2_type=type(d2[key]),
                                                       data1_type=type(d1[key][0]),
@@ -47,7 +47,7 @@ def compare_dictionaries(d1, d2):
                 assert np.allclose(d1[key], np.asarray(d2[key])), ("key: {key} has type {key1_type} in d1 and {key2_type} in d2\n"
                                                                    "d1:  data has type {data1_type} and value {data1_val}\n"
                                                                    "d2:  data has type {data2_type} and value {data2_val}\n"
-                                                                   .format(key1=key,
+                                                                   .format(key=key,
                                                                            key1_type=type(d1[key]),
                                                                            key2_type=type(d2[key]),
                                                                            data1_type=type(d1[key][0]),
@@ -62,7 +62,7 @@ def compare_dictionaries(d1, d2):
             assert np.allclose(d1[key], d2[key]), ("key: {key} has type {key1_type} in d1 and {key2_type} in d2\n"
                                                    "d1:  data has type {data1_type} and value {data1_val}\n"
                                                    "d2:  data has type {data2_type} and value {data2_val}\n"
-                                                   .format(key1=key,
+                                                   .format(key=key,
                                                            key1_type=type(d1[key]),
                                                            key2_type=type(d2[key]),
                                                            data1_type=type(d1[key][0]),
@@ -75,7 +75,7 @@ def compare_dictionaries(d1, d2):
             assert d1[key] == d2[key], ("key: {key} has type {key1_type} in d1 and {key2_type} in d2\n"
                                         "d1:  data has type {data1_type} and value {data1_val}\n"
                                         "d2:  data has type {data2_type} and value {data2_val}\n"
-                                        .format(key1=key,
+                                        .format(key=key,
                                                 key1_type=type(d1[key]),
                                                 key2_type=type(d2[key]),
                                                 data1_type=type(d1[key][0]),
