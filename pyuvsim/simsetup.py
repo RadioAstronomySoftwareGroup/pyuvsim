@@ -110,7 +110,7 @@ def skymodel_to_array(sky):
     arr['ra_j2000'] = sky.ra.value
     arr['dec_j2000'] = sky.dec.value
     arr['flux_density_I'] = sky.stokes[0, :]
-    arr['frequency'] = sky.freq
+    arr['frequency'] = sky.freq_array
 
     return arr
 
@@ -123,15 +123,15 @@ def array_to_skymodel(catalog_table):
     ra = Angle(catalog_table['ra_j2000'], units.deg)
     dec = Angle(catalog_table['dec_j2000'], units.deg)
     ids = catalog_table['source_id']
-    freqs = catalog_table['frequency'] * units.Hz
     flux_I = np.atleast_1d(catalog_table['flux_density_I'])
     stokes = np.pad(np.expand_dims(flux_I, 1), ((0, 0), (0, 3)), 'constant').T
+    stokes = stokes[:, np.newaxis, :]
     rise_lst = None
     set_lst = None
     if 'rise_lst' in catalog_table.dtype.names:
         rise_lst = catalog_table['rise_lst']
         set_lst = catalog_table['set_lst']
-    sourcelist = SkyModel(ids, ra, dec, freqs, stokes, rise_lst=rise_lst, set_lst=set_lst)
+    sourcelist = SkyModel(ids, ra, dec, stokes, rise_lst=rise_lst, set_lst=set_lst)
 
     return sourcelist
 
@@ -492,10 +492,10 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     ra = icrs_coord.ra
     dec = icrs_coord.dec
     names = np.array(['src' + str(si) for si in range(Nsrcs)])
-    stokes = np.zeros((4, Nsrcs))
+    stokes = np.zeros((4, 1, Nsrcs))
     stokes[0, :] = fluxes
     freqs = np.ones(Nsrcs) * freq
-    catalog = SkyModel(names, ra, dec, freqs, stokes)
+    catalog = SkyModel(names, ra, dec, stokes, freq_array=freqs)
     if return_table:
         return skymodel_to_array(catalog), mock_keywords
     if get_rank() == 0 and save:

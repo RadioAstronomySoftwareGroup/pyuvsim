@@ -46,7 +46,6 @@ def test_mock_catalog_zenith_source():
     array_location = EarthLocation(
         lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.
     )
-    freq = (150e6 * units.Hz)
 
     source_coord = SkyCoord(
         alt=Angle(90 * units.deg), az=Angle(0 * units.deg),
@@ -57,7 +56,7 @@ def test_mock_catalog_zenith_source():
     ra = icrs_coord.ra
     dec = icrs_coord.dec
 
-    test_source = pyuvsim.SkyModel('src0', ra, dec, freq, [1, 0, 0, 0])
+    test_source = pyuvsim.SkyModel('src0', ra, dec, [1, 0, 0, 0])
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
@@ -73,7 +72,6 @@ def test_mock_catalog_off_zenith_source():
     array_location = EarthLocation(
         lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.
     )
-    freq = (150e6 * units.Hz)
 
     source_coord = SkyCoord(
         alt=src_alt, az=src_az, obstime=time, frame='altaz', location=array_location
@@ -82,7 +80,7 @@ def test_mock_catalog_off_zenith_source():
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    test_source = pyuvsim.SkyModel('src0', ra, dec, freq, [1.0, 0, 0, 0])
+    test_source = pyuvsim.SkyModel('src0', ra, dec, [1.0, 0, 0, 0])
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith',
                                                      alt=src_alt.deg)
@@ -789,7 +787,6 @@ def test_point_catalog_reader():
     assert srcs.ra.deg in catalog_table['ra_j2000']
     assert srcs.dec.deg in catalog_table['dec_j2000']
     assert srcs.stokes[0] in catalog_table['flux_density_I']
-    assert srcs.freq.to("Hz").value in catalog_table['frequency']
 
     # Check cuts
     source_select_kwds = {'min_flux': 1.0}

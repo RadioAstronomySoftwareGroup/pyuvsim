@@ -4,9 +4,11 @@
 
 from __future__ import absolute_import, division, print_function
 
-import sys
-
 import numpy as np
+import sys
+import healpy as hp
+import h5py
+
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy.time import Time
 from astropy.units import Quantity
@@ -48,8 +50,8 @@ class SkyModel(object):
 
     _member_funcs = ['coherency_calc', 'update_positions']
 
-    def __init__(self, name, ra, dec, freq, stokes,
-                 rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
+    def __init__(self, name, ra, dec, stokes,
+                 Nfreqs=1, freq_array=None, rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
         """
         Args:
             name: Unique identifier for the source.
@@ -57,11 +59,12 @@ class SkyModel(object):
                 source RA in J2000 (or ICRS) coordinates
             dec: astropy Angle object, shape (Ncomponents,)
                 source Dec in J2000 (or ICRS) coordinates
-            stokes:
-                shape (4, Ncomponents)
+            stokes: shape (4, Nfreqs, Ncomponents)
                 4 element vector giving the source [I, Q, U, V]
-            freq: astropy quantity, shape (Ncomponents,)
-                reference frequencies of flux values
+            Nfreqs: (integer) 
+                length of frequency axis
+            freq_array: shape(Nfreqs,)
+                corresponding frequencies for each flux density
             rise_lst: (float), shape (Ncomponents,)
                 Approximate lst (radians) when the source rises.
                 Set by coarse horizon cut in simsetup.
@@ -81,14 +84,11 @@ class SkyModel(object):
             raise ValueError('dec must be an astropy Angle object. '
                              'value was: {dec}'.format(dec=dec))
 
-        if not isinstance(freq, Quantity):
-            raise ValueError('freq must be an astropy Quantity object. '
-                             'value was: {f}'.format(f=freq))
-
         self.Ncomponents = ra.size
 
         self.name = np.atleast_1d(np.asarray(name))
-        self.freq = np.atleast_1d(freq)
+        self.freq_array = np.atleast_1d(freq_array)
+        self.Nfreqs = Nfreqs
         self.stokes = np.asarray(stokes)
         self.ra = np.atleast_1d(ra)
         self.dec = np.atleast_1d(dec)
@@ -107,21 +107,20 @@ class SkyModel(object):
             bool)  # If true, source component is below horizon.
 
         if self.Ncomponents == 1:
-            self.stokes = self.stokes.reshape(4, 1)
+            self.stokes = self.stokes.reshape(4, Nfreqs, 1)
 
         # The coherency is a 2x2 matrix giving electric field correlation in Jy.
         # Multiply by .5 to ensure that Trace sums to I not 2*I
         # Shape = (2,2,Ncomponents)
-        self.coherency_radec = .5 * np.array([[self.stokes[0, :] + self.stokes[1, :],
-                                               self.stokes[2, :] - 1j * self.stokes[3, :]],
-                                              [self.stokes[2, :] + 1j * self.stokes[3, :],
-                                               self.stokes[0, :] - self.stokes[1, :]]])
+        self.coherency_radec = .5 * np.array([[self.stokes[0, :, :] + self.stokes[1, :, :],
+                                               self.stokes[2, :, :] - 1j * self.stokes[3, :, :]],
+                                              [self.stokes[2, :, :] + 1j * self.stokes[3, :, :],
+                                               self.stokes[0, :, :] - self.stokes[1, :, :]]])
 
         self.time = None
 
         assert np.all([self.Ncomponents == l for l in
-                       [self.ra.size, self.dec.size, self.freq.size,
-                        self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
+                       [self.ra.size, self.dec.size, self.stokes.shape[2]]]), 'Inconsistent quantity dimensions.'
 
     def coherency_calc(self, telescope_location):
         """
@@ -141,8 +140,8 @@ class SkyModel(object):
             raise ValueError('telescope_location must be an astropy EarthLocation object. '
                              'value was: {al}'.format(al=telescope_location))
 
-        Ionly_mask = np.sum(self.stokes[1:, :], axis=0) == 0.0
-        NstokesI = np.sum(Ionly_mask)  # Number of unpolarized sources
+        Ionly_mask = np.sum(self.stokes[1:, :, :], axis=0) == 0.0
+        NstokesI = np.sum(Ionly_mask)   # Number of unpolarized sources
 
         # For unpolarized sources, there's no need to rotate the coherency matrix.
         coherency_local = self.coherency_radec.copy()
@@ -164,14 +163,14 @@ class SkyModel(object):
             rotation_matrix = rotation_matrix[..., polarized_sources]
 
             rotation_matrix_T = np.swapaxes(rotation_matrix, 0, 1)
-            coherency_local[:, :, polarized_sources] = np.einsum(
-                'abx,bcx,cdx->adx', rotation_matrix_T,
-                self.coherency_radec[:, :, polarized_sources],
+            coherency_local[:, :, :, polarized_sources] = np.einsum(
+                'abxy,bcxy,cdxy->adxy', rotation_matrix_T,
+                self.coherency_radec[:, :, :, polarized_sources],
                 rotation_matrix
             )
 
         # Zero coherency on sources below horizon.
-        coherency_local[:, :, self.horizon_mask] *= 0.0
+        coherency_local[:, :, :, self.horizon_mask] *= 0.0
 
         return coherency_local
 
@@ -236,8 +235,7 @@ class SkyModel(object):
         return (np.allclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)
                 and np.allclose(self.stokes, other.stokes)
                 and np.all(self.name == other.name)
-                and time_check
-                and np.all(self.freq == other.freq))
+                and time_check)
 
     def get_size(self):
         """
@@ -246,19 +244,17 @@ class SkyModel(object):
         return self.Ncomponents * self._basesize
 
 
-def read_healpix_hdf5(hdf5_filename, freq_ind):
+def read_healpix_hdf5(hdf5_filename):
     """
     Read hdf5 files using h5py and get a healpix map, indices and frequencies
 
     Args:
         hdf5_filename: path and name of the hdf5 file to read
-        freq_ind: index of the frequency, for which you want to get the healpix map
     """
-    import h5py
     f = h5py.File(hdf5_filename)
-    hpmap = f['data'][0, :, freq_ind]
+    hpmap = f['data'][0, :]
     indices = f['indices'][()]
-    freqs = f['freqs'][freq_ind] * np.ones(len(indices),)
+    freqs = f['freqs'][()]
     return hpmap, indices, freqs
 
 
@@ -272,13 +268,12 @@ def healpix_to_sky(hpmap, indices, freqs):
         indices: indices from a hdf5 file
         freqs: frequencies from a hdf5 file
     """
-    import healpy as hp
-    Nside = hp.npix2nside(hpmap.size)
+    Nside = hp.npix2nside(hpmap.shape[-1])
     dec, ra = hp.pix2ang(Nside, indices, lonlat=True)
     dec = Angle(dec, unit='deg')
     ra = Angle(ra, unit='deg')
     freq = Quantity(freqs, 'hertz')
-    stokes = np.zeros((4, len(indices)))
+    stokes = np.zeros((4, len(freq), len(indices)))
     stokes[0] = hpmap / simutils.jy2Tsr(freq, bm=hp.nside2pixarea(Nside), mK=False)
-    sky = SkyModel(indices.astype('str'), ra, dec, freq, stokes)
+    sky = SkyModel(indices.astype('str'), ra, dec, stokes, freq_array=freq, Nfreqs=len(freq))
     return sky
