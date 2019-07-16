@@ -26,8 +26,6 @@ def test_source_zenith_from_icrs():
                                    height=1073.)
     time = Time('2018-03-01 00:00:00', scale='utc', location=array_location)
 
-    freq = (150e6 * units.Hz)
-
     lst = time.sidereal_time('apparent')
 
     tee_ra = lst
@@ -89,11 +87,11 @@ def test_pol_coherency_calc():
     names = np.arange(Ncomp).astype('str')
     freq = np.ones(Ncomp) * 1e8 * units.Hz
 
-    stokes = np.zeros((4, Ncomp))
-    stokes[0, :] = 1.0
-    stokes[1, :Ncomp // 2] = 2.5
+    stokes = np.zeros((4, len(freq), Ncomp))
+    stokes[0, :, :] = 1.0
+    stokes[1, :, :Ncomp // 2] = 2.5
 
-    sky = pyuvsim.source.SkyModel(names, ra, dec, freq, stokes)
+    sky = pyuvsim.source.SkyModel(names, ra, dec, stokes, freq_array=freq)
 
     time = Time('2018-03-01 00:00:00', scale='utc')
 
@@ -319,7 +317,8 @@ def test_read_healpix_hdf5():
     frequencies = 100000000 * np.ones(len(indices))
 
     hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(
-        os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
+        os.path.join(SIM_DATA_PATH, 'test_file.hdf5')
+    )
 
     assert np.allclose(hpmap, m)
     assert np.allclose(inds, indices)
@@ -335,7 +334,8 @@ def test_healpix_to_sky():
     m[ipix_disc] = m.max()
 
     hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(
-        os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
+        os.path.join(SIM_DATA_PATH, 'test_file.hdf5')
+    )
     m = m / simutils.jy2Tsr(freqs, bm=hp.nside2pixarea(Nside), mK=False)
     sky = pyuvsim.source.healpix_to_sky(hpmap, inds, freqs)
     assert np.allclose(sky.stokes[0], m)
@@ -345,9 +345,10 @@ def test_units_healpix_to_sky():
     Nside = 32
     beam_area = hp.pixelfunc.nside2pixarea(Nside) * units.sr
     hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(
-        os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
+        os.path.join(SIM_DATA_PATH, 'test_file.hdf5')
+    )
     freqs = freqs * units.Hz
     stokes = (hpmap * units.K).to(units.Jy, units.brightness_temperature(beam_area, freqs))
     sky = pyuvsim.source.healpix_to_sky(hpmap, inds, freqs)
 
-    assert np.allclose(sky.stokes[0], stokes.value)
+    assert np.allclose(sky.stokes[0, 0], stokes.value[0])

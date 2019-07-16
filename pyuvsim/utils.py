@@ -318,10 +318,10 @@ def stokes_to_coherency(stokes_vector):
     if stokes_arr.size == 4 and len(initial_shape) == 1:
         stokes_arr = stokes_arr[:, np.newaxis]
 
-    coherency = .5 * np.array([[stokes_arr[0, :] + stokes_arr[1, :],
-                                stokes_arr[2, :] - 1j * stokes_arr[3, :]],
-                               [stokes_arr[2, :] + 1j * stokes_arr[3, :],
-                                stokes_arr[0, :] - stokes_arr[1, :]]])
+    coherency = .5 * np.array([[stokes_arr[0, :, :] + stokes_arr[1, :, :],
+                                stokes_arr[2, :, :] - 1j * stokes_arr[3, :, :]],
+                               [stokes_arr[2, :, :] + 1j * stokes_arr[3, :, :],
+                                stokes_arr[0, :, :] - stokes_arr[1, :, :]]])
 
     if stokes_arr.size == 4 and len(initial_shape) == 1:
         coherency = np.squeeze(coherency)
