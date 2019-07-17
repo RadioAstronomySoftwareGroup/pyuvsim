@@ -122,7 +122,7 @@ def test_param_flux_cuts():
 
 
 # parametrize will loop over all the give values
-@pytest.mark.parametrize("config_num", list(range(6)))
+@pytest.mark.parametrize("config_num", list([0, 2]))
 def test_param_reader(config_num):
     """
         Part of test_param_reader
