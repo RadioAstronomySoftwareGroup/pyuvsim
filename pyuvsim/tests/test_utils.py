@@ -159,7 +159,7 @@ def test_write_uvdata(save_format):
 
 
 def test_write_error_with_no_format():
-    """Test wirte_uvdata will error if no format is given."""
+    """Test write_uvdata will error if no format is given."""
     uv = UVData()
     uvtest.checkWarnings(uv.read_uvfits, [triangle_uvfits_file],
                          message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
@@ -170,7 +170,7 @@ def test_write_error_with_no_format():
                                   simutils.write_uvdata, uv, filing_dict, return_filename=True, out_format='')
 
 
-def test_file_forma_in_filing_dict():
+def test_file_format_in_filing_dict():
     """Test file is written out when output_format is set in filing dict."""
     uv = UVData()
     uvtest.checkWarnings(uv.read_uvfits, [triangle_uvfits_file],
