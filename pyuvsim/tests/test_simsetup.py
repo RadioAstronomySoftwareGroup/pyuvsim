@@ -458,9 +458,12 @@ def test_param_select_bls():
         pyuvsim.initialize_uvdata_from_params(param_dict)
 
     uv_obj_bls2 = uv_obj_full.select(bls=[(40, 41), (42, 43), (44, 45)], inplace=False, metadata_only=True)
-
     uv_obj_bls.history, uv_obj_bls2.history = '', ''
     assert uv_obj_bls == uv_obj_bls2
+
+    param_dict['object_name'] = 'foo'
+    uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    assert uv_obj_full.object_name == 'foo'
 
 
 def test_param_select_redundant():
