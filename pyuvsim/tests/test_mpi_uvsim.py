@@ -7,13 +7,13 @@ from __future__ import absolute_import, division, print_function
 import os
 import numpy as np
 import yaml
-import nose.tools as nt
 import mpi4py
 mpi4py.rc.initialize = False    # noqa
+import pytest
 from mpi4py import MPI
 import astropy
 
-from pyuvdata import UVBeam, UVData
+from pyuvdata import UVData
 from pyuvdata.data import DATA_PATH
 import pyuvdata.tests as uvtest
 
@@ -33,7 +33,7 @@ singlesource_txt = os.path.join(SIM_DATA_PATH, 'single_source.txt')
 
 
 def test_mpi_version():
-    nt.assert_true(MPI.VERSION == 3)
+    assert MPI.VERSION == 3
 
 
 def test_run_uvsim():
@@ -50,7 +50,7 @@ def test_run_uvsim():
     uv_out = pyuvsim.run_uvdata_uvsim(hera_uv, beam_list, catalog=catalog)
     rank = mpi.get_rank()
     if rank == 0:
-        nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))
+        assert np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3)
     os.remove(beamfile)
 
 
@@ -90,9 +90,9 @@ def test_run_paramfile_uvsim():
     uv_new_txt.history = uv_ref.history  # History includes irrelevant info for comparison
     uv_new_vot.history = uv_ref.history
     uv_new_txt.object_name = uv_ref.object_name
-    nt.assert_equal(uv_new_txt, uv_new_vot)
-    nt.assert_equal(uv_new_txt, uv_ref)
-    nt.assert_equal(uv_new_vot, uv_ref)
+    uv_new_vot.object_name = uv_ref.object_name
+    assert uv_new_txt == uv_ref
+    assert uv_new_vot == uv_ref
 
 
 def test_run_paramdict_uvsim():
@@ -105,10 +105,11 @@ def test_run_paramdict_uvsim():
 
 def test_mpi_funcs():
     mpi.start_mpi()
-    nt.assert_true(mpi.get_rank() == 0)
-    nt.assert_true(mpi.get_Npus() == 1)
-    nt.assert_true(isinstance(mpi.get_comm(), MPI.Intracomm))
-    nt.assert_true(isinstance(mpi.get_node_comm(), MPI.Intracomm))
+    assert mpi.get_rank() == 0
+    assert mpi.get_Npus() == 1
+    assert isinstance(mpi.get_comm(), MPI.Intracomm)
+    assert isinstance(mpi.get_comm(), MPI.Intracomm)
+    assert isinstance(mpi.get_node_comm(), MPI.Intracomm)
 
 
 def test_shared_mem():
@@ -120,13 +121,13 @@ def test_shared_mem():
     sA = mpi.shared_mem_bcast(A)
 
     # Equivalent to original
-    nt.assert_true(np.all(sA == A))
+    assert np.all(sA == A)
 
     # Not the original object:
-    nt.assert_true(hex(id(sA)) != hex(id(A)))
+    assert hex(id(sA)) != hex(id(A))
 
     # Shared array should be read-only
-    nt.assert_raises(ValueError, sA.itemset, 0, 3.0)
+    pytest.raises(ValueError, sA.itemset, 0, 3.0)
 
 
 def test_mpi_counter():
@@ -137,5 +138,5 @@ def test_mpi_counter():
     N = 20
     for i in range(N):
         c = count.next()
-    nt.assert_equal(count.current_value(), N)
+    assert count.current_value() == N
     count.free()

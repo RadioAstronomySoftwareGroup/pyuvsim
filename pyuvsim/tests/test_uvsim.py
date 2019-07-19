@@ -6,7 +6,6 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import numpy as np
-import nose.tools as nt
 import copy
 import itertools
 from astropy.time import Time
@@ -14,7 +13,7 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy import units
 import astropy.constants as const
 
-from pyuvdata import UVBeam, UVData
+from pyuvdata import UVData
 import pyuvdata.utils as uvutils
 from pyuvdata.data import DATA_PATH
 import pyuvdata.tests as uvtest
@@ -64,7 +63,7 @@ def test_visibility_single_zenith_source():
         engine = pyuvsim.UVEngine(task)
 
         visibility = engine.make_visibility()
-        nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3))
+        assert np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3)
 
 
 def test_visibility_source_below_horizon():
@@ -96,7 +95,7 @@ def test_visibility_source_below_horizon():
 
     visibility = engine.make_visibility()
 
-    nt.assert_true(np.allclose(visibility, np.array([0, 0, 0, 0])))
+    assert np.allclose(visibility, np.array([0, 0, 0, 0]))
 
 
 def test_visibility_source_below_horizon_radec():
@@ -130,7 +129,7 @@ def test_visibility_source_below_horizon_radec():
 
     visibility = engine.make_visibility()
 
-    nt.assert_true(np.allclose(visibility, np.array([0, 0, 0, 0])))
+    assert np.allclose(visibility, np.array([0, 0, 0, 0]))
 
 
 def test_visibility_single_zenith_source_uvdata():
@@ -168,7 +167,7 @@ def test_visibility_single_zenith_source_uvdata():
 
     visibility = engine.make_visibility()
 
-    nt.assert_true(np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3))
+    assert np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3)
 
 
 def test_redundant_baselines():
@@ -219,7 +218,7 @@ def test_redundant_baselines():
 
     visibility2 = engine.make_visibility()
 
-    nt.assert_true(np.allclose(visibility1, visibility2))
+    assert np.allclose(visibility1, visibility2)
 
 
 def test_single_offzenith_source_uvfits():
@@ -257,13 +256,13 @@ def test_single_offzenith_source_uvfits():
 
     source.update_positions(time, array_location)
     src_alt_az = source.alt_az
-    nt.assert_true(np.isclose(src_alt_az[0], src_alt.rad))
-    nt.assert_true(np.isclose(src_alt_az[1], src_az.rad))
+    assert np.isclose(src_alt_az[0], src_alt.rad)
+    assert np.isclose(src_alt_az[1], src_az.rad)
 
     src_lmn = source.pos_lmn
-    nt.assert_true(np.isclose(src_lmn[0], src_l))
-    nt.assert_true(np.isclose(src_lmn[1], src_m))
-    nt.assert_true(np.isclose(src_lmn[2], src_n))
+    assert np.isclose(src_lmn[0], src_l)
+    assert np.isclose(src_lmn[1], src_m)
+    assert np.isclose(src_lmn[2], src_n)
 
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = [beam]
@@ -282,8 +281,8 @@ def test_single_offzenith_source_uvfits():
     beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_alt.rad, src_az.rad)
     beam_za2, beam_az2 = simutils.altaz_to_zenithangle_azimuth(src_alt_az[0], src_alt_az[1])
 
-    nt.assert_true(np.isclose(beam_za, beam_za2))
-    nt.assert_true(np.isclose(beam_az, beam_az2))
+    assert np.isclose(beam_za, beam_za2)
+    assert np.isclose(beam_az, beam_az2)
 
     interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array([beam_az]),
                                                          za_array=np.array([beam_za]),
@@ -295,24 +294,17 @@ def test_single_offzenith_source_uvfits():
     jones[0, 1] = interpolated_beam[0, 0, 0, 0, 0]
 
     beam_jones = antenna1.get_beam_jones(array, src_alt_az, freq)
-    print(beam_jones)
-    print(jones)
-    print(beam_jones - jones)
-    nt.assert_true(np.allclose(beam_jones, jones))
+    assert np.allclose(beam_jones, jones)
 
     uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
-    jones_T = np.swapaxes(jones, 0, 1)
     # Remove source axis from jones matrix
     jones = jones.squeeze()
     vis_analytic = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(2j * np.pi * (uvw_wavelength_array[0, 0] * src_l + uvw_wavelength_array[0, 1] * src_m + uvw_wavelength_array[0, 2] * src_n))
     vis_analytic = np.array([vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[0, 1], vis_analytic[1, 0]])
 
-    nt.assert_true(np.allclose(baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4))
+    assert np.allclose(baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4)
 
-    print(vis_analytic)
-    print(visibility)
-    print(vis_analytic - visibility)
-    nt.assert_true(np.allclose(visibility, vis_analytic, atol=1e-4))
+    assert np.allclose(visibility, vis_analytic, atol=1e-4)
 
 
 def test_offzenith_source_multibl_uvfits():
@@ -390,10 +382,10 @@ def test_offzenith_source_multibl_uvfits():
         visibilities_analytic.append(np.array([vis[0, 0], vis[1, 1], vis[1, 0], vis[0, 1]]))
 
     # the file used different phasing code than the test uses -- increase the tolerance
-    nt.assert_true(np.allclose(uvws, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4))
+    assert np.allclose(uvws, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4)
 
     # the file used different phasing code than the test uses -- increase the tolerance
-    nt.assert_true(np.allclose(visibilities, visibilities_analytic, atol=1e-4))
+    assert np.allclose(visibilities, visibilities_analytic, atol=1e-4)
 
 
 def test_file_to_tasks():
@@ -406,10 +398,7 @@ def test_file_to_tasks():
     beam_list = [beam]
 
     Nblts = hera_uv.Nblts
-    Nbls = hera_uv.Nbls
-    Ntimes = hera_uv.Ntimes
     Nfreqs = hera_uv.Nfreqs
-    Nsrcs = len(sources)
 
     Ntasks = Nblts * Nfreqs
     beam_dict = None
@@ -422,23 +411,21 @@ def test_file_to_tasks():
     tlist = copy.deepcopy(uvtask_list)
     # Test task comparisons
     tlist.sort()
-    nt.assert_true(np.all([tlist[i + 1] > tlist[i] for i in range(Ntasks - 1)]))
-    nt.assert_true(np.all([tlist[i + 1] >= tlist[i] for i in range(Ntasks - 1)]))
+    assert np.all([tlist[i + 1] > tlist[i] for i in range(Ntasks - 1)])
+    assert np.all([tlist[i + 1] >= tlist[i] for i in range(Ntasks - 1)])
     task0 = copy.deepcopy(tlist[0])
     task1 = copy.deepcopy(tlist[1])
-    uvind0 = copy.copy(task0.uvdata_index)
-    uvind1 = copy.copy(task1.uvdata_index)
     task0.baseline = task1.baseline
     task0.uvdata_index = (0, 0, 0)
     task1.uvdata_index = (1, 0, 0)
-    nt.assert_true(task1 > task0)
-    nt.assert_true(task1 >= task0)
+    assert task1 > task0
+    assert task1 >= task0
 
     task0.uvdata_index = (0, 0, 0)
     task1.uvdata_index = (0, 0, 1)
-    nt.assert_true(task1 > task0)
-    nt.assert_true(task1 >= task0)
-    nt.assert_true(task0 <= task1)
+    assert task1 > task0
+    assert task1 >= task0
+    assert task0 <= task1
 
     tel_loc = EarthLocation.from_geocentric(*hera_uv.telescope_location, unit='m')
 
@@ -476,7 +463,7 @@ def test_file_to_tasks():
     expected_task_list.sort()
     for idx, task in enumerate(uvtask_list):
         exp_task = expected_task_list[idx]
-        nt.assert_equal(task, exp_task)
+        assert task == exp_task
 
 
 def test_gather():
@@ -489,10 +476,7 @@ def test_gather():
     beam_list = [beam]
 
     Nblts = hera_uv.Nblts
-    Nbls = hera_uv.Nbls
-    Ntimes = hera_uv.Ntimes
     Nfreqs = hera_uv.Nfreqs
-    Nsrcs = len(sources)
 
     Ntasks = Nblts * Nfreqs
     beam_dict = dict(zip(hera_uv.antenna_names, [0] * hera_uv.Nants_data))
@@ -508,7 +492,7 @@ def test_gather():
 
     uv_out = pyuvsim.serial_gather(uvtask_list, uv_out)
 
-    nt.assert_true(np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3))
+    assert np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3)
 
 
 def test_local_task_gen():
@@ -523,10 +507,7 @@ def test_local_task_gen():
     beam_list = [beam]
 
     Nblts = hera_uv.Nblts
-    Nbls = hera_uv.Nbls
-    Ntimes = hera_uv.Ntimes
     Nfreqs = hera_uv.Nfreqs
-    Nsrcs = len(sources)
     Ntasks = Nblts * Nfreqs
     beam_dict = None
 
@@ -549,7 +530,7 @@ def test_local_task_gen():
         task1 = uvtask_list[tki]
         engine1 = pyuvsim.UVEngine(task1, reuse_spline=True)
         engine0.set_task(task0)
-        nt.assert_true(np.allclose(engine1.make_visibility(), engine0.make_visibility()))
+        assert np.allclose(engine1.make_visibility(), engine0.make_visibility())
 
 
 def test_pol_error():
@@ -592,7 +573,7 @@ def test_task_coverage():
             tasks_all.append(tasks)
         tasks_all = itertools.chain(*tasks_all)
         tasks = np.array(list(tasks_all))
-        nt.assert_true(np.all(tasks == tasks_expected))
+        assert np.all(tasks == tasks_expected)
 
         # Case 2 -- (Nbltf < Npus and Nsrcs > Npus)
 
@@ -619,7 +600,7 @@ def test_task_coverage():
 
         # Returned task indices are out of order, compared with the meshgrid.
         inds = np.lexsort((tasks[:, 0], tasks[:, 1]), axis=0)
-        nt.assert_true(np.all(tasks[inds] == tasks_expected))
+        assert np.all(tasks[inds] == tasks_expected)
 
 
 def test_source_splitting():
@@ -643,8 +624,6 @@ def test_source_splitting():
     beam_list = [beam]
 
     Nblts = hera_uv.Nblts
-    Nbls = hera_uv.Nbls
-    Ntimes = hera_uv.Ntimes
     Nfreqs = hera_uv.Nfreqs
     Nsrcs = len(sources)
     Ntasks = Nblts * Nfreqs
@@ -658,14 +637,13 @@ def test_source_splitting():
 
     Nsky_parts = np.ceil(skymodel_mem_footprint / float(mem_avail))
     partsize = int(np.floor(Nsrcs / Nsky_parts))
-    src_iter = [range(s, s + partsize) for s in range(0, Nsrcs, partsize)]
 
-    nt.assert_true(partsize * pyuvsim.SkyModel._basesize * Npus_node < mem_avail)
+    assert partsize * pyuvsim.SkyModel._basesize * Npus_node < mem_avail
     print(skymodel_mem_footprint / 1e6, partsize * pyuvsim.SkyModel._basesize * Npus_node / 1e6, mem_avail / 1e6)
 
     # Normally, the number of tasks is Nbls * Ntimes * Nfreqs (partsize = Nsrcs)
     # If the source list is split within the task iterator, then it will be larger.
-    nt.assert_equal(len(uvtask_list), Ntasks * Nsrcs / partsize)
+    assert len(uvtask_list) == Ntasks * Nsrcs / partsize
 
     # Reset spoofed parameters.
     del os.environ['SLURM_MEM_PER_NODE']
