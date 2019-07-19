@@ -39,7 +39,7 @@ install:
 script:
   - python -m pytest pyuvsim --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --cov-report term
   # unclear why this call needs to be different than in pyuvdata...
-  - pycodestyle . --ignore=E501,W503
+  - flake8
 
 after_success:
   - coveralls

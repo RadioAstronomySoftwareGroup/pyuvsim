@@ -9,3 +9,4 @@ psutil
 pytest
 pytest-runner
 pytest-cov
+flake8

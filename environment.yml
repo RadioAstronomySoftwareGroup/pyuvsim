@@ -14,9 +14,9 @@ dependencies:
   - psutil
   - nose
   - line_profiler
-  - pycodestyle
   - h5py
   - pyuvdata
   - pytest
   - pytest-runner
   - pytest-cov
+  - flake8
