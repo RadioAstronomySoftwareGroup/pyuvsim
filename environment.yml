@@ -17,3 +17,6 @@ dependencies:
   - pycodestyle
   - h5py
   - pyuvdata
+  - pytest
+  - pytest-runner
+  - pytest-cov

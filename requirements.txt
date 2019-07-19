@@ -6,3 +6,6 @@ PyYAML>=5.1
 mpi4py>=3.0.0
 astropy>=2.0
 psutil
+pytest
+pytest-runner
+pytest-cov
