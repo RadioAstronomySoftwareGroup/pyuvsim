@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import os
 import shutil
-import nose.tools as nt
+import pytest
 from astropy.time import Time
 from astropy.coordinates import Angle
 
@@ -26,7 +26,7 @@ def test_tee_ra_loop():
     tee_ra = Angle(np.pi / 4., unit='rad')  # rad
     cirs_ra = simutils.tee_to_cirs_ra(tee_ra, time)
     new_tee_ra = simutils.cirs_to_tee_ra(cirs_ra, time)
-    nt.assert_equal(new_tee_ra, tee_ra)
+    assert new_tee_ra == tee_ra
 
 
 def test_altaz_to_za_az():
@@ -40,8 +40,8 @@ def test_altaz_to_za_az():
 
     calc_za, calc_az = simutils.altaz_to_zenithangle_azimuth(np.deg2rad(alts),
                                                              np.deg2rad(azs))
-    nt.assert_true(np.allclose(calc_za, np.deg2rad(zas)))
-    nt.assert_true(np.allclose(calc_az, np.deg2rad(beam_azs)))
+    assert np.allclose(calc_za, np.deg2rad(zas))
+    assert np.allclose(calc_az, np.deg2rad(beam_azs))
 
 
 def test_single_altaz_to_za_az():
@@ -55,8 +55,8 @@ def test_single_altaz_to_za_az():
 
     calc_za, calc_az = simutils.altaz_to_zenithangle_azimuth(np.deg2rad(alts),
                                                              np.deg2rad(azs))
-    nt.assert_true(np.isclose(calc_za, np.deg2rad(zas)))
-    nt.assert_true(np.isclose(calc_az, np.deg2rad(beam_azs)))
+    assert np.isclose(calc_za, np.deg2rad(zas))
+    assert np.isclose(calc_az, np.deg2rad(beam_azs))
 
 
 def test_za_az_to_altaz():
@@ -71,11 +71,11 @@ def test_za_az_to_altaz():
 
     calc_alt, calc_az = simutils.zenithangle_azimuth_to_altaz(np.deg2rad(zas),
                                                               np.deg2rad(azs))
-    nt.assert_true(np.allclose(calc_alt, np.deg2rad(alts)))
-    nt.assert_true(np.allclose(calc_az, np.deg2rad(astropy_azs)))
+    assert np.allclose(calc_alt, np.deg2rad(alts))
+    assert np.allclose(calc_az, np.deg2rad(astropy_azs))
 
 
-def test_za_az_to_altaz():
+def test_single_za_az_to_altaz():
     # 5 degrees off zenith in the East direction
     zas = 5
     # 0=East, 90=North
@@ -87,8 +87,8 @@ def test_za_az_to_altaz():
 
     calc_alt, calc_az = simutils.zenithangle_azimuth_to_altaz(np.deg2rad(zas),
                                                               np.deg2rad(azs))
-    nt.assert_true(np.isclose(calc_alt, np.deg2rad(alts)))
-    nt.assert_true(np.isclose(calc_az, np.deg2rad(astropy_azs)))
+    assert np.isclose(calc_alt, np.deg2rad(alts))
+    assert np.isclose(calc_az, np.deg2rad(astropy_azs))
 
 
 def test_altaz_za_az_errors():
@@ -110,7 +110,7 @@ def test_file_namer():
     new_filepath = simutils.check_file_exists_and_increment(existing_file)
     for fn in fnames:
         os.remove(fn)
-    nt.assert_true(new_filepath.endswith("_111"))
+    assert new_filepath.endswith("_111")
 
 
 def test_file_namer_extensions():
@@ -127,11 +127,14 @@ def test_file_namer_extensions():
     existing_file = fnames[0]
     new_filepath = simutils.check_file_exists_and_increment(existing_file, 'ext')
     shutil.rmtree(os.path.join(simtest.TESTDATA_PATH, 'tempfiles'))
-    nt.assert_true(new_filepath.endswith("_111.ext"))
+    assert new_filepath.endswith("_111.ext")
 
 
-def test_write_uvdata():
+@pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5'])
+def test_write_uvdata(save_format):
     """ Test function that defines filenames from parameter dict """
+    if save_format == 'uvh5':
+        pytest.importorskip('h5py')
 
     uv = UVData()
     uvtest.checkWarnings(uv.read_uvfits, [triangle_uvfits_file],
@@ -139,22 +142,45 @@ def test_write_uvdata():
 
     ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
     filing_dict = {'outfile_name': ofname}
-    expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True)
+    expected_ofname = simutils.write_uvdata(uv, filing_dict,
+                                            return_filename=True,
+                                            out_format=save_format)
     ofname = os.path.join('.', ofname)
-    nt.assert_equal(ofname + '.uvfits', expected_ofname)
-    expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='miriad')
-    nt.assert_equal(ofname, expected_ofname)
+
+    if save_format == 'uvfits' or save_format is None:
+        assert ofname + '.uvfits' == expected_ofname
+        os.remove(ofname + '.uvfits')
+    elif save_format == 'uvh5':
+        assert ofname + '.uvh5' == expected_ofname
+        os.remove(ofname + '.uvh5')
+    else:
+        assert ofname == expected_ofname
+        shutil.rmtree(ofname)
+
+
+def test_write_error_with_no_format():
+    """Test write_uvdata will error if no format is given."""
+    uv = UVData()
+    uvtest.checkWarnings(uv.read_uvfits, [triangle_uvfits_file],
+                         message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
+
+    ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
+    filing_dict = {'outfile_name': ofname}
     simtest.assert_raises_message(ValueError, 'Invalid output format. Options are " uvfits", "uvh5", or "miriad"',
                                   simutils.write_uvdata, uv, filing_dict, return_filename=True, out_format='')
-    try:
-        import h5py     # noqa
-        filing_dict['output_format'] = 'uvh5'
-        expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True)
-        nt.assert_equal(ofname + '.uvh5', expected_ofname)
-        os.remove(ofname + '.uvh5')
-    except ImportError:
-        pass  # No h5py
+
+
+def test_file_format_in_filing_dict():
+    """Test file is written out when output_format is set in filing dict."""
+    uv = UVData()
+    uvtest.checkWarnings(uv.read_uvfits, [triangle_uvfits_file],
+                         message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
+
+    ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
+    filing_dict = {'outfile_name': ofname}
+    filing_dict['output_format'] = 'uvfits'
+    expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True)
+    assert ofname + '.uvfits' == expected_ofname
 
     # Cleanup
     os.remove(ofname + '.uvfits')
-    shutil.rmtree(ofname)

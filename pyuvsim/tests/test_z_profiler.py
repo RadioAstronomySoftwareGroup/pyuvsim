@@ -5,9 +5,7 @@
 from __future__ import absolute_import, division, print_function
 
 import os
-import yaml
 import numpy as np
-import nose.tools as nt
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -27,10 +25,10 @@ def test_profiler():
         uv_out = pyuvsim.uvsim.run_uvsim(param_filename, return_uv=True)
 
         time_profiler = pyuvsim.profiling.get_profiler()
-        nt.assert_true(isinstance(time_profiler, LineProfiler))
+        assert isinstance(time_profiler, LineProfiler)
         lstats = time_profiler.get_stats()
 
-        nt.assert_false(len(lstats.timings) == 0)
+        assert len(lstats.timings) != 0
         func_names = [k[2] for k in lstats.timings.keys()]
-        nt.assert_equal(np.unique(func_names).tolist(), sorted(pyuvsim.profiling.default_profile_funcs))
+        assert np.unique(func_names).tolist() == sorted(pyuvsim.profiling.default_profile_funcs)
         time_profiler.disable()

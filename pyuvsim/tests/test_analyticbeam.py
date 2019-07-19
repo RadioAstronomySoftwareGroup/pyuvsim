@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import numpy as np
-import nose.tools as nt
+import pytest
 from scipy.special import j1
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
@@ -49,7 +49,9 @@ def test_uniform_beam():
     expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=np.float)
     expected_data[1, 0, 0, :, :] = 1
     expected_data[0, 0, 1, :, :] = 1
-    nt.assert_true(np.allclose(interpolated_beam, expected_data))
+    # expected_data[1, 0, 1, :, :] = 1
+    # expected_data[0, 0, 0, :, :] = 1
+    assert np.allclose(interpolated_beam, expected_data)
 
 
 def test_airy_beam_values():
@@ -89,7 +91,7 @@ def test_airy_beam_values():
     expected_data[1, 0, 0, :, :] = airy_values
     expected_data[0, 0, 1, :, :] = airy_values
 
-    nt.assert_true(np.allclose(interpolated_beam, expected_data))
+    assert np.allclose(interpolated_beam, expected_data)
 
 
 def test_uv_beam_widths():
@@ -124,7 +126,7 @@ def test_uv_beam_widths():
         upix = 1 / (2 * np.sin(zmax))   # 2*sin(zmax) = fov extent projected onto the xy plane
         area = np.sum(points) * upix**2
         kern_radius = np.sqrt(area / np.pi)
-        nt.assert_true(np.isclose(diameter_m / lams[i], kern_radius, rtol=0.5))
+        assert np.isclose(diameter_m / lams[i], kern_radius, rtol=0.5)
 
 
 def test_achromatic_gaussian_beam():
@@ -162,7 +164,7 @@ def test_achromatic_gaussian_beam():
     expected_data[1, 0, 0, :, :] = gaussian_vals
     expected_data[0, 0, 1, :, :] = gaussian_vals
 
-    nt.assert_true(np.allclose(interpolated_beam, expected_data))
+    assert np.allclose(interpolated_beam, expected_data)
 
 
 def test_gaussbeam_values():
@@ -209,7 +211,7 @@ def test_gaussbeam_values():
     # Confirm the coherency values (ie., brightnesses) match the beam values.
 
     beam_values = np.exp(-(zenith_angles)**2 / (2 * beam.sigma**2))
-    nt.assert_true(np.all(beam_values**2 == coherencies))
+    assert np.all(beam_values**2 == coherencies)
 
 
 def test_chromatic_gaussian():
@@ -242,13 +244,11 @@ def test_chromatic_gaussian():
     for fi in range(Nfreqs):
         hwhm = za[np.argmin(np.abs(vals[fi] - 0.5))]
         sig_f = sigma * (freqs[fi] / freqs[0])**alpha
-        print(sig_f, 2 * hwhm / 2.355)
-        nt.assert_true(np.isclose(sig_f, 2 * hwhm / 2.355, atol=1e-3))
+        assert np.isclose(sig_f, 2 * hwhm / 2.355, atol=1e-3)
 
 
 def test_power_analytic_beam():
     freqs = np.arange(120e6, 160e6, 4e6)
-    Nfreqs = len(freqs)
     Npix = 1000
     diam = 14.0
 
@@ -260,7 +260,7 @@ def test_power_analytic_beam():
     pb.efield_to_power()
     evals = eb.interp(az, za, freqs)[0][0, 0, 1]
     pvals = pb.interp(az, za, freqs)[0][0, 0, 0]
-    nt.assert_true(np.allclose(evals**2, pvals))
+    assert np.allclose(evals**2, pvals)
 
 
 def test_comparison():
@@ -272,8 +272,8 @@ def test_comparison():
     beam2.type = 'undefined'
 
     not_beam = UVData()
-    nt.assert_false(beam1 == not_beam)
-    nt.assert_false(beam2 == beam1)
+    assert beam1 != not_beam
+    assert beam2 != beam1
 
 
 def test_beamerrs():
@@ -328,4 +328,4 @@ def test_diameter_to_sigma():
         inds = np.where(np.abs(zas) < null)
 
         # Assert integral of power beams within the first Airy null are close
-        nt.assert_true(np.isclose(np.sum(airy_vals[fi, inds]), np.sum(gauss_vals[fi, inds]), rtol=1e-2))
+        assert np.isclose(np.sum(airy_vals[fi, inds]), np.sum(gauss_vals[fi, inds]), rtol=1e-2)

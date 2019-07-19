@@ -5,13 +5,12 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-import nose.tools as nt
+import pyuvsim.tests as simtest
 from astropy.time import Time
-from astropy.coordinates import Angle, SkyCoord, EarthLocation
+from astropy.coordinates import SkyCoord, EarthLocation, Angle
 from astropy import units
 
 import pyuvsim
-import pyuvsim.tests as simtest
 
 
 def test_source_zenith_from_icrs():
@@ -45,7 +44,7 @@ def test_source_zenith_from_icrs():
 
     zenith_source.update_positions(time, array_location)
     zenith_source_lmn = zenith_source.pos_lmn.squeeze()
-    nt.assert_true(np.allclose(zenith_source_lmn, np.array([0, 0, 1]), atol=1e-5))
+    assert np.allclose(zenith_source_lmn, np.array([0, 0, 1]), atol=1e-5)
 
 
 def test_source_zenith():
@@ -60,15 +59,14 @@ def test_source_zenith():
 
     zenith_source.update_positions(time, array_location)
     zenith_source_lmn = zenith_source.pos_lmn.squeeze()
-
-    nt.assert_true(np.allclose(zenith_source_lmn, np.array([0, 0, 1])))
+    assert np.allclose(zenith_source_lmn, np.array([0, 0, 1]))
 
 
 def test_sources_equal():
     time = Time('2018-03-01 00:00:00', scale='utc')
     src1, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
     src2, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
-    nt.assert_equal(src1, src2)
+    assert src1 == src2
 
 
 def test_pol_coherency_calc():
@@ -97,7 +95,7 @@ def test_pol_coherency_calc():
     pol_srcs_up = (sky.alt_az[0] > 0) * inds
     unpol_srcs_up = (sky.alt_az[0] > 0) * (~inds)
 
-    nt.assert_true(np.allclose(coh_loc[0, 0, unpol_srcs_up], 0.5))
-    nt.assert_true(np.allclose(coh_loc[1, 1, unpol_srcs_up], 0.5))
-    nt.assert_true(np.allclose(coh_loc[1, 0, unpol_srcs_up], 0.0))
-    nt.assert_true(np.allclose(coh_loc[0, 1, unpol_srcs_up], 0.0))
+    assert np.allclose(coh_loc[0, 0, unpol_srcs_up], 0.5)
+    assert np.allclose(coh_loc[1, 1, unpol_srcs_up], 0.5)
+    assert np.allclose(coh_loc[1, 0, unpol_srcs_up], 0.0)
+    assert np.allclose(coh_loc[0, 1, unpol_srcs_up], 0.0)

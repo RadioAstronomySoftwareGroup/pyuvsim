@@ -81,14 +81,14 @@ Documentation on how to run simulations and developer API documentation is hoste
 
 # Testing
 
-`pyuvsim` uses the `nose` package for unit testing. If you've cloned the source into a directory `pyuvsim/`, you may verify it as follows:
+`pyuvsim` uses the `pytest` package for unit testing. If you've cloned the source into a directory `pyuvsim/`, you may verify it as follows:
 
-1. Install `nose` from anaconda or pip.
-2. Run the nosetests from `pyuvsim/`
+1. Install `pytest` from anaconda or pip.
+2. Run the pytest from `pyuvsim/`
 ```
-nosetests pyuvsim/tests/
+pytest
 ```
-
+You can alternatively run ```python -m pytest pyuvsim``` or ```python setup.py test```.
 You will need to have all dependencies installed.
 
 # Where to find Support
