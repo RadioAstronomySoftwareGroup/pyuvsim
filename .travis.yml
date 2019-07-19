@@ -35,9 +35,6 @@ install:
   - pip install .
   - python -c "from pyuvdata import version; version.main()"
   - conda list
-  # removed this, as it's installed via conda. However, it may be that we *want* it to
-  # be from github...
-  #- pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
 
 script:
   - python -m pytest pyuvsim --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --cov-report term
