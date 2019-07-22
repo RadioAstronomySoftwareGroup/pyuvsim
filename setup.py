@@ -2,12 +2,16 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-from setuptools import setup
 import glob
-import os
 import io
 import json
-from pyuvsim import version
+import os
+import sys
+
+from setuptools import setup
+
+sys.path.append("pyuvsim")
+import version  # noqa
 
 data = [version.git_origin, version.git_hash, version.git_description, version.git_branch]
 with open(os.path.join('pyuvsim', 'GIT_INFO'), 'w') as outfile:
@@ -16,6 +20,8 @@ with open(os.path.join('pyuvsim', 'GIT_INFO'), 'w') as outfile:
 with io.open('README.md', 'r', encoding='utf-8') as readme_file:
     readme = readme_file.read()
 
+with io.open("requirements.txt", 'r') as req_file:
+    reqs = list(req_file.readlines())
 
 setup_args = {
     'name': 'pyuvsim',
@@ -30,10 +36,9 @@ setup_args = {
     'scripts': glob.glob('scripts/*'),
     'version': version.version,
     'include_package_data': True,
+    'install_requires': reqs,
     'test_requires': ['pytest', 'h5py'],
     'setup_requires': ['pytest-runner'],
-    'install_requires': ['numpy>=1.15', 'astropy>=2.0', 'scipy>1.0.1', 'mpi4py>=3.0.0',
-                         'pyyaml>=5.1', 'six>=1.11', 'pyuvdata>=1.3.7'],
     'classifiers': ['Development Status :: 3 - Alpha',
                     'Intended Audience :: Science/Research',
                     'License :: OSI Approved :: BSD License',

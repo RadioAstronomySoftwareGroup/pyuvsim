@@ -9,6 +9,7 @@
 - Polarization selection is now allowed in setup. Will break if incorrect polarization is used in pyuvsim.
 
 ### Fixed
+- Circular-installation bug
 - Bug in how integration_time array is set in setup
 
 

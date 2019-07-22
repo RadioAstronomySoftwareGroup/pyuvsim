@@ -1,0 +1,22 @@
+name: pyuvsim
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy>=1.15
+  - six>=1.11.0
+  - setuptools>=38.4.0
+  - scipy>=1.0.1
+  - PyYAML>=5.1
+  - mpi4py>=3.0.0
+  - astropy>=2.0
+  - pip
+  - psutil
+  - nose
+  - line_profiler
+  - h5py
+  - pyuvdata
+  - pytest
+  - pytest-runner
+  - pytest-cov
+  - flake8

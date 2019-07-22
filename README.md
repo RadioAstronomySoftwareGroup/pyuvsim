@@ -13,7 +13,7 @@ general simulator design.
 
 A comparison to other simulators may be found at [ReadTheDocs](https://pyuvsim.readthedocs.io/en/latest/comparison.html).
 
-# Motivation and Approach
+## Motivation and Approach
 pyuvsim's two primary goals are interferometer simulation accuracy at the level of precision necessary for 21cm cosmology science, and maximum flexibility in use cases. Key elements of this approach include:
 
 1. High level of test coverage including accuracy (design goal is 97%).
@@ -24,19 +24,46 @@ pyuvsim's two primary goals are interferometer simulation accuracy at the level 
 6. Support for varied beam models across the array.
 7. Defining a clear, user-friendly standard for simulation design.
 
-# Installation
-* For simple installation, the latest stable release is available via pip (`pip install pyuvsim`)
-* To install the development version: Clone the repository using `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`, navigate into the pyuvsim directory and run
-```
-pip install -r requirements.txt
-pip install pyuvdata
-pip install .
-```
-* `pyuvsim` is intended to run on clusters running the linux operating system.
+## Installation
+A user-installation is achieved simply with `pip install pyuvsim`, or to get the 
+bleeding-edge: `pip install https://github.com/RadioAstronomySoftwareGroup/pyuvsim`. 
+This will install all dependencies. 
+
+If you wish to manage dependencies manually, or are developing `pyuvsim` yourself, read
+on.
+
+Note that `pyuvsim` is intended to run on clusters running the linux operating system.
+
+
+### Dependencies
+If you are using `conda` to manage your environment, you may wish to install the 
+following before installing `pyuvsim`::
+
+    conda install -c conda-forge "numpy>=1.15" "astropy>=2.0" "scipy>1.0.1" "mpi4py>=3.0.0" "pyyaml>=5.1" "six>=1.11" "pyuvdata>=1.3.7"
+
+### Developing
+If you are developing `pyuvsim`, it is preferred that you do so in a fresh `conda`
+environment. The following commands will install all relevant development packages::
+
+    $ git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim.git
+    $ cd pyuvsim
+    $ conda create -n pyuvsim python=3
+    $ conda activate pyuvsim
+    $ conda env update -n pyuvsim -f environment.yml
+    $ pip install -e . 
+
+This will install extra dependencies required for testing/development as well as the 
+standard ones.
+
+The second-to-last line may also be replaced by `pip install -r requirements.txt` if you
+do not care about using `conda`.
+
 
 
 **Note**
-The `mpi4py` module is installed as a wrapper around an existing installation of MPI. The easiest way to install it is to use anaconda, which will install a compatible version of MPI and configure mpi4py to use it:
+The `mpi4py` module is installed as a wrapper around an existing installation of MPI. 
+The easiest way to install it is to use anaconda, which will install a compatible 
+version of MPI and configure `mpi4py` to use it:
 ```
 conda install -c conda-forge mpi4py
 ```

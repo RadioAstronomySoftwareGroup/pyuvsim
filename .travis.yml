@@ -29,17 +29,17 @@ install:
   - conda info -a
 
   # install dependencies
-  - conda install numpy scipy astropy six pip pyyaml line_profiler pycodestyle coveralls h5py pytest-cov psutil
-  - conda install -c conda-forge mpi4py
-  - pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git
-  - python setup.py install
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION coveralls
+  - source activate test-environment
+  - conda env update -n test-environment -f environment.yml
+  - pip install .
   - python -c "from pyuvdata import version; version.main()"
   - conda list
 
 script:
   - python -m pytest pyuvsim --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --cov-report term
   # unclear why this call needs to be different than in pyuvdata...
-  - pycodestyle . --ignore=E501,W503
+  - flake8
 
 after_success:
   - coveralls
