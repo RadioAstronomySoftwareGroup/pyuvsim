@@ -5,13 +5,13 @@
 from __future__ import absolute_import, division, print_function
 
 from . import version
-from .profiling import *
-from .uvsim import *
-from .simsetup import *
-from .analyticbeam import *
-from .antenna import *
-from .baseline import *
-from .source import *
-from .telescope import *
-from .utils import *
+from .profiling import *  # noqa
+from .uvsim import *  # noqa
+from .simsetup import *  # noqa
+from .analyticbeam import *  # noqa
+from .antenna import *  # noqa
+from .baseline import *  # noqa
+from .source import *  # noqa
+from .telescope import *  # noqa
+from .utils import *  # noqa
 __version__ = version.version

@@ -5,18 +5,14 @@
 from __future__ import absolute_import, division, print_function
 
 import os
-import numpy as np
+
 import psutil
-from astropy.time import Time
-from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
-
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-import pyuvsim
 import yaml
-from pyuvsim import simsetup, create_mock_catalog, uvsim
-from guppy import hpy
-
+from astropy.coordinates import EarthLocation
+from astropy.time import Time
 from mpi4py import MPI
+
+from pyuvsim import simsetup, create_mock_catalog, uvsim
 
 # Initialize MPI variables
 comm = MPI.COMM_WORLD
@@ -25,7 +21,7 @@ rank = comm.Get_rank()
 print("rank = ", rank, "PID", os.getpid())
 time = Time('2018-03-01 00:00:00', scale='utc')
 array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
-                                   height=1073.)
+                               height=1073.)
 # pfile = '../data/5km_triangle_2time_1chan.yaml'
 # pfile = '../data/5km_triangle_10time_1chan.yaml'
 # pfile = '../data/5km_triangle_1time_1chan_6ant.yaml'

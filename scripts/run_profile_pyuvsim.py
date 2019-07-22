@@ -5,18 +5,19 @@
 
 from __future__ import absolute_import, division, print_function
 
-import pyuvsim
 import argparse
-import numpy as np
-import yaml
 import os
 import resource
+
+import numpy as np
+import yaml
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-from pyuvsim import simsetup
-from astropy.coordinates import EarthLocation
+
+import pyuvsim
 from pyuvsim import mpi, profiling
+from pyuvsim import simsetup
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 parser = argparse.ArgumentParser(description=("A command-line script "
                                               "to execute a pyuvsim simulation for profiling purposes."))
@@ -32,7 +33,6 @@ parser.add_argument('--Nbls', dest='Nbls', type=int, default=1)
 parser.add_argument('--beam', dest='beam', type=str, default='uniform')
 parser.add_argument('--prof_out', dest='prof_out', type=str, default='time_profile.out')
 parser.add_argument('--mem_out', dest='mem_out', type=str, default='memory_usage.out')
-
 
 args = parser.parse_args()
 
@@ -66,7 +66,8 @@ if rank == 0:
     input_uv.ant_1_array, input_uv.ant_2_array = input_uv.baseline_to_antnums(input_uv.baseline_array)
     ants_new = np.unique(input_uv.ant_1_array.tolist() + input_uv.ant_2_array.tolist())
     input_uv.antenna_numbers = ants_new
-    input_uv.antenna_names = ants_new.astype(str)  # Antnames/numbers are going to be messed up by the baseline selection. Unimportant.
+    input_uv.antenna_names = ants_new.astype(
+        str)  # Antnames/numbers are going to be messed up by the baseline selection. Unimportant.
     Nants = ants_new.size
     beam_dict = dict(zip(input_uv.antenna_names, np.zeros(Nants, dtype=int)))  # For now, all use the same beam model
     input_uv.antenna_positions = input_uv.antenna_positions[:Nants, :]
@@ -88,7 +89,8 @@ if rank == 0:
 
     mock_keywords = {'arrangement': 'random', 'Nsrcs': args.Nsrcs, 'min_alt': min_alt}
 
-uvdata_out = pyuvsim.uvsim.run_uvdata_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog, mock_keywords=mock_keywords)
+uvdata_out = pyuvsim.uvsim.run_uvdata_uvsim(input_uv, beam_list=beam_list, beam_dict=beam_dict, catalog_file=catalog,
+                                            mock_keywords=mock_keywords)
 
 memory_usage_GB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
 mpi.comm.Barrier()

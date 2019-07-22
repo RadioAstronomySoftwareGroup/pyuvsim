@@ -6,13 +6,9 @@
 
 from __future__ import absolute_import, division, print_function
 
-import os
 import sys
-import glob
-import re
 import numpy as np
 from numpy.lib.recfunctions import append_fields
-import subprocess
 from matplotlib.mlab import rec2csv
 import subprocess
 

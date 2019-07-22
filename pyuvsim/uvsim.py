@@ -4,32 +4,26 @@
 
 from __future__ import absolute_import, division, print_function
 
-import numpy as np
-import os
 import sys
-import copy
-import six
-import yaml
-import itertools
-from six.moves import map, range, zip
-import warnings
+
 import astropy.constants as const
 import astropy.units as units
-from astropy.units import Quantity
-from astropy.time import Time
+import numpy as np
+import six
+import yaml
 from astropy.coordinates import EarthLocation
+from astropy.time import Time
+from astropy.units import Quantity
+from pyuvdata import UVData
+from six.moves import range
 
-from pyuvdata import UVData, UVBeam
-import pyuvdata.utils as uvutils
-
-from . import profiling
+from . import mpi
+from . import simsetup
+from . import utils as simutils
 from .antenna import Antenna
 from .baseline import Baseline
-from .telescope import Telescope
 from .source import SkyModel
-from . import utils as simutils
-from . import simsetup
-from . import mpi
+from .telescope import Telescope
 
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim', 'serial_gather']
 
@@ -44,7 +38,7 @@ class UVTask(object):
         self.baseline = baseline
         self.telescope = telescope
         self.visibility_vector = None
-        self.uvdata_index = None        # Where to add the visibility in the uvdata object.
+        self.uvdata_index = None  # Where to add the visibility in the uvdata object.
 
         if isinstance(self.time, float):
             self.time = Time(self.time, format='jd')
@@ -124,7 +118,7 @@ class UVEngine(object):
 
     def make_visibility(self):
         """ Visibility contribution from a set of source components """
-        assert(isinstance(self.task.freq, Quantity))
+        assert (isinstance(self.task.freq, Quantity))
 
         srcs = self.task.sources
         time = self.task.time
@@ -197,7 +191,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
 
-#   Skymodel will now be passed in as a catalog array.
+    #   Skymodel will now be passed in as a catalog array.
     if not isinstance(catalog, np.ndarray):
         raise TypeError("catalog must be a record array")
 
@@ -251,7 +245,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
             time_i = task_index[time_ax]
             freq_i = task_index[freq_ax]
 
-            blti = bl_i + time_i * Nbls   # baseline is the fast axis
+            blti = bl_i + time_i * Nbls  # baseline is the fast axis
 
             # We reuse a lot of baseline info, so make the baseline list on the first go and reuse.
             if bl_i not in baselines.keys():
@@ -266,7 +260,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
             freq = freq_array[0, freq_i]  # 0 = spw axis
 
             task = UVTask(sky, time, freq, bl, telescope)
-            task.uvdata_index = (blti, 0, freq_i)    # 0 = spectral window index
+            task.uvdata_index = (blti, 0, freq_i)  # 0 = spectral window index
 
             yield task
 

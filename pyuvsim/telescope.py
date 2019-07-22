@@ -34,4 +34,4 @@ class Telescope(object):
             return ((np.allclose(this_vector_loc, other_vector_loc, atol=1e-3))
                     and (np.all([self.beam_list[bi] == other.beam_list[bi] for bi in range(Nbeams_self)]))
                     and (self.name == other.name))
-        return false
+        return False

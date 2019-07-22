@@ -100,7 +100,7 @@ def test_run_paramdict_uvsim():
 
     params = pyuvsim.simsetup._config_str_to_dict(os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml'))
 
-    uv_out = pyuvsim.run_uvsim(params, return_uv=True)
+    pyuvsim.run_uvsim(params, return_uv=True)
 
 
 def test_mpi_funcs():
@@ -137,6 +137,6 @@ def test_mpi_counter():
     count = mpi.Counter()
     N = 20
     for i in range(N):
-        c = count.next()
+        count.next()
     assert count.current_value() == N
     count.free()

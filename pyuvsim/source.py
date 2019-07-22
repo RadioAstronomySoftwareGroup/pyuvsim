@@ -4,13 +4,12 @@
 
 from __future__ import absolute_import, division, print_function
 
-import numpy as np
-import copy
 import sys
 
-from astropy.units import Quantity
-from astropy.time import Time
+import numpy as np
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
+from astropy.time import Time
+from astropy.units import Quantity
 
 from . import utils as simutils
 
@@ -41,7 +40,7 @@ class SkyModel(object):
     frame at a specified time.
     """
 
-    Ncomponents = None      # Number of point source components represented here.
+    Ncomponents = None  # Number of point source components represented here.
 
     _basesize = _skymodel_basesize()
 
@@ -106,7 +105,7 @@ class SkyModel(object):
         self.alt_az = np.zeros((2, self.Ncomponents), dtype=float)
         self.pos_lmn = np.zeros((3, self.Ncomponents), dtype=float)
 
-        self.horizon_mask = np.zeros(self.Ncomponents).astype(bool)     # If true, source component is below horizon.
+        self.horizon_mask = np.zeros(self.Ncomponents).astype(bool)  # If true, source component is below horizon.
 
         if self.Ncomponents == 1:
             self.stokes = self.stokes.reshape(4, 1)
@@ -122,7 +121,8 @@ class SkyModel(object):
         self.time = None
 
         assert np.all([self.Ncomponents == l for l in
-                       [self.ra.size, self.dec.size, self.freq.size, self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
+                       [self.ra.size, self.dec.size, self.freq.size,
+                        self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
 
     def coherency_calc(self, telescope_location):
         """
@@ -143,7 +143,7 @@ class SkyModel(object):
                              'value was: {al}'.format(al=telescope_location))
 
         Ionly_mask = np.sum(self.stokes[1:, :], axis=0) == 0.0
-        NstokesI = np.sum(Ionly_mask)   # Number of unpolarized sources
+        NstokesI = np.sum(Ionly_mask)  # Number of unpolarized sources
 
         # For unpolarized sources, there's no need to rotate the coherency matrix.
         coherency_local = self.coherency_radec.copy()
@@ -159,7 +159,7 @@ class SkyModel(object):
             sinX = np.sin(self.hour_angle)
             cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(self.hour_angle)
 
-            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]]).astype(float)       # (2, 2, Ncomponents)
+            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]]).astype(float)  # (2, 2, Ncomponents)
             rotation_matrix = rotation_matrix[..., polarized_sources]
 
             rotation_matrix_T = np.swapaxes(rotation_matrix, 0, 1)

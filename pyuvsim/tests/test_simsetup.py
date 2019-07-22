@@ -4,20 +4,20 @@
 
 from __future__ import absolute_import, division, print_function
 
-import numpy as np
-import os
-import yaml
-import shutil
 import copy
-from six.moves import range
-import pytest
-import astropy
-from astropy.time import Time
-from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
-from astropy import units
+import os
+import shutil
 
-from pyuvdata import UVBeam, UVData
+import astropy
+import numpy as np
+import pytest
 import pyuvdata.tests as uvtest
+import yaml
+from astropy import units
+from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
+from astropy.time import Time
+from pyuvdata import UVBeam, UVData
+from six.moves import range
 
 import pyuvsim
 import pyuvsim.tests as simtest
@@ -26,7 +26,8 @@ from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 
 # Five different test configs
-param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(6)]
+param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in
+                   range(6)]
 
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
@@ -36,7 +37,6 @@ gleam_param_file = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_
 
 
 def test_mock_catalog_zenith_source():
-
     time = Time(2457458.65410, scale='utc', format='jd')
 
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
@@ -58,7 +58,6 @@ def test_mock_catalog_zenith_source():
 
 
 def test_mock_catalog_off_zenith_source():
-
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
 
@@ -88,7 +87,8 @@ def test_catalog_from_params():
                          message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
 
     source_dict = {}
-    simtest.assert_raises_message(KeyError, "No catalog defined.", pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
+    simtest.assert_raises_message(KeyError, "No catalog defined.", pyuvsim.simsetup.initialize_catalog_from_params,
+                                  {'sources': source_dict})
     pytest.raises(KeyError, pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
     arrloc = '{:.5f},{:.5f},{:.5f}'.format(*hera_uv.telescope_location_lat_lon_alt_degrees)
     source_dict = {'catalog': 'mock', 'mock_arrangement': 'zenith', 'Nsrcs': 5, 'time': hera_uv.time_array[0]}
@@ -99,10 +99,14 @@ def test_catalog_from_params():
     source_dict['array_location'] = arrloc
     del source_dict['time']
 
-    simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict}, input_uv='not_uvdata')
-    simtest.assert_raises_message(ValueError, 'input_uv must be supplied if using mock catalog without specified julian date',
+    simtest.assert_raises_message(TypeError, 'input_uv must be UVData object',
+                                  pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict},
+                                  input_uv='not_uvdata')
+    simtest.assert_raises_message(ValueError,
+                                  'input_uv must be supplied if using mock catalog without specified julian date',
                                   pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict})
-    catalog_str, srclistname2 = uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [{'sources': source_dict}, hera_uv],
+    catalog_str, srclistname2 = uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params,
+                                                     [{'sources': source_dict}, hera_uv],
                                                      message="Warning: No julian date given for mock catalog. Defaulting to first time step.")
     catalog_str = pyuvsim.simsetup.array_to_skymodel(catalog_str)
     assert np.all(catalog_str == catalog_uv)
@@ -112,10 +116,12 @@ def test_param_flux_cuts():
     # Check that min/max flux limits in test params work.
 
     gleam_path = os.path.join(SIM_DATA_PATH, 'test_config', '..', 'gleam_50srcs.vot')
-    catalog, srclistname = uvtest.checkWarnings(pyuvsim.simsetup.initialize_catalog_from_params, [gleam_param_file],
-                                                message=gleam_path, nwarnings=11,
-                                                category=[astropy.io.votable.exceptions.W27]
-                                                + [astropy.io.votable.exceptions.W50] * 10)
+    catalog, srclistname = uvtest.checkWarnings(
+        pyuvsim.simsetup.initialize_catalog_from_params, [gleam_param_file],
+        message=gleam_path, nwarnings=11,
+        category=[astropy.io.votable.exceptions.W27] + [astropy.io.votable.exceptions.W50] * 10
+    )
+
     catalog = pyuvsim.simsetup.array_to_skymodel(catalog)
     for sI in catalog.stokes[0, :]:
         assert np.all(0.2 < sI < 1.5)
@@ -161,14 +167,17 @@ def test_param_reader(config_num):
 
         # Missing config file info
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, 'nonexistent_directory', 'nonexistent_file')
-        simtest.assert_raises_message(ValueError, 'nonexistent_directory is not a directory', pyuvsim.initialize_uvdata_from_params, params_bad)
+        simtest.assert_raises_message(ValueError, 'nonexistent_directory is not a directory',
+                                      pyuvsim.initialize_uvdata_from_params, params_bad)
 
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
         params_bad['telescope']['array_layout'] = 'nonexistent_file'
-        simtest.assert_raises_message(ValueError, 'nonexistent_file from yaml does not exist', pyuvsim.initialize_uvdata_from_params, params_bad)
+        simtest.assert_raises_message(ValueError, 'nonexistent_file from yaml does not exist',
+                                      pyuvsim.initialize_uvdata_from_params, params_bad)
 
         params_bad['telescope']['telescope_config_name'] = 'nonexistent_file'
-        simtest.assert_raises_message(ValueError, 'telescope_config_name file from yaml does not exist', pyuvsim.initialize_uvdata_from_params, params_bad)
+        simtest.assert_raises_message(ValueError, 'telescope_config_name file from yaml does not exist',
+                                      pyuvsim.initialize_uvdata_from_params, params_bad)
 
         # Missing beam keywords
         params_bad = copy.deepcopy(bak_params_bad)
@@ -176,13 +185,16 @@ def test_param_reader(config_num):
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
 
         params_bad = copy.deepcopy(bak_params_bad)
-        params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_gaussnoshape.yaml')
+        params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config',
+                                                                        '28m_triangle_10time_10chan_gaussnoshape.yaml')
         simtest.assert_raises_message(KeyError, 'Missing shape parameter for gaussian beam (diameter or sigma).',
                                       pyuvsim.initialize_uvdata_from_params, params_bad)
-        params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml')
+        params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config',
+                                                                        '28m_triangle_10time_10chan_nodiameter.yaml')
         simtest.assert_raises_message(KeyError, 'Missing diameter for airy beam.',
                                       pyuvsim.initialize_uvdata_from_params, params_bad)
-        params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml')
+        params_bad['telescope']['telescope_config_name'] = os.path.join(SIM_DATA_PATH, 'test_config',
+                                                                        '28m_triangle_10time_10chan_nofile.yaml')
         simtest.assert_raises_message(OSError, 'Could not find file',
                                       pyuvsim.initialize_uvdata_from_params, params_bad)
 
@@ -235,7 +247,8 @@ def test_tele_parser():
     assert bdict == {}
 
     tdict.pop('array_layout')
-    simtest.assert_raises_message(KeyError, 'array_layout must be provided.', pyuvsim.simsetup.parse_telescope_params, tdict)
+    simtest.assert_raises_message(KeyError, 'array_layout must be provided.', pyuvsim.simsetup.parse_telescope_params,
+                                  tdict)
 
 
 def test_freq_parser():
@@ -289,13 +302,16 @@ def test_freq_parser():
         simtest.assert_raises_message(ValueError, err_mess[ei], pyuvsim.parse_frequency_params, subdict)
 
     subdict = {'freq_array': freq_array[0]}
-    simtest.assert_raises_message(ValueError, 'Channel width must be specified if freq_arr has length 1', pyuvsim.parse_frequency_params, subdict)
+    simtest.assert_raises_message(ValueError, 'Channel width must be specified if freq_arr has length 1',
+                                  pyuvsim.parse_frequency_params, subdict)
 
     subdict = {'freq_array': np.random.choice(freq_array, 4, replace=False)}
-    simtest.assert_raises_message(ValueError, 'Spacing in frequency array is uneven.', pyuvsim.parse_frequency_params, subdict)
+    simtest.assert_raises_message(ValueError, 'Spacing in frequency array is uneven.', pyuvsim.parse_frequency_params,
+                                  subdict)
 
     subdict = {'channel_width': 3.14, 'start_freq': 1.0, 'end_freq': 8.3}
-    simtest.assert_raises_message(ValueError, 'end_freq - start_freq must be evenly divisible by channel_width', pyuvsim.parse_frequency_params, subdict)
+    simtest.assert_raises_message(ValueError, 'end_freq - start_freq must be evenly divisible by channel_width',
+                                  pyuvsim.parse_frequency_params, subdict)
 
     subdict = fdict_base.copy()
     subdict['Nfreqs'] = 7
@@ -386,7 +402,7 @@ def times_and_freqs():
     # then delete after
     yield times, freqs
 
-    del(times, freqs)
+    del (times, freqs)
 
 
 def test_freq_time_params_match(times_and_freqs):
@@ -419,7 +435,6 @@ def test_single_time_array_to_params(times_and_freqs):
 
 
 def test_single_freq_array_to_params(times_and_freqs):
-    times, freqs = times_and_freqs
     freqs = np.linspace(100, 200, 1)
     fdict = pyuvsim.simsetup.freq_array_to_params(freqs)
     assert fdict['Nfreqs'] == 1
@@ -452,7 +467,7 @@ def test_param_select_bls():
     uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
 
     # test only keeping certain baselines
-    param_dict['select'] = {'bls': '[(40, 41), (42, 43), (44, 45)]'}    # Test as string
+    param_dict['select'] = {'bls': '[(40, 41), (42, 43), (44, 45)]'}  # Test as string
 
     uv_obj_bls, new_beam_list, new_beam_dict = \
         pyuvsim.initialize_uvdata_from_params(param_dict)
@@ -560,8 +575,8 @@ def check_uvdata_keyword_init(case):
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
         layout_path = os.path.join(simtest.TESTDATA_PATH, layout_fname)
         obsparam_path = os.path.join(simtest.TESTDATA_PATH, obsparam_fname)
-        assert os.path.exists(layout_fname)
-        assert os.path.exists(obsparam_fname)
+        assert os.path.exists(layout_path)
+        assert os.path.exists(obsparam_path)
 
         assert uvd.Nbls == 6
         assert uvd.Nants_data == 4
@@ -581,7 +596,7 @@ def check_uvdata_keyword_init(case):
         new_kwargs = copy.deepcopy(base_kwargs)
         new_kwargs['write_files'] = True
 
-        uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
+        pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
         assert os.path.exists(layout_fname)
         assert os.path.exists(obsparam_fname)
 
@@ -594,7 +609,7 @@ def check_uvdata_keyword_init(case):
         new_kwargs['array_layout'] = antpos_d
         new_kwargs['complete'] = True
 
-        uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
+        pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
         assert os.path.exists(layout_fname)
         assert os.path.exists(obsparam_fname)
 
@@ -609,16 +624,16 @@ def test_uvfits_to_config():
     opath = 'uvfits_yaml_temp'
     param_filename = 'obsparam.yaml'
     second_param_filename = 'test2_config.yaml'
-    telescope_config = 'test_telescope_config.yaml'
     if not os.path.exists(opath):
-        os.makedirs(opath)        # Directory will be deleted when test completed.
+        os.makedirs(opath)  # Directory will be deleted when test completed.
 
     # Read uvfits file to params.
     uv0 = UVData()
     uv0.read_uvfits(longbl_uvfits_file)
 
-    warningmessages = ['The default for the `center` keyword has changed. Previously it defaulted to True, using the median antennna location; now it defaults to False, using the telescope_location.',
-                       'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3). Historically this function has supported (3, Npts) arrays, please verify that array ordering is as expected.']
+    warningmessages = [
+        'The default for the `center` keyword has changed. Previously it defaulted to True, using the median antennna location; now it defaults to False, using the telescope_location.',
+        'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3). Historically this function has supported (3, Npts) arrays, please verify that array ordering is as expected.']
     path, telescope_config, layout_fname = \
         uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_telescope_config,
                              [uv0, herabeam_default], dict(path_out=opath, return_names=True),
@@ -626,33 +641,41 @@ def test_uvfits_to_config():
                              category=DeprecationWarning,
                              message=warningmessages)
     uv0.integration_time[-1] += 2  # Test case of non-uniform integration times
-    uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_config_file, [uv0], dict(
-        telescope_config_name=os.path.join(path, telescope_config),
-        layout_csv_name=os.path.join(path, layout_fname),
-        path_out=opath),
-        message='The integration time is not constant. Using the shortest integration time')
+    uvtest.checkWarnings(
+        pyuvsim.simsetup.uvdata_to_config_file, [uv0],
+        dict(
+            telescope_config_name=os.path.join(path, telescope_config),
+            layout_csv_name=os.path.join(path, layout_fname),
+            path_out=opath
+        ),
+        message='The integration time is not constant. Using the shortest integration time'
+    )
 
     # From parameters, generate a uvdata object.
     param_dict = pyuvsim.simsetup._config_str_to_dict(os.path.join(opath, param_filename))
 
-    orig_param_dict = copy.deepcopy(param_dict)   # The parameter dictionary gets modified in the function below.
+    orig_param_dict = copy.deepcopy(param_dict)  # The parameter dictionary gets modified in the function below.
     uv1, new_beam_list, new_beam_dict = \
         uvtest.checkWarnings(pyuvsim.initialize_uvdata_from_params, [param_dict],
                              category=[DeprecationWarning] * 2,
-                             nwarnings=2, message=['The enu array in ECEF_from_ENU is being interpreted', 'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'])
+                             nwarnings=2, message=['The enu array in ECEF_from_ENU is being interpreted',
+                                                   'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'])
     # Generate parameters from new uvfits and compare with old.
-    path, telescope_config, layout_fname = \
-        uvtest.checkWarnings(pyuvsim.simsetup.uvdata_to_telescope_config, [uv1, herabeam_default],
-                             dict(telescope_config_name=telescope_config,
-                                  layout_csv_name=layout_fname,
-                                  path_out=opath, return_names=True),
-                             category=DeprecationWarning,
-                             nwarnings=2,
-                             message=warningmessages)
-    pyuvsim.simsetup.uvdata_to_config_file(uv1, param_filename=second_param_filename,
-                                           telescope_config_name=os.path.join(path, telescope_config),
-                                           layout_csv_name=os.path.join(path, layout_fname),
-                                           path_out=opath)
+    path, telescope_config, layout_fname = uvtest.checkWarnings(
+        pyuvsim.simsetup.uvdata_to_telescope_config, [uv1, herabeam_default],
+        dict(
+            telescope_config_name=telescope_config,
+            layout_csv_name=layout_fname,
+            path_out=opath, return_names=True
+        ),
+        category=DeprecationWarning, nwarnings=2, message=warningmessages
+    )
+    pyuvsim.simsetup.uvdata_to_config_file(
+        uv1, param_filename=second_param_filename,
+        telescope_config_name=os.path.join(path, telescope_config),
+        layout_csv_name=os.path.join(path, layout_fname),
+        path_out=opath
+    )
 
     del param_dict
 
@@ -757,20 +780,22 @@ def test_circumpolar_nonrising():
 
 
 def test_read_gleam():
-    sourcelist = uvtest.checkWarnings(pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
-                                      message=GLEAM_vot, nwarnings=11,
-                                      category=[astropy.io.votable.exceptions.W27]
-                                      + [astropy.io.votable.exceptions.W50] * 10)
+    sourcelist = uvtest.checkWarnings(
+        pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
+        message=GLEAM_vot, nwarnings=11,
+        category=[astropy.io.votable.exceptions.W27] + [astropy.io.votable.exceptions.W50] * 10
+    )
 
     assert sourcelist.Ncomponents == 50
 
     # Check cuts
     source_select_kwds = {'min_flux': 1.0}
-    catalog = uvtest.checkWarnings(pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
-                                   dict(source_select_kwds=source_select_kwds, return_table=True),
-                                   message=GLEAM_vot, nwarnings=11,
-                                   category=[astropy.io.votable.exceptions.W27]
-                                   + [astropy.io.votable.exceptions.W50] * 10)
+    catalog = uvtest.checkWarnings(
+        pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
+        dict(source_select_kwds=source_select_kwds, return_table=True),
+        message=GLEAM_vot, nwarnings=11,
+        category=[astropy.io.votable.exceptions.W27] + [astropy.io.votable.exceptions.W50] * 10
+    )
 
     assert len(catalog) < sourcelist.Ncomponents
 
@@ -805,7 +830,7 @@ def test_mock_catalogs():
 
     cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, 'random', save=True)
     loc = eval(mock_kwds['array_location'])
-    loc = EarthLocation.from_geodetic(loc[1], loc[0], loc[2])    # Lon, Lat, alt
+    loc = EarthLocation.from_geodetic(loc[1], loc[0], loc[2])  # Lon, Lat, alt
     fname = 'mock_catalog_random.npz'
     alts_reload = np.load(fname)['alts']
     cat.update_positions(time, loc)

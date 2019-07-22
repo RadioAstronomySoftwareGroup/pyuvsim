@@ -5,7 +5,6 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib
 
 dat = np.genfromtxt(sys.argv[1], names=True, max_rows=2, delimiter=',')
 

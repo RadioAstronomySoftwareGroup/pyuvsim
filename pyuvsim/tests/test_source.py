@@ -5,12 +5,12 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-import pyuvsim.tests as simtest
-from astropy.time import Time
-from astropy.coordinates import SkyCoord, EarthLocation, Angle
 from astropy import units
+from astropy.coordinates import SkyCoord, EarthLocation, Angle
+from astropy.time import Time
 
 import pyuvsim
+import pyuvsim.tests as simtest
 
 
 def test_source_zenith_from_icrs():
@@ -92,7 +92,6 @@ def test_pol_coherency_calc():
     inds = np.ones(Ncomp).astype(bool)
     inds[Ncomp // 2:] = False
 
-    pol_srcs_up = (sky.alt_az[0] > 0) * inds
     unpol_srcs_up = (sky.alt_az[0] > 0) * (~inds)
 
     assert np.allclose(coh_loc[0, 0, unpol_srcs_up], 0.5)

@@ -5,18 +5,17 @@
 from __future__ import absolute_import, division, print_function
 
 import os
-import numpy as np
-import pytest
-from scipy.special import j1
-from astropy.time import Time
-from astropy.coordinates import Angle, SkyCoord, EarthLocation
-from astropy import units
 
+import numpy as np
+from astropy import units
+from astropy.coordinates import Angle, EarthLocation
+from astropy.time import Time
 from pyuvdata import UVData
+from scipy.special import j1
 
 import pyuvsim
-import pyuvsim.utils as simutils
 import pyuvsim.tests as simtest
+import pyuvsim.utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
@@ -33,9 +32,6 @@ def test_uniform_beam():
     sources, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
 
     nsrcs = sources.Ncomponents
-    az_vals = []
-    za_vals = []
-    freq_vals = []
 
     sources.update_positions(time, array_location)
     za_vals = np.pi / 2. - sources.alt_az[1]  # rad
@@ -65,17 +61,11 @@ def test_airy_beam_values():
                                    height=1073.)
     sources, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
 
-    nsrcs = sources.Ncomponents
-    az_vals = []
-    za_vals = []
-    freq_vals = []
-
     sources.update_positions(time, array_location)
     za_vals = np.pi / 2. - sources.alt_az[1]  # rad
     az_vals = sources.alt_az[1]
     freq_vals = sources.freq.to("Hz").value
 
-    n_freqs = len(freq_vals)
     interpolated_beam, interp_basis_vector = beam.interp(az_array=az_vals,
                                                          za_array=za_vals,
                                                          freq_array=freq_vals)
@@ -109,7 +99,7 @@ def test_uv_beam_widths():
     zmax = np.radians(90)  # Degrees
     arr = np.arange(-N, N)
     x, y = np.meshgrid(arr, arr)
-    r = np.sqrt(x**2 + y**2) / float(N)
+    r = np.sqrt(x ** 2 + y ** 2) / float(N)
     zas = r * zmax
     azs = np.arctan2(y, x)
     interpolated_beam, interp_basis_vector = beam.interp(az_array=np.array(azs),
@@ -123,8 +113,8 @@ def test_uv_beam_widths():
     for i, bk in enumerate(beam_kern):
         thresh = np.max(np.abs(bk)) * 0.005  # Cutoff at half a % of the maximum value in Fourier space.
         points = np.sum(np.abs(bk) >= thresh)
-        upix = 1 / (2 * np.sin(zmax))   # 2*sin(zmax) = fov extent projected onto the xy plane
-        area = np.sum(points) * upix**2
+        upix = 1 / (2 * np.sin(zmax))  # 2*sin(zmax) = fov extent projected onto the xy plane
+        area = np.sum(points) * upix ** 2
         kern_radius = np.sqrt(area / np.pi)
         assert np.isclose(diameter_m / lams[i], kern_radius, rtol=0.5)
 
@@ -141,9 +131,6 @@ def test_achromatic_gaussian_beam():
     sources, mock_keywords = pyuvsim.create_mock_catalog(time, 'hera_text', array_location=array_location)
 
     nsrcs = sources.Ncomponents
-    az_vals = []
-    za_vals = []
-    freq_vals = []
 
     sources.update_positions(time, array_location)
     za_vals = np.pi / 2. - sources.alt_az[1]  # rad
@@ -159,7 +146,7 @@ def test_achromatic_gaussian_beam():
     interp_zas = np.zeros((n_freqs, nsrcs), dtype=np.float)
     for f_ind in range(n_freqs):
         interp_zas[f_ind, :] = np.array(za_vals)
-    gaussian_vals = np.exp(-(interp_zas**2) / (2 * sigma_rad**2))
+    gaussian_vals = np.exp(-(interp_zas ** 2) / (2 * sigma_rad ** 2))
 
     expected_data[1, 0, 0, :, :] = gaussian_vals
     expected_data[0, 0, 1, :, :] = gaussian_vals
@@ -202,16 +189,17 @@ def test_gaussbeam_values():
 
     engine = pyuvsim.UVEngine(task)
     engine.apply_beam()
-    altitudes = task.sources.alt_az[0]   # In radians.
-    coherencies = np.real(engine.apparent_coherency[0, 0] + engine.apparent_coherency[1, 1]).astype(float)  # All four components should be identical
+    altitudes = task.sources.alt_az[0]  # In radians.
+    coherencies = np.real(engine.apparent_coherency[0, 0] + engine.apparent_coherency[1, 1]).astype(
+        float)  # All four components should be identical
 
     zenith_angles, _ = simutils.altaz_to_zenithangle_azimuth(altitudes,
                                                              np.zeros_like(np.array(altitudes)))
 
     # Confirm the coherency values (ie., brightnesses) match the beam values.
 
-    beam_values = np.exp(-(zenith_angles)**2 / (2 * beam.sigma**2))
-    assert np.all(beam_values**2 == coherencies)
+    beam_values = np.exp(-(zenith_angles) ** 2 / (2 * beam.sigma ** 2))
+    assert np.all(beam_values ** 2 == coherencies)
 
 
 def test_chromatic_gaussian():
@@ -243,7 +231,7 @@ def test_chromatic_gaussian():
 
     for fi in range(Nfreqs):
         hwhm = za[np.argmin(np.abs(vals[fi] - 0.5))]
-        sig_f = sigma * (freqs[fi] / freqs[0])**alpha
+        sig_f = sigma * (freqs[fi] / freqs[0]) ** alpha
         assert np.isclose(sig_f, 2 * hwhm / 2.355, atol=1e-3)
 
 
@@ -260,7 +248,7 @@ def test_power_analytic_beam():
     pb.efield_to_power()
     evals = eb.interp(az, za, freqs)[0][0, 0, 1]
     pvals = pb.interp(az, za, freqs)[0][0, 0, 0]
-    assert np.allclose(evals**2, pvals)
+    assert np.allclose(evals ** 2, pvals)
 
 
 def test_comparison():
@@ -284,15 +272,16 @@ def test_beamerrs():
     beam = pyuvsim.AnalyticBeam('gaussian')
     az, za = np.random.uniform(0.0, np.pi, (2, 5))
     freq_arr = np.linspace(1e8, 1.5e8, 10)
-    simtest.assert_raises_message(ValueError, 'Dish diameter needed for gaussian beam -- units: meters', beam.interp, az, za, freq_arr)
+    simtest.assert_raises_message(ValueError, 'Dish diameter needed for gaussian beam -- units: meters', beam.interp,
+                                  az, za, freq_arr)
     beam.type = 'airy'
-    simtest.assert_raises_message(ValueError, 'Dish diameter needed for airy beam -- units: meters', beam.interp, az, za, freq_arr)
+    simtest.assert_raises_message(ValueError, 'Dish diameter needed for airy beam -- units: meters', beam.interp, az,
+                                  za, freq_arr)
     beam.type = 'noninterpolable'
     simtest.assert_raises_message(ValueError, 'no interp for this type: noninterpolable', beam.interp, az, za, freq_arr)
 
 
 def test_diameter_to_sigma():
-
     diameter_m = 25.0
     abm = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)
     gbm = pyuvsim.AnalyticBeam('gaussian', diameter=diameter_m)
