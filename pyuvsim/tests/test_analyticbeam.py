@@ -190,8 +190,9 @@ def test_gaussbeam_values():
     engine = pyuvsim.UVEngine(task)
     engine.apply_beam()
     altitudes = task.sources.alt_az[0]  # In radians.
-    coherencies = np.real(engine.apparent_coherency[0, 0] + engine.apparent_coherency[1, 1]).astype(
-        float)  # All four components should be identical
+    coherencies = np.real(
+        engine.apparent_coherency[0, 0] + engine.apparent_coherency[1, 1]
+    ).astype(float)  # All four components should be identical
 
     zenith_angles, _ = simutils.altaz_to_zenithangle_azimuth(altitudes,
                                                              np.zeros_like(np.array(altitudes)))

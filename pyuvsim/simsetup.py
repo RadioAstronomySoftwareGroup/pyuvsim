@@ -653,8 +653,9 @@ def parse_telescope_params(tele_params, config_path=''):
     return_dict['antenna_names'] = np.array(antnames.tolist())
     return_dict['antenna_numbers'] = np.array(antnums)
     antpos_enu = np.vstack((E, N, U)).T
-    return_dict['antenna_positions'] = uvutils.ECEF_from_ENU(antpos_enu, *telescope_location) - tele_params[
-        'telescope_location']
+    return_dict['antenna_positions'] = (
+            uvutils.ECEF_from_ENU(antpos_enu, *telescope_location) - tele_params['telescope_location']
+    )
     return_dict['array_layout'] = layout_csv
     return_dict['telescope_location'] = tuple(tele_params['telescope_location'])
     return_dict['telescope_location_lat_lon_alt'] = tuple(telescope_location_latlonalt)
@@ -747,8 +748,9 @@ def parse_frequency_params(freq_params):
                 raise ValueError("Either channel_width or Nfreqs "
                                  " must be included in parameters:" + kws_used)
             if sf and ef:
-                freq_params['bandwidth'] = freq_params['end_freq'] - freq_params['start_freq'] + freq_params[
-                    'channel_width']
+                freq_params['bandwidth'] = (
+                        freq_params['end_freq'] - freq_params['start_freq'] + freq_params['channel_width']
+                )
                 bw = True
             if bw:
                 Nfreqs = float(freq_params['bandwidth']
@@ -767,18 +769,19 @@ def parse_frequency_params(freq_params):
                                             / float(freq_params['Nfreqs']))
 
         if not bw:
-            freq_params['bandwidth'] = (freq_params['channel_width']
-                                        * freq_params['Nfreqs'])
+            freq_params['bandwidth'] = freq_params['channel_width'] * freq_params['Nfreqs']
             bw = True
 
         if not sf:
             if ef and bw:
-                freq_params['start_freq'] = freq_params['end_freq'] - freq_params['bandwidth'] + freq_params[
-                    'channel_width']
+                freq_params['start_freq'] = (
+                        freq_params['end_freq'] - freq_params['bandwidth'] + freq_params['channel_width']
+                )
         if not ef:
             if sf and bw:
-                freq_params['end_freq'] = freq_params['start_freq'] + freq_params['bandwidth'] - freq_params[
-                    'channel_width']
+                freq_params['end_freq'] = (
+                        freq_params['start_freq'] + freq_params['bandwidth'] - freq_params['channel_width']
+                )
 
         if not np.isclose(freq_params['Nfreqs'] % 1, 0):
             raise ValueError("end_freq - start_freq must be evenly divisible by channel_width")
@@ -855,12 +858,15 @@ def parse_time_params(time_params):
                 raise ValueError("Either integration_time or Ntimes must be "
                                  "included in parameters: " + kws_used)
             if st and et:
-                time_params['duration'] = time_params['end_time'] - time_params['start_time'] + time_params[
-                    'integration_time'] * dayspersec
+                time_params['duration'] = (
+                        time_params['end_time'] - time_params['start_time'] +
+                        time_params['integration_time'] * dayspersec
+                )
                 dd = True
             if dd:
-                time_params['Ntimes'] = int(np.round(time_params['duration']
-                                                     / (time_params['integration_time'] * dayspersec)))
+                time_params['Ntimes'] = int(
+                    np.round(time_params['duration'] / (time_params['integration_time'] * dayspersec))
+                )
             else:
                 raise ValueError("Either duration or time bounds must be specified: "
                                  + kws_used)
@@ -891,7 +897,7 @@ def parse_time_params(time_params):
             if not np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1),
                                atol=dayspersec):  # To nearest second
                 raise ValueError("Calculated time array is not consistent with set integration_time."
-                                 + "\nInput parameters are: {}".format(str(init_time_params)))
+                                 "\nInput parameters are: {}".format(str(init_time_params)))
 
     return_dict['integration_time'] = time_params['integration_time']
     return_dict['time_array'] = time_arr
@@ -1031,8 +1037,9 @@ def initialize_uvdata_from_params(obs_params):
         src, _ = create_mock_catalog(time, arrangement='zenith', array_location=tloc)
         if 'sources' in param_dict:
             source_file_name = os.path.basename(param_dict['sources']['catalog'])
-            uvparam_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(source_file_name, src.ra.deg[0],
-                                                                         src.dec.deg[0])
+            uvparam_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(
+                source_file_name, src.ra.deg[0],src.dec.deg[0]
+            )
         else:
             uvparam_dict['object_name'] = 'Unspecified'
     else:
@@ -1047,9 +1054,13 @@ def initialize_uvdata_from_params(obs_params):
         if k in uvparam_dict:
             setattr(uv_obj, k, uvparam_dict[k])
 
-    bls = np.array([uv_obj.antnums_to_baseline(uv_obj.antenna_numbers[j], uv_obj.antenna_numbers[i])
-                    for i in range(0, uv_obj.Nants_data)
-                    for j in range(i, uv_obj.Nants_data)])
+    bls = np.array(
+        [
+            uv_obj.antnums_to_baseline(uv_obj.antenna_numbers[j], uv_obj.antenna_numbers[i])
+            for i in range(0, uv_obj.Nants_data)
+            for j in range(i, uv_obj.Nants_data)
+        ]
+    )
 
     uv_obj.baseline_array = np.tile(bls, uv_obj.Ntimes)
     uv_obj.Nbls = bls.size
@@ -1057,8 +1068,7 @@ def initialize_uvdata_from_params(obs_params):
     uv_obj.integration_time = np.repeat(uv_obj.integration_time, uv_obj.Nbls * uv_obj.Ntimes)
     uv_obj.Nblts = uv_obj.Nbls * uv_obj.Ntimes
 
-    uv_obj.ant_1_array, uv_obj.ant_2_array = \
-        uv_obj.baseline_to_antnums(uv_obj.baseline_array)
+    uv_obj.ant_1_array, uv_obj.ant_2_array = uv_obj.baseline_to_antnums(uv_obj.baseline_array)
 
     # add other required metadata to allow select to work without errors
     # these will all be overwritten in uvsim.init_uvdata_out, so it's ok to hardcode them here
@@ -1067,8 +1077,10 @@ def initialize_uvdata_from_params(obs_params):
     uv_obj.history = ''
 
     # select on object
-    valid_select_keys = ['antenna_nums', 'antenna_names', 'ant_str', 'bls', 'frequencies', 'freq_chans', 'times',
-                         'blt_inds']
+    valid_select_keys = [
+        'antenna_nums', 'antenna_names', 'ant_str', 'bls',
+        'frequencies', 'freq_chans', 'times','blt_inds'
+    ]
 
     # downselect baselines (or anything that can be passed to pyuvdata's select method)
     # Note: polarization selection is allowed here, but will cause an error if the incorrect pols are passed to pyuvsim.
@@ -1143,7 +1155,8 @@ def initialize_uvdata_from_keywords(
     channel_width: float
         Frequency channel spacing [Hz]
     freq_array : ndarray
-        frequency array [Hz], if this is specified, it supersedes Nfreqs, start_freq, bandwidth
+        frequency array [Hz], if this is specified, it supersedes Nfreqs,
+        start_freq, bandwidth
     Ntimes : int
         Number of integration bins
     integration_time : float
@@ -1151,7 +1164,8 @@ def initialize_uvdata_from_keywords(
     start_time : float
         Time of the first integration bin [Julian Date]
     time_array : ndarray
-        time array [Julian Date]. If this is specified it supersedes values of Ntimes, start_time and integration_time
+        time array [Julian Date]. If this is specified it supersedes values of Ntimes,
+        start_time and integration_time
     bls : list
         List of antenna-pair tuples for baseline selection
     redundant_threshold: float
@@ -1193,16 +1207,23 @@ def initialize_uvdata_from_keywords(
 
         # Increment name appropriately:
         output_layout_filepath = os.path.join(path_out, output_layout_filename)
-        output_layout_filename = os.path.basename(check_file_exists_and_increment(output_layout_filepath, 'csv'))
+        output_layout_filename = os.path.basename(
+            check_file_exists_and_increment(output_layout_filepath, 'csv')
+        )
 
         if output_yaml_filename is None:
             output_yaml_filename = 'obsparam.yaml'
-        output_yaml_filename = check_file_exists_and_increment(os.path.join(path_out, output_yaml_filename), 'yaml')
+        output_yaml_filename = check_file_exists_and_increment(
+            os.path.join(path_out, output_yaml_filename), 'yaml'
+        )
 
         if antenna_layout_filepath is not None:
             # Copying original file to new place, if it exists
             if os.path.exists(antenna_layout_filepath):
-                shutil.copyfile(antenna_layout_filepath, os.path.join(path_out, output_layout_filename))
+                shutil.copyfile(
+                    antenna_layout_filepath,
+                    os.path.join(path_out, output_layout_filename)
+                )
 
     antenna_numbers = None
     if isinstance(array_layout, dict):
@@ -1211,7 +1232,9 @@ def initialize_uvdata_from_keywords(
         if antenna_names is None:
             antenna_names = antenna_numbers.astype('str')
         if write_files:
-            _write_layout_csv(output_layout_filepath, antpos_enu, antenna_names, antenna_numbers)
+            _write_layout_csv(
+                output_layout_filepath, antpos_enu, antenna_names, antenna_numbers
+            )
 
     if array_layout is None:
         if outfile:
@@ -1287,7 +1310,8 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
     For a given UVData object, generate telescope parameter files.
     See documentation for more information on the specification. In short:
         telescope_config = YAML file with telescope_location and telescope_name
-                           The beam list is spoofed, since that information cannot be found in a UVData object.
+                           The beam list is spoofed, since that information cannot be
+                           found in a UVData object.
         layout_csv = tab separated value file giving ENU antenna positions/
                            Beam ID is spoofed as well.
     Args:
@@ -1306,9 +1330,11 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
 
     if telescope_config_name is None:
         telescope_config_path = \
-            check_file_exists_and_increment(os.path.join(path_out, 'telescope_config_'
-                                                         + uvdata_in.telescope_name
-                                                         + '.yaml'))
+            check_file_exists_and_increment(
+                os.path.join(
+                    path_out, 'telescope_config_{}.yaml'.format(uvdata_in.telescope_name)
+                )
+            )
         telescope_config_name = os.path.basename(telescope_config_path)
 
     if layout_csv_name is None:
@@ -1318,8 +1344,10 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
 
     antpos_enu, antenna_numbers = uvdata_in.get_ENU_antpos()
 
-    _write_layout_csv(os.path.join(path_out, layout_csv_name), antpos_enu, uvdata_in.antenna_names,
-                      uvdata_in.antenna_numbers)
+    _write_layout_csv(
+        os.path.join(path_out, layout_csv_name),
+        antpos_enu, uvdata_in.antenna_names,uvdata_in.antenna_numbers
+    )
 
     # Write the rest to a yaml file.
     yaml_dict = dict(
@@ -1334,8 +1362,9 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
     with open(os.path.join(path_out, telescope_config_name), 'w+') as yfile:
         yaml.dump(yaml_dict, yfile, default_flow_style=False)
 
-    print('Path: {}, telescope_config: {}, layout: {}'.format(path_out, telescope_config_name,
-                                                              layout_csv_name))
+    print('Path: {}, telescope_config: {}, layout: {}'.format(
+        path_out, telescope_config_name,layout_csv_name)
+    )
 
     if return_names:
         return path_out, telescope_config_name, layout_csv_name
@@ -1442,9 +1471,10 @@ def _complete_uvdata(uv_in, inplace=False):
                                    * np.diff(np.unique(uv_obj.time_array))[0] * (24. * 60 ** 2))  # Seconds
 
     # Clear existing data, if any.
-    uv_obj.data_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=np.complex)
-    uv_obj.flag_array = np.zeros((uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols), dtype=bool)
-    uv_obj.nsample_array = np.ones_like(uv_obj.data_array, dtype=float)
+    _shape = (uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols)
+    uv_obj.data_array = np.zeros(_shape, dtype=np.complex)
+    uv_obj.flag_array = np.zeros(_shape, dtype=bool)
+    uv_obj.nsample_array = np.ones(_shape, dtype=float)
 
     uv_obj.extra_keywords = {}
 

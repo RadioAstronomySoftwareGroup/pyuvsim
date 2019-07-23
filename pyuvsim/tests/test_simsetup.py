@@ -26,8 +26,10 @@ from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 
 # Five different test configs
-param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in
-                   range(6)]
+param_filenames = [
+    os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x))
+    for x in range(6)
+]
 
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
