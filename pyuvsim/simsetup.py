@@ -196,6 +196,8 @@ def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}, re
     """
     Creates a list of pyuvsim source objects from a votable catalog.
 
+    Tested on: GLEAM EGC catalog, version 2
+
     Args:
         gleam_votable: Path to votable catalog file.
         input_uv: The UVData object for the simulation (needed for horizon cuts)
@@ -204,17 +206,13 @@ def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}, re
             Valid options:
             |  lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
             |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
-            |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
-            |                  (See caveats in simsetup.array_to_skymodel docstring)
+            |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut.
+            |      Default is about 10 minutes of sky rotation. (See caveats in simsetup.array_to_skymodel docstring)
             |  min_flux: Minimum stokes I flux to select [Jy]
             |  max_flux: Maximum stokes I flux to select [Jy]
 
     Returns:
-        if return_table : recarray of source parameters
-        otherwise:
-            pyuvsim.SkyModel object
-
-    Tested on: GLEAM EGC catalog, version 2
+        if return_table, recarray of source parameters, otherwise :class:`pyuvsim.SkyModel` instance
     """
 
     class Found(Exception):
@@ -256,12 +254,12 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}, return_
 
     Args:
         catalog_csv: tab separated value file with the following expected columns:
+            For now, all sources are flat spectrum.
             |  Source_ID: source name as a string of maximum 10 characters
             |  ra_j2000: right ascension at J2000 epoch, in decimal degrees
             |  dec_j2000: declination at J2000 epoch, in decimal degrees
             |  flux_density_I: Stokes I flux density in Janskys
             |  frequency: reference frequency (for future spectral indexing) [Hz]
-                For now, all sources are flat spectrum.
         input_uv: The UVData object for the simulation (needed for horizon cuts)
         source_select_kwds: Dictionary of keywords for source selection.
             Valid options:
@@ -322,13 +320,13 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         time (float or astropy Time object): Julian date
         arrangement (str): Point source pattern (default = 1 source at zenith).
             Accepted arrangements:
-                |  `triangle`:  Three point sources forming a triangle around the zenith
-                |  `cross`: An asymmetric cross
-                |  `zenith`: Some number of sources placed at the zenith.
-                |  `off-zenith`:  A single source off zenith
-                |  `long-line`:  Horizon to horizon line of point sources
-                |  `hera_text`:  Spell out HERA around the zenith
-                |  `random`:  Randomly distributed point sources near zenith
+            |  `triangle`:  Three point sources forming a triangle around the zenith
+            |  `cross`: An asymmetric cross
+            |  `zenith`: Some number of sources placed at the zenith.
+            |  `off-zenith`:  A single source off zenith
+            |  `long-line`:  Horizon to horizon line of point sources
+            |  `hera_text`:  Spell out HERA around the zenith
+            |  `random`:  Randomly distributed point sources near zenith
         Nsrcs (int):  Number of sources to put at zenith
         array_location (EarthLocation object): [Default = HERA site]
         alt (float): For off-zenith and triangle arrangements, altitude to place sources. (deg)
@@ -560,9 +558,8 @@ def parse_telescope_params(tele_params, config_path=''):
         tele_params: Dictionary of telescope parameters
             See pyuvsim documentation for allowable keys.
             https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#telescope-configuration
-
-        config_path: path to directory holding configuration and
-            layout files.
+        config_path: str
+            path to directory holding configuration and layout files.
 
     Returns:
         dict of array properties:
@@ -1308,12 +1305,9 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
                                return_names=False, path_out='.'):
     """
     For a given UVData object, generate telescope parameter files.
-    See documentation for more information on the specification. In short:
-        telescope_config = YAML file with telescope_location and telescope_name
-                           The beam list is spoofed, since that information cannot be
-                           found in a UVData object.
-        layout_csv = tab separated value file giving ENU antenna positions/
-                           Beam ID is spoofed as well.
+
+    See documentation for more information on the specification.
+
     Args:
         uvdata_in (UVData): object to process
         path_out (str): Target directory for the config file.
@@ -1326,6 +1320,14 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
 
     Returns:
         if return_names, returns tuple (path, telescope_config_name, layout_csv_name)
+
+    Notes:
+        The generate files are, briefly:
+
+        telescope_config: YAML file with telescope_location and telescope_name
+            The beam list is spoofed, since that information cannot be found in a UVData object.
+        layout_csv: tab separated value file giving ENU antenna positions/
+            Beam ID is spoofed as well.
     """
 
     if telescope_config_name is None:

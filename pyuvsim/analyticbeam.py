@@ -46,18 +46,18 @@ class AnalyticBeam(object):
     function beam types.
 
     Supported types:
-        Uniform beam : Unit response from all directions.
-        Airy: An Airy disk pattern (the 2D Fourier transform of a circular aperture of width given by `diameter`)
-        Gaussian : A peak-normalized gaussian function.
-                   If given a `diameter`, then this makes a chromatic beam with FWHMs matching an equivalent Airy disk beam at each frequency.
-                   If given a `sigma`, this makes an achromatic beam with standard deviation set to `sigma`
-                   If given a `sigma`, `ref_freq`, and `spectral_index`, then this will make a chromatic beam
-                        with standard deviation defined by a power law:
-                            stddev(f) = sigma * (f/ref_freq)**(spectral_index)
+
+        * Uniform beam : Unit response from all directions.
+        * Airy: An Airy disk pattern (the 2D Fourier transform of a circular aperture of width given by `diameter`)
+        * Gaussian : A peak-normalized gaussian function.
+            * If given a `diameter`, then this makes a chromatic beam with FWHMs matching an equivalent Airy disk beam at each frequency.
+            * If given a `sigma`, this makes an achromatic beam with standard deviation set to `sigma`
+            * If given a `sigma`, `ref_freq`, and `spectral_index`, then this will make a chromatic beam
+              with standard deviation defined by a power law: `stddev(f) = sigma * (f/ref_freq)**(spectral_index)`
 
     Args:
-        type: (string)
-            Beam type to use
+        type: str, {'uniform', 'airy', 'gaussian'}
+            Beam type to use.
         sigma: (float)
             standard deviation [radians] for gaussian beam
             When spectral index is set, this represents the FWHM at the ref_freq.

@@ -70,18 +70,19 @@ Frequency
 
     Time and frequency structure may be defined with different combinations of keywords to suit the user's purposes. The user must specify sufficient information for the frequency array to be defined.
     Minimum frequency requirements:
-        specify bandwidth via one of the following combinations:
-            * (``start_freq``, ``end_freq``)
-            * (``channel_width``, ``Nfreqs``)
-            * (``bandwidth``)
 
-        specify channel width via:
-            * (``bandwidth``, ``Nfreqs``)
-            * (``channel width``)
+    Specify bandwidth via one of the following combinations:
+        * (``start_freq``, ``end_freq``)
+        * (``channel_width``, ``Nfreqs``)
+        * (``bandwidth``)
 
-        specify a reference frequency via:
-            * (``start_freq``)
-            * (``end_freq``)
+    Specify channel width via:
+        * (``bandwidth``, ``Nfreqs``)
+        * (``channel width``)
+
+    Specify a reference frequency via:
+        * (``start_freq``)
+        * (``end_freq``)
 
     As long as one of the sets from each category above is met by the supplied keywords, the frequency array will be successfully built.
     You can also just give an explicit ``freq_array``.
@@ -100,18 +101,18 @@ Time
 
     The numerical factors are to convert among seconds, days, and hours. The user must specify sufficient information for the time array to be defined:
     Minimum time requirements:
-        Total time:
-            * (``start_time``, ``end_time``)
-            * (``integration_time``, ``Ntimes``)
-            * (``duration_hours``) or (``duration_days``)
+    Total time:
+        * (``start_time``, ``end_time``)
+        * (``integration_time``, ``Ntimes``)
+        * (``duration_hours``) or (``duration_days``)
 
-        Time step:
-            * (``duration_hours`` or ``duration_days``, ``Ntimes``)
-            * (``integration_time``)
+    Time step:
+        * (``duration_hours`` or ``duration_days``, ``Ntimes``)
+        * (``integration_time``)
 
-        Reference time:
-            * (``start_time``)
-            * (``end_time``)
+    Reference time:
+        * (``start_time``)
+        * (``end_time``)
 
     As long as one of the sets from each category above is met by the supplied keywords, the time array will be successfully built.
 
