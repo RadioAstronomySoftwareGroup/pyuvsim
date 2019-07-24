@@ -659,7 +659,7 @@ def check_uvdata_keyword_init(case):
         assert uvd.Nants_data == 4
         ap, a = uvd.get_ENU_antpos()
         apd = dict(zip(a, ap))
-        assert np.all([np.isclose(antpos_d[a], apd[a]) for a in ants])
+        assert np.all([np.isclose(antpos_d[ant], apd[ant]) for ant in ants])
 
     elif case == 5:
         # Check defaults when writing to file.
