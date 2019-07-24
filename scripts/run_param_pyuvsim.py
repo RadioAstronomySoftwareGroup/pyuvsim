@@ -10,9 +10,9 @@ import os
 
 import pyuvsim
 
-parser = argparse.ArgumentParser(description=("A command-line script "
-                                              "to execute a pyuvsim simulation from a parameter file."))
-
+parser = argparse.ArgumentParser(
+    description="A command-line script to execute a pyuvsim simulation from a parameter file."
+)
 parser.add_argument('paramsfile', type=str, help='Parameter yaml file.', default=None)
 parser.add_argument('--profile', type=str, help='Time profiling output file', default=None)
 

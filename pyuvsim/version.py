@@ -43,8 +43,10 @@ def _get_gitinfo_file(git_file=None):
         git_description = data[2]
         git_branch = data[3]
 
-    return {'git_origin': git_origin, 'git_hash': git_hash,
-            'git_description': git_description, 'git_branch': git_branch}
+    return {
+        'git_origin': git_origin, 'git_hash': git_hash,
+        'git_description': git_description, 'git_branch': git_branch
+    }
 
 
 def _unicode_to_str(u):
@@ -58,8 +60,10 @@ def construct_version_info():
     with open(version_file) as f:
         version = f.read().strip()
 
-    version_info = {'version': version, 'git_origin': '', 'git_hash': '',
-                    'git_description': '', 'git_branch': ''}
+    version_info = {
+        'version': version, 'git_origin': '', 'git_hash': '',
+        'git_description': '', 'git_branch': ''
+    }
 
     try:
         git_origin = _get_git_output(['config', '--get', 'remote.origin.url'], capture_stderr=True)
@@ -69,8 +73,12 @@ def construct_version_info():
 
         version_info['git_origin'] = git_origin
         version_info['git_hash'] = _get_git_output(['rev-parse', 'HEAD'], capture_stderr=True)
-        version_info['git_description'] = _get_git_output(['describe', '--dirty', '--tag', '--always'])
-        version_info['git_branch'] = _get_git_output(['rev-parse', '--abbrev-ref', 'HEAD'], capture_stderr=True)
+        version_info['git_description'] = _get_git_output(
+            ['describe', '--dirty', '--tag', '--always']
+        )
+        version_info['git_branch'] = _get_git_output(
+            ['rev-parse', '--abbrev-ref', 'HEAD'], capture_stderr=True
+        )
     except (subprocess.CalledProcessError, ValueError, OSError):  # pragma: no cover
         try:
             # Check if a GIT_INFO file was created when installing package

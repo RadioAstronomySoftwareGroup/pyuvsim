@@ -1,4 +1,3 @@
-
 Comparison with other simulators
 ================================
 

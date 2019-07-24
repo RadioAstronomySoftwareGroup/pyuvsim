@@ -6,11 +6,12 @@
 
 from __future__ import absolute_import, division, print_function
 
-import sys
-import numpy as np
-from numpy.lib.recfunctions import append_fields
-from matplotlib.mlab import rec2csv
 import subprocess
+import sys
+
+import numpy as np
+from matplotlib.mlab import rec2csv
+from numpy.lib.recfunctions import append_fields
 
 slurmids = []
 Nall = []  # Each entry is a list of Nbl, Ntimes, Nchan, Nsrcs
@@ -21,16 +22,23 @@ with open(fname, 'a+') as fhandle:
     header = fhandle.readline()
 
 header = [h.strip().upper() for h in header.split(',')]
-dt = np.format_parser(['i4', 'i4', 'i4', 'i4', 'U8', 'i4'],
-                      ['Nsrcs', 'Ntimes', 'Nfreqs', 'Nbls', 'beam', 'slurm_id'], header)
+dt = np.format_parser(
+    ['i4', 'i4', 'i4', 'i4', 'U8', 'i4'],
+    ['Nsrcs', 'Ntimes', 'Nfreqs', 'Nbls', 'beam', 'slurm_id'],
+    header
+)
 
-filedat = np.genfromtxt(fname, autostrip=True, skip_header=1,
-                        delimiter=',', dtype=dt.dtype)
+filedat = np.genfromtxt(fname, autostrip=True, skip_header=1, delimiter=',', dtype=dt.dtype)
 
 slurmids = filedat['slurm_id'].astype(str)
 slurmids = [sid + '_0.0' for sid in slurmids]
 
-p = subprocess.Popen('sacct --jobs=\"' + ",".join(slurmids) + '\" --format=\"JobID, Start, Elapsed, MaxRSS, NNodes, NTasks, NCPUS\"', shell=True, stdout=subprocess.PIPE)
+p = subprocess.Popen(
+    'sacct --jobs=\"'
+    + ",".join(slurmids)
+    + '\" --format=\"JobID, Start, Elapsed, MaxRSS, NNodes, NTasks, NCPUS\"',
+    shell=True, stdout=subprocess.PIPE
+)
 
 table = np.genfromtxt(p.stdout, dtype=None, names=True, comments='--', encoding=None)
 table['MaxRSS'] = map(lambda x: float(x[:-1]) * 1e3 / 1e9, table['MaxRSS'])
@@ -39,7 +47,7 @@ dt = table.dtype.descr
 ind = dt.index(('MaxRSS', table.dtype['MaxRSS']))
 dt[ind] = ('MaxRSS (GB)', 'f')
 ind = dt.index(('NTasks', table.dtype['NTasks']))
-dt[ind] = ('NProcs', 'i')    # So there's no confusion with slurm tasks vs. UVTasks.
+dt[ind] = ('NProcs', 'i')  # So there's no confusion with slurm tasks vs. UVTasks.
 dt = np.dtype(dt)
 table = table.astype(dt)
 
@@ -59,13 +67,18 @@ for ent in filedat:
 
 def hms2sec(hms):
     h, m, s = map(float, hms.split(":"))
-    return h * 60.**2 + m * 60. + s
+    return h * 60. ** 2 + m * 60. + s
 
 
 runtime_sec = np.array(map(hms2sec, table['Elapsed']))
 cores_per_node = table['NProcs'] / table['NNodes']
 ntasks = Nsrcs * Ntimes * Nbls * Nchans
 
-table = append_fields(table, ['CoresPerNode', 'Nbls', 'Ntimes', 'Nchan', 'Nsrc', 'Beam', 'Ntasks', 'Runtime_Seconds'], [cores_per_node, Nbls, Ntimes, Nchans, Nsrcs, beam_type, ntasks, runtime_sec], usemask=False)
+table = append_fields(
+    table,
+    ['CoresPerNode', 'Nbls', 'Ntimes', 'Nchan', 'Nsrc', 'Beam', 'Ntasks', 'Runtime_Seconds'],
+    [cores_per_node, Nbls, Ntimes, Nchans, Nsrcs, beam_type, ntasks, runtime_sec],
+    usemask=False
+)
 
 rec2csv(table, 'profiling_results_table.csv')

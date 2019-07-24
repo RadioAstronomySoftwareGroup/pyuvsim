@@ -4,16 +4,17 @@
 
 from __future__ import absolute_import, division, print_function
 
-import time as pytime
-import sys
 import os
-import psutil
+import sys
+import time as pytime
+
 import numpy as np
-from six.moves import range
+import psutil
 from astropy import _erfa as erfa
 from astropy.coordinates import Angle
-from astropy.time import Time
 from astropy.coordinates.builtin_frames.utils import get_jd12
+from astropy.time import Time
+from six.moves import range
 
 from . import version as simversion
 
@@ -52,7 +53,7 @@ class progsteps:
                 self.curval = count
             if doprint:
                 print("{:0.2f}% completed. {:0.3f} minutes elapsed \n".format(
-                      (count / self.maxval) * 100., (pytime.time() - self.t0) / 60.))
+                    (count / self.maxval) * 100., (pytime.time() - self.t0) / 60.))
             sys.stdout.flush()
 
     def finish(self):
@@ -68,8 +69,8 @@ def tee_to_cirs_ra(tee_ra, time):
     era = erfa.era00(*get_jd12(time, 'ut1'))
     theta_earth = Angle(era, unit='rad')
 
-    assert(isinstance(time, Time))
-    assert(isinstance(tee_ra, Angle))
+    assert (isinstance(time, Time))
+    assert (isinstance(tee_ra, Angle))
     gast = time.sidereal_time('apparent', longitude=0)
     cirs_ra = tee_ra - (gast - theta_earth)
     return cirs_ra
@@ -79,8 +80,8 @@ def cirs_to_tee_ra(cirs_ra, time):
     era = erfa.era00(*get_jd12(time, 'ut1'))
     theta_earth = Angle(era, unit='rad')
 
-    assert(isinstance(time, Time))
-    assert(isinstance(cirs_ra, Angle))
+    assert (isinstance(time, Time))
+    assert (isinstance(cirs_ra, Angle))
     gast = time.sidereal_time('apparent', longitude=0)
     tee_ra = cirs_ra + (gast - theta_earth)
     return tee_ra
@@ -239,7 +240,8 @@ def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_fo
         elif out_format == 'uvh5':
             uv_obj.write_uvh5(outfile_name)
         else:
-            raise ValueError("Invalid output format. Options are \" uvfits\", \"uvh5\", or \"miriad\"")
+            raise ValueError(
+                "Invalid output format. Options are \" uvfits\", \"uvh5\", or \"miriad\"")
     if return_filename:
         return outfile_name
 

@@ -14,11 +14,10 @@
 #
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('../pyuvsim/'))
-print(sys.path)
 readme_file = os.path.join(os.path.abspath('../'), 'README.md')
 index_file = os.path.join(os.path.abspath('../docs'), 'index.rst')
-
 
 # -- Project information -----------------------------------------------------
 
@@ -30,7 +29,6 @@ author = u'Radio Astronomy Software Group'
 version = u''
 # The full version, including alpha/beta/rc tags
 release = u''
-
 
 # -- General configuration ---------------------------------------------------
 
@@ -76,7 +74,6 @@ exclude_patterns = [u'.build', 'Thumbs.db', '.DS_Store']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
-
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -115,7 +112,6 @@ html_static_path = ['.static']
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'pyuvsimdoc'
 
-
 # -- Options for LaTeX output ------------------------------------------------
 
 latex_elements = {
@@ -144,7 +140,6 @@ latex_documents = [
      u'Radio Astronomy Software Group', 'manual'),
 ]
 
-
 # -- Options for manual page output ------------------------------------------
 
 # One entry per manual page. List of tuples
@@ -153,7 +148,6 @@ man_pages = [
     (master_doc, 'pyuvsim', u'pyuvsim Documentation',
      [author], 1)
 ]
-
 
 # -- Options for Texinfo output ----------------------------------------------
 
@@ -171,6 +165,7 @@ def build_custom_docs(app):
     sys.path.append(os.getcwd())
     import make_index
     make_index.write_index_rst(readme_file=readme_file, write_file=index_file)
+
 
 # -- Extension configuration -------------------------------------------------
 

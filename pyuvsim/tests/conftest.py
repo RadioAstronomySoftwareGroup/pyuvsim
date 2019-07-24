@@ -6,11 +6,13 @@
 from __future__ import absolute_import, division, print_function
 
 import os
-import pytest
 import shutil
+
+import pytest
 import six.moves.urllib as urllib
-from astropy.utils import iers
 from astropy.time import Time
+from astropy.utils import iers
+
 from pyuvsim.data import DATA_PATH
 
 

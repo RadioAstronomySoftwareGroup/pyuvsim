@@ -25,11 +25,13 @@ from .baseline import Baseline
 from .source import SkyModel
 from .telescope import Telescope
 
-__all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim', 'serial_gather']
+__all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim',
+           'serial_gather']
 
 
 class UVTask(object):
-    # holds all the information necessary to calculate a visibility for a set of sources at a single (t, f, bl)
+    # holds all the information necessary to calculate a visibility for a set of sources at a
+    # single (t, f, bl)
 
     def __init__(self, sources, time, freq, baseline, telescope):
         self.time = time
@@ -101,14 +103,17 @@ class UVEngine(object):
         # [ |Ex|^2, Ex* Ey, Ey* Ex |Ey|^2 ]
         # where x and y vectors along the local alt/az axes.
 
-        # Apparent coherency gives the direction and polarization dependent baseline response to a source.
-        beam1_jones = baseline.antenna1.get_beam_jones(self.task.telescope, sources.alt_az,
-                                                       self.task.freq, reuse_spline=self.reuse_spline)
+        # Apparent coherency gives the direction and polarization dependent baseline response to
+        # a source.
+        beam1_jones = baseline.antenna1.get_beam_jones(
+            self.task.telescope, sources.alt_az, self.task.freq, reuse_spline=self.reuse_spline
+        )
         if baseline.antenna1.beam_id == baseline.antenna2.beam_id:
             beam2_jones = np.copy(beam1_jones)
         else:
-            beam2_jones = baseline.antenna2.get_beam_jones(self.task.telescope, sources.alt_az,
-                                                           self.task.freq, reuse_spline=self.reuse_spline)
+            beam2_jones = baseline.antenna2.get_beam_jones(
+                self.task.telescope, sources.alt_az, self.task.freq, reuse_spline=self.reuse_spline
+            )
 
         coherency = sources.coherency_calc(self.task.telescope.location)
         beam2_jones = np.swapaxes(beam2_jones, 0, 1).conj()  # Transpose at each component.
@@ -228,9 +233,11 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     tasks_shape = (Ntimes, Nfreqs, Nbls)
     time_ax, freq_ax, bl_ax = range(3)
 
-    telescope = Telescope(input_uv.telescope_name,
-                          EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
-                          beam_list)
+    telescope = Telescope(
+        input_uv.telescope_name,
+        EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
+        beam_list
+    )
 
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
@@ -322,14 +329,18 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     Nfreqs = input_uv.Nfreqs
     Nsrcs = len(catalog)
 
-    task_inds, src_inds, Ntasks_local, Nsrcs_local = _make_task_inds(Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus)
+    task_inds, src_inds, Ntasks_local, Nsrcs_local = _make_task_inds(
+        Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus
+    )
 
     # Construct beam objects from strings
     beam_models = [simsetup.beam_string_to_object(bm) for bm in beam_list]
     for bm in beam_models:
         bm.interpolation_function = 'az_za_simple'
 
-    local_task_iter = uvdata_to_task_iter(task_inds, input_uv, catalog[src_inds], beam_models, beam_dict)
+    local_task_iter = uvdata_to_task_iter(
+        task_inds, input_uv, catalog[src_inds], beam_models, beam_dict
+    )
 
     summed_task_dict = {}
     if rank == 0:

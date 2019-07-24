@@ -20,14 +20,11 @@ def _skymodel_basesize():
 
     Sum the sizes of the data types that go into SkyModel
     """
-    attrs = ['',
-             Quantity(1.0, 'Hz'),
-             [0.0] * 4,
-             Angle(np.pi, 'rad'),
-             Angle(np.pi, 'rad'),
-             [1.5] * 4,
-             [0.3] * 2,
-             [0.0] * 3]
+    attrs = [
+        '', Quantity(1.0, 'Hz'), [0.0] * 4,
+        Angle(np.pi, 'rad'), Angle(np.pi, 'rad'),
+        [1.5] * 4, [0.3] * 2, [0.0] * 3
+    ]
     return np.sum([sys.getsizeof(a) for a in attrs])
 
 
@@ -66,7 +63,8 @@ class SkyModel(object):
             freq: astropy quantity, shape (Ncomponents,)
                 reference frequencies of flux values
             rise_lst: (float), shape (Ncomponents,)
-                Approximate lst (radians) when the source rises. Set by coarse horizon cut in simsetup.
+                Approximate lst (radians) when the source rises.
+                Set by coarse horizon cut in simsetup.
                 Default is nan, meaning the source never rises.
             set_lst: (float), shape (Ncomponents,)
                 Approximate lst (radians) when the source sets.
@@ -105,7 +103,8 @@ class SkyModel(object):
         self.alt_az = np.zeros((2, self.Ncomponents), dtype=float)
         self.pos_lmn = np.zeros((3, self.Ncomponents), dtype=float)
 
-        self.horizon_mask = np.zeros(self.Ncomponents).astype(bool)  # If true, source component is below horizon.
+        self.horizon_mask = np.zeros(self.Ncomponents).astype(
+            bool)  # If true, source component is below horizon.
 
         if self.Ncomponents == 1:
             self.stokes = self.stokes.reshape(4, 1)
@@ -157,15 +156,19 @@ class SkyModel(object):
 
             polarized_sources = np.where(~Ionly_mask)[0]
             sinX = np.sin(self.hour_angle)
-            cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(self.hour_angle)
+            cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(
+                self.hour_angle)
 
-            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]]).astype(float)  # (2, 2, Ncomponents)
+            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]]).astype(
+                float)  # (2, 2, Ncomponents)
             rotation_matrix = rotation_matrix[..., polarized_sources]
 
             rotation_matrix_T = np.swapaxes(rotation_matrix, 0, 1)
-            coherency_local[:, :, polarized_sources] = np.einsum('abx,bcx,cdx->adx', rotation_matrix_T,
-                                                                 self.coherency_radec[:, :, polarized_sources],
-                                                                 rotation_matrix)
+            coherency_local[:, :, polarized_sources] = np.einsum(
+                'abx,bcx,cdx->adx', rotation_matrix_T,
+                self.coherency_radec[:, :, polarized_sources],
+                rotation_matrix
+            )
 
         # Zero coherency on sources below horizon.
         coherency_local[:, :, self.horizon_mask] *= 0.0

@@ -42,7 +42,14 @@ def _parse_layout_csv(layout_csv):
         str_format_code = 'U'
 
     # get data types for each column
-    dtypes = {"name": str_format_code + '10', 'number': 'i4', 'beamid': 'i4', 'e': 'f8', 'n': 'f8', 'u': 'f8'}
+    dtypes = {
+        "name": str_format_code + '10',
+        'number': 'i4',
+        'beamid': 'i4',
+        'e': 'f8',
+        'n': 'f8',
+        'u': 'f8'
+    }
 
     # check columns in file
     lower_header = [col.lower() for col in header]
@@ -58,16 +65,18 @@ def _parse_layout_csv(layout_csv):
 
 def _write_layout_csv(filepath, antpos_enu, antenna_names, antenna_numbers):
     col_width = max([len(name) for name in antenna_names])
-    header = ("{:" + str(col_width) + "} {:8} {:8} {:10} {:10} {:10}\n").format("Name", "Number", "BeamID", "E", "N",
-                                                                                "U")
+    header = ("{:" + str(col_width) + "} {:8} {:8} {:10} {:10} {:10}\n").format(
+        "Name", "Number", "BeamID", "E", "N", "U"
+    )
     with open(filepath, 'w') as lfile:
         lfile.write(header + '\n')
         for i, (e, n, u) in enumerate(antpos_enu):
             beam_id = 0
             name = antenna_names[i]
             num = antenna_numbers[i]
-            line = ("{:" + str(col_width) + "} {:8d} {:8d} {:10.4f} {:10.4f} {:10.4f}\n").format(name, num, beam_id, e,
-                                                                                                 n, u)
+            line = ("{:" + str(col_width) + "} {:8d} {:8d} {:10.4f} {:10.4f} {:10.4f}\n").format(
+                name, num, beam_id, e,
+                n, u)
             lfile.write(line)
 
 
@@ -122,7 +131,8 @@ def array_to_skymodel(catalog_table):
     return sourcelist
 
 
-def source_cuts(catalog_table, input_uv=None, latitude_deg=None, horizon_buffer=0.04364, min_flux=None, max_flux=None):
+def source_cuts(catalog_table, input_uv=None, latitude_deg=None, horizon_buffer=0.04364,
+                min_flux=None, max_flux=None):
     """
     Performing flux and horizon selections on recarray of source components.
 
@@ -132,14 +142,14 @@ def source_cuts(catalog_table, input_uv=None, latitude_deg=None, horizon_buffer=
         input_uv: (UVData)
             If not None, can set lst_array and latitude_deg if either or both is missing.
         latitude_deg: Latitude of telescope in degrees. Used to estimate rise/set lst.
-        horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
-                        SkyModel components whose calculated altitude is less than -horizon_buffer are excluded.
-
-                        Caution! The altitude calculation does not account for precession/nutation of the Earth. The buffer angle
-                        is needed to ensure that the horizon cut doesn't exclude sources near but above the horizon.
-                        Since the cutoff is done using lst, and the lsts are calculated with astropy, the required buffer should
-                        _not_ drift with time since the J2000 epoch. The default buffer has been tested around julian date 2457458.0.
-
+        horizon_buffer: Angle (float, in radians)
+            Buffer for coarse horizon cut. Default is about 10 minutes of sky rotation. `SkyModel`
+            components whose calculated altitude is less than `horizon_buffer` are excluded.
+            Caution! The altitude calculation does not account for precession/nutation of the Earth.
+            The buffer angle is needed to ensure that the horizon cut doesn't exclude sources near
+            but above the horizon. Since the cutoff is done using lst, and the lsts are calculated
+            with astropy, the required buffer should _not_ drift with time since the J2000 epoch.
+            The default buffer has been tested around julian date 2457458.0.
         min_flux: Minimum stokes I flux to select [Jy]
         max_flux: Maximum stokes I flux to select [Jy]
     Returns:
@@ -177,7 +187,8 @@ def source_cuts(catalog_table, input_uv=None, latitude_deg=None, horizon_buffer=
 
     if coarse_horizon_cut:
         with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', message='invalid value encountered', category=RuntimeWarning)
+            warnings.filterwarnings('ignore', message='invalid value encountered',
+                                    category=RuntimeWarning)
             rise_lst = ra.rad - np.arccos((-1) * tans) - buff
             set_lst = ra.rad + np.arccos((-1) * tans) + buff
 
@@ -186,7 +197,8 @@ def source_cuts(catalog_table, input_uv=None, latitude_deg=None, horizon_buffer=
             rise_lst[rise_lst > 2 * np.pi] -= 2 * np.pi
             set_lst[set_lst > 2 * np.pi] -= 2 * np.pi
 
-        catalog_table = recfunctions.append_fields(catalog_table, ['rise_lst', 'set_lst'], [rise_lst, set_lst],
+        catalog_table = recfunctions.append_fields(catalog_table, ['rise_lst', 'set_lst'],
+                                                   [rise_lst, set_lst],
                                                    usemask=False)
 
     return catalog_table
@@ -201,13 +213,16 @@ def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}, re
     Args:
         gleam_votable: Path to votable catalog file.
         input_uv: The UVData object for the simulation (needed for horizon cuts)
-        return_table: If True, return the astropy table instead of a list of Source objects. (Default False)
+        return_table: bool, optional
+            Whether to return the astropy table instead of a list of Source objects.
         source_select_kwds: Dictionary of keywords for source selection
             Valid options:
             |  lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
-            |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
+            |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse
+            horizon cut.
             |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut.
-            |      Default is about 10 minutes of sky rotation. (See caveats in simsetup.array_to_skymodel docstring)
+            |      Default is about 10 minutes of sky rotation. (See caveats in
+            simsetup.array_to_skymodel docstring)
             |  min_flux: Minimum stokes I flux to select [Jy]
             |  max_flux: Maximum stokes I flux to select [Jy]
 
@@ -264,8 +279,10 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}, return_
         source_select_kwds: Dictionary of keywords for source selection.
             Valid options:
             |  lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
-            |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse horizon cut.
-            |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut. Default is about 10 minutes of sky rotation.
+            |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse
+            horizon cut.
+            |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut.
+            Default is about 10 minutes of sky rotation.
             |                  (See caveats in simsetup.array_to_skymodel docstring)
             |  min_flux: Minimum stokes I flux to select [Jy]
             |  max_flux: Maximum stokes I flux to select [Jy]
@@ -277,7 +294,8 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}, return_
         header = cfile.readline()
     header = [h.strip() for h in header.split() if not h[0] == '[']  # Ignore units in header
     dt = np.format_parser(['U10', 'f8', 'f8', 'f8', 'f8'],
-                          ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], header)
+                          ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'],
+                          header)
 
     catalog_table = np.genfromtxt(catalog_csv, autostrip=True, skip_header=1,
                                   dtype=dt.dtype)
@@ -330,12 +348,14 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         Nsrcs (int):  Number of sources to put at zenith
         array_location (EarthLocation object): [Default = HERA site]
         alt (float): For off-zenith and triangle arrangements, altitude to place sources. (deg)
-        min_alt (float): For random and long-line arrangements, minimum altitude at which to place sources. (deg)
+        min_alt (float):
+            For random and long-line arrangements, minimum altitude at which to place sources. (deg)
         save (bool): Save mock catalog as npz file.
         rseed (int): If using the random configuration, pass in a RandomState seed.
 
     Returns:
-        catalog: pyuvsim.SkyModel object (or a recarray of source parameters if return_table is True)
+        catalog: pyuvsim.SkyModel object (or a recarray of source parameters if return_table is
+        True)
         mock_kwds: (dictionary) The keywords defining this source catalog
     """
 
@@ -347,12 +367,15 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
                                        height=1073.)
     freq = (150e6 * units.Hz)
 
-    if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text', 'random']:
+    if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text',
+                           'random']:
         raise KeyError("Invalid mock catalog arrangement: " + str(arrangement))
 
-    mock_keywords = {'time': time.jd, 'arrangement': arrangement,
-                     'array_location': repr(
-                         (array_location.lat.deg, array_location.lon.deg, array_location.height.value))}
+    mock_keywords = {
+        'time': time.jd, 'arrangement': arrangement,
+        'array_location': repr(
+            (array_location.lat.deg, array_location.lon.deg, array_location.height.value))
+    }
 
     if arrangement == 'off-zenith':
         if alt is None:
@@ -459,7 +482,8 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     if return_table:
         return skymodel_to_array(catalog), mock_keywords
     if get_rank() == 0 and save:
-        np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs, fluxes=fluxes)
+        np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs,
+                 fluxes=fluxes)
 
     return catalog, mock_keywords
 
@@ -520,15 +544,20 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
 
         if 'array_location' not in mock_keywords:
             if input_uv is not None:
-                mock_keywords['array_location'] = EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m')
+                mock_keywords['array_location'] = EarthLocation.from_geocentric(
+                    *input_uv.telescope_location, unit='m')
             else:
                 warnings.warn("No array_location specified. Defaulting to the HERA site.")
         if 'time' not in mock_keywords:
             if input_uv is not None:
                 mock_keywords['time'] = input_uv.time_array[0]
-                warnings.warn("Warning: No julian date given for mock catalog. Defaulting to first time step.")
+                warnings.warn(
+                    "Warning: No julian date given for mock catalog. Defaulting to first time step."
+                )
             else:
-                raise ValueError("input_uv must be supplied if using mock catalog without specified julian date")
+                raise ValueError(
+                    "input_uv must be supplied if using mock catalog without specified julian date"
+                )
 
         time = mock_keywords.pop('time')
 
@@ -603,10 +632,12 @@ def parse_telescope_params(tele_params, config_path=''):
         # if not provided, get bare-minumum keys from tele_params
         if 'telescope_location' not in tele_params:
             raise KeyError(
-                "If telescope_config_name not provided in `telescope` obsparam section, you must provide telescope_location")
+                "If telescope_config_name not provided in `telescope` obsparam section, you must "
+                "provide telescope_location")
         if 'telescope_name' not in tele_params:
             raise KeyError(
-                "If telescope_config_name not provided in `telescope` obsparam section, you must provide telescope_name")
+                "If telescope_config_name not provided in `telescope` obsparam section, you must "
+                "provide telescope_name")
         telescope_location_latlonalt = tele_params['telescope_location']
         if isinstance(telescope_location_latlonalt, (str, np.str)):
             telescope_location_latlonalt = ast.literal_eval(telescope_location_latlonalt)
@@ -628,7 +659,8 @@ def parse_telescope_params(tele_params, config_path=''):
             if not os.path.exists(layout_csv):
                 layout_csv = os.path.join(config_path, layout_csv)
                 if not os.path.exists(layout_csv):
-                    raise ValueError('layout_csv file {} from yaml does not exist'.format(layout_csv))
+                    raise ValueError(
+                        'layout_csv file {} from yaml does not exist'.format(layout_csv))
             ant_layout = _parse_layout_csv(layout_csv)
             E, N, U = ant_layout['e'], ant_layout['n'], ant_layout['u']
             antnames = ant_layout['name']
@@ -651,7 +683,8 @@ def parse_telescope_params(tele_params, config_path=''):
     return_dict['antenna_numbers'] = np.array(antnums)
     antpos_enu = np.vstack((E, N, U)).T
     return_dict['antenna_positions'] = (
-            uvutils.ECEF_from_ENU(antpos_enu, *telescope_location) - tele_params['telescope_location']
+        uvutils.ECEF_from_ENU(antpos_enu, *telescope_location)
+        - tele_params['telescope_location']
     )
     return_dict['array_layout'] = layout_csv
     return_dict['telescope_location'] = tuple(tele_params['telescope_location'])
@@ -686,7 +719,9 @@ def parse_telescope_params(tele_params, config_path=''):
                         sigma = telconfig['sigma']
                         beam_model = '_'.join(['analytic', beam_model, 'sig', str(sigma)])
                     except KeyError:
-                        raise KeyError("Missing shape parameter for gaussian beam (diameter or sigma).")
+                        raise KeyError(
+                            "Missing shape parameter for gaussian beam (diameter or sigma)."
+                        )
             if beam_model == 'airy':
                 try:
                     diam = telconfig['diameter']
@@ -718,10 +753,10 @@ def parse_frequency_params(freq_params):
         dict of array properties:
             |  channel_width: (float) Frequency channel spacing in Hz
             |  Nfreqs: (int) Number of frequencies
-            |  freq_array: (dtype float, ndarray, shape=(Nspws, Nfreqs)) Frequency channel centers in Hz
+            |  freq_array: (dtype float, ndarray, shape=(Nspws, Nfreqs)) Frequency channel
+            centers in Hz
     """
-    freq_keywords = ['freq_array', 'start_freq', 'end_freq', 'Nfreqs',
-                     'channel_width', 'bandwidth']
+    freq_keywords = ['freq_array', 'start_freq', 'end_freq', 'Nfreqs', 'channel_width', 'bandwidth']
     fa, sf, ef, nf, cw, bw = [fk in freq_params for fk in freq_keywords]
     kws_used = ", ".join(sorted(freq_params.keys()))
     freq_params = copy.deepcopy(freq_params)
@@ -746,24 +781,22 @@ def parse_frequency_params(freq_params):
                                  " must be included in parameters:" + kws_used)
             if sf and ef:
                 freq_params['bandwidth'] = (
-                        freq_params['end_freq'] - freq_params['start_freq'] + freq_params['channel_width']
+                    freq_params['end_freq']
+                    - freq_params['start_freq']
+                    + freq_params['channel_width']
                 )
                 bw = True
             if bw:
-                Nfreqs = float(freq_params['bandwidth']
-                               / freq_params['channel_width'])
+                Nfreqs = float(freq_params['bandwidth'] / freq_params['channel_width'])
                 freq_params['Nfreqs'] = Nfreqs
 
             else:
-                raise ValueError("Either bandwidth or band edges "
-                                 "must be specified: " + kws_used)
+                raise ValueError("Either bandwidth or band edges must be specified: " + kws_used)
 
         if not cw:
             if not bw:
-                raise ValueError("Either bandwidth or channel width"
-                                 " must be specified: " + kws_used)
-            freq_params['channel_width'] = (freq_params['bandwidth']
-                                            / float(freq_params['Nfreqs']))
+                raise ValueError("Either bandwidth or channel width must be specified: " + kws_used)
+            freq_params['channel_width'] = (freq_params['bandwidth'] / float(freq_params['Nfreqs']))
 
         if not bw:
             freq_params['bandwidth'] = freq_params['channel_width'] * freq_params['Nfreqs']
@@ -772,12 +805,16 @@ def parse_frequency_params(freq_params):
         if not sf:
             if ef and bw:
                 freq_params['start_freq'] = (
-                        freq_params['end_freq'] - freq_params['bandwidth'] + freq_params['channel_width']
+                    freq_params['end_freq']
+                    - freq_params['bandwidth']
+                    + freq_params['channel_width']
                 )
         if not ef:
             if sf and bw:
                 freq_params['end_freq'] = (
-                        freq_params['start_freq'] + freq_params['bandwidth'] - freq_params['channel_width']
+                    freq_params['start_freq']
+                    + freq_params['bandwidth']
+                    - freq_params['channel_width']
                 )
 
         if not np.isclose(freq_params['Nfreqs'] % 1, 0):
@@ -789,7 +826,8 @@ def parse_frequency_params(freq_params):
                                freq_params['Nfreqs'], endpoint=False)
 
     if freq_params['Nfreqs'] != 1:
-        if not np.allclose(np.diff(freq_arr), freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1)):
+        if not np.allclose(np.diff(freq_arr),
+                           freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1)):
             raise ValueError("Frequency array spacings are not equal to channel width."
                              + "\nInput parameters are: {}".format(str(init_freq_params)))
 
@@ -856,24 +894,26 @@ def parse_time_params(time_params):
                                  "included in parameters: " + kws_used)
             if st and et:
                 time_params['duration'] = (
-                        time_params['end_time'] - time_params['start_time'] +
-                        time_params['integration_time'] * dayspersec
+                    time_params['end_time']
+                    - time_params['start_time']
+                    + time_params['integration_time'] * dayspersec
                 )
                 dd = True
             if dd:
                 time_params['Ntimes'] = int(
-                    np.round(time_params['duration'] / (time_params['integration_time'] * dayspersec))
+                    np.round(
+                        time_params['duration'] / (time_params['integration_time'] * dayspersec))
                 )
             else:
-                raise ValueError("Either duration or time bounds must be specified: "
-                                 + kws_used)
+                raise ValueError("Either duration or time bounds must be specified: " + kws_used)
 
         if not it:
             if not dd:
                 raise ValueError("Either duration or integration time "
                                  "must be specified: " + kws_used)
-            time_params['integration_time'] = (time_params['duration'] / dayspersec
-                                               / float(time_params['Ntimes']))  # In seconds
+            # In seconds
+            time_params['integration_time'] = \
+                time_params['duration'] / dayspersec / float(time_params['Ntimes'])
 
         inttime_days = time_params['integration_time'] * dayspersec
         if not dd:
@@ -881,20 +921,30 @@ def parse_time_params(time_params):
             dd = True
         if not st:
             if et and dd:
-                time_params['start_time'] = time_params['end_time'] - time_params['duration'] + inttime_days
+                time_params['start_time'] = (
+                    time_params['end_time']
+                    - time_params['duration']
+                    + inttime_days
+                )
         if not et:
             if st and dd:
-                time_params['end_time'] = time_params['start_time'] + time_params['duration'] - inttime_days
+                time_params['end_time'] = (
+                    time_params['start_time']
+                    + time_params['duration']
+                    - inttime_days
+                )
 
         time_arr = np.linspace(time_params['start_time'],
                                time_params['end_time'] + inttime_days,
                                time_params['Ntimes'], endpoint=False)
 
         if time_params['Ntimes'] != 1:
-            if not np.allclose(np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1),
-                               atol=dayspersec):  # To nearest second
-                raise ValueError("Calculated time array is not consistent with set integration_time."
-                                 "\nInput parameters are: {}".format(str(init_time_params)))
+            if not np.allclose(
+                    np.diff(time_arr), inttime_days * np.ones(time_params["Ntimes"] - 1),
+                    atol=dayspersec):  # To nearest second
+                raise ValueError(
+                    "Calculated time array is not consistent with set integration_time."
+                    "\nInput parameters are: {}".format(str(init_time_params)))
 
     return_dict['integration_time'] = time_params['integration_time']
     return_dict['time_array'] = time_arr
@@ -994,7 +1044,8 @@ def initialize_uvdata_from_params(obs_params):
     # Parse telescope parameters
     tele_dict = param_dict['telescope']
     uvparam_dict.update(tele_dict)
-    tele_params, beam_list, beam_dict = parse_telescope_params(tele_dict, config_path=param_dict['config_path'])
+    tele_params, beam_list, beam_dict = parse_telescope_params(tele_dict, config_path=param_dict[
+        'config_path'])
     uvparam_dict.update(tele_params)
 
     # Use extra_keywords to pass along required paths for file history.
@@ -1035,7 +1086,7 @@ def initialize_uvdata_from_params(obs_params):
         if 'sources' in param_dict:
             source_file_name = os.path.basename(param_dict['sources']['catalog'])
             uvparam_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(
-                source_file_name, src.ra.deg[0],src.dec.deg[0]
+                source_file_name, src.ra.deg[0], src.dec.deg[0]
             )
         else:
             uvparam_dict['object_name'] = 'Unspecified'
@@ -1076,15 +1127,17 @@ def initialize_uvdata_from_params(obs_params):
     # select on object
     valid_select_keys = [
         'antenna_nums', 'antenna_names', 'ant_str', 'bls',
-        'frequencies', 'freq_chans', 'times','blt_inds'
+        'frequencies', 'freq_chans', 'times', 'blt_inds'
     ]
 
     # downselect baselines (or anything that can be passed to pyuvdata's select method)
-    # Note: polarization selection is allowed here, but will cause an error if the incorrect pols are passed to pyuvsim.
+    # Note: polarization selection is allowed here, but will cause an error if the incorrect pols
+    # are passed to pyuvsim.
     if 'select' in param_dict:
         select_params = param_dict['select']
         no_autos = bool(select_params.pop('no_autos', False))
-        select_params = dict([(k, v) for k, v in six.iteritems(select_params) if k in valid_select_keys])
+        select_params = dict(
+            [(k, v) for k, v in six.iteritems(select_params) if k in valid_select_keys])
         if 'antenna_nums' in select_params:
             select_params['antenna_nums'] = list(map(int, select_params['antenna_nums']))
         redundant_threshold = param_dict['select'].get('redundant_threshold', None)
@@ -1109,13 +1162,11 @@ def initialize_uvdata_from_params(obs_params):
 
 def initialize_uvdata_from_keywords(
         output_yaml_filename=None, antenna_layout_filepath=None, output_layout_filename=None,
-        array_layout=None,
-        telescope_location=None, telescope_name=None, Nfreqs=None, start_freq=None,
-        bandwidth=None, freq_array=None, channel_width=None, Ntimes=None,
+        array_layout=None, telescope_location=None, telescope_name=None, Nfreqs=None,
+        start_freq=None, bandwidth=None, freq_array=None, channel_width=None, Ntimes=None,
         integration_time=None, start_time=None, time_array=None, bls=None,
         antenna_nums=None, antenna_names=None, polarization_array=None, no_autos=False,
-        redundant_threshold=None, write_files=True, path_out=None, complete=False,
-        **kwargs):
+        redundant_threshold=None, write_files=True, path_out=None, complete=False, **kwargs):
     """
     Setup a UVData object from keyword arguments.
 
@@ -1239,16 +1290,26 @@ def initialize_uvdata_from_keywords(
         else:
             array_layout = antenna_layout_filepath
 
-    freq_params = {'Nfreqs': Nfreqs, 'start_freq': start_freq, 'bandwidth': bandwidth,
-                   'freq_array': freq_array, 'channel_width': channel_width}
-    time_params = {'Ntimes': Ntimes, 'start_time': start_time,
-                   'integration_time': integration_time, 'time_array': time_array}
-    selection_params = {'bls': bls, 'redundant_threshold': redundant_threshold,
-                        'antenna_nums': antenna_nums, 'no_autos': no_autos}
-    tele_params = {'telescope_location': repr(telescope_location),
-                   'telescope_name': telescope_name}
-    layout_params = {'antenna_names': antenna_names, 'antenna_numbers': antenna_numbers,
-                     'array_layout': array_layout}
+    freq_params = {
+        'Nfreqs': Nfreqs, 'start_freq': start_freq, 'bandwidth': bandwidth,
+        'freq_array': freq_array, 'channel_width': channel_width
+    }
+    time_params = {
+        'Ntimes': Ntimes, 'start_time': start_time,
+        'integration_time': integration_time, 'time_array': time_array
+    }
+    selection_params = {
+        'bls': bls, 'redundant_threshold': redundant_threshold,
+        'antenna_nums': antenna_nums, 'no_autos': no_autos
+    }
+    tele_params = {
+        'telescope_location': repr(telescope_location),
+        'telescope_name': telescope_name
+    }
+    layout_params = {
+        'antenna_names': antenna_names, 'antenna_numbers': antenna_numbers,
+        'array_layout': array_layout
+    }
 
     freq_params = {k: v for k, v in six.iteritems(freq_params) if v is not None}
     time_params = {k: v for k, v in six.iteritems(time_params) if v is not None}
@@ -1300,9 +1361,9 @@ def initialize_uvdata_from_keywords(
     return uv_obj
 
 
-def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
-                               telescope_config_name=None,
-                               return_names=False, path_out='.'):
+def uvdata_to_telescope_config(
+        uvdata_in, beam_filepath, layout_csv_name=None, telescope_config_name=None,
+        return_names=False, path_out='.'):
     """
     For a given UVData object, generate telescope parameter files.
 
@@ -1348,7 +1409,7 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
 
     _write_layout_csv(
         os.path.join(path_out, layout_csv_name),
-        antpos_enu, uvdata_in.antenna_names,uvdata_in.antenna_numbers
+        antpos_enu, uvdata_in.antenna_names, uvdata_in.antenna_numbers
     )
 
     # Write the rest to a yaml file.
@@ -1365,7 +1426,7 @@ def uvdata_to_telescope_config(uvdata_in, beam_filepath, layout_csv_name=None,
         yaml.dump(yaml_dict, yfile, default_flow_style=False)
 
     print('Path: {}, telescope_config: {}, layout: {}'.format(
-        path_out, telescope_config_name,layout_csv_name)
+        path_out, telescope_config_name, layout_csv_name)
     )
 
     if return_names:
@@ -1469,8 +1530,11 @@ def _complete_uvdata(uv_in, inplace=False):
         uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
     else:
         # Note: currently only support a constant spacing of times
-        uv_obj.integration_time = (np.ones_like(uv_obj.time_array, dtype=np.float64)
-                                   * np.diff(np.unique(uv_obj.time_array))[0] * (24. * 60 ** 2))  # Seconds
+        uv_obj.integration_time = (
+            np.ones_like(uv_obj.time_array, dtype=np.float64)
+            * np.diff(np.unique(uv_obj.time_array))[0]
+            * (24. * 60 ** 2)  # Seconds
+        )
 
     # Clear existing data, if any.
     _shape = (uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols)

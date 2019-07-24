@@ -7,12 +7,14 @@
 """
 from __future__ import absolute_import, division, print_function
 
-import sys
+import json
 import os
+import subprocess
+import sys
+
 import six
 from six import StringIO
-import subprocess
-import json
+
 import pyuvsim
 from pyuvsim.data import DATA_PATH
 
@@ -38,8 +40,10 @@ def test_get_gitinfo_file():
         git_description = data[2]
         git_branch = data[3]
 
-    test_file_info = {'git_origin': git_origin, 'git_hash': git_hash,
-                      'git_description': git_description, 'git_branch': git_branch}
+    test_file_info = {
+        'git_origin': git_origin, 'git_hash': git_hash,
+        'git_description': git_description, 'git_branch': git_branch
+    }
 
     if 'temp_git_file' in locals():
         file_info = pyuvsim.version._get_gitinfo_file(git_file=temp_git_file)
@@ -100,9 +104,11 @@ def test_construct_version_info():
             git_hash = ''
             git_description = ''
             git_branch = ''
-    test_version_info = {'version': pyuvsim.__version__, 'git_origin': git_origin,
-                         'git_hash': git_hash, 'git_description': git_description,
-                         'git_branch': git_branch}
+    test_version_info = {
+        'version': pyuvsim.__version__, 'git_origin': git_origin,
+        'git_hash': git_hash, 'git_description': git_description,
+        'git_branch': git_branch
+    }
 
     assert pyuvsim.version.construct_version_info() == test_version_info
 
@@ -116,11 +122,11 @@ def test_main():
         sys.stdout = out
         pyuvsim.version.main()
         output = out.getvalue()
-        assert output == ('Version = {v}\ngit origin = {o}\n'
-                          'git branch = {b}\ngit description = {d}\n'
-                          .format(v=version_info['version'],
-                                  o=version_info['git_origin'],
-                                  b=version_info['git_branch'],
-                                  d=version_info['git_description']))
+        assert output == (
+            'Version = {v}\ngit origin = {o}\ngit branch = {b}\ngit description = {d}\n'.format(
+                v=version_info['version'], o=version_info['git_origin'],
+                b=version_info['git_branch'], d=version_info['git_description']
+            )
+        )
     finally:
         sys.stdout = saved_stdout

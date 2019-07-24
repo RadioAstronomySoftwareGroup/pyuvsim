@@ -4,8 +4,8 @@
 
 from __future__ import absolute_import, division, print_function
 
-import numpy as np
 import astropy.units as units
+import numpy as np
 
 from . import utils as simutils
 
@@ -47,7 +47,9 @@ class Antenna(object):
         # 2x2 array of Efield vectors in alt/az
 
         # convert to UVBeam az/za convention
-        source_za, source_az = simutils.altaz_to_zenithangle_azimuth(source_alt_az[0], source_alt_az[1])
+        source_za, source_az = simutils.altaz_to_zenithangle_azimuth(
+            source_alt_az[0], source_alt_az[1]
+        )
 
         freq = np.array([frequency.to('Hz').value])
 
@@ -64,7 +66,7 @@ class Antenna(object):
                                                  reuse_spline=reuse_spline)
         Ncomponents = source_za.shape[-1]
 
-        # interp_data has shape: (Naxes_vec, Nspws, Nfeeds, 1 (freq),  Ncomponents (source positions))
+        # interp_data has shape: (Naxes_vec, Nspws, Nfeeds, 1 (freq),  Ncomponents (source pos))
         jones_matrix = np.zeros((2, 2, Ncomponents), dtype=np.complex)
         # first axis is feed, second axis is theta, phi (opposite order of beam!)
         jones_matrix[0, 0] = interp_data[1, 0, 0, 0, :]
