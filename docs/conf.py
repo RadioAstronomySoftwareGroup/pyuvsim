@@ -160,7 +160,8 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-
+napoleon_use_rtype = False
+napoleon_use_param = False
 def build_custom_docs(app):
     sys.path.append(os.getcwd())
     import make_index

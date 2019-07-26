@@ -156,11 +156,11 @@ class SkyModel(object):
 
             polarized_sources = np.where(~Ionly_mask)[0]
             sinX = np.sin(self.hour_angle)
-            cosX = np.tan(telescope_location.lat) * np.cos(self.dec) - np.sin(self.dec) * np.cos(
-                self.hour_angle)
+            cosX = (np.tan(telescope_location.lat) * np.cos(self.dec)
+                    - np.sin(self.dec) * np.cos(self.hour_angle))
 
-            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]]).astype(
-                float)  # (2, 2, Ncomponents)
+            # shape (2, 2, Ncomponents)
+            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]]).astype(float)
             rotation_matrix = rotation_matrix[..., polarized_sources]
 
             rotation_matrix_T = np.swapaxes(rotation_matrix, 0, 1)

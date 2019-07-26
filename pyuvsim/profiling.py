@@ -33,8 +33,7 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
     Applies a line profiler to the listed functions, wherever they appear in pyuvsim.
 
     Places a LineProfiler object in the builtins list, and registers its dumping/printing
-    functions to run
-    at the end.
+    functions to run at the end.
 
     Args:
         func_list: list of function names (strings). Defaults to the list above.

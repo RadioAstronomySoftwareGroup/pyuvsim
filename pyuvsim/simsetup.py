@@ -12,14 +12,14 @@ import warnings
 
 import astropy.units as units
 import numpy as np
-import pyuvdata.utils as uvutils
 import six
 import yaml
+
+from pyuvdata import utils as uvutils, UVBeam, UVData
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy.io.votable import parse
 from astropy.time import Time
 from numpy.lib import recfunctions
-from pyuvdata import UVBeam, UVData
 from six.moves import map, range
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -74,9 +74,10 @@ def _write_layout_csv(filepath, antpos_enu, antenna_names, antenna_numbers):
             beam_id = 0
             name = antenna_names[i]
             num = antenna_numbers[i]
-            line = ("{:" + str(col_width) + "} {:8d} {:8d} {:10.4f} {:10.4f} {:10.4f}\n").format(
-                name, num, beam_id, e,
-                n, u)
+            line = (
+                "{:{}} {:8d} {:8d} {:10.4f} {:10.4f} {:10.4f}\n").format(
+                    name, col_width, num, beam_id, e,n, u
+            )
             lfile.write(line)
 
 
@@ -211,20 +212,23 @@ def read_votable_catalog(gleam_votable, input_uv=None, source_select_kwds={}, re
     Tested on: GLEAM EGC catalog, version 2
 
     Args:
-        gleam_votable: Path to votable catalog file.
-        input_uv: The UVData object for the simulation (needed for horizon cuts)
+        gleam_votable: str
+            Path to votable catalog file.
+        input_uv: :class:`~pyuvdata.UVData` object
+            The UVData object for the simulation (needed for horizon cuts)
         return_table: bool, optional
             Whether to return the astropy table instead of a list of Source objects.
-        source_select_kwds: Dictionary of keywords for source selection
-            Valid options:
-            |  lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
-            |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse
-            horizon cut.
-            |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut.
-            |      Default is about 10 minutes of sky rotation. (See caveats in
-            simsetup.array_to_skymodel docstring)
-            |  min_flux: Minimum stokes I flux to select [Jy]
-            |  max_flux: Maximum stokes I flux to select [Jy]
+        source_select_kwds: dict, optional
+            Dictionary of keywords for source selection Valid options:
+
+            * `lst_array`: For coarse RA horizon cuts, lsts used in the simulation [radians]
+            * `latitude_deg`: Latitude of telescope in degrees. Used for declination coarse
+               horizon cut.
+            * `horizon_buffer`: Angle (float, in radians) of buffer for coarse horizon cut.
+              Default is about 10 minutes of sky rotation. (See caveats in
+              :func:`array_to_skymodel` docstring)
+            * `min_flux`: Minimum stokes I flux to select [Jy]
+            * `max_flux`: Maximum stokes I flux to select [Jy]
 
     Returns:
         if return_table, recarray of source parameters, otherwise :class:`pyuvsim.SkyModel` instance
@@ -268,27 +272,32 @@ def read_text_catalog(catalog_csv, input_uv=None, source_select_kwds={}, return_
     Read in a text file of sources.
 
     Args:
-        catalog_csv: tab separated value file with the following expected columns:
-            For now, all sources are flat spectrum.
-            |  Source_ID: source name as a string of maximum 10 characters
-            |  ra_j2000: right ascension at J2000 epoch, in decimal degrees
-            |  dec_j2000: declination at J2000 epoch, in decimal degrees
-            |  flux_density_I: Stokes I flux density in Janskys
-            |  frequency: reference frequency (for future spectral indexing) [Hz]
-        input_uv: The UVData object for the simulation (needed for horizon cuts)
-        source_select_kwds: Dictionary of keywords for source selection.
-            Valid options:
-            |  lst_array: For coarse RA horizon cuts, lsts used in the simulation [radians]
-            |  latitude_deg: Latitude of telescope in degrees. Used for declination coarse
-            horizon cut.
-            |  horizon_buffer: Angle (float, in radians) of buffer for coarse horizon cut.
-            Default is about 10 minutes of sky rotation.
-            |                  (See caveats in simsetup.array_to_skymodel docstring)
-            |  min_flux: Minimum stokes I flux to select [Jy]
-            |  max_flux: Maximum stokes I flux to select [Jy]
+        catalog_csv: str
+            Path to tab separated value file with the following expected columns
+            (For now, all sources are flat spectrum):
+
+            *  `Source_ID`: source name as a string of maximum 10 characters
+            *  `ra_j2000`: right ascension at J2000 epoch, in decimal degrees
+            *  `dec_j2000`: declination at J2000 epoch, in decimal degrees
+            *  `flux_density_I`: Stokes I flux density in Janskys
+            *  `frequency`: reference frequency (for future spectral indexing) [Hz]
+
+        input_uv: :class:`pyuvdata.UVData` object
+            The UVData object for the simulation (needed for horizon cuts)
+        source_select_kwds: dict, optional
+            Dictionary of keywords for source selection. Valid options:
+
+            * `lst_array`: For coarse RA horizon cuts, lsts used in the simulation [radians]
+            * `latitude_deg`: Latitude of telescope in degrees. Used for declination coarse
+            *  horizon cut.
+            * `horizon_buffer`: Angle (float, in radians) of buffer for coarse horizon cut.
+              Default is about 10 minutes of sky rotation. (See caveats in
+              :func:`array_to_skymodel` docstring)
+            * `min_flux`: Minimum stokes I flux to select [Jy]
+            * `max_flux`: Maximum stokes I flux to select [Jy]
 
     Returns:
-        pyuvsim.SkyModel object
+        :class:`pyuvsim.SkyModel`
     """
     with open(catalog_csv, 'r') as cfile:
         header = cfile.readline()
@@ -335,16 +344,19 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     ICRS ra/dec coordinates.
 
     Args:
-        time (float or astropy Time object): Julian date
-        arrangement (str): Point source pattern (default = 1 source at zenith).
-            Accepted arrangements:
-            |  `triangle`:  Three point sources forming a triangle around the zenith
-            |  `cross`: An asymmetric cross
-            |  `zenith`: Some number of sources placed at the zenith.
-            |  `off-zenith`:  A single source off zenith
-            |  `long-line`:  Horizon to horizon line of point sources
-            |  `hera_text`:  Spell out HERA around the zenith
-            |  `random`:  Randomly distributed point sources near zenith
+        time : float or astropy Time object
+            Julian date
+        arrangement : (str)
+            Point source pattern (default = 1 source at zenith). Accepted arrangements:
+
+            * `triangle`:  Three point sources forming a triangle around the zenith
+            * `cross`: An asymmetric cross
+            * `zenith`: Some number of sources placed at the zenith.
+            * `off-zenith`:  A single source off zenith
+            * `long-line`:  Horizon to horizon line of point sources
+            * `hera_text`:  Spell out HERA around the zenith
+            * `random`:  Randomly distributed point sources near zenith
+
         Nsrcs (int):  Number of sources to put at zenith
         array_location (EarthLocation object): [Default = HERA site]
         alt (float): For off-zenith and triangle arrangements, altitude to place sources. (deg)
@@ -354,9 +366,10 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         rseed (int): If using the random configuration, pass in a RandomState seed.
 
     Returns:
-        catalog: pyuvsim.SkyModel object (or a recarray of source parameters if return_table is
-        True)
-        mock_kwds: (dictionary) The keywords defining this source catalog
+        catalog : :class:`pyuvsim.SkyModel`
+            Or a recarray of source parameters if `return_table` is True)
+        mock_kwds : dict
+           The keywords defining this source catalog
     """
 
     if not isinstance(time, Time):
@@ -499,8 +512,10 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         input_uv: (UVData object) Needed to know location and time for mock catalog
                   and for horizon cuts
     Returns:
-        catalog: source recarray
-        source_list_name: (str) Catalog identifier for metadata.
+        recarray
+            Source catalog
+        source_list_name : str
+            Catalog identifier for metadata.
     """
     if input_uv is not None and not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
@@ -591,19 +606,22 @@ def parse_telescope_params(tele_params, config_path=''):
             path to directory holding configuration and layout files.
 
     Returns:
-        dict of array properties:
-            |  Nants_data: Number of antennas
-            |  Nants_telescope: Number of antennas
-            |  antenna_names: list of antenna names
-            |  antenna_numbers: corresponding list of antenna numbers
-            |  antenna_positions: Array of ECEF antenna positions
-            |  telescope_location: ECEF array center location
-            |  telescope_location_lat_lon_alt: Lat Lon Alt array center location
-            |  telescope_config_file: Path to configuration yaml file
-            |  antenna_location_file: Path to csv layout file
-            |  telescope_name: observatory name
-        beam_list:  Beam models in the configuration.
-        beam_dict:  Antenna numbers to beam indices
+        param_dict : dict
+            * `Nants_data`: Number of antennas
+            * `Nants_telescope`: Number of antennas
+            *  `antenna_names`: list of antenna names
+            * `antenna_numbers`: corresponding list of antenna numbers
+            * `antenna_positions`: Array of ECEF antenna positions
+            * `telescope_location`: ECEF array center location
+            * `telescope_location_lat_lon_alt`: Lat Lon Alt array center location
+            * `telescope_config_file`: Path to configuration yaml file
+            * `antenna_location_file`: Path to csv layout file
+            * `telescope_name`: observatory name
+
+        beam_list : list of :class:`pyuvdata.UVBeam` or `pyuvsim.AnalyticBeam`
+            Beam models in the configuration.
+        beam_dict : dict
+            Antenna numbers to beam indices
     """
     tele_params = copy.deepcopy(tele_params)
     # check for telescope config
@@ -632,12 +650,14 @@ def parse_telescope_params(tele_params, config_path=''):
         # if not provided, get bare-minumum keys from tele_params
         if 'telescope_location' not in tele_params:
             raise KeyError(
-                "If telescope_config_name not provided in `telescope` obsparam section, you must "
-                "provide telescope_location")
+                "If telescope_config_name not provided in `telescope` obsparam section, "
+                "you must provide telescope_location"
+            )
         if 'telescope_name' not in tele_params:
             raise KeyError(
-                "If telescope_config_name not provided in `telescope` obsparam section, you must "
-                "provide telescope_name")
+                "If telescope_config_name not provided in `telescope` obsparam section, "
+                "you must provide telescope_name"
+            )
         telescope_location_latlonalt = tele_params['telescope_location']
         if isinstance(telescope_location_latlonalt, (str, np.str)):
             telescope_location_latlonalt = ast.literal_eval(telescope_location_latlonalt)
@@ -750,11 +770,11 @@ def parse_frequency_params(freq_params):
             https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#frequency
 
     Returns:
-        dict of array properties:
-            |  channel_width: (float) Frequency channel spacing in Hz
-            |  Nfreqs: (int) Number of frequencies
-            |  freq_array: (dtype float, ndarray, shape=(Nspws, Nfreqs)) Frequency channel
-            centers in Hz
+        dict
+            * `channel_width`: (float) Frequency channel spacing in Hz
+            * `Nfreqs`: (int) Number of frequencies
+            * `freq_array`: (dtype float, ndarray, shape=(Nspws, Nfreqs)) Frequency channel
+              centers in Hz
     """
     freq_keywords = ['freq_array', 'start_freq', 'end_freq', 'Nfreqs', 'channel_width', 'bandwidth']
     fa, sf, ef, nf, cw, bw = [fk in freq_params for fk in freq_keywords]
@@ -853,11 +873,11 @@ def parse_time_params(time_params):
             https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#time
 
     Returns:
-        dict of array properties:
-            |  integration_time: (float) Time array spacing in seconds.
-            |  Ntimes: (int) Number of times
-            |  start_time: (float) Starting time in Julian Date
-            |  time_array: (dtype float, ndarray, shape=(Ntimes,)) Time step centers in JD.
+        dict
+            * `integration_time`: (float) Time array spacing in seconds.
+            * `Ntimes`: (int) Number of times
+            * `start_time`: (float) Starting time in Julian Date
+            * `time_array`: (dtype float, ndarray, shape=(Ntimes,)) Time step centers in JD.
     """
     return_dict = {}
 
@@ -1551,7 +1571,7 @@ def _complete_uvdata(uv_in, inplace=False):
 
 def beam_string_to_object(beam_model):
     """
-        Make a beam object given an identifying string.
+    Make a beam object given an identifying string.
     """
     # Identify analytic beams
     if beam_model.startswith('analytic'):

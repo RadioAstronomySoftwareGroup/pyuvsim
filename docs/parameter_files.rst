@@ -71,15 +71,18 @@ Frequency
     Minimum frequency requirements:
 
     Specify bandwidth via one of the following combinations:
+
         * (``start_freq``, ``end_freq``)
         * (``channel_width``, ``Nfreqs``)
         * (``bandwidth``)
 
     Specify channel width via:
+
         * (``bandwidth``, ``Nfreqs``)
         * (``channel width``)
 
     Specify a reference frequency via:
+
         * (``start_freq``)
         * (``end_freq``)
 
@@ -100,16 +103,20 @@ Time
 
     The numerical factors are to convert among seconds, days, and hours. The user must specify sufficient information for the time array to be defined:
     Minimum time requirements:
+
     Total time:
+
         * (``start_time``, ``end_time``)
         * (``integration_time``, ``Ntimes``)
         * (``duration_hours``) or (``duration_days``)
 
     Time step:
+
         * (``duration_hours`` or ``duration_days``, ``Ntimes``)
         * (``integration_time``)
 
     Reference time:
+
         * (``start_time``)
         * (``end_time``)
 
@@ -156,6 +163,7 @@ Sources
         :end-before: 3
 
     The columns are:
+
         * ``SOURCE_ID`` : Identifier for the source
         * ``RA_J2000`` : Right ascension of source at J2000 epoch, in decimal degrees.
         * ``DEC_J2000`` : Declination of source at J2000 epoch, in decimal degrees.
