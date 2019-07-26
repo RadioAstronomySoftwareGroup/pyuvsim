@@ -45,7 +45,7 @@ class AnalyticBeam(object):
     Supported types:
 
         * Uniform beam : Unit response from all directions.
-        * Airy: An Airy disk pattern (the 2D Fourier transform of a circular aperture of
+        * Airy : An Airy disk pattern (the 2D Fourier transform of a circular aperture of
           width given by `diameter`)
         * Gaussian : A peak-normalized gaussian function.
             * If given a `diameter`, then this makes a chromatic beam with FWHMs

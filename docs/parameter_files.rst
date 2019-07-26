@@ -68,6 +68,7 @@ Frequency
 
 
     Time and frequency structure may be defined with different combinations of keywords to suit the user's purposes. The user must specify sufficient information for the frequency array to be defined.
+
     Minimum frequency requirements:
 
     Specify bandwidth via one of the following combinations:
@@ -102,6 +103,7 @@ Time
         end_time = start_time + duration_days - integration_time / 86400
 
     The numerical factors are to convert among seconds, days, and hours. The user must specify sufficient information for the time array to be defined:
+
     Minimum time requirements:
 
     Total time:

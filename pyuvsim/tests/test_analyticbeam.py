@@ -116,8 +116,8 @@ def test_uv_beam_widths():
     beam_kern = np.fft.fft2(ebeam, axes=(1, 2))
     beam_kern = np.fft.fftshift(beam_kern, axes=(1, 2))
     for i, bk in enumerate(beam_kern):
-        thresh = np.max(
-            np.abs(bk)) * 0.005  # Cutoff at half a % of the maximum value in Fourier space.
+        # Cutoff at half a % of the maximum value in Fourier space.
+        thresh = np.max(np.abs(bk)) * 0.005
         points = np.sum(np.abs(bk) >= thresh)
         upix = 1 / (2 * np.sin(zmax))  # 2*sin(zmax) = fov extent projected onto the xy plane
         area = np.sum(points) * upix ** 2
@@ -165,9 +165,9 @@ def test_achromatic_gaussian_beam():
 
 def test_gaussbeam_values():
     """
-        Make the long-line point sources up to 10 degrees from zenith.
-        Obtain visibilities
-        Confirm that the values match the expected beam values at those zenith angles.
+    Make the long-line point sources up to 10 degrees from zenith.
+    Obtain visibilities
+    Confirm that the values match the expected beam values at those zenith angles.
     """
     sigma = 0.05
     hera_uv = UVData()

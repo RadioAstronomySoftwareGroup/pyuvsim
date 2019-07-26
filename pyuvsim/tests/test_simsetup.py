@@ -612,9 +612,6 @@ def check_uvdata_keyword_init(case):
 
     elif case == 2:
         # also check that '1' gets converted to [1]
-        # Note -- Currently, pyuvdata's selection does not intersect antenna_nums with bls,
-        # but joins them.
-        # If/when that is changed, this test should also include the bls selection keyword above.
         new_kwargs = copy.deepcopy(base_kwargs)
         new_kwargs['polarization_array'] = ['xx', 'yy']
         new_kwargs['no_autos'] = False
