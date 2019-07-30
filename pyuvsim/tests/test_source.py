@@ -85,9 +85,9 @@ def test_pol_coherency_calc():
     ra = Angle(np.linspace(0.0, 2 * np.pi, Ncomp), unit='rad')
     dec = Angle(np.linspace(-np.pi / 2., np.pi / 2., Ncomp), unit='rad')
     names = np.arange(Ncomp).astype('str')
-    freq = np.ones(Ncomp) * 1e8 * units.Hz
+    freq = 1e8 * units.Hz
 
-    stokes = np.zeros((4, len(freq), Ncomp))
+    stokes = np.zeros((4, 1, Ncomp))
     stokes[0, :, :] = 1.0
     stokes[1, :, :Ncomp // 2] = 2.5
 

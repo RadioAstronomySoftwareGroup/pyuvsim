@@ -324,7 +324,7 @@ class SkyModel(object):
 
             rotation_matrix_T = np.swapaxes(rotation_matrix, 0, 1)
             coherency_local[:, :, :, polarized_sources] = np.einsum(
-                'abxy,bcxy,cdxy->adxy', rotation_matrix_T,
+                'aby,bcxy,cdy->adxy', rotation_matrix_T,
                 self.coherency_radec[:, :, :, polarized_sources],
                 rotation_matrix
             )
