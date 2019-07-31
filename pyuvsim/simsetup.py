@@ -76,7 +76,7 @@ def _write_layout_csv(filepath, antpos_enu, antenna_names, antenna_numbers):
             num = antenna_numbers[i]
             line = (
                 "{:{}} {:8d} {:8d} {:10.4f} {:10.4f} {:10.4f}\n").format(
-                    name, col_width, num, beam_id, e,n, u
+                    name, col_width, num, beam_id, e, n, u
             )
             lfile.write(line)
 
