@@ -29,6 +29,10 @@ A user-installation is achieved simply with `pip install pyuvsim`, or to get the
 bleeding-edge: `pip install https://github.com/RadioAstronomySoftwareGroup/pyuvsim`. 
 This will install all dependencies. 
 
+By default, `mpi` capabilities are not enabled -- many of the utilities provided in 
+`pyuvsim` do not require it. To use `mpi`, you may install it with 
+`pip install pyuvsim[mpi]`.
+
 If you wish to manage dependencies manually, or are developing `pyuvsim` yourself, read
 on.
 
@@ -50,7 +54,7 @@ environment. The following commands will install all relevant development packag
     $ conda create -n pyuvsim python=3
     $ conda activate pyuvsim
     $ conda env update -n pyuvsim -f environment.yml
-    $ pip install -e . 
+    $ pip install -e ".[mpi]" 
 
 This will install extra dependencies required for testing/development as well as the 
 standard ones.

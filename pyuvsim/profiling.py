@@ -14,7 +14,10 @@ from inspect import isclass, isfunction
 import six
 
 import pyuvsim as _pyuvsim
-from .mpi import start_mpi, get_rank
+try:
+    from .mpi import start_mpi, get_rank
+except ImportError:
+    raise ImportError("You must install mpi4py to use the profiling module")
 
 try:
     from line_profiler import LineProfiler

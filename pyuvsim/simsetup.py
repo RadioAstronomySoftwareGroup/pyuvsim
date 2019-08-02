@@ -24,7 +24,11 @@ from six.moves import map, range
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from .analyticbeam import AnalyticBeam
-from .mpi import get_rank
+try:
+    from .mpi import get_rank
+except ImportError:
+    def get_rank():
+        return 0
 from .source import SkyModel
 from .utils import check_file_exists_and_increment
 

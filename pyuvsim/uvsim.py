@@ -17,7 +17,10 @@ from astropy.units import Quantity
 from pyuvdata import UVData
 from six.moves import range
 
-from . import mpi
+try:
+    from .mpi import start_mpi, get_rank
+except ImportError:
+    raise ImportError("You must install mpi4py to use the uvsim module")
 from . import simsetup
 from . import utils as simutils
 from .antenna import Antenna

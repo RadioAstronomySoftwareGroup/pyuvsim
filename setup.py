@@ -45,7 +45,8 @@ setup_args = {
                     'Programming Language :: Python :: 2.7',
                     'Programming Language :: Python :: 3.6',
                     'Topic :: Scientific/Engineering :: Astronomy'],
-    'keywords': 'radio astronomy interferometry'
+    'keywords': 'radio astronomy interferometry',
+    'extras_require': {'mpi': ['mpi4py>=3.0.0']}
 }
 
 if __name__ == '__main__':
