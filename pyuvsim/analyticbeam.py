@@ -42,23 +42,22 @@ class AnalyticBeam(object):
     Directly calculates jones matrices at given azimuths and zenith angles
     from analytic functions.
 
-    Supported types:
-
-    * Uniform beam : Unit response from all directions.
-    * Airy : An Airy disk pattern (the 2D Fourier transform of a circular aperture of
-      width given by `diameter`)
-    * Gaussian : A peak-normalized gaussian function.
-        * If given a `diameter`, then this makes a chromatic beam with FWHMs
-          matching an equivalent Airy disk beam at each frequency.
-        * If given a `sigma`, this makes an achromatic beam with standard deviation
-          set to `sigma`
-        * If given a `sigma`, `ref_freq`, and `spectral_index`, then this will make
-          a chromatic beam with standard deviation defined by a power law:
-          `stddev(f) = sigma * (f/ref_freq)**(spectral_index)`
-
     Args:
         type: str, {'uniform', 'airy', 'gaussian'}
-            Beam type to use.
+            Beam type to use. Supported types:
+
+            * Uniform beam: Unit response from all directions.
+            * Airy: An Airy disk pattern (the 2D Fourier transform of a circular aperture of
+              width given by `diameter`)
+            * Gaussian: A peak-normalized gaussian function.
+                * If given a `diameter`, then this makes a chromatic beam with FWHMs
+                  matching an equivalent Airy disk beam at each frequency.
+                * If given a `sigma`, this makes an achromatic beam with standard deviation
+                  set to `sigma`
+                * If given a `sigma`, `ref_freq`, and `spectral_index`, then this will make
+                  a chromatic beam with standard deviation defined by a power law:
+                  `stddev(f) = sigma * (f/ref_freq)**(spectral_index)`
+
         sigma: (float)
             standard deviation [radians] for gaussian beam
             When spectral index is set, this represents the FWHM at the ref_freq.
