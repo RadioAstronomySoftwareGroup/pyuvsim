@@ -132,6 +132,10 @@ class AnalyticBeam(object):
             interp_data[0, 0, 1, :, :] = 1
             interp_data[1, 0, 1, :, :] = 0
             interp_data[0, 0, 0, :, :] = 0
+
+            # If beam_type == "power", we need to know the shape of "values"
+            values = interp_data[0, 0, 0]
+
             interp_basis_vector = None
         elif self.type == 'gaussian':
             if (self.diameter is None) and (self.sigma is None):
