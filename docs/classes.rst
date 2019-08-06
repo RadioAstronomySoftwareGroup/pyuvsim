@@ -37,7 +37,7 @@ Simulations are run from .yaml files with specified keywords. See :ref:`usage`.
 Sources
 -------
 
-.. autoclass:: pyuvsim.Source
+.. autoclass:: pyuvsim.SkyModel
     :members:
 
 Telescopes

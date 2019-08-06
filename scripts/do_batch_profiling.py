@@ -8,8 +8,9 @@
 
 from __future__ import absolute_import, division, print_function
 
-import numpy as np
 import subprocess
+
+import numpy as np
 
 # Nsrcs = [5, 10, 20, 30]
 # Ntimes = [1, 5, 10, 15]

@@ -4,16 +4,17 @@
 
 from __future__ import absolute_import, division, print_function
 
-import numpy as np
 import sys
-from threading import Thread
 from array import array
-import struct as _struct
+from threading import Thread
+
 import mpi4py
-mpi4py.rc.initialize = False    # noqa
+import numpy as np
+
+mpi4py.rc.initialize = False  # noqa
 from mpi4py import MPI
 
-rank = 0    # COMM_WORLD rank
+rank = 0  # COMM_WORLD rank
 Npus = 1
 Npus_node = 1
 world_comm = None
@@ -24,7 +25,7 @@ rank_comm = None
 def set_mpi_excepthook(mpi_comm):
     """Kill the whole job on an uncaught python exception"""
 
-    def mpi_excepthook(exctype, value, traceback):      # pragma: no cover
+    def mpi_excepthook(exctype, value, traceback):  # pragma: no cover
         sys.__excepthook__(exctype, value, traceback)
         mpi_comm.Abort(1)
 
@@ -45,13 +46,12 @@ def start_mpi():
     rank_comm = world_comm.Split(color=node_comm.rank)
 
     Npus = world_comm.Get_size()
-    Npus_node = node_comm.Get_size()
     rank = world_comm.Get_rank()
     set_mpi_excepthook(world_comm)
 
     world_comm.Barrier()
 
-    if not rank == 0:       # pragma: no cover
+    if not rank == 0:  # pragma: no cover
         # For non-root ranks, do not print to stdout.
         # (Uncovered until we have multi-rank tests)
         global stdout
@@ -99,7 +99,7 @@ def shared_mem_bcast(arr, root=0):
         # Now fill the window on each node with the data.
         sh_arr[:] = arr
 
-    sh_arr.flags['WRITEABLE'] = False   # Do not want ranks overwriting the data.
+    sh_arr.flags['WRITEABLE'] = False  # Do not want ranks overwriting the data.
 
     world_comm.Barrier()
     return sh_arr

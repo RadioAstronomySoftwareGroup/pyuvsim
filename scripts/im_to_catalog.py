@@ -3,17 +3,15 @@
 # Licensed under the 3-clause BSD License
 from __future__ import absolute_import, division, print_function
 
-import numpy as np
-import matplotlib.image as mpimg
-import pylab as pl
-import sys
-import psutil
 import argparse
-import numpy as np
+import sys
+
 import matplotlib.image as mpimg
+import numpy as np
+import psutil
 import pylab as pl
-from astropy.coordinates import SkyCoord, Angle, EarthLocation
 from astropy import units as u
+from astropy.coordinates import SkyCoord, Angle, EarthLocation
 from astropy.time import Time
 
 """
@@ -29,9 +27,12 @@ Input:
 
 
 def removeallspaces(s):
-    "removeallspaces"
+    "remove all spaces"
     return ''.join([c for c in s if c != ' '])
 
+
+if sys.version_info >= (3, 0):
+    xrange = range
 
 parser = argparse.ArgumentParser(
     description=("make a test pattern catalog that spells out something"))
@@ -51,10 +52,8 @@ parser.add_argument('--array_location', type=str, default='-30,116',
 parser.add_argument('--plot', action='store_true')
 args = parser.parse_args()
 
-
 catname = removeallspaces(args.text)
 imgfname = catname + '.bmp'
-
 
 # first lets construct our image
 fontsize = 10  # this ends up being arbitrary here
@@ -79,7 +78,6 @@ p = psutil.Popen(im_cmd)
 print(p.communicate())
 p.wait(timeout=2)
 
-
 jd = args.jd
 print("processing image into a catalog")
 im = mpimg.imread(imgfname)
@@ -94,10 +92,9 @@ dy = y - int(np.floor(ny / 2.))
 
 pixsize_deg = 1.0
 
-zas = np.sqrt(dx**2 + dy**2) * pixsize_deg
+zas = np.sqrt(dx ** 2 + dy ** 2) * pixsize_deg
 aztmp = np.arctan2(dy, dx) * 180. / np.pi
 azs = np.arctan2(dy, dx) * 180. / np.pi - 90.
-
 
 alts = 90. - zas
 Nsrcs = zas.size

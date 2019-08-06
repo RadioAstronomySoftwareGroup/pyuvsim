@@ -3,14 +3,16 @@
 # Make plots of profiling results under different constraints:
 
 import sys
-import numpy as np
+
 import matplotlib.pyplot as plt
-import matplotlib
+import numpy as np
 
 dat = np.genfromtxt(sys.argv[1], names=True, max_rows=2, delimiter=',')
 
-
-fields = ['JobID', 'Start', 'MaxRSS_GB', 'NNodes', 'NProcs', 'Nbls', 'Ntimes', 'Nchan', 'Nsrc', 'Beam', 'Ntasks', 'Runtime_Second']
+fields = [
+    'JobID', 'Start', 'MaxRSS_GB', 'NNodes', 'NProcs', 'Nbls', 'Ntimes',
+    'Nchan', 'Nsrc', 'Beam', 'Ntasks', 'Runtime_Second'
+]
 titles = [f.lower() for f in fields]
 fmts = ['U10', 'U10', 'f8', 'i4', 'i4', 'i4', 'i4', 'i4', 'i4', 'U10', 'i4', 'f8']
 dt = np.format_parser(fmts, dat.dtype.names, titles)
@@ -25,7 +27,6 @@ markers = ['.', 'o', '+', '<', '>', '*', 'v', '^', 'h', 'p']
 cmap = plt.get_cmap('tab10')
 colors = [cmap(i) for i in range(len(Ncpus))]
 
-
 params = ['Nbls', 'Ntimes', 'Nchan', 'Nsrc']
 fig1, axes = plt.subplots(nrows=1, ncols=len(beams))
 handles, labels = [], []
@@ -39,7 +40,11 @@ for nni in range(len(NNodes)):
             inds = np.where(condN & condB & (dat['NProcs'] == Ncpus[nc]))
             if len(inds[0]) == 0:
                 continue
-            axes[bi].scatter(dat['Ntasks'][inds], dat['Runtime_Seconds'][inds], label="{:d} cores, {:d} Nodes".format(Ncpus[nc], NNodes[nni]), color=colors[nc], marker=markers[nni])
+            axes[bi].scatter(
+                dat['Ntasks'][inds], dat['Runtime_Seconds'][inds],
+                label="{:d} cores, {:d} Nodes".format(Ncpus[nc], NNodes[nni]),
+                color=colors[nc], marker=markers[nni]
+            )
 
         axes[bi].set_title("{} beam".format(beams[bi]))
         axes[bi].set_ylabel("Runtime (seconds)")
@@ -71,7 +76,11 @@ for nni in range(len(NNodes)):
             inds = np.where(condN & condB & (dat['NProcs'] == Ncpus[nc]))
             if len(inds[0]) == 0:
                 continue
-            axes[bi].scatter(dat['Ntasks'][inds], dat['MaxRSS_GB'][inds], label="{:d} cores, {:d} Nodes".format(Ncpus[nc], NNodes[nni]), color=colors[nc], marker=markers[nni])
+            axes[bi].scatter(
+                dat['Ntasks'][inds], dat['MaxRSS_GB'][inds],
+                label="{:d} cores, {:d} Nodes".format(Ncpus[nc], NNodes[nni]),
+                color=colors[nc], marker=markers[nni]
+            )
 
         axes[bi].set_title("{} beam".format(beams[bi]))
         axes[bi].set_ylabel("MaxRSS (GB)")

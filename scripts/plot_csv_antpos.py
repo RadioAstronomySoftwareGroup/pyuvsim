@@ -5,9 +5,10 @@
 
 from __future__ import absolute_import, division, print_function
 
-from pyuvdata import UVData
 import sys
+
 import matplotlib.pyplot as plt
+
 from pyuvsim.simsetup import _parse_layout_csv as parse_csv
 
 antpos = parse_csv(sys.argv[1])

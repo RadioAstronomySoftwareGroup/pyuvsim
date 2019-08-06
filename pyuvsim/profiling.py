@@ -8,40 +8,44 @@ Use the line profiler when requested.
 
 from __future__ import absolute_import, division, print_function
 
-from .mpi import start_mpi, get_rank
-from inspect import isclass, isfunction
 import atexit
+from inspect import isclass, isfunction
+
 import six
 
 import pyuvsim as _pyuvsim
+from .mpi import start_mpi, get_rank
 
 try:
     from line_profiler import LineProfiler
-except ImportError:   # pragma: no cover
+except ImportError:  # pragma: no cover
     def LineProfiler():
         return None
 
+default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params',
+                         'coherency_calc', 'update_positions', 'apply_beam', 'make_visibility',
+                         'uvdata_to_task_iter', 'run_uvsim']
 
-default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params', 'coherency_calc', 'update_positions', 'apply_beam', 'make_visibility', 'uvdata_to_task_iter', 'run_uvsim']
 
-
-def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_profile.out', dump_raw=False):
+def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_profile.out',
+                 dump_raw=False):
     """
     Applies a line profiler to the listed functions, wherever they appear in pyuvsim.
 
-    Places a LineProfiler object in the builtins list, and registers its dumping/printing functions to run
-    at the end.
+    Places a LineProfiler object in the builtins list, and registers its dumping/printing
+    functions to run at the end.
 
     Args:
         func_list: list of function names (strings). Defaults to the list above.
-        rank: (int) Which rank process should write out to file? (only one rank at a time will). Default 0
+        rank: int, optional
+            Which rank process should write out to file? (only one rank at a time will).
         outfile_name: Filename for printing profiling results.
         dump_raw: Write out a pickled LineStats object to <outfile_name>.lprof (Default False)
     """
     start_mpi()
     global prof
     prof = LineProfiler()
-    if prof is None:   # pragma: no cover
+    if prof is None:  # pragma: no cover
         raise ImportError("line_profiler module required to use profiling tools.")
 
     # Add module functions to profiler.

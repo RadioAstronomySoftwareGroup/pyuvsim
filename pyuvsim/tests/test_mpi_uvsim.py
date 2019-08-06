@@ -5,10 +5,12 @@
 from __future__ import absolute_import, division, print_function
 
 import os
+
+import mpi4py
 import numpy as np
 import yaml
-import mpi4py
-mpi4py.rc.initialize = False    # noqa
+
+mpi4py.rc.initialize = False  # noqa
 import pytest
 from mpi4py import MPI
 import astropy
@@ -22,12 +24,14 @@ import pyuvsim
 from pyuvsim import mpi
 import pyuvsim.tests as simtest
 
-
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, 'NicCSTbeams', f) for f in cst_files]
 hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
-param_filenames = [os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x)) for x in range(4)]   # Five different test configs
+param_filenames = [
+    os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x))
+    for x in range(4)
+]  # Five different test configs
 singlesource_vot = os.path.join(SIM_DATA_PATH, 'single_source.vot')
 singlesource_txt = os.path.join(SIM_DATA_PATH, 'single_source.txt')
 
@@ -44,9 +48,14 @@ def test_run_uvsim():
     beam.write_beamfits(beamfile)
     beam_list = [beamfile]
     mock_keywords = {"Nsrcs": 3}
-    simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', pyuvsim.run_uvdata_uvsim, 'not_uvdata', beam_list)
+    simtest.assert_raises_message(
+        TypeError, 'input_uv must be UVData object',
+        pyuvsim.run_uvdata_uvsim, 'not_uvdata', beam_list
+    )
     mpi.start_mpi()
-    catalog, mock_kwds = pyuvsim.simsetup.create_mock_catalog(hera_uv.time_array[0], return_table=True, **mock_keywords)
+    catalog, mock_kwds = pyuvsim.simsetup.create_mock_catalog(
+        hera_uv.time_array[0], return_table=True, **mock_keywords
+    )
     uv_out = pyuvsim.run_uvdata_uvsim(hera_uv, beam_list, catalog=catalog)
     rank = mpi.get_rank()
     if rank == 0:
@@ -71,20 +80,22 @@ def test_run_paramfile_uvsim():
                          message=['The default for the `center` keyword'],
                          category=[DeprecationWarning])
     uv_new_txt = UVData()
-    uvtest.checkWarnings(uv_new_txt.read_uvfits, [tempfilename], message='antenna_diameters is not set')
+    uvtest.checkWarnings(uv_new_txt.read_uvfits, [tempfilename],
+                         message='antenna_diameters is not set')
     uv_new_txt.unphase_to_drift(use_ant_pos=True)
     os.remove(tempfilename)
 
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
-    uvtest.checkWarnings(pyuvsim.uvsim.run_uvsim, [param_filename],
-                         nwarnings=11,
-                         message=([SIM_DATA_PATH] * 10
-                                  + ['The default for the `center` keyword has changed']),
-                         category=([astropy.io.votable.exceptions.W50] * 10
-                                   + [DeprecationWarning]))
+    uvtest.checkWarnings(
+        pyuvsim.uvsim.run_uvsim, [param_filename],
+        nwarnings=11,
+        message=[SIM_DATA_PATH] * 10 + ['The default for the `center` keyword has changed'],
+        category=[astropy.io.votable.exceptions.W50] * 10 + [DeprecationWarning]
+    )
 
     uv_new_vot = UVData()
-    uvtest.checkWarnings(uv_new_vot.read_uvfits, [tempfilename], nwarnings=1, category=[UserWarning], message=['antenna_diameters is not set'])
+    uvtest.checkWarnings(uv_new_vot.read_uvfits, [tempfilename], nwarnings=1,
+                         category=[UserWarning], message=['antenna_diameters is not set'])
     uv_new_vot.unphase_to_drift(use_ant_pos=True)
     os.remove(tempfilename)
     uv_new_txt.history = uv_ref.history  # History includes irrelevant info for comparison
@@ -98,9 +109,11 @@ def test_run_paramfile_uvsim():
 def test_run_paramdict_uvsim():
     # Running a simulation from parameter dictionary.
 
-    params = pyuvsim.simsetup._config_str_to_dict(os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml'))
+    params = pyuvsim.simsetup._config_str_to_dict(
+        os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
+    )
 
-    uv_out = pyuvsim.run_uvsim(params, return_uv=True)
+    pyuvsim.run_uvsim(params, return_uv=True)
 
 
 def test_mpi_funcs():
@@ -137,6 +150,6 @@ def test_mpi_counter():
     count = mpi.Counter()
     N = 20
     for i in range(N):
-        c = count.next()
+        count.next()
     assert count.current_value() == N
     count.free()

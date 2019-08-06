@@ -4,11 +4,11 @@
 
 from __future__ import absolute_import, division, print_function
 
-import numpy as np
 import warnings
-from scipy.special import j1
 
+import numpy as np
 import pyuvdata.utils as uvutils
+from scipy.special import j1
 
 
 def diameter_to_sigma(diam, freqs):
@@ -28,7 +28,7 @@ def diameter_to_sigma(diam, freqs):
     c_ms = 299792458.
     wavelengths = c_ms / freqs
 
-    scalar = 2.2150894        # Found by fitting a Gaussian to an Airy disk function
+    scalar = 2.2150894  # Found by fitting a Gaussian to an Airy disk function
 
     sigma = np.arcsin(scalar * wavelengths / (np.pi * diam)) * 2 / 2.355
 
@@ -42,22 +42,22 @@ class AnalyticBeam(object):
     Directly calculates jones matrices at given azimuths and zenith angles
     from analytic functions.
 
-    Supports uniform (unit response in all directions), gaussian, and Airy
-    function beam types.
-
-    Supported types:
-        Uniform beam : Unit response from all directions.
-        Airy: An Airy disk pattern (the 2D Fourier transform of a circular aperture of width given by `diameter`)
-        Gaussian : A peak-normalized gaussian function.
-                   If given a `diameter`, then this makes a chromatic beam with FWHMs matching an equivalent Airy disk beam at each frequency.
-                   If given a `sigma`, this makes an achromatic beam with standard deviation set to `sigma`
-                   If given a `sigma`, `ref_freq`, and `spectral_index`, then this will make a chromatic beam
-                        with standard deviation defined by a power law:
-                            stddev(f) = sigma * (f/ref_freq)**(spectral_index)
-
     Args:
-        type: (string)
-            Beam type to use
+        type: str, {'uniform', 'airy', 'gaussian'}
+            Beam type to use. Supported types:
+
+            * Uniform beam: Unit response from all directions.
+            * Airy: An Airy disk pattern (the 2D Fourier transform of a circular aperture of
+              width given by `diameter`)
+            * Gaussian: A peak-normalized gaussian function.
+                * If given a `diameter`, then this makes a chromatic beam with FWHMs
+                  matching an equivalent Airy disk beam at each frequency.
+                * If given a `sigma`, this makes an achromatic beam with standard deviation
+                  set to `sigma`
+                * If given a `sigma`, `ref_freq`, and `spectral_index`, then this will make
+                  a chromatic beam with standard deviation defined by a power law:
+                  `stddev(f) = sigma * (f/ref_freq)**(spectral_index)`
+
         sigma: (float)
             standard deviation [radians] for gaussian beam
             When spectral index is set, this represents the FWHM at the ref_freq.
@@ -78,7 +78,8 @@ class AnalyticBeam(object):
         self.sigma = sigma
         if self.type == 'gaussian' and self.sigma is not None:
             warnings.warn("Achromatic gaussian beams will not be supported in the future."
-                          + "Define your gaussian beam by a dish diameter from now on.", PendingDeprecationWarning)
+                          + "Define your gaussian beam by a dish diameter from now on.",
+                          PendingDeprecationWarning)
 
         if (spectral_index != 0.0) and (ref_freq is None):
             raise ValueError("ref_freq must be set for nonzero gaussian beam spectral index")
@@ -143,8 +144,8 @@ class AnalyticBeam(object):
             if self.diameter is not None:
                 sigmas = diameter_to_sigma(self.diameter, freq_array)
             elif self.sigma is not None:
-                sigmas = self.sigma * (freq_array / self.ref_freq)**(self.spectral_index)
-            values = np.exp(-(za_array[np.newaxis, ...]**2) / (2 * sigmas[:, np.newaxis]**2))
+                sigmas = self.sigma * (freq_array / self.ref_freq) ** self.spectral_index
+            values = np.exp(-(za_array[np.newaxis, ...] ** 2) / (2 * sigmas[:, np.newaxis] ** 2))
             interp_data[1, 0, 0, :, :] = values
             interp_data[0, 0, 1, :, :] = values
             interp_basis_vector = None

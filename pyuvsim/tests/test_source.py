@@ -5,12 +5,12 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-import pyuvsim.tests as simtest
-from astropy.time import Time
-from astropy.coordinates import SkyCoord, EarthLocation, Angle
 from astropy import units
+from astropy.coordinates import SkyCoord, EarthLocation, Angle
+from astropy.time import Time
 
 import pyuvsim
+import pyuvsim.tests as simtest
 
 
 def test_source_zenith_from_icrs():
@@ -34,12 +34,18 @@ def test_source_zenith_from_icrs():
     ra = icrs_coord.ra
     dec = icrs_coord.dec
     # Check error cases
-    simtest.assert_raises_message(ValueError, 'ra must be an astropy Angle object. value was: 3.14',
-                                  pyuvsim.SkyModel, 'icrs_zen', ra.rad, dec.rad, freq.value, [1, 0, 0, 0])
-    simtest.assert_raises_message(ValueError, 'dec must be an astropy Angle object. value was: -0.53',
-                                  pyuvsim.SkyModel, 'icrs_zen', ra, dec.rad, freq.value, [1, 0, 0, 0])
-    simtest.assert_raises_message(ValueError, 'freq must be an astropy Quantity object. value was: 150000000.0',
-                                  pyuvsim.SkyModel, 'icrs_zen', ra, dec, freq.value, [1, 0, 0, 0])
+    simtest.assert_raises_message(
+        ValueError, 'ra must be an astropy Angle object. value was: 3.14',
+        pyuvsim.SkyModel, 'icrs_zen', ra.rad, dec.rad, freq.value, [1, 0, 0, 0]
+    )
+    simtest.assert_raises_message(
+        ValueError, 'dec must be an astropy Angle object. value was: -0.53',
+        pyuvsim.SkyModel, 'icrs_zen', ra, dec.rad, freq.value, [1, 0, 0, 0]
+    )
+    simtest.assert_raises_message(
+        ValueError, 'freq must be an astropy Quantity object. value was: 150000000.0',
+        pyuvsim.SkyModel, 'icrs_zen', ra, dec, freq.value, [1, 0, 0, 0]
+    )
     zenith_source = pyuvsim.SkyModel('icrs_zen', ra, dec, freq, [1, 0, 0, 0])
 
     zenith_source.update_positions(time, array_location)
@@ -92,7 +98,6 @@ def test_pol_coherency_calc():
     inds = np.ones(Ncomp).astype(bool)
     inds[Ncomp // 2:] = False
 
-    pol_srcs_up = (sky.alt_az[0] > 0) * inds
     unpol_srcs_up = (sky.alt_az[0] > 0) * (~inds)
 
     assert np.allclose(coh_loc[0, 0, unpol_srcs_up], 0.5)

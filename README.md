@@ -37,13 +37,13 @@ Note that `pyuvsim` is intended to run on clusters running the linux operating s
 
 ### Dependencies
 If you are using `conda` to manage your environment, you may wish to install the 
-following before installing `pyuvsim`::
+following before installing `pyuvsim`:
 
     conda install -c conda-forge "numpy>=1.15" "astropy>=2.0" "scipy>1.0.1" "mpi4py>=3.0.0" "pyyaml>=5.1" "six>=1.11" "pyuvdata>=1.3.7"
 
 ### Developing
 If you are developing `pyuvsim`, it is preferred that you do so in a fresh `conda`
-environment. The following commands will install all relevant development packages::
+environment. The following commands will install all relevant development packages:
 
     $ git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim.git
     $ cd pyuvsim

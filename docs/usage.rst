@@ -1,4 +1,5 @@
 .. _usage:
+
 Running a simulation
 ====================
 
