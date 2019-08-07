@@ -89,7 +89,7 @@ class SkyModel(object):
                 source Dec in J2000 (or ICRS) coordinates
             stokes: shape (4, Nfreqs, Ncomponents)
                 4 element vector giving the source [I, Q, U, V]
-            Nfreqs: (integer) 
+            Nfreqs: (integer)
                 length of frequency axis
             freq_array: shape(Nfreqs,)
                 corresponding frequencies for each flux density
