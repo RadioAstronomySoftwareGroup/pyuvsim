@@ -40,6 +40,7 @@ class UVTask(object):
         self.sources = sources  # SkyModel object
         self.baseline = baseline
         self.telescope = telescope
+        self.freq_i = None
         self.visibility_vector = None
         self.uvdata_index = None  # Where to add the visibility in the uvdata object.
 
@@ -117,10 +118,12 @@ class UVEngine(object):
             )
 
         coherency = sources.coherency_calc(self.task.telescope.location)
+        coherency = coherency[:, :, self.freq_i, :]
         beam2_jones = np.swapaxes(beam2_jones, 0, 1).conj()  # Transpose at each component.
         this_apparent_coherency = np.einsum("abz,bcz,cdz->adz", beam1_jones, coherency, beam2_jones)
 
         self.apparent_coherency = this_apparent_coherency
+        print(coherency.shape)
 
     def make_visibility(self):
         """ Visibility contribution from a set of source components """
@@ -273,10 +276,11 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
             bl = baselines[bl_i]
             freq = freq_array[0, freq_i]  # 0 = spw axis
 
-            task = UVTask(sky, time, freq, bl, telescope)
-            task.uvdata_index = (blti, 0, freq_i)  # 0 = spectral window index
+            task = UVTask(sky, time, freq, bl, telescope, freq_i)
+            task.uvdata_index = (blti, 0, freq_i)    # 0 = spectral window index
 
             yield task
+        print(np.allclose(input_uv.freq_array, sky.freq_array))
 
 
 def serial_gather(uvtask_list, uv_out):
