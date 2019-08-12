@@ -111,7 +111,7 @@ def test_visibility_source_below_horizon_radec():
     source_coord = SkyCoord(ra=Angle('13h20m'), dec=Angle('-30d43m17.5s'),
                             obstime=time, frame='icrs', location=array_location)
 
-    source = pyuvsim.SkyModel('src_down', source_coord.ra, source_coord.dec, freq,
+    source = pyuvsim.SkyModel('src_down', source_coord.ra, source_coord.dec,
                               np.array([1.0, 0, 0, 0]).reshape(4, 1))
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
