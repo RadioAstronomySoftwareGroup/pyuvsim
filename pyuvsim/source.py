@@ -135,6 +135,8 @@ class SkyModel(object):
         self.horizon_mask = np.zeros(self.Ncomponents).astype(
             bool)  # If true, source component is below horizon.
 
+        print(Nfreqs)
+
         if self.Ncomponents == 1:
             self.stokes = self.stokes.reshape(4, Nfreqs, 1)
 
