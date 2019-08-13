@@ -79,7 +79,7 @@ class SkyModel(object):
 
 
     def __init__(self, name, ra, dec, stokes,
-                 Nfreqs=1, freq_array=None, rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
+                 Nfreqs=1, freq_array=None, rise_lst=None, set_lst=None, spectral_type=None, pos_tol=np.finfo(float).eps):
         """
         Args:
             name: Unique identifier for the source.
@@ -122,6 +122,7 @@ class SkyModel(object):
         self.ra = np.atleast_1d(ra)
         self.dec = np.atleast_1d(dec)
         self.pos_tol = pos_tol
+        self.spectral_type = spectral_type
 
         self.has_rise_set_lsts = False
         if (rise_lst is not None) and (set_lst is not None):
@@ -136,6 +137,9 @@ class SkyModel(object):
             bool)  # If true, source component is below horizon.
 
         print(Nfreqs)
+
+        if freq_array == None:
+            self.spectral_type = 'flat'
 
         if self.Ncomponents == 1:
             self.stokes = self.stokes.reshape(4, Nfreqs, 1)
