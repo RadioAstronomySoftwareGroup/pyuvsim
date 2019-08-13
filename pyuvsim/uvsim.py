@@ -48,6 +48,8 @@ class UVTask(object):
             self.time = Time(self.time, format='jd')
         if isinstance(self.freq, float):
             self.freq = self.freq * units.Hz
+        if sources.spectral_type == 'flat':
+            self.freq_i = 0
 
     def __eq__(self, other):
         return (np.isclose(self.time.jd, other.time.jd, atol=1e-4)
@@ -258,6 +260,8 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
 
     for src_i in src_iter:
         sky = simsetup.array_to_skymodel(catalog[src_i])
+        if sky.spectral_type == 'values':
+            assert np.allclose(sky.freq_array, input_uv.freq_array)
         for task_index in task_ids:
             # Shape indicates slowest to fastest index.
             if not isinstance(task_index, tuple):
@@ -284,8 +288,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
             task.uvdata_index = (blti, 0, freq_i)    # 0 = spectral window index
 
             yield task
-        print(input_uv.freq_array)
-        print(sky.freq_array)
 
 
 def serial_gather(uvtask_list, uv_out):
