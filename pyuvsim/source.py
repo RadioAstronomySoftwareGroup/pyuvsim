@@ -109,13 +109,13 @@ class SkyModel(object):
 
         print(Nfreqs)
 
-        if freq_array == None:
+        if freq_array is None:
             self.spectral_type = 'flat'
 
         if self.Ncomponents == 1:
             self.stokes = self.stokes.reshape(4, Nfreqs, 1)
 
-        # The coherency is a 2x2 matrix giving electric field correlation in Jy.
+        # The coherency is a 2x2 matrix giving electric field correlation in Jy
         # Multiply by .5 to ensure that Trace sums to I not 2*I
         # Shape = (2,2,Ncomponents)
         self.coherency_radec = .5 * np.array([[self.stokes[0, :, :] + self.stokes[1, :, :],
