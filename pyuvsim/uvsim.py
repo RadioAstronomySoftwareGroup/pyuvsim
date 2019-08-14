@@ -249,11 +249,10 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     tasks_shape = (Ntimes, Nfreqs, Nbls)
     time_ax, freq_ax, bl_ax = range(3)
 
-    telescope = Telescope(
-        input_uv.telescope_name,
-        EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
-        beam_list
-    )
+    tloc = [np.float64(x) for x in input_uv.telescope_location]
+    telescope = Telescope(input_uv.telescope_name,
+                          EarthLocation.from_geocentric(*tloc, unit='m'),
+                          beam_list)
 
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
