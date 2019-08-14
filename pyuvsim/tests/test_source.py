@@ -118,13 +118,13 @@ def test_read_healpix_hdf5():
 
     indices = np.arange(Npix)
 
-    frequencies = np.linspace(100,110,10)
+    frequencies = np.linspace(100, 110, 10)
 
     hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(
         os.path.join(SIM_DATA_PATH, 'test_file.hdf5')
     )
 
-    assert np.allclose(hpmap[0,:], m)
+    assert np.allclose(hpmap[0, :], m)
     assert np.allclose(inds, indices)
     assert np.allclose(freqs, frequencies)
 
@@ -137,9 +137,11 @@ def test_healpix_to_sky():
     m = np.arange(Npix)
     m[ipix_disc] = m.max()
 
+    m = np.repeat(m[None, :], 10, axis=0)
     hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(
         os.path.join(SIM_DATA_PATH, 'test_file.hdf5')
     )
+
     m = (m.T / simutils.jy2Tsr(freqs, bm=hp.nside2pixarea(Nside), mK=False)).T
     sky = pyuvsim.source.healpix_to_sky(hpmap, inds, freqs)
     assert np.allclose(sky.stokes[0], m)
