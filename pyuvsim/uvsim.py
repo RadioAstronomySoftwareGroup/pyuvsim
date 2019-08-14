@@ -119,17 +119,12 @@ class UVEngine(object):
                 self.task.telescope, sources.alt_az, self.task.freq, reuse_spline=self.reuse_spline
             )
 
-        print('freq index')
-        print(self.task.freq_i)
         coherency = sources.coherency_calc(self.task.telescope.location)
         coherency = coherency[:, :, self.task.freq_i, :]
-        print('Coherency shape')
-        print(coherency.shape)
         beam2_jones = np.swapaxes(beam2_jones, 0, 1).conj()  # Transpose at each component.
         this_apparent_coherency = np.einsum("abz,bcz,cdz->adz", beam1_jones, coherency, beam2_jones)
 
         self.apparent_coherency = this_apparent_coherency
-        print(coherency.shape)
 
     def make_visibility(self):
         """ Visibility contribution from a set of source components """
