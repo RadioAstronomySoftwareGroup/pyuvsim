@@ -413,7 +413,7 @@ def read_healpix_hdf5(hdf5_filename):
         hdf5_filename: path and name of the hdf5 file to read
     """
     f = h5py.File(hdf5_filename)
-    hpmap = f['data'][0,...]    # Remove Nskies axis.
+    hpmap = f['data'][0, ...]    # Remove Nskies axis.
     indices = f['indices'][()]
     freqs = f['freqs'][()]
     return hpmap, indices, freqs
