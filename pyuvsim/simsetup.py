@@ -644,7 +644,7 @@ def parse_telescope_params(tele_params, config_path=''):
         with open(telescope_config_name, 'r') as yf:
             telconfig = yaml.safe_load(yf)
         telescope_location_latlonalt = ast.literal_eval(telconfig['telescope_location'])
-        telescope_location = list(telescope_location_latlonalt)
+        telescope_location = [np.float64(x) for x in telescope_location_latlonalt]
         telescope_location[0] *= np.pi / 180.
         telescope_location[1] *= np.pi / 180.  # Convert to radians
         tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
