@@ -413,7 +413,7 @@ def read_healpix_hdf5(hdf5_filename):
         hdf5_filename: path and name of the hdf5 file to read
     """
     f = h5py.File(hdf5_filename)
-    hpmap = f['data'][0, :]
+    hpmap = f['data'][0,...]    # Remove Nskies axis.
     indices = f['indices'][()]
     freqs = f['freqs'][()]
     return hpmap, indices, freqs
@@ -435,6 +435,6 @@ def healpix_to_sky(hpmap, indices, freqs):
     ra = Angle(ra, unit='deg')
     freq = Quantity(freqs, 'hertz')
     stokes = np.zeros((4, len(freq), len(indices)))
-    stokes[0] = hpmap / simutils.jy2Tsr(freq, bm=hp.nside2pixarea(Nside), mK=False)
+    stokes[0] = (hpmap.T / simutils.jy2Tsr(freq, bm=hp.nside2pixarea(Nside), mK=False)).T
     sky = SkyModel(indices.astype('str'), ra, dec, stokes, freq_array=freq, Nfreqs=len(freq))
     return sky
