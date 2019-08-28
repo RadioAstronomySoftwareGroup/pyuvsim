@@ -9,7 +9,11 @@ import sys
 import time as pytime
 
 import numpy as np
-import psutil
+try:
+    import psutil
+    HAVE_PSUTIL = True
+except ImportError:
+    HAVE_PSUTIL = False
 from astropy import _erfa as erfa
 from astropy.coordinates import Angle
 from astropy.coordinates.builtin_frames.utils import get_jd12
@@ -256,6 +260,8 @@ def get_avail_memory():
     If this is not called from within a SLURM task, it will estimate
     using psutils methods.
     """
+    if not HAVE_PSUTIL:
+        raise ImportError("You need psutils to run this function. Install pyuvsim.[sim]")
 
     slurm_key = 'SLURM_MEM_PER_NODE'
     if slurm_key in os.environ:

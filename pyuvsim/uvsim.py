@@ -18,9 +18,9 @@ from pyuvdata import UVData
 from six.moves import range
 
 try:
-    from .mpi import start_mpi, get_rank
+    from . import mpi
 except ImportError:
-    raise ImportError("You must install mpi4py to use the uvsim module")
+    raise ImportError("You need mpi to use the uvsim module. Install pyuvsim.[sim]")
 from . import simsetup
 from . import utils as simutils
 from .antenna import Antenna
