@@ -20,7 +20,7 @@ from six.moves import range
 try:
     from . import mpi
 except ImportError:
-    raise ImportError("You need mpi to use the uvsim module. Install pyuvsim.[sim]")
+    raise ImportError("You need mpi to use the uvsim module. Install pyuvsim[sim]")
 from . import simsetup
 from . import utils as simutils
 from .antenna import Antenna

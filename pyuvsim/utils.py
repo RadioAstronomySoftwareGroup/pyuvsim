@@ -261,7 +261,7 @@ def get_avail_memory():
     using psutils methods.
     """
     if not HAVE_PSUTIL:
-        raise ImportError("You need psutils to run this function. Install pyuvsim.[sim]")
+        raise ImportError("You need psutils to run this function. Install pyuvsim[sim]")
 
     slurm_key = 'SLURM_MEM_PER_NODE'
     if slurm_key in os.environ:

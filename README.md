@@ -14,13 +14,16 @@ general simulator design.
 A comparison to other simulators may be found at [ReadTheDocs](https://pyuvsim.readthedocs.io/en/latest/comparison.html).
 
 ## Motivation and Approach
-pyuvsim's two primary goals are interferometer simulation accuracy at the level of precision necessary for 21cm cosmology science, and maximum flexibility in use cases. Key elements of this approach include:
+pyuvsim's two primary goals are interferometer simulation accuracy at the level of 
+precision necessary for 21cm cosmology science, and maximum flexibility in use cases. 
+Key elements of this approach include:
 
 1. High level of test coverage including accuracy (design goal is 97%).
 2. Include analytic tests in unittests.
 3. Comparison with external simulations.
 4. Design for scalability across many cpus.
-5. Fully-polarized instrument response, floating-point source position accuracy, full-sky field of view, and exact antenna positions.
+5. Fully-polarized instrument response, floating-point source position accuracy, 
+   full-sky field of view, and exact antenna positions.
 6. Support for varied beam models across the array.
 7. Defining a clear, user-friendly standard for simulation design.
 
@@ -30,8 +33,13 @@ bleeding-edge: `pip install https://github.com/RadioAstronomySoftwareGroup/pyuvs
 This will install all dependencies. 
 
 By default, `mpi` capabilities are not enabled -- many of the utilities provided in 
-`pyuvsim` do not require it. To use `mpi`, you may install it with 
-`pip install pyuvsim[mpi]`.
+`pyuvsim` do not require it. To use the simulator within `pyuvsim`, you should install
+`pyuvsim` with  `pip install pyuvsim[sim]`.
+
+There are a few more optional dependencies for `pyuvsim` which enable some features,
+such as `line_profiler` to use the built-in profiling, and `h5py` to write to HDF5 
+file format. If you would like these tools as well as the full simulator, install
+`pyuvsim` with `pip install pyuvsim[all]`
 
 If you wish to manage dependencies manually, or are developing `pyuvsim` yourself, read
 on.
@@ -54,7 +62,7 @@ environment. The following commands will install all relevant development packag
     $ conda create -n pyuvsim python=3
     $ conda activate pyuvsim
     $ conda env update -n pyuvsim -f environment.yml
-    $ pip install -e ".[mpi]" 
+    $ pip install -e ".[sim]" 
 
 This will install extra dependencies required for testing/development as well as the 
 standard ones.
@@ -63,22 +71,7 @@ The second-to-last line may also be replaced by `pip install -r requirements.txt
 do not care about using `conda`.
 
 
-
-**Note**
-The `mpi4py` module is installed as a wrapper around an existing installation of MPI. 
-The easiest way to install it is to use anaconda, which will install a compatible 
-version of MPI and configure `mpi4py` to use it:
-```
-conda install -c conda-forge mpi4py
-```
-
-
-## Dependencies
-* `numpy`, `astropy`, `scipy`, `mpi4py`, `pyyaml`, `six`, `pyuvdata`
-* optionally `line_profiler` if you want to do profiling (support for profiling is built in)
-* optionally, `h5py` is needed to support writing to the new `uvh5` file format.
-
-# Inputs
+## Inputs
 
 A simulation requires sets of times, frequencies, source positions and brightnesses, antenna positions, and direction-dependent primary beam responses. pyuvsim specifies times, frequencies, and array configuration via a UVData object (from the pyuvdata package), source positions and brightnesses via Source objects, and primary beams either through UVBeam or AnalyticBeam objects.
 
@@ -88,7 +81,7 @@ A simulation requires sets of times, frequencies, source positions and brightnes
 
 These input objects may be made from a data file or from a set of `yaml` configuration files. See [Running a simulation](https://pyuvsim.readthedocs.io/en/latest/usage.html).
 
-# Outputs
+## Outputs
 
 Data from a simulation run are written out to a file in any format accessible with `pyuvdata`. This includes:
 
@@ -98,7 +91,7 @@ Data from a simulation run are written out to a file in any format accessible wi
 
 When read into a UVData object, the `history` string will contain information on the pyuvsim and pyuvdata versions used for that run (including the latest git hash, if available), and details on the catalog used.
 
-# Quick start guide
+## Quick start guide
 Example `obsparam` configuration files may be found in the `reference_simulations` directory.
 
 1. Install from github or pip.
@@ -107,10 +100,10 @@ Example `obsparam` configuration files may be found in the `reference_simulation
 mpirun -n 20 run_param_pyuvsim.py reference_simulations/obsparam_1.1.yaml
 ```
 
-# Documentation
+## Documentation
 Documentation on how to run simulations and developer API documentation is hosted on [ReadTheDocs](https://pyuvsim.readthedocs.io).
 
-# Testing
+## Testing
 
 `pyuvsim` uses the `pytest` package for unit testing. If you've cloned the source into a directory `pyuvsim/`, you may verify it as follows:
 
@@ -122,11 +115,11 @@ pytest
 You can alternatively run ```python -m pytest pyuvsim``` or ```python setup.py test```.
 You will need to have all dependencies installed.
 
-# Where to find Support
+## Where to find Support
 
 Please feel free to submit new issues to the [issue log](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/issues) to request new features, document new bugs, or ask questions.
 
-# How to contribute
+## How to contribute
 Contributions to this package to add new features or address any of the
 issues in the [issue log](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/issues) are very welcome.
 Please submit improvements as pull requests against the repo after verifying that
@@ -136,7 +129,7 @@ Bug reports or feature requests are also very welcome, please add them to the
 issue log after verifying that the issue does not already exist.
 Comments on existing issues are also welcome.
 
-# Versioning Approach
+## Versioning Approach
 We use a `generation.major.minor` format.
 
 * Generation - Release combining multiple new physical effects and or major computational improvements.
@@ -146,7 +139,7 @@ Testing: Backed by unittests, internal model validation and limited external com
 * Minor - Bug fixes and small improvements not expected to change physical model.
 Testing: Backed by unittests
 
-## Some helpful definitions
+### Some helpful definitions
 * __Physical effects__: things like polarization effects, noise, ionospheric modeling, or nonterrestrial observing positions.
 * __Major computational improvement__:  Support for new catalog types (e.g, diffuse maps), new analysis tools, changes to parallelization scheme
 * __Small improvements__: Better documentation or example code, outer framework redesign.
