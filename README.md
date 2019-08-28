@@ -62,7 +62,7 @@ environment. The following commands will install all relevant development packag
     $ conda create -n pyuvsim python=3
     $ conda activate pyuvsim
     $ conda env update -n pyuvsim -f environment.yml
-    $ pip install -e ".[sim]" 
+    $ pip install -e .
 
 This will install extra dependencies required for testing/development as well as the 
 standard ones.
