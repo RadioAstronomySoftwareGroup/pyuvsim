@@ -20,7 +20,7 @@ from six.moves import range
 try:
     from . import mpi
 except ImportError:
-    raise ImportError("You need mpi to use the uvsim module. Install pyuvsim[sim]")
+    mpi = None
 from . import simsetup
 from . import utils as simutils
 from .antenna import Antenna
@@ -195,6 +195,9 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     Yields:
         Iterable of task objects to be done on current rank.
     """
+    if mpi is None:
+        raise ImportError("You need mpi to use the uvsim module. Install pyuvsim[sim]")
+
     # The task_ids refer to tasks on the flattened meshgrid.
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
@@ -307,6 +310,9 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     -------
     :class:~`pyuvdata.UVData` instance containing simulated visibilities.
     """
+    if mpi is None:
+        raise ImportError("You need mpi to use the uvsim module. Install pyuvsim[sim]")
+
     mpi.start_mpi()
     rank = mpi.get_rank()
     comm = mpi.get_comm()
@@ -411,6 +417,8 @@ def run_uvsim(params, return_uv=False):
     Returns:
         uv_out (UVData): Finished simulation results. (if return_uv is True)
     """
+    if mpi is None:
+        raise ImportError("You need mpi to use the uvsim module. Install pyuvsim[sim]")
 
     mpi.start_mpi()
     rank = mpi.get_rank()
