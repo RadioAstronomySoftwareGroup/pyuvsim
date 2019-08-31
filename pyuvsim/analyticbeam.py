@@ -77,8 +77,8 @@ class AnalyticBeam(object):
 
         self.sigma = sigma
         if self.type == 'gaussian' and self.sigma is not None:
-            warnings.warn("Achromatic gaussian beams will not be supported in the future."
-                          + "Define your gaussian beam by a dish diameter from now on.",
+            warnings.warn("Achromatic gaussian beams will not be supported in the future." +
+                          "Define your gaussian beam by a dish diameter from now on.",
                           PendingDeprecationWarning)
 
         if (spectral_index != 0.0) and (ref_freq is None):
@@ -174,10 +174,10 @@ class AnalyticBeam(object):
             pairs = [(i, j) for i in range(2) for j in range(2)]
             power_data = np.zeros((1, 1, 4) + values.shape, dtype=np.float)
             for pol_i, pair in enumerate(pairs):
-                power_data[:, :, pol_i] = ((interp_data[0, :, pair[0]]
-                                            * np.conj(interp_data[0, :, pair[1]]))
-                                           + (interp_data[1, :, pair[0]]
-                                              * np.conj(interp_data[1, :, pair[1]])))
+                power_data[:, :, pol_i] = ((interp_data[0, :, pair[0]] *
+                                            np.conj(interp_data[0, :, pair[1]])) +
+                                           (interp_data[1, :, pair[0]] *
+                                              np.conj(interp_data[1, :, pair[1]])))
             interp_data = power_data
 
         return interp_data, interp_basis_vector
@@ -186,12 +186,12 @@ class AnalyticBeam(object):
         if not isinstance(other, self.__class__):
             return False
         if self.type == 'gaussian':
-            return ((self.type == other.type)
-                    and (self.sigma == other.sigma))
+            return ((self.type == other.type) and
+                    (self.sigma == other.sigma))
         elif self.type == 'uniform':
             return other.type == 'uniform'
         elif self.type == 'airy':
-            return ((self.type == other.type)
-                    and (self.diameter == other.diameter))
+            return ((self.type == other.type) and
+                    (self.diameter == other.diameter))
         else:
             return False
