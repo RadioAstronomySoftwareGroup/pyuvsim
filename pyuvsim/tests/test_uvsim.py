@@ -300,9 +300,9 @@ def test_single_offzenith_source_uvfits():
     jones = jones.squeeze()
     vis_analytic = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(
         2j * np.pi * (
-            uvw_wavelength_array[0, 0] * src_l +
-            uvw_wavelength_array[0, 1] * src_m +
-            uvw_wavelength_array[0, 2] * src_n
+            uvw_wavelength_array[0, 0] * src_l
+            + uvw_wavelength_array[0, 1] * src_m
+            + uvw_wavelength_array[0, 2] * src_n
         )
     )
     vis_analytic = np.array(
@@ -715,7 +715,9 @@ def test_get_beam_jones():
 
     jones = antenna1.get_beam_jones(array, source_altaz, freq, freq_interp_kind='cubic')
     assert beam.freq_interp_kind == 'cubic'
-    jones = antenna1.get_beam_jones(array, source_altaz, freq)
-    jones = antenna1.get_beam_jones(array, source_altaz, freq, freq_interp_kind='linear')
+    jones0 = antenna1.get_beam_jones(array, source_altaz, freq)
+    jones1 = antenna1.get_beam_jones(array, source_altaz, freq, freq_interp_kind='linear')
     assert beam.freq_interp_kind == 'linear'
-    jones = antenna1.get_beam_jones(array, source_altaz, freq)
+    jones2 = antenna1.get_beam_jones(array, source_altaz, freq)
+
+    assert jones2 == jones0 and jones1 == jones and jones1 == jones0
