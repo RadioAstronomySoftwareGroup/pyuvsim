@@ -15,9 +15,9 @@ import six
 
 import pyuvsim as _pyuvsim
 try:
-    from .mpi import start_mpi, get_rank
+    from . import mpi
 except ImportError:
-    raise ImportError("You must install mpi4py to use the profiling module")
+    mpi = None
 
 try:
     from line_profiler import LineProfiler
@@ -45,11 +45,14 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
         outfile_name: Filename for printing profiling results.
         dump_raw: Write out a pickled LineStats object to <outfile_name>.lprof (Default False)
     """
-    start_mpi()
     global prof
     prof = LineProfiler()
-    if prof is None:  # pragma: no cover
-        raise ImportError("line_profiler module required to use profiling tools.")
+    if mpi is None or prof is None:  # pragma: no cover
+        raise ImportError("You need mpi4py and line_profiler to use the "
+                          "profiling module. Install them both by running pip "
+                          "install pyuvsim[all].")
+
+    mpi.start_mpi()
 
     # Add module functions to profiler.
     for mod_it in _pyuvsim.__dict__.values():
@@ -63,7 +66,7 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
                         prof.add_function(item)
 
     # Write out profiling report to file.
-    if get_rank() == rank:
+    if mpi.get_rank() == rank:
         ofile = open(outfile_name, 'w')
         atexit.register(ofile.close)
         atexit.register(prof.print_stats, stream=ofile)
