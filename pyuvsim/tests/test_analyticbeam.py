@@ -262,6 +262,11 @@ def test_power_analytic_beam():
     pvals = pb.interp(az, za, freqs)[0][0, 0, 0]
     assert np.allclose(evals**2, pvals)
 
+    # Ensure uniform beam works
+    pb = pyuvsim.AnalyticBeam('uniform')
+    pb.efield_to_power()
+    pb.interp(az, za, freqs)
+
 
 def test_comparison():
     """
