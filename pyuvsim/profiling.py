@@ -46,13 +46,17 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
         dump_raw: Write out a pickled LineStats object to <outfile_name>.lprof (Default False)
     """
     if mpi is None:
-        raise ImportError("You need mpi4py to use the uvsim module. Install pyuvsim[sim]")
+        raise ImportError("You need mpi4py to use the profiling module. "
+                          "Install it by running pip install pyuvsim[sim] "
+                          "or pip install pyuvsim[all] if you also want h5py "
+                          "and line_profiler installed.")
 
     mpi.start_mpi()
     global prof
     prof = LineProfiler()
     if prof is None:  # pragma: no cover
-        raise ImportError("line_profiler module required to use profiling tools.")
+        raise ImportError("You need line_profiler to use the profiling module. "
+                          "Install it by running pip install pyuvsim[all]. ")
 
     # Add module functions to profiler.
     for mod_it in _pyuvsim.__dict__.values():

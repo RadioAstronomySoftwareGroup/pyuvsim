@@ -196,7 +196,10 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         Iterable of task objects to be done on current rank.
     """
     if mpi is None:
-        raise ImportError("You need mpi to use the uvsim module. Install pyuvsim[sim]")
+        raise ImportError("You need mpi4py to use the uvsim module. "
+                          "Install it by running pip install pyuvsim[sim] "
+                          "or pip install pyuvsim[all] if you also want h5py "
+                          "and line_profiler installed.")
 
     # The task_ids refer to tasks on the flattened meshgrid.
     if not isinstance(input_uv, UVData):
@@ -311,7 +314,10 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     :class:~`pyuvdata.UVData` instance containing simulated visibilities.
     """
     if mpi is None:
-        raise ImportError("You need mpi to use the uvsim module. Install pyuvsim[sim]")
+        raise ImportError("You need mpi4py to use the uvsim module. "
+                          "Install it by running pip install pyuvsim[sim] "
+                          "or pip install pyuvsim[all] if you also want h5py "
+                          "and line_profiler installed.")
 
     mpi.start_mpi()
     rank = mpi.get_rank()
@@ -418,7 +424,10 @@ def run_uvsim(params, return_uv=False):
         uv_out (UVData): Finished simulation results. (if return_uv is True)
     """
     if mpi is None:
-        raise ImportError("You need mpi to use the uvsim module. Install pyuvsim[sim]")
+        raise ImportError("You need mpi4py to use the uvsim module. "
+                          "Install it by running pip install pyuvsim[sim] "
+                          "or pip install pyuvsim[all] if you also want h5py "
+                          "and line_profiler installed.")
 
     mpi.start_mpi()
     rank = mpi.get_rank()
