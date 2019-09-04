@@ -130,6 +130,7 @@ def test_shared_mem():
     pytest.raises(ValueError, sA.itemset, 0, 3.0)
 
 
+@pytest.mark.skip
 def test_mpi_counter():
     # This test should be run in parallel to check likely bug sources.
     mpi.start_mpi()
