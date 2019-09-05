@@ -720,4 +720,6 @@ def test_get_beam_jones():
     assert beam.freq_interp_kind == 'linear'
     jones2 = antenna1.get_beam_jones(array, source_altaz, freq)
 
-    assert jones2 == jones0 and jones1 == jones and jones1 == jones0
+    assert (np.all(jones2 == jones0)
+            and np.all(jones1 == jones)
+            and np.all(jones1 == jones0))
