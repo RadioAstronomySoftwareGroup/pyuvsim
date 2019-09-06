@@ -4,13 +4,15 @@
 # Licensed under the 3-clause BSD License
 
 import argparse
-import numpy as np
 import yaml
-import os
+import numpy as np
 import sys
 import resource
+import time as pytime
+
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
+import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim import mpi, profiling, simsetup, uvsim
 
@@ -29,6 +31,7 @@ parser.add_argument('--Nbls', dest='Nbls', type=int, default=1)
 parser.add_argument('--beam', dest='beam', type=str, default='uniform')
 parser.add_argument('--prof_out', dest='prof_out', type=str, default='time_profile.out')
 parser.add_argument('--mem_out', dest='mem_out', type=str, default='memory_usage.out')
+parser.add_argument('--time_out', dest='time_out', type=str, default='time_usage.out')
 
 args = parser.parse_args()
 
@@ -42,19 +45,26 @@ min_alt = 70  # Degrees
 mpi.start_mpi()
 rank = mpi.get_rank()
 
+if rank == 0:
+    t0 = pytime.time()
+
 beam_list = None
 beam_dict = None
 input_uv = UVData()
 mock_keywords = None
 catalog = None
 profiling.set_profiler(outfile_name=args.prof_out)
-if rank == 0:
 
+if rank == 0:
+    print("{} freqs, {} times, {} bls, {} srcs, {} beam".format(args.Nfreqs, args.Ntimes, args.Nbls, args.Nsrcs, args.beam))
     params['freq']['Nfreqs'] = args.Nfreqs
     params['time']['Ntimes'] = args.Ntimes
     params['sources'] = {'catalog': 'mock'}
 
     input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(params)
+
+    if input_uv.Nbls < args.Nbls:
+        raise ValueError('Cannot profile for more than {} baselines, requeted {}'.format(input_uv.Nbls, args.Nbls))
 
     # Baseline selection:
     input_uv.baseline_array = np.repeat(input_uv.baseline_array[:args.Nbls], args.Ntimes)
@@ -88,6 +98,7 @@ if rank == 0:
 
     mock_keywords = {'mock_arrangement': 'random', 'Nsrcs': args.Nsrcs,
                      'min_alt': min_alt, 'time': input_uv.time_array[0]}
+    print("Beam: {}".format(beam_list[0]))
     params['sources'].update(**mock_keywords)
 
     # Catalog setup
@@ -110,6 +121,11 @@ comm.Barrier()
 memory_usage_GB = comm.gather(memory_usage_GB, root=0)
 
 if rank == 0:
+    elapsed_time_sec = pytime.time() - t0
+    print('Elapsed: ' + str(elapsed_time_sec))
+    with open(args.time_out, 'w') as timefile:
+        timefile.write(str(elapsed_time_sec))
+
     memory_usage_GB = np.min(memory_usage_GB)
     print('Mem_usage: ' + str(memory_usage_GB))
     with open(args.mem_out, 'w') as memfile:
