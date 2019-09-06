@@ -9,7 +9,6 @@ import sys
 import six
 import yaml
 from astropy.coordinates import EarthLocation
-import astropy.constants as const
 import astropy.units as units
 from astropy.time import Time
 from astropy.units import Quantity

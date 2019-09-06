@@ -6,7 +6,6 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import healpy as hp
-import h5py
 import os
 from astropy import units
 from astropy.coordinates import SkyCoord, EarthLocation, Angle
