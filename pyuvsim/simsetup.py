@@ -544,6 +544,7 @@ def parse_telescope_params(tele_params, config_path=''):
 
     # if provided, parse sections related to beam files and types
     if not tele_config:
+        beam_dict = {n : 0 for n in antnames}
         return return_dict, beam_list, beam_dict
 
     return_dict['telescope_config_name'] = telescope_config_name
