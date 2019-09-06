@@ -694,3 +694,32 @@ def test_source_splitting():
     # Reset spoofed parameters.
     del os.environ['SLURM_MEM_PER_NODE']
     pyuvsim.mpi.Npus_node = 1
+
+
+def test_get_beam_jones():
+    # check setting the interpolation method
+
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
+
+    beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
+    beam.freq_interp_kind = None
+    beam.interpolation_function = 'az_za_simple'
+    beam_list = [beam]
+    antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 10, 0]), 0)
+    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+    source_altaz = np.array([[0.0], [np.pi / 4.]])
+    freq = 100e6 * units.Hz
+
+    simtest.assert_raises_message(ValueError, 'freq_interp_kind must be set',
+                                  antenna1.get_beam_jones, array, source_altaz, freq)
+
+    jones = antenna1.get_beam_jones(array, source_altaz, freq, freq_interp_kind='cubic')
+    assert beam.freq_interp_kind == 'cubic'
+    jones0 = antenna1.get_beam_jones(array, source_altaz, freq)
+    jones1 = antenna1.get_beam_jones(array, source_altaz, freq, freq_interp_kind='linear')
+    assert beam.freq_interp_kind == 'linear'
+    jones2 = antenna1.get_beam_jones(array, source_altaz, freq)
+
+    assert (np.all(jones2 == jones0)
+            and np.all(jones1 == jones)
+            and np.all(jones1 == jones0))

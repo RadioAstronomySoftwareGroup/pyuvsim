@@ -27,22 +27,38 @@ class Antenna(object):
         self.beam_id = beam_id
 
     def get_beam_jones(self, array, source_alt_az, frequency, reuse_spline=True,
-                       interpolation_function='az_za_simple', freq_interp_kind='cubic'):
+                       interpolation_function='az_za_simple', freq_interp_kind=None):
         """
         2x2 array of Efield vectors in Az/Alt
 
-        Args:
-            array: az values to evaluate (same length as za_array)
-            source_az_za: Tuple or list (azimuth, zenith angle) in radians
-            frequency: (float) frequency in Hz
-            reuse_spline: (bool) Reuse interpolation fits in beam objects.
-            inteprolation_function: (string) angular interpolation method
-            freq_interp_kind: (string) 1d interpolation method for frequencies.
+        Parameters
+        ----------
+        array : Telescope object
+            Provides the beam list.
+        source_alt_az : array_like
+            Positions to evaluate in alt/az, where
+            source_alt_az[0] gives list of alts
+            soruce_alt_az[1] gives list of corresponding az
+        frequency : float
+            Frequency in Hz
+        reuse_spline : bool
+            Option to keep and reuse interpolation splines in UVBeam.
+        interpolation_function: str
+            Set the angular interpolation function on the UVBeam.
+            See UVBeam.interp for options.
+            Defaults to az_za_simple.
+        freq_interp_kind : str
+            Interpolation method for frequencies.
+            Note -- This overrides whatever method may be set on the
+            UVBeam objects.
+        Returns
+        -------
 
-        Returns:
-            jones_matrix, A 2x2 float array. The first axis is feed, the
-                          second axis is vector component on the sky in az/za.
+        jones_matrix : (2,2) ndarray, dtype float
+            The first axis is feed, the second axis is vector component
+            on the sky in az/za.
         """
+
         # get_direction_jones needs to be defined on UVBeam
         # 2x2 array of Efield vectors in alt/az
 
@@ -56,13 +72,15 @@ class Antenna(object):
         if array.beam_list[self.beam_id].data_normalization != 'peak':
             array.beam_list[self.beam_id].peak_normalize()
 
+        if freq_interp_kind is not None:
+            array.beam_list[self.beam_id].freq_interp_kind = freq_interp_kind
+
         array.beam_list[self.beam_id].interpolation_function = interpolation_function
 
         interp_data, interp_basis_vector = \
             array.beam_list[self.beam_id].interp(az_array=source_az,
                                                  za_array=source_za,
                                                  freq_array=freq,
-                                                 freq_interp_kind=freq_interp_kind,
                                                  reuse_spline=reuse_spline)
         Ncomponents = source_za.shape[-1]
 

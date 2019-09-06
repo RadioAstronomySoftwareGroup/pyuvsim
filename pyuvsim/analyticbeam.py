@@ -104,7 +104,7 @@ class AnalyticBeam(object):
         pol_strings = ['XX', 'XY', 'YX', 'YY']
         self.polarization_array = np.array([uvutils.polstr2num(ps.upper()) for ps in pol_strings])
 
-    def interp(self, az_array, za_array, freq_array, reuse_spline=None, freq_interp_kind=None):
+    def interp(self, az_array, za_array, freq_array, reuse_spline=None):
         """
         Evaluate the primary beam at given az, za locations (in radians).
 
@@ -116,7 +116,6 @@ class AnalyticBeam(object):
             za_array: za values to evaluate at in radians (same length as az_array)
             freq_array: frequency values to evaluate at
             reuse_spline: Does nothing for analytic beams. Here for compatibility with UVBeam.
-            freq_interp_kind: Does nothing for analytic beams. Here for compatibility with UVBeam.
 
         Returns:
             an array of beam values, shape (Naxes_vec, Nspws, Nfeeds or Npols,
@@ -176,9 +175,9 @@ class AnalyticBeam(object):
             power_data = np.zeros((1, 1, 4) + values.shape, dtype=np.float)
             for pol_i, pair in enumerate(pairs):
                 power_data[:, :, pol_i] = ((interp_data[0, :, pair[0]]
-                                            * np.conj(interp_data[0, :, pair[1]]))
+                                           * np.conj(interp_data[0, :, pair[1]]))
                                            + (interp_data[1, :, pair[0]]
-                                              * np.conj(interp_data[1, :, pair[1]])))
+                                           * np.conj(interp_data[1, :, pair[1]])))
             interp_data = power_data
 
         return interp_data, interp_basis_vector
