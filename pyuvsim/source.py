@@ -9,8 +9,10 @@ from astropy.units import Quantity
 from astropy.time import Time
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 
-from .spherical_coordinates_basis_transformation import spherical_basis_transformation_components
+from . import spherical_coordinates_basis_transformation as scbt
 from . import utils
+
+from scipy.linalg import orthogonal_procrustes
 
 
 class Source(object):
@@ -94,23 +96,65 @@ class Source(object):
         y_c = np.array([0, 1., 0])
         z_c = np.array([0, 0, 1.])
 
-        ''' We are using GCRS rather than ICRS to explicitly neglect the effect of aberration, which is a position-dependent
-        effect, and obtain a proper, orthgonal rotation matrix between the RA/Dec and Alt/Az coordinate systems.  It is
-        not clear (to JEA) what the correct thing for the transformation of Stokes parameters is in the presence of
-        aberration '''
         axes_icrs = SkyCoord(x=x_c, y=y_c, z=z_c,
                              obstime=time,
                              location=telescope_location,
-                             frame='gcrs',
+                             frame='icrs',
                              representation='cartesian')
         axes_altaz = axes_icrs.transform_to('altaz')
         axes_altaz.representation = 'cartesian'
 
-        return np.array(axes_altaz.cartesian.xyz)  # the 3D rotation matrix that defines the mapping (RA,Dec) <--> (Alt,Az)
+        ''' This transformation matrix is generally not orthogonal 
+        to better than 10^-7, so let's fix that. '''
 
+        from scipy.linalg import orthogonal_procrustes as ortho_procr
+        R_screwy = axes_altaz.cartesian.xyz
+        R_really_orthogonal, _ = ortho_procr(R_screwy, np.eye(3)) 
+
+        R_really_orthogonal = np.array(R_really_orthogonal).T # Note the transpose, to be consistent with calculation in scbt
+
+        return R_really_orthogonal  # the 3D rotation matrix that defines the mapping (RA,Dec) <--> (Alt,Az)
+
+    def _calc_rotation_perturbation(self, time, telescope_location):
+
+        # Find mathematical points and vectors for RA/Dec
+        theta_radec = np.pi / 2. - self.dec.rad
+        phi_radec = self.ra.rad
+        radec_vec = scbt.r_hat(theta_radec, phi_radec)
+
+        # Find mathematical points and vectors for Alt/Az
+        alt, az = self.get_alt_az(time, telescope_location)
+        theta_altaz = np.pi / 2. - alt
+        phi_altaz = az
+        altaz_vec = scbt.r_hat(theta_altaz, phi_altaz)
+        
+        R_avg = self._calc_basis_rotation_matrix(time, telescope_location)
+
+        intermediate_vec = np.matmul(R_avg, radec_vec)
+
+        R_perturb = scbt.vecs2rot(intermediate_vec, altaz_vec)
+
+        R_exact = np.matmul(R_perturb, R_avg)
+
+        return R_exact
+                                    
     # Check np.power(cosX,2)+np.power(sinX,2) = 1
-    def _calc_vector_rotation(self, basis_rotation_matrix):
-        cosX, sinX = spherical_basis_transformation_components(self.dec.rad, self.ra.rad, basis_rotation_matrix)
+    def _calc_vector_rotation(self, time, telescope_location): 
+
+        basis_rotation_matrix = self._calc_rotation_perturbation(time, telescope_location)
+
+        # Find mathematical points and vectors for RA/Dec
+        theta_radec = np.pi / 2. - self.dec.rad
+        phi_radec = self.ra.rad
+        radec_vec = scbt.r_hat(theta_radec, phi_radec)
+
+        # Find mathematical points and vectors for Alt/Az
+        alt, az = self.get_alt_az(time, telescope_location)
+        theta_altaz = np.pi / 2. - alt
+        phi_altaz = az
+        altaz_vec = scbt.r_hat(theta_altaz, phi_altaz)
+
+        cosX, sinX = scbt.spherical_basis_transformation_components_two_points(theta_altaz, phi_altaz, theta_radec, phi_radec, basis_rotation_matrix)
 
         return np.array([[cosX, sinX], [-sinX, cosX]])
 
@@ -141,11 +185,11 @@ class Source(object):
             rotation_matrix = np.array([[1, 0], [0, 1]])
         else:
             # Calculate the coherency transformation matrix
-            Rotation = self._calc_basis_rotation_matrix(time, telescope_location)
+            #Rotation = self._calc_basis_rotation_matrix(time, telescope_location)
 
             # This calculation is for a single point on the sphere.  The rotation_matrix below is different for every point
             # on the sphere.
-            rotation_matrix = self._calc_vector_rotation(Rotation)
+            rotation_matrix = self._calc_vector_rotation(time, telescope_location)#Rotation)
 
         coherency_local = np.einsum('ab,bc,cd->ad', rotation_matrix.T,
                                     self.coherency_radec, rotation_matrix)
