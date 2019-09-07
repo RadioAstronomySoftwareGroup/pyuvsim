@@ -152,7 +152,7 @@ def test_param_flux_cuts():
     )
 
     catalog = pyuvsim.simsetup.array_to_skymodel(catalog)
-    for sI in catalog.stokes[0, :]:
+    for sI in catalog.stokes[0, 0, :]:
         assert np.all(0.2 < sI < 1.5)
 
 

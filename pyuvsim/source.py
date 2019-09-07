@@ -79,7 +79,8 @@ class SkyModel(object):
 
 
     def __init__(self, name, ra, dec, stokes,
-                 Nfreqs=1, freq_array=None, rise_lst=None, set_lst=None, spectral_type=None, pos_tol=np.finfo(float).eps):
+                 Nfreqs=1, freq_array=None, rise_lst=None, set_lst=None,
+                 spectral_type=None, pos_tol=np.finfo(float).eps):
         """
         Args:
             name: Unique identifier for the source.
@@ -152,8 +153,9 @@ class SkyModel(object):
 
         self.time = None
 
-        assert np.all([self.Ncomponents == l for l in
-                       [self.ra.size, self.dec.size, self.stokes.shape[2]]]), 'Inconsistent quantity dimensions.'
+        assert np.all(
+            [self.Ncomponents == l for l in [self.ra.size, self.dec.size, self.stokes.shape[2]]]
+        ), 'Inconsistent quantity dimensions.'
 
     def _calc_average_rotation_matrix(self, telescope_location):
         """
@@ -421,13 +423,25 @@ def read_healpix_hdf5(hdf5_filename):
 
 def healpix_to_sky(hpmap, indices, freqs):
     """
-    Convert a healpix map to a set of point source components at given ICRS ra/dec coordinates,
-    with a flux densities defined by stokes parameters.
+    Convert a healpix map in K to a set of point source components in Jy.
 
-    Args:
-        hpmap: healpix map that you get from reading hdf5 file
-        indices: indices from a hdf5 file
-        freqs: frequencies from a hdf5 file
+    Parameters
+    ----------
+    hpmap : array_like of float
+        Stokes-I surface brightness in K, for a set of pixels
+        Shape (Ncomponents, Nfreqs)
+    indices : array_like, int
+        Corresponding HEALPix indices for hpmap.
+    freqs : array_like, float
+        Frequencies in Hz. Shape (Nfreqs)
+
+    Returns
+    -------
+    SkyModel
+
+    Notes
+    -----
+    Currently, this function only converts a HEALPix map with a frequency axis.
     """
     Nside = hp.npix2nside(hpmap.shape[-1])
     dec, ra = hp.pix2ang(Nside, indices, lonlat=True)

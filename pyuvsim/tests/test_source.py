@@ -41,17 +41,13 @@ def test_source_zenith_from_icrs():
     # Check error cases
     simtest.assert_raises_message(
         ValueError, 'ra must be an astropy Angle object. value was: 3.14',
-        pyuvsim.SkyModel, 'icrs_zen', ra.rad, dec.rad, freq.value, [1, 0, 0, 0]
+        pyuvsim.SkyModel, 'icrs_zen', ra.rad, dec.rad, [1, 0, 0, 0]
     )
     simtest.assert_raises_message(
         ValueError, 'dec must be an astropy Angle object. value was: -0.53',
-        pyuvsim.SkyModel, 'icrs_zen', ra, dec.rad, freq.value, [1, 0, 0, 0]
+        pyuvsim.SkyModel, 'icrs_zen', ra, dec.rad, [1, 0, 0, 0]
     )
-    simtest.assert_raises_message(
-        ValueError, 'freq must be an astropy Quantity object. value was: 150000000.0',
-        pyuvsim.SkyModel, 'icrs_zen', ra, dec, freq.value, [1, 0, 0, 0]
-    )
-    zenith_source = pyuvsim.SkyModel('icrs_zen', ra, dec, freq, [1, 0, 0, 0])
+    zenith_source = pyuvsim.SkyModel('icrs_zen', ra, dec, [1, 0, 0, 0])
 
     zenith_source.update_positions(time, array_location)
     zenith_source_lmn = zenith_source.pos_lmn.squeeze()
@@ -105,10 +101,10 @@ def test_pol_coherency_calc():
 
     unpol_srcs_up = (sky.alt_az[0] > 0) * (~inds)
 
-    assert np.allclose(coh_loc[0, 0, unpol_srcs_up], 0.5)
-    assert np.allclose(coh_loc[1, 1, unpol_srcs_up], 0.5)
-    assert np.allclose(coh_loc[1, 0, unpol_srcs_up], 0.0)
-    assert np.allclose(coh_loc[0, 1, unpol_srcs_up], 0.0)
+    assert np.allclose(coh_loc[0, 0, 0, unpol_srcs_up], 0.5)
+    assert np.allclose(coh_loc[1, 1, 0, unpol_srcs_up], 0.5)
+    assert np.allclose(coh_loc[1, 0, 0, unpol_srcs_up], 0.0)
+    assert np.allclose(coh_loc[0, 1, 0, unpol_srcs_up], 0.0)
 
 
 def test_calc_basis_rotation_matrix():
@@ -337,7 +333,6 @@ def test_healpix_to_sky():
     hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(
         os.path.join(SIM_DATA_PATH, 'test_file.hdf5')
     )
-
     m = (m.T / simutils.jy2Tsr(freqs, bm=hp.nside2pixarea(Nside), mK=False)).T
     sky = pyuvsim.source.healpix_to_sky(hpmap, inds, freqs)
     assert np.allclose(sky.stokes[0], m)
