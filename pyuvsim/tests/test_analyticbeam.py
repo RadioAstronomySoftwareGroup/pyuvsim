@@ -42,7 +42,7 @@ def test_uniform_beam():
 
     n_freqs = 1
     interpolated_beam, interp_basis_vector = beam.interp(
-            az_array=az_vals, za_array=za_vals, freq_array=np.array(freq_vals)
+        az_array=az_vals, za_array=za_vals, freq_array=np.array(freq_vals)
     )
     expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=np.float)
     expected_data[1, 0, 0, :, :] = 1
@@ -71,7 +71,6 @@ def test_airy_beam_values():
     az_vals = sources.alt_az[1]
     freq_vals = np.array([10**8])
 
-    n_freqs = 1
     interpolated_beam, interp_basis_vector = beam.interp(
         az_array=az_vals, za_array=za_vals, freq_array=freq_vals
     )
