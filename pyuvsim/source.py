@@ -370,8 +370,8 @@ def read_healpix_hdf5(hdf5_filename, freq_ind):
 
 def healpix_to_sky(hpmap, indices, freqs):
     """
-    Convert a healpix map to a set of point source components at given ICRS ra/dec coordinates, with a
-    flux densities defined by stokes parameters.
+    Convert a healpix map to a set of point source components at given ICRS ra/dec coordinates,
+    with a flux densities defined by stokes parameters.
 
     Args:
         hpmap: healpix map that you get from reading hdf5 file

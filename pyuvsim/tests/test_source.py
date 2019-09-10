@@ -318,7 +318,8 @@ def test_read_healpix_hdf5():
 
     frequencies = 100000000 * np.ones(len(indices))
 
-    hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
+    hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(
+        os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
 
     assert np.allclose(hpmap, m)
     assert np.allclose(inds, indices)
@@ -333,7 +334,8 @@ def test_healpix_to_sky():
     m = np.arange(Npix)
     m[ipix_disc] = m.max()
 
-    hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
+    hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(
+        os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
     m = m / simutils.jy2Tsr(freqs, bm=hp.nside2pixarea(Nside), mK=False)
     sky = pyuvsim.source.healpix_to_sky(hpmap, inds, freqs)
     assert np.allclose(sky.stokes[0], m)
@@ -342,7 +344,8 @@ def test_healpix_to_sky():
 def test_units_healpix_to_sky():
     Nside = 32
     beam_area = hp.pixelfunc.nside2pixarea(Nside) * units.sr
-    hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
+    hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(
+        os.path.join(SIM_DATA_PATH, 'test_file.hdf5'), 0)
     freqs = freqs * units.Hz
     stokes = (hpmap * units.K).to(units.Jy, units.brightness_temperature(beam_area, freqs))
     sky = pyuvsim.source.healpix_to_sky(hpmap, inds, freqs)
