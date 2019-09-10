@@ -76,7 +76,7 @@ def spherical_basis_transformation_components_two_points(beta, alpha, theta, phi
     ph = phi_hat(theta, phi)
 
     bh = np.einsum('ab...,b...->a...', R.T, theta_hat(beta, alpha))
-    ah = np.einsum('ab...,b...->a...', R.T, phi_hat(beta, alpha))
+    # ah = np.einsum('ab...,b...->a...', R.T, phi_hat(beta, alpha))
 
     cosX = np.einsum('a...,a...', bh, th)
     sinX = np.einsum('a...,a...', bh, ph)
@@ -114,8 +114,8 @@ def pts2rot(theta1, phi1, theta2, phi2):
     Probably done somewhere else better.
 
     """
-    r1 = scbt.r_hat(theta1, phi1)
-    r2 = scbt.r_hat(theta2, phi2)
+    r1 = r_hat(theta1, phi1)
+    r2 = r_hat(theta2, phi2)
     norm = np.cross(r1, r2)
     # Note that Psi is between 0 and pi
     sinPsi = np.sqrt(np.dot(norm, norm))

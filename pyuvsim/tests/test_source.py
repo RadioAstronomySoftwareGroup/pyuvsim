@@ -118,6 +118,7 @@ def test_calc_basis_rotation_matrix():
     source = pyuvsim.source.SkyModel('Test', Angle(12. * units.hr),
                                      Angle(-30. * units.deg),
                                      150 * units.MHz, [1., 0., 0., 0.])
+    source.update_positions(time, telescope_location)
 
     basis_rot_matrix = source._calc_average_rotation_matrix(telescope_location)
 
@@ -137,6 +138,7 @@ def test_calc_vector_rotation():
     source = pyuvsim.source.SkyModel('Test', Angle(12. * units.hr),
                                      Angle(-30. * units.deg),
                                      150 * units.MHz, [1., 0., 0., 0.])
+    source.update_positions(time, telescope_location)
 
     coherency_rotation = np.squeeze(source._calc_coherency_rotation(telescope_location))
 
