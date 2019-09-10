@@ -104,3 +104,40 @@ def test_pol_coherency_calc():
     assert np.allclose(coh_loc[1, 1, unpol_srcs_up], 0.5)
     assert np.allclose(coh_loc[1, 0, unpol_srcs_up], 0.0)
     assert np.allclose(coh_loc[0, 1, unpol_srcs_up], 0.0)
+
+
+def test_calc_basis_rotation_matrix():
+    """
+    This tests whether the 3-D rotation matrix from RA/Dec to Alt/Az is
+    actually a rotation matrix (R R^T = R^T R = I)
+    """
+
+    time = Time('2018-01-01 00:00')
+    telescope_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
+
+    source = pyuvsim.source.SkyModel('Test', Angle(12. * units.hr),
+                                     Angle(-30. * units.deg),
+                                     150 * units.MHz, [1., 0., 0., 0.])
+
+    basis_rot_matrix = source._calc_average_rotation_matrix(telescope_location)
+
+    assert np.allclose(np.matmul(basis_rot_matrix, basis_rot_matrix.T), np.eye(3))
+    assert np.allclose(np.matmul(basis_rot_matrix.T, basis_rot_matrix), np.eye(3))
+
+
+def test_calc_vector_rotation():
+    """
+    This checks that the 2-D coherency rotation matrix is unit determinant.
+    I suppose we could also have checked (R R^T = R^T R = I)
+    """
+
+    time = Time('2018-01-01 00:00')
+    telescope_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
+
+    source = pyuvsim.source.SkyModel('Test', Angle(12. * units.hr),
+                                     Angle(-30. * units.deg),
+                                     150 * units.MHz, [1., 0., 0., 0.])
+
+    coherency_rotation = np.squeeze(source._calc_coherency_rotation(telescope_location))
+
+    assert(np.isclose(np.linalg.det(coherency_rotation), 1))

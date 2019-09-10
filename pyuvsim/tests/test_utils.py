@@ -202,3 +202,30 @@ def test_file_format_in_filing_dict():
 
     # Cleanup
     os.remove(ofname + '.uvfits')
+
+
+def test_stokes_to_coherency():
+
+    stokesI = 4.5
+    stokesQ = -0.3
+    stokesU = 1.2
+    stokesV = -0.15
+    stokes = np.array([stokesI, stokesQ, stokesU, stokesV])
+
+    expected_coherency = .5 * np.array([[4.2, 1.2 + 0.15j], [1.2 - 0.15j, 4.8]])
+
+    coherency = simutils.stokes_to_coherency(stokes)
+    assert np.allclose(expected_coherency, coherency)
+
+    back_to_stokes = simutils.coherency_to_stokes(coherency)
+
+    assert np.allclose(stokes, back_to_stokes)
+
+    # again, with multiple sources
+    stokes = np.array([[stokesI, stokesQ, stokesU, stokesV],
+                       [stokesI, stokesQ, stokesU, stokesV]]).T
+
+    coherency = simutils.stokes_to_coherency(stokes)
+    back_to_stokes = simutils.coherency_to_stokes(coherency)
+
+    assert np.allclose(stokes, back_to_stokes)
