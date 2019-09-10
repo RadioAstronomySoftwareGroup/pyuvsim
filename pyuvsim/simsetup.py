@@ -591,6 +591,8 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
             catalog = read_text_catalog(catalog, return_table=True)
         elif catalog.endswith('vot'):
             catalog = read_votable_catalog(catalog, return_table=True)
+        elif catalog.endswith('hdf5'):
+            catalog = read_healpix_hdf5(catalog)
 
     # Do source selections, if any.
     catalog = source_cuts(catalog, input_uv=input_uv, **source_select_kwds)
