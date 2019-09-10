@@ -29,7 +29,7 @@ try:
 except ImportError:
     def get_rank():
         return 0
-from .source import SkyModel
+from .source import SkyModel, read_healpix_hdf5
 from .utils import check_file_exists_and_increment
 
 
