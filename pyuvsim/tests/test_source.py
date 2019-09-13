@@ -180,6 +180,7 @@ def test_polarized_source_visibilities():
     src_astropy = SkyCoord(ra=zenith_icrs.ra, dec=zenith_icrs.dec,
                            obstime=times, location=array_location)
     src_astropy_altaz = src_astropy.transform_to('altaz')
+    assert np.isclose(src_astropy_altaz.alt.rad[zero_indx], np.pi / 2)
 
     freq = (150e6 * units.Hz)
     stokes_radec = [1, -0.2, 0.3, 0.1]
@@ -245,6 +246,7 @@ def test_polarized_source_smooth_visibilities():
     src_astropy = SkyCoord(ra=zenith_icrs.ra, dec=zenith_icrs.dec,
                            obstime=times, location=array_location)
     src_astropy_altaz = src_astropy.transform_to('altaz')
+    assert np.isclose(src_astropy_altaz.alt.rad[zero_indx], np.pi / 2)
 
     freq = (150e6 * units.Hz)
     stokes_radec = [1, -0.2, 0.3, 0.1]
@@ -270,11 +272,9 @@ def test_polarized_source_smooth_visibilities():
                                       coherency_matrix_local, np.conj(Jbeam))
 
     # test that all the instrumental coherencies are smooth
-    coherency_label = ['XX', 'XY', 'YX', 'YY']
     t_diff_sec = np.diff(times.jd) * 24 * 3600
     for pol_i in [0, 1]:
         for pol_j in [0, 1]:
-            sp = 2 * pol_i + pol_j
             real_coherency = coherency_instr_local[pol_i, pol_j, :].real
             real_derivative = np.diff(real_coherency) / t_diff_sec
             real_derivative_diff = np.diff(real_derivative)
@@ -286,7 +286,6 @@ def test_polarized_source_smooth_visibilities():
 
     # test that the stokes coherencies are smooth
     stokes_instr_local = simutils.coherency_to_stokes(coherency_instr_local)
-    stokes_label = ['pI', 'pQ', 'pU', 'pV']
     for pol_i in range(4):
         real_stokes = stokes_instr_local[pol_i, :].real
         real_derivative = np.diff(real_stokes) / t_diff_sec
