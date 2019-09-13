@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 
+import six
 import numpy as np
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy.time import Time
