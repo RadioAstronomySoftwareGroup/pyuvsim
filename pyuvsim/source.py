@@ -144,11 +144,20 @@ class SkyModel(object):
         y_c = np.array([0, 1., 0])
         z_c = np.array([0, 0, 1.])
 
+        # astropy 2 vs 3 use a different keyword name
+        if six.PY2:
+            rep_keyword = 'representation'
+        else:
+            rep_keyword = 'representation_type'
+
+        rep_dict = {}
+        rep_dict[rep_keyword] = 'cartesian'
         axes_icrs = SkyCoord(x=x_c, y=y_c, z=z_c, obstime=self.time,
                              location=telescope_location, frame='icrs',
-                             representation_type='cartesian')
+                             **rep_dict)
+
         axes_altaz = axes_icrs.transform_to('altaz')
-        axes_altaz.representation_type = 'cartesian'
+        setattr(axes_altaz, rep_keyword, 'cartesian')
 
         ''' This transformation matrix is generally not orthogonal
             to better than 10^-7, so let's fix that. '''
