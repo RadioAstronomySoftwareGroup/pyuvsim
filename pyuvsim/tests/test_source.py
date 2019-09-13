@@ -11,6 +11,7 @@ from astropy.time import Time
 
 import pyuvsim
 import pyuvsim.tests as simtest
+import pyuvsim.utils as simutils
 
 
 def test_source_zenith_from_icrs():
@@ -143,3 +144,153 @@ def test_calc_vector_rotation():
     coherency_rotation = np.squeeze(source._calc_coherency_rotation(telescope_location))
 
     assert(np.isclose(np.linalg.det(coherency_rotation), 1))
+
+
+def analytic_beam_jones(za, az, sigma=0.3):
+    """
+    Analytic beam with sensible polarization response.
+
+    Required for testing polarized sources.
+    """
+    # B = np.exp(-np.tan(za/2.)**2. / 2. / sigma**2.)
+    B = 1
+    J = np.array([[np.cos(za) * np.sin(az), np.cos(az)],
+                 [np.cos(az) * np.cos(za), -np.sin(az)]])
+    return B * J
+
+
+def test_polarized_source_visibilities():
+    """Test that visibilities of a polarized source match prior calculations."""
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
+    time0 = Time('2018-03-01 18:00:00', scale='utc', location=array_location)
+
+    ha_off = 1 / 6.
+    ha_delta = 0.1
+    time_offsets = np.arange(-ha_off, ha_off + ha_delta, ha_delta)
+    zero_indx = np.argmin(np.abs(time_offsets))
+    # make sure we get a true zenith time
+    time_offsets[zero_indx] = 0.
+    times = time0 + time_offsets * units.hr
+    ntimes = times.size
+
+    zenith = SkyCoord(alt=90. * units.deg, az=0 * units.deg, frame='altaz',
+                      obstime=time0, location=array_location)
+    zenith_icrs = zenith.transform_to('icrs')
+
+    src_astropy = SkyCoord(ra=zenith_icrs.ra, dec=zenith_icrs.dec,
+                           obstime=times, location=array_location)
+    src_astropy_altaz = src_astropy.transform_to('altaz')
+
+    freq = (150e6 * units.Hz)
+    stokes_radec = [1, -0.2, 0.3, 0.1]
+
+    decoff = 0.0 * units.arcmin  # -0.17 * units.arcsec
+    raoff = 0.0 * units.arcsec
+
+    source = pyuvsim.SkyModel('icrs_zen', zenith_icrs.ra + raoff,
+                              zenith_icrs.dec + decoff, freq, stokes_radec)
+
+    coherency_matrix_local = np.zeros([2, 2, ntimes], dtype='complex128')
+    alts = np.zeros(ntimes)
+    azs = np.zeros(ntimes)
+    for ti, time in enumerate(times):
+        source.update_positions(time, telescope_location=array_location)
+        alt, az = source.alt_az
+        alts[ti] = alt
+        azs[ti] = az
+
+        coherency_tmp = source.coherency_calc(array_location).squeeze()
+        coherency_matrix_local[:, :, ti] = coherency_tmp
+
+    zas = np.pi / 2. - alts
+    Jbeam = analytic_beam_jones(zas, azs)
+    coherency_instr_local = np.einsum('ab...,bc...,dc...->ad...', Jbeam,
+                                      coherency_matrix_local, np.conj(Jbeam))
+
+    expected_instr_local = np.array(
+        [[[0.60632557 + 0.00000000e+00j, 0.6031185 - 2.71050543e-20j,
+           0.60059597 + 0.00000000e+00j, 0.59464231 + 5.42101086e-20j,
+           0.58939657 + 0.00000000e+00j],
+          [0.14486082 + 4.99646382e-02j, 0.14776209 + 4.99943414e-02j,
+           0.14960097 + 5.00000000e-02j, 0.15302905 + 4.99773672e-02j,
+           0.15536376 + 4.99307015e-02j]],
+         [[0.14486082 - 4.99646382e-02j, 0.14776209 - 4.99943414e-02j,
+           0.14960097 - 5.00000000e-02j, 0.15302905 - 4.99773672e-02j,
+           0.15536376 - 4.99307015e-02j],
+          [0.39282051 + 0.00000000e+00j, 0.39674527 + 0.00000000e+00j,
+           0.39940403 + 0.00000000e+00j, 0.40481652 + 5.42101086e-20j,
+           0.40895287 + 0.00000000e+00j]]])
+
+    assert np.allclose(coherency_instr_local, expected_instr_local)
+
+
+def test_polarized_source_smooth_visibilities():
+    """Test that visibilities change smoothly as a polarized source transits."""
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
+    time0 = Time('2018-03-01 18:00:00', scale='utc', location=array_location)
+
+    ha_off = 1
+    ha_delta = 0.01
+    time_offsets = np.arange(-ha_off, ha_off + ha_delta, ha_delta)
+    zero_indx = np.argmin(np.abs(time_offsets))
+    # make sure we get a true zenith time
+    time_offsets[zero_indx] = 0.
+    times = time0 + time_offsets * units.hr
+    ntimes = times.size
+
+    zenith = SkyCoord(alt=90. * units.deg, az=0 * units.deg, frame='altaz',
+                      obstime=time0, location=array_location)
+    zenith_icrs = zenith.transform_to('icrs')
+
+    src_astropy = SkyCoord(ra=zenith_icrs.ra, dec=zenith_icrs.dec,
+                           obstime=times, location=array_location)
+    src_astropy_altaz = src_astropy.transform_to('altaz')
+
+    freq = (150e6 * units.Hz)
+    stokes_radec = [1, -0.2, 0.3, 0.1]
+
+    source = pyuvsim.SkyModel('icrs_zen', zenith_icrs.ra,
+                              zenith_icrs.dec, freq, stokes_radec)
+
+    coherency_matrix_local = np.zeros([2, 2, ntimes], dtype='complex128')
+    alts = np.zeros(ntimes)
+    azs = np.zeros(ntimes)
+    for ti, time in enumerate(times):
+        source.update_positions(time, telescope_location=array_location)
+        alt, az = source.alt_az
+        alts[ti] = alt
+        azs[ti] = az
+
+        coherency_tmp = source.coherency_calc(array_location).squeeze()
+        coherency_matrix_local[:, :, ti] = coherency_tmp
+
+    zas = np.pi / 2. - alts
+    Jbeam = analytic_beam_jones(zas, azs)
+    coherency_instr_local = np.einsum('ab...,bc...,dc...->ad...', Jbeam,
+                                      coherency_matrix_local, np.conj(Jbeam))
+
+    # test that all the instrumental coherencies are smooth
+    coherency_label = ['XX', 'XY', 'YX', 'YY']
+    t_diff_sec = np.diff(times.jd) * 24 * 3600
+    for pol_i in [0, 1]:
+        for pol_j in [0, 1]:
+            sp = 2 * pol_i + pol_j
+            real_coherency = coherency_instr_local[pol_i, pol_j, :].real
+            real_derivative = np.diff(real_coherency) / t_diff_sec
+            real_derivative_diff = np.diff(real_derivative)
+            assert np.max(np.abs(real_derivative_diff)) < 1e-6
+            imag_coherency = coherency_instr_local[pol_i, pol_j, :].imag
+            imag_derivative = np.diff(imag_coherency) / t_diff_sec
+            imag_derivative_diff = np.diff(imag_derivative)
+            assert np.max(np.abs(imag_derivative_diff)) < 1e-6
+
+    # test that the stokes coherencies are smooth
+    stokes_instr_local = simutils.coherency_to_stokes(coherency_instr_local)
+    stokes_label = ['pI', 'pQ', 'pU', 'pV']
+    for pol_i in range(4):
+        real_stokes = stokes_instr_local[pol_i, :].real
+        real_derivative = np.diff(real_stokes) / t_diff_sec
+        real_derivative_diff = np.diff(real_derivative)
+        assert np.max(np.abs(real_derivative_diff)) < 1e-6
+        imag_stokes = stokes_instr_local[pol_i, :].imag
+        assert np.all(imag_stokes == 0)
