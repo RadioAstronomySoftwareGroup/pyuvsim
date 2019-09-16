@@ -197,6 +197,8 @@ def test_polarized_source_visibilities():
     for ti, time in enumerate(times):
         source.update_positions(time, telescope_location=array_location)
         alt, az = source.alt_az
+        assert alt == src_astropy_altaz[ti].alt.radian
+        assert az == src_astropy_altaz[ti].az.radian
         alts[ti] = alt
         azs[ti] = az
 
@@ -260,6 +262,8 @@ def test_polarized_source_smooth_visibilities():
     for ti, time in enumerate(times):
         source.update_positions(time, telescope_location=array_location)
         alt, az = source.alt_az
+        assert alt == src_astropy_altaz[ti].alt.radian
+        assert az == src_astropy_altaz[ti].az.radian
         alts[ti] = alt
         azs[ti] = az
 

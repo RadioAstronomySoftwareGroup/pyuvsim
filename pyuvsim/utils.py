@@ -302,7 +302,7 @@ def stokes_to_coherency(stokes_vector):
     Parameters
     ----------
     stokes_vector : array_like of float
-        Vector(s) of stokes parameters, shape(4,) or (4, Ncomponents)
+        Vector(s) of stokes parameters in order [I, Q, U, V], shape(4,) or (4, Ncomponents)
 
     Returns
     -------
@@ -329,7 +329,7 @@ def stokes_to_coherency(stokes_vector):
 
 def coherency_to_stokes(coherency_matrix):
     """
-    Convert coherency matrix to vector of 4 Stokes parameter in order [I, Q, U , V]
+    Convert coherency matrix to vector of 4 Stokes parameter in order [I, Q, U, V]
 
     Parameters
     ----------
@@ -343,7 +343,7 @@ def coherency_to_stokes(coherency_matrix):
     """
     coherency_arr = np.asarray(coherency_matrix)
     initial_shape = coherency_arr.shape
-    if initial_shape[0] != 2 or initial_shape[1] != 2:
+    if len(initial_shape) < 2 or initial_shape[0] != 2 or initial_shape[1] != 2:
         raise ValueError('First two dimensions of coherency_matrix must be length 2.')
 
     if coherency_arr.size == 4 and len(initial_shape) == 2:

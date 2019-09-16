@@ -205,7 +205,7 @@ class SkyModel(object):
         for src_i in range(self.Ncomponents):
             intermediate_vec = np.matmul(R_avg, radec_vec[:, src_i])
 
-            R_perturb = scbt.vecs2rot(intermediate_vec, altaz_vec[:, src_i])
+            R_perturb = scbt.vecs2rot(r1=intermediate_vec, r2=altaz_vec[:, src_i])
 
             R_exact[:, :, src_i] = np.matmul(R_perturb, R_avg)
 
@@ -238,11 +238,11 @@ class SkyModel(object):
 
         coherency_rot_matrix = np.zeros((2, 2, self.Ncomponents), dtype=np.float)
         for src_i in range(self.Ncomponents):
-            cosX, sinX = scbt.spherical_basis_transformation_components_two_points(
-                theta_altaz[src_i], phi_altaz[src_i], theta_radec[src_i],
-                phi_radec[src_i], basis_rotation_matrix[:, :, src_i])
+            coherency_rot_matrix[:, :, src_i] = scbt.spherical_basis_vector_rotation_matrix(
+                theta_radec[src_i], phi_radec[src_i],
+                basis_rotation_matrix[:, :, src_i],
+                theta_altaz[src_i], phi_altaz[src_i])
 
-            coherency_rot_matrix[:, :, src_i] = np.array([[cosX, sinX], [-sinX, cosX]])
         return coherency_rot_matrix
 
     def coherency_calc(self, telescope_location):

@@ -204,7 +204,7 @@ def test_file_format_in_filing_dict():
     os.remove(ofname + '.uvfits')
 
 
-def test_stokes_to_coherency():
+def test_stokes_tofrom_coherency():
 
     stokesI = 4.5
     stokesQ = -0.3
@@ -229,3 +229,11 @@ def test_stokes_to_coherency():
     back_to_stokes = simutils.coherency_to_stokes(coherency)
 
     assert np.allclose(stokes, back_to_stokes)
+
+    simtest.assert_raises_message(
+        ValueError, 'First dimension of stokes_vector must be length 4.',
+        simutils.stokes_to_coherency, stokes[0:2, :])
+
+    simtest.assert_raises_message(
+        ValueError, 'First two dimensions of coherency_matrix must be length 2.',
+        simutils.coherency_to_stokes, expected_coherency[0, :])
