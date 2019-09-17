@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 import six
 import numpy as np
 from astropy import units
-from astropy.coordinates import SkyCoord, EarthLocation, Angle
+from astropy.coordinates import SkyCoord, EarthLocation
 from astropy.time import Time
 from scipy.linalg import orthogonal_procrustes as ortho_procr
 
@@ -51,7 +51,6 @@ def test_spherical_coordinates_map():
     src_astropy_altaz = src_astropy.transform_to('altaz')
     assert np.isclose(src_astropy_altaz.alt.rad[zero_indx], np.pi / 2)
 
-    coherency_matrix_local = np.zeros([2, 2, ntimes], dtype='complex128')
     alts = np.zeros(ntimes)
     azs = np.zeros(ntimes)
     for ti, time in enumerate(times):
