@@ -138,7 +138,7 @@ def test_spherical_coordinates_map():
 
         if ti == zero_indx:
             assert np.allclose(coherency_rot_matrix_two_pt,
-                               coherency_rot_matrix_one_pt, atol=1e-4)
+                               coherency_rot_matrix_one_pt, atol=1e-3)
         else:
             assert np.allclose(coherency_rot_matrix_two_pt,
                                coherency_rot_matrix_one_pt, atol=1e-14)
