@@ -121,7 +121,7 @@ def test_spherical_coordinates_map():
             assert np.isclose(calc_theta_altaz, theta_altaz)
 
         if ti == zero_indx:
-            assert np.isclose(calc_phi_altaz, phi_altaz, atol=1e-5)
+            assert np.isclose(calc_phi_altaz, phi_altaz, atol=1e-4)
         else:
             assert np.isclose(calc_phi_altaz, phi_altaz)
 
