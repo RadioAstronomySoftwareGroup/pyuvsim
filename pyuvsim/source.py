@@ -8,6 +8,7 @@ import sys
 
 import six
 import numpy as np
+from scipy.linalg import orthogonal_procrustes as ortho_procr
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy.time import Time
 from astropy.units import Quantity
@@ -163,7 +164,6 @@ class SkyModel(object):
         ''' This transformation matrix is generally not orthogonal
             to better than 10^-7, so let's fix that. '''
 
-        from scipy.linalg import orthogonal_procrustes as ortho_procr
         R_screwy = axes_altaz.cartesian.xyz
         R_really_orthogonal, _ = ortho_procr(R_screwy, np.eye(3))
 
@@ -277,11 +277,10 @@ class SkyModel(object):
             # If there are any polarized sources, do rotation.
             rotation_matrix = self._calc_coherency_rotation(telescope_location)
 
-            for src_ind in range(self.Ncomponents):
-                coherency_local[:, :, src_ind] = np.einsum(
-                    'ab,bc,cd->ad', rotation_matrix[:, :, src_ind].T,
-                    self.coherency_radec[:, :, src_ind],
-                    rotation_matrix[:, :, src_ind])
+            coherency_local = np.einsum(
+                'xab,bcx,cdx->adx', rotation_matrix.T,
+                self.coherency_radec,
+                rotation_matrix)
 
         # Zero coherency on sources below horizon.
         coherency_local[:, :, self.horizon_mask] *= 0.0
@@ -320,12 +319,6 @@ class SkyModel(object):
 
         time.location = telescope_location
         lst = time.sidereal_time('apparent')
-
-        cirs_source_coord = skycoord_use.transform_to('cirs')
-        tee_ra = simutils.cirs_to_tee_ra(cirs_source_coord.ra, time)
-
-        self.hour_angle = None
-        self.hour_angle = (lst - tee_ra).rad
 
         self.time = time
         alt_az = np.array([source_altaz.alt.rad, source_altaz.az.rad])
