@@ -375,7 +375,7 @@ def test_freq_parser():
         pyuvsim.parse_frequency_params, subdict
     )
 
-    subdict = {'freq_array': np.random.choice(freq_array, 4, replace=False)}
+    subdict = {'freq_array': freq_array[[0, 1, 4, 8]]}
     simtest.assert_raises_message(ValueError, 'Spacing in frequency array is uneven.',
                                   pyuvsim.parse_frequency_params,
                                   subdict)
