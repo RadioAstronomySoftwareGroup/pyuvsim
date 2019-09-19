@@ -318,7 +318,6 @@ class SkyModel(object):
                                                        location=telescope_location))
 
         time.location = telescope_location
-        lst = time.sidereal_time('apparent')
 
         self.time = time
         alt_az = np.array([source_altaz.alt.rad, source_altaz.az.rad])
