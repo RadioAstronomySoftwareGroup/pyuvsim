@@ -12,7 +12,6 @@ dependencies:
   - astropy>=2.0
   - pip
   - psutil
-  - nose
   - line_profiler
   - h5py
   - pyuvdata
