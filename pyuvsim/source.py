@@ -137,10 +137,12 @@ class SkyModel(object):
         self.horizon_mask = np.zeros(self.Ncomponents).astype(
             bool)  # If true, source component is below horizon.
 
-        print(Nfreqs)
-
-        if freq_array is None:
+        # TODO -- Need a way of passing the spectral_type from catalog to each rank.
+        # For now, if there are multiple frequencies, assume we have one per simulation frequency.
+        if self.spectral_type is None:
             self.spectral_type = 'flat'
+        if self.Nfreqs > 1:
+            self.spectral_type = 'full'
 
         if self.Ncomponents == 1:
             self.stokes = self.stokes.reshape(4, Nfreqs, 1)
@@ -414,7 +416,7 @@ def read_healpix_hdf5(hdf5_filename):
     Args:
         hdf5_filename: path and name of the hdf5 file to read
     """
-    f = h5py.File(hdf5_filename)
+    f = h5py.File(hdf5_filename, 'r')
     hpmap = f['data'][0, ...]    # Remove Nskies axis.
     indices = f['indices'][()]
     freqs = f['freqs'][()]
