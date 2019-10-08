@@ -6,12 +6,15 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 
+import six
 import numpy as np
+from scipy.linalg import orthogonal_procrustes as ortho_procr
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy.time import Time
 from astropy.units import Quantity
 
 from . import utils as simutils
+from . import spherical_coordinates_basis_transformation as scbt
 
 
 def _skymodel_basesize():
@@ -35,6 +38,29 @@ class SkyModel(object):
 
     Used to calculate local coherency matrix for source brightness in AltAz
     frame at a specified time.
+
+    Parameters
+    ----------
+    name : array_like of str
+        Unique identifier for the source.
+    ra : astropy Angle object
+        source RA in J2000 (or ICRS) coordinates, shape (Ncomponents,).
+    dec : astropy Angle object
+        source Dec in J2000 (or ICRS) coordinates, shape (Ncomponents,).
+    stokes : array_like of float
+        4 element vector giving the source [I, Q, U, V], shape (4, Ncomponents).
+    freq : astropy Quantity
+        Reference frequencies of flux values, shape (Ncomponents,).
+    rise_lst : array_like of float
+        Approximate lst (radians) when the source rises, shape (Ncomponents,).
+        Set by coarse horizon cut in simsetup.
+        Default is nan, meaning the source never rises.
+    set_lst : array_like of float
+        Approximate lst (radians) when the source sets, shape (Ncomponents,).
+        Default is None, meaning the source never sets.
+    pos_tol : float
+        position tolerance in degrees, defaults to minimum float in numpy
+        position tolerance in degrees
     """
 
     Ncomponents = None  # Number of point source components represented here.
@@ -50,29 +76,6 @@ class SkyModel(object):
 
     def __init__(self, name, ra, dec, freq, stokes,
                  rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
-        """
-        Args:
-            name: Unique identifier for the source.
-            ra: astropy Angle object, shape (Ncomponents,)
-                source RA in J2000 (or ICRS) coordinates
-            dec: astropy Angle object, shape (Ncomponents,)
-                source Dec in J2000 (or ICRS) coordinates
-            stokes:
-                shape (4, Ncomponents)
-                4 element vector giving the source [I, Q, U, V]
-            freq: astropy quantity, shape (Ncomponents,)
-                reference frequencies of flux values
-            rise_lst: (float), shape (Ncomponents,)
-                Approximate lst (radians) when the source rises.
-                Set by coarse horizon cut in simsetup.
-                Default is nan, meaning the source never rises.
-            set_lst: (float), shape (Ncomponents,)
-                Approximate lst (radians) when the source sets.
-                Default is None, meaning the source never sets.
-            pos_tol: float, defaults to minimum float in numpy
-                position tolerance in degrees
-        """
-
         if not isinstance(ra, Angle):
             raise ValueError('ra must be an astropy Angle object. '
                              'value was: {ra}'.format(ra=ra))
@@ -112,16 +115,135 @@ class SkyModel(object):
         # The coherency is a 2x2 matrix giving electric field correlation in Jy.
         # Multiply by .5 to ensure that Trace sums to I not 2*I
         # Shape = (2,2,Ncomponents)
-        self.coherency_radec = .5 * np.array([[self.stokes[0, :] + self.stokes[1, :],
-                                               self.stokes[2, :] - 1j * self.stokes[3, :]],
-                                              [self.stokes[2, :] + 1j * self.stokes[3, :],
-                                               self.stokes[0, :] - self.stokes[1, :]]])
+        self.coherency_radec = simutils.stokes_to_coherency(self.stokes)
 
         self.time = None
 
         assert np.all([self.Ncomponents == l for l in
                        [self.ra.size, self.dec.size, self.freq.size,
                         self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
+
+    def _calc_average_rotation_matrix(self, telescope_location):
+        """
+        Calculate the "average" rotation matrix from RA/Dec to AltAz.
+
+        This gets us close to the right value, then need to calculate a correction
+        for each source separately.
+
+        Parameters
+        ----------
+        telescope_location : astropy EarthLocation object
+            Location of the telescope.
+
+        Returns
+        -------
+        array of floats
+            Rotation matrix that defines the average mapping (RA,Dec) <--> (Alt,Az),
+            shape (3, 3).
+        """
+        # unit vectors to be transformed by astropy
+        x_c = np.array([1., 0, 0])
+        y_c = np.array([0, 1., 0])
+        z_c = np.array([0, 0, 1.])
+
+        # astropy 2 vs 3 use a different keyword name
+        if six.PY2:
+            rep_keyword = 'representation'
+        else:
+            rep_keyword = 'representation_type'
+
+        rep_dict = {}
+        rep_dict[rep_keyword] = 'cartesian'
+        axes_icrs = SkyCoord(x=x_c, y=y_c, z=z_c, obstime=self.time,
+                             location=telescope_location, frame='icrs',
+                             **rep_dict)
+
+        axes_altaz = axes_icrs.transform_to('altaz')
+        setattr(axes_altaz, rep_keyword, 'cartesian')
+
+        ''' This transformation matrix is generally not orthogonal
+            to better than 10^-7, so let's fix that. '''
+
+        R_screwy = axes_altaz.cartesian.xyz
+        R_really_orthogonal, _ = ortho_procr(R_screwy, np.eye(3))
+
+        # Note the transpose, to be consistent with calculation in scbt
+        R_really_orthogonal = np.array(R_really_orthogonal).T
+
+        return R_really_orthogonal
+
+    def _calc_rotation_matrix(self, telescope_location):
+        """
+        Calculate the true rotation matrix from RA/Dec to AltAz for each component.
+
+        Parameters
+        ----------
+        telescope_location : astropy EarthLocation object
+            Location of the telescope.
+
+        Returns
+        -------
+        array of floats
+            Rotation matrix that defines the mapping (RA,Dec) <--> (Alt,Az),
+            shape (3, 3, Ncomponents).
+        """
+        # Find mathematical points and vectors for RA/Dec
+        theta_radec = np.pi / 2. - self.dec.rad
+        phi_radec = self.ra.rad
+        radec_vec = scbt.r_hat(theta_radec, phi_radec)
+        assert radec_vec.shape == (3, self.Ncomponents)
+
+        # Find mathematical points and vectors for Alt/Az
+        theta_altaz = np.pi / 2. - self.alt_az[0, :]
+        phi_altaz = self.alt_az[1, :]
+        altaz_vec = scbt.r_hat(theta_altaz, phi_altaz)
+        assert altaz_vec.shape == (3, self.Ncomponents)
+
+        R_avg = self._calc_average_rotation_matrix(telescope_location)
+
+        R_exact = np.zeros((3, 3, self.Ncomponents), dtype=np.float)
+        for src_i in range(self.Ncomponents):
+            intermediate_vec = np.matmul(R_avg, radec_vec[:, src_i])
+
+            R_perturb = scbt.vecs2rot(r1=intermediate_vec, r2=altaz_vec[:, src_i])
+
+            R_exact[:, :, src_i] = np.matmul(R_perturb, R_avg)
+
+        return R_exact
+
+    def _calc_coherency_rotation(self, telescope_location):
+        """
+        Calculate the rotation matrix to apply to the RA/Dec coherency to get it into alt/az.
+
+        Parameters
+        ----------
+        telescope_location : astropy EarthLocation object
+            Location of the telescope.
+
+        Returns
+        -------
+        array of floats
+            Rotation matrix that takes the coherency from (RA,Dec) --> (Alt,Az),
+            shape (2, 2, Ncomponents).
+        """
+        basis_rotation_matrix = self._calc_rotation_matrix(telescope_location)
+
+        # Find mathematical points and vectors for RA/Dec
+        theta_radec = np.pi / 2. - self.dec.rad
+        phi_radec = self.ra.rad
+
+        # Find mathematical points and vectors for Alt/Az
+        theta_altaz = np.pi / 2. - self.alt_az[0, :]
+        phi_altaz = self.alt_az[1, :]
+
+        coherency_rot_matrix = np.zeros((2, 2, self.Ncomponents), dtype=np.float)
+        for src_i in range(self.Ncomponents):
+            coherency_rot_matrix[:, :, src_i] = scbt.spherical_basis_vector_rotation_matrix(
+                theta_radec[src_i], phi_radec[src_i],
+                basis_rotation_matrix[:, :, src_i],
+                theta_altaz[src_i], phi_altaz[src_i])
+
+        return coherency_rot_matrix
 
     def coherency_calc(self, telescope_location):
         """
@@ -131,11 +253,15 @@ class SkyModel(object):
         It's specified on the object as a coherency in the ra/dec basis,
         but must be rotated into local alt/az.
 
-        Args:
-            telescope_location: astropy EarthLocation object
+        Parameters
+        ----------
+        telescope_location : astropy EarthLocation object
+            location of the telescope.
 
-        Returns:
-            local coherency in alt/az basis
+        Returns
+        -------
+        array of float
+            local coherency in alt/az basis, shape (2, 2, Ncomponents)
         """
         if not isinstance(telescope_location, EarthLocation):
             raise ValueError('telescope_location must be an astropy EarthLocation object. '
@@ -149,26 +275,12 @@ class SkyModel(object):
 
         if NstokesI < self.Ncomponents:
             # If there are any polarized sources, do rotation.
+            rotation_matrix = self._calc_coherency_rotation(telescope_location)
 
-            # First need to calculate the sin & cos of the parallactic angle
-            # See Meeus's astronomical algorithms eq 14.1
-            # also see Astroplan.observer.parallactic_angle method
-
-            polarized_sources = np.where(~Ionly_mask)[0]
-            sinX = np.sin(self.hour_angle)
-            cosX = (np.tan(telescope_location.lat) * np.cos(self.dec)
-                    - np.sin(self.dec) * np.cos(self.hour_angle))
-
-            # shape (2, 2, Ncomponents)
-            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]]).astype(float)
-            rotation_matrix = rotation_matrix[..., polarized_sources]
-
-            rotation_matrix_T = np.swapaxes(rotation_matrix, 0, 1)
-            coherency_local[:, :, polarized_sources] = np.einsum(
-                'abx,bcx,cdx->adx', rotation_matrix_T,
-                self.coherency_radec[:, :, polarized_sources],
-                rotation_matrix
-            )
+            coherency_local = np.einsum(
+                'xab,bcx,cdx->adx', rotation_matrix.T,
+                self.coherency_radec,
+                rotation_matrix)
 
         # Zero coherency on sources below horizon.
         coherency_local[:, :, self.horizon_mask] *= 0.0
@@ -202,16 +314,10 @@ class SkyModel(object):
             return
 
         skycoord_use = SkyCoord(self.ra, self.dec, frame='icrs')
-        source_altaz = skycoord_use.transform_to(AltAz(obstime=time, location=telescope_location))
+        source_altaz = skycoord_use.transform_to(AltAz(obstime=time,
+                                                       location=telescope_location))
 
         time.location = telescope_location
-        lst = time.sidereal_time('apparent')
-
-        cirs_source_coord = skycoord_use.transform_to('cirs')
-        tee_ra = simutils.cirs_to_tee_ra(cirs_source_coord.ra, time)
-
-        self.hour_angle = None
-        self.hour_angle = (lst - tee_ra).rad
 
         self.time = time
         alt_az = np.array([source_altaz.alt.rad, source_altaz.az.rad])

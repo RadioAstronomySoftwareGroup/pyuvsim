@@ -293,3 +293,67 @@ def iter_array_split(part_index, N, M):
         end = start + length
 
     return range(start, end), end - start
+
+
+def stokes_to_coherency(stokes_vector):
+    """
+    Convert Stokes vector to coherency matrix
+
+    Parameters
+    ----------
+    stokes_vector : array_like of float
+        Vector(s) of stokes parameters in order [I, Q, U, V], shape(4,) or (4, Ncomponents)
+
+    Returns
+    -------
+    coherency matrix : array of float
+        Array of coherencies, shape (2, 2) or (2, 2, Ncomponents)
+    """
+    stokes_arr = np.atleast_1d(np.asarray(stokes_vector))
+    initial_shape = stokes_arr.shape
+    if initial_shape[0] != 4:
+        raise ValueError('First dimension of stokes_vector must be length 4.')
+
+    if stokes_arr.size == 4 and len(initial_shape) == 1:
+        stokes_arr = stokes_arr[:, np.newaxis]
+
+    coherency = .5 * np.array([[stokes_arr[0, :] + stokes_arr[1, :],
+                                stokes_arr[2, :] - 1j * stokes_arr[3, :]],
+                               [stokes_arr[2, :] + 1j * stokes_arr[3, :],
+                                stokes_arr[0, :] - stokes_arr[1, :]]])
+
+    if stokes_arr.size == 4 and len(initial_shape) == 1:
+        coherency = np.squeeze(coherency)
+    return coherency
+
+
+def coherency_to_stokes(coherency_matrix):
+    """
+    Convert coherency matrix to vector of 4 Stokes parameter in order [I, Q, U, V]
+
+    Parameters
+    ----------
+    coherency matrix : array_like of float
+        Array of coherencies, shape (2, 2) or (2, 2, Ncomponents)
+
+    Returns
+    -------
+    stokes_vector : array of float
+        Vector(s) of stokes parameters, shape(4,) or (4, Ncomponents)
+    """
+    coherency_arr = np.asarray(coherency_matrix)
+    initial_shape = coherency_arr.shape
+    if len(initial_shape) < 2 or initial_shape[0] != 2 or initial_shape[1] != 2:
+        raise ValueError('First two dimensions of coherency_matrix must be length 2.')
+
+    if coherency_arr.size == 4 and len(initial_shape) == 2:
+        coherency_arr = coherency_arr[:, :, np.newaxis]
+
+    stokes = np.array([coherency_arr[0, 0, :] + coherency_arr[1, 1, :],
+                       coherency_arr[0, 0, :] - coherency_arr[1, 1, :],
+                       coherency_arr[0, 1, :] + coherency_arr[1, 0, :],
+                       -(coherency_arr[0, 1, :] - coherency_arr[1, 0, :]).imag]).real
+    if coherency_arr.size == 4 and len(initial_shape) == 2:
+        stokes = np.squeeze(stokes)
+
+    return stokes
