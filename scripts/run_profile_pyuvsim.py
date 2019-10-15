@@ -6,6 +6,7 @@
 import argparse
 import yaml
 import numpy as np
+import os
 import sys
 import resource
 import time as pytime
