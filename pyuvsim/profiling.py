@@ -35,7 +35,8 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
 
     Args:
         func_list: list
-            List of function names (strings) to profile. Defaults to ``profiling.default_profile_funcs``.
+            List of function names (strings) to profile.
+            Defaults to ``profiling.default_profile_funcs``.
         rank: int, optional
             Which rank process should write out to file? (only one rank at a time will).
         outfile_name: Filename for printing profiling results.

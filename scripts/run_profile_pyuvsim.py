@@ -13,13 +13,12 @@ import time as pytime
 
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
-import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim import mpi, profiling, simsetup, uvsim
 
 parser = argparse.ArgumentParser(description=("A command-line script "
-                                              "to execute a pyuvsim simulation "
-                                              "for profiling purposes."))
+                                              "to execute a pyuvsim simulation for"
+                                              "profiling purposes."))
 
 paramsfile = os.path.join(SIM_DATA_PATH, 'profiling_params.yaml')
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
@@ -57,7 +56,8 @@ catalog = None
 profiling.set_profiler(outfile_name=args.prof_out)
 
 if rank == 0:
-    print("{} freqs, {} times, {} bls, {} srcs, {} beam".format(args.Nfreqs, args.Ntimes, args.Nbls, args.Nsrcs, args.beam))
+    print("{} freqs, {} times, {} bls, {} srcs, {} beam".format(
+        args.Nfreqs, args.Ntimes, args.Nbls, args.Nsrcs, args.beam))
     params['freq']['Nfreqs'] = args.Nfreqs
     params['time']['Ntimes'] = args.Ntimes
     params['sources'] = {'catalog': 'mock'}
@@ -65,19 +65,19 @@ if rank == 0:
     input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(params)
 
     if input_uv.Nbls < args.Nbls:
-        raise ValueError('Cannot profile for more than {} baselines, requeted {}'.format(input_uv.Nbls, args.Nbls))
+        raise ValueError('Cannot profile for more than {} baselines, requeted {}'.format(
+            input_uv.Nbls, args.Nbls))
 
     # Baseline selection:
     input_uv.baseline_array = np.repeat(input_uv.baseline_array[:args.Nbls], args.Ntimes)
-    input_uv.ant_1_array, input_uv.ant_2_array = input_uv.baseline_to_antnums(
-        input_uv.baseline_array)
+    input_uv.ant_1_array, input_uv.ant_2_array = \
+        input_uv.baseline_to_antnums(input_uv.baseline_array)
     ants_new = np.unique(input_uv.ant_1_array.tolist() + input_uv.ant_2_array.tolist())
     input_uv.antenna_numbers = ants_new
-    # Antnames/numbers are going to be messed up by the baseline selection. Unimportant.
     input_uv.antenna_names = ants_new.astype(str)
     Nants = ants_new.size
-    beam_dict = dict(zip(input_uv.antenna_names, np.zeros(Nants, dtype=int))
-                     )  # For now, all use the same beam model
+    # For now, all use the same beam model
+    beam_dict = dict(zip(input_uv.antenna_names, np.zeros(Nants, dtype=int)))
     input_uv.antenna_positions = input_uv.antenna_positions[:Nants, :]
     input_uv.Nants_data = Nants
     input_uv.Nants_telescope = Nants

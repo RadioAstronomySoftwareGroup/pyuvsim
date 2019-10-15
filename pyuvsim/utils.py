@@ -68,11 +68,9 @@ class progsteps:
                 dt = pytime.time() - self.t0
                 frac_done = count / self.maxval
                 self.remain = dt * (1 / frac_done - 1)
-                ostr = "{:0.2f}% completed. {:0.3f} minutes elapsed."\
-                    " {:0.3f} minutes remaining.".format(
-                        frac_done * 100, dt / 60., self.remain / 60.)
-                ostr += '\n'
-                print(ostr)
+                print(("{:0.2f}% completed. {:0.3f} minutes elapsed."
+                       + "{:0.3f} minutes remaining. \n").format(
+                    frac_done * 100., dt / 60., self.remain / 60.))
                 sys.stdout.flush()
 
     def finish(self):
