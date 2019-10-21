@@ -6,12 +6,13 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import sys
-import healpy as hp
 import h5py
 
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy.time import Time
 from astropy.units import Quantity
+import astropy_healpix
+from astropy_healpix import HEALPix
 
 from . import utils as simutils
 
@@ -290,12 +291,11 @@ def healpix_to_sky(hpmap, indices, freqs):
     -----
     Currently, this function only converts a HEALPix map with a frequency axis.
     """
-    Nside = hp.npix2nside(hpmap.shape[-1])
-    dec, ra = hp.pix2ang(Nside, indices, lonlat=True)
-    dec = Angle(dec, unit='deg')
-    ra = Angle(ra, unit='deg')
+    Nside = astropy_healpix.npix_to_nside(hpmap.shape[-1])
+    ra, dec = astropy_healpix.healpix_to_lonlat(indices, Nside)
     freq = Quantity(freqs, 'hertz')
     stokes = np.zeros((4, len(freq), len(indices)))
-    stokes[0] = (hpmap.T / simutils.jy2Tsr(freq, bm=hp.nside2pixarea(Nside), mK=False)).T
+    stokes[0] = (hpmap.T / simutils.jy2Tsr(freq,
+                                           bm=astropy_healpix.nside_to_pixel_area(Nside), mK=False)).T
     sky = SkyModel(indices.astype('str'), ra, dec, stokes, freq_array=freq, Nfreqs=len(freq))
     return sky
