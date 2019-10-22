@@ -82,33 +82,6 @@ class progsteps:
         self.update(self.maxval)
 
 
-# The frame radio astronomers call the apparent or current epoch is the
-# "true equator & equinox" frame, notated E_upsilon in the USNO circular
-# astropy doesn't have this frame but it's pretty easy to adapt the CIRS frame
-# by modifying the ra to reflect the difference between
-# GAST (Grenwich Apparent Sidereal Time) and the earth rotation angle (theta)
-def tee_to_cirs_ra(tee_ra, time):
-    era = erfa.era00(*get_jd12(time, 'ut1'))
-    theta_earth = Angle(era, unit='rad')
-
-    assert (isinstance(time, Time))
-    assert (isinstance(tee_ra, Angle))
-    gast = time.sidereal_time('apparent', longitude=0)
-    cirs_ra = tee_ra - (gast - theta_earth)
-    return cirs_ra
-
-
-def cirs_to_tee_ra(cirs_ra, time):
-    era = erfa.era00(*get_jd12(time, 'ut1'))
-    theta_earth = Angle(era, unit='rad')
-
-    assert (isinstance(time, Time))
-    assert (isinstance(cirs_ra, Angle))
-    gast = time.sidereal_time('apparent', longitude=0)
-    tee_ra = cirs_ra + (gast - theta_earth)
-    return tee_ra
-
-
 def altaz_to_zenithangle_azimuth(altitude, azimuth):
     """
     Convert from astropy altaz convention to UVBeam az/za convention.
@@ -312,82 +285,56 @@ def iter_array_split(part_index, N, M):
 
     return range(start, end), end - start
 
-
-def stokes_to_coherency(stokes_vector):
+def _skymodel_basesize():
     """
-    Convert Stokes vector to coherency matrix
+    Estimate the memory footprint of a SkyModel with a single source.
+
+    Sum the sizes of the data types that go into SkyModel
+    """
+    attrs = [
+        '', Quantity(1.0, 'Hz'), [0.0] * 4,
+        Angle(np.pi, 'rad'), Angle(np.pi, 'rad'),
+        [1.5] * 4, [0.3] * 2, [0.0] * 3
+    ]
+    return np.sum([sys.getsizeof(a) for a in attrs])
+
+
+def estimate_skymodel_memory_usage(Ncomponents, Nfreqs):
+    """
+    Estimate the memory footprint of a SkyModel by summing the sizes
+    of the data types that go into SkyModel.
+
+    This aims to anticipate the full memory required to handle a SkyModel
+    class in simulation, accounting for its attributes as well as 
+    data generated while used.
 
     Parameters
     ----------
-    stokes_vector : array_like of float
-        Vector(s) of stokes parameters in order [I, Q, U, V], shape(4,) or (4, Nfreqs, Ncomponents)
+
+    Ncomponents : int
+        Number of source components.
+    Nfreqs : int
+        Number of frequencies per source component.
+        (size of SkyModel.freq_array)
 
     Returns
     -------
-    coherency matrix : array of float
-        Array of coherencies, shape (2, 2) or (2, 2, Ncomponents)
+    mem_est : float
+        Estimate of memory usage in bytes
     """
-    stokes_arr = np.atleast_1d(np.asarray(stokes_vector))
-    initial_shape = stokes_arr.shape
-    if initial_shape[0] != 4:
-        raise ValueError('First dimension of stokes_vector must be length 4.')
 
-    if stokes_arr.size == 4 and len(initial_shape) == 1:
-        stokes_arr = stokes_arr[:, np.newaxis, np.newaxis]
+    base_float = [1.5]    # A float
+    base_bool = [True]
+    base_str = ["source_name"]
 
-    coherency = .5 * np.array([[stokes_arr[0, :, :] + stokes_arr[1, :, :],
-                                stokes_arr[2, :, :] - 1j * stokes_arr[3, :, :]],
-                               [stokes_arr[2, :, :] + 1j * stokes_arr[3, :, :],
-                                stokes_arr[0, :, :] - stokes_arr[1, :, :]]])
+    Ncomp_attrs = {'ra': base_float, 'dec': base_float,
+                   'alt_az': 2 * base_float, 'rise_lst': base_float, 'set_lst': base_float,
+                   'pos_lmn': 3 * base_float, 'name': base_str, 'horizon_mask': base_bool}
+    Ncomp_Nfreq_attrs = {'stokes': 4 * base_float,
+                         'coherency_radec': 4 * base_float,
+                         'coherency_local': 4 * base_float}
 
-    if stokes_arr.size == 4 and len(initial_shape) == 1:
-        coherency = np.squeeze(coherency)
-    return coherency
-
-
-def coherency_to_stokes(coherency_matrix):
-    """
-    Convert coherency matrix to vector of 4 Stokes parameter in order [I, Q, U, V]
-
-    Parameters
-    ----------
-    coherency matrix : array_like of float
-        Array of coherencies, shape (2, 2) or (2, 2, Ncomponents)
-
-    Returns
-    -------
-    stokes_vector : array of float
-        Vector(s) of stokes parameters, shape(4,) or (4, Ncomponents)
-    """
-    coherency_arr = np.asarray(coherency_matrix)
-    initial_shape = coherency_arr.shape
-    if len(initial_shape) < 2 or initial_shape[0] != 2 or initial_shape[1] != 2:
-        raise ValueError('First two dimensions of coherency_matrix must be length 2.')
-
-    if coherency_arr.size == 4 and len(initial_shape) == 2:
-        coherency_arr = coherency_arr[:, :, np.newaxis]
-
-    stokes = np.array([coherency_arr[0, 0, :] + coherency_arr[1, 1, :],
-                       coherency_arr[0, 0, :] - coherency_arr[1, 1, :],
-                       coherency_arr[0, 1, :] + coherency_arr[1, 0, :],
-                       -(coherency_arr[0, 1, :] - coherency_arr[1, 0, :]).imag]).real
-    if coherency_arr.size == 4 and len(initial_shape) == 2:
-        stokes = np.squeeze(stokes)
-
-    return stokes
-
-
-def jy2Tsr(f, bm=1.0, mK=False):
-    '''Return [K sr] / [Jy] vs. frequency (in Hz)
-        Arguments:
-            f = frequencies (Hz)
-            bm = Reference solid angle in steradians (Defaults to 1)
-            mK = Return in mK sr instead of K sr
-    '''
-    c_cmps = c.to('cm/s').value  # cm/s
-    k_boltz = 1.380658e-16   # erg/K
-    lam = c_cmps / f  # cm
-    fac = 1.0
-    if mK:
-        fac = 1e3
-    return 1e-23 * lam**2 / (2 * k_boltz * bm) * fac
+    mem_est = np.sum([sys.getsizeof(v) * Ncomponents for k, v in six.iteritems(Ncomp_attrs)])
+    mem_est += np.sum([sys.getsizeof(v) * Ncomponents * Nfreqs
+                       for k, v in six.iteritems(Ncomp_Nfreq_attrs)])
+    return mem_est
