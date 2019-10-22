@@ -16,10 +16,13 @@ from astropy.time import Time
 
 import pyuvsim
 import pyuvsim.tests as simtest
-
 from pyuvdata import UVData
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim import utils as simutils
+
+EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
+single_offzenith_healpix_hdf5_file = os.path.join(SIM_DATA_PATH, 'single_off_zenith_healpix.hdf5')
+
 
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 single_offzenith_healpix_hdf5_file = os.path.join(SIM_DATA_PATH, 'single_off_zenith_healpix.hdf5')

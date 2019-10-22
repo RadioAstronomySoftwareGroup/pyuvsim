@@ -109,6 +109,7 @@ def skymodel_to_array(sky):
     dt = np.dtype(list(zip(fieldnames, fieldtypes, fieldshapes)))
     if sky.Nfreqs == 1:
         sky.freq_array = sky.freq_array[:, None]
+
     arr = np.empty(sky.Ncomponents, dtype=dt)
     arr['source_id'] = sky.name
     arr['ra_j2000'] = sky.ra.value
@@ -138,6 +139,7 @@ def array_to_skymodel(catalog_table):
     if 'rise_lst' in catalog_table.dtype.names:
         rise_lst = catalog_table['rise_lst']
         set_lst = catalog_table['set_lst']
+
     sourcelist = SkyModel(ids, ra, dec, stokes, Nfreqs=source_freqs.size,
                           freq_array=source_freqs, rise_lst=rise_lst, set_lst=set_lst)
 
@@ -345,6 +347,7 @@ def write_catalog_to_file(filename, catalog):
         arr = skymodel_to_array(catalog)
         for src in arr:
             srcid, ra, dec, flux_i, freq = src
+
             fo.write("{}\t{:f}\t{:f}\t{:0.2f}\t{:0.2f}\n".format(
                 srcid, ra, dec, flux_i[0], freq[0]))
 
@@ -721,8 +724,8 @@ def parse_telescope_params(tele_params, config_path=''):
     return_dict['antenna_numbers'] = np.array(antnums)
     antpos_enu = np.vstack((E, N, U)).T
     return_dict['antenna_positions'] = (
-        uvutils.ECEF_from_ENU(antpos_enu, *telescope_location)
-        - tele_params['telescope_location']
+        uvutils.ECEF_from_ENU(antpos_enu, *telescope_location) -
+        tele_params['telescope_location']
     )
     return_dict['array_layout'] = layout_csv
     return_dict['telescope_location'] = tuple(tele_params['telescope_location'])
@@ -819,9 +822,9 @@ def parse_frequency_params(freq_params):
                                  " must be included in parameters:" + kws_used)
             if sf and ef:
                 freq_params['bandwidth'] = (
-                    freq_params['end_freq']
-                    - freq_params['start_freq']
-                    + freq_params['channel_width']
+                    freq_params['end_freq'] -
+                    freq_params['start_freq'] +
+                    freq_params['channel_width']
                 )
                 bw = True
             if bw:
@@ -843,16 +846,16 @@ def parse_frequency_params(freq_params):
         if not sf:
             if ef and bw:
                 freq_params['start_freq'] = (
-                    freq_params['end_freq']
-                    - freq_params['bandwidth']
-                    + freq_params['channel_width']
+                    freq_params['end_freq'] -
+                    freq_params['bandwidth'] +
+                    freq_params['channel_width']
                 )
         if not ef:
             if sf and bw:
                 freq_params['end_freq'] = (
-                    freq_params['start_freq']
-                    + freq_params['bandwidth']
-                    - freq_params['channel_width']
+                    freq_params['start_freq'] +
+                    freq_params['bandwidth'] -
+                    freq_params['channel_width']
                 )
 
         if not np.isclose(freq_params['Nfreqs'] % 1, 0):
@@ -866,8 +869,8 @@ def parse_frequency_params(freq_params):
     if freq_params['Nfreqs'] != 1:
         if not np.allclose(np.diff(freq_arr),
                            freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1)):
-            raise ValueError("Frequency array spacings are not equal to channel width."
-                             + "\nInput parameters are: {}".format(str(init_freq_params)))
+            raise ValueError("Frequency array spacings are not equal to channel width." +
+                             "\nInput parameters are: {}".format(str(init_freq_params)))
 
     Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
     freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
@@ -932,9 +935,9 @@ def parse_time_params(time_params):
                                  "included in parameters: " + kws_used)
             if st and et:
                 time_params['duration'] = (
-                    time_params['end_time']
-                    - time_params['start_time']
-                    + time_params['integration_time'] * dayspersec
+                    time_params['end_time'] -
+                    time_params['start_time'] +
+                    time_params['integration_time'] * dayspersec
                 )
                 dd = True
             if dd:
@@ -960,16 +963,16 @@ def parse_time_params(time_params):
         if not st:
             if et and dd:
                 time_params['start_time'] = (
-                    time_params['end_time']
-                    - time_params['duration']
-                    + inttime_days
+                    time_params['end_time'] -
+                    time_params['duration'] +
+                    inttime_days
                 )
         if not et:
             if st and dd:
                 time_params['end_time'] = (
-                    time_params['start_time']
-                    + time_params['duration']
-                    - inttime_days
+                    time_params['start_time'] +
+                    time_params['duration'] -
+                    inttime_days
                 )
 
         time_arr = np.linspace(time_params['start_time'],
@@ -1569,9 +1572,9 @@ def _complete_uvdata(uv_in, inplace=False):
     else:
         # Note: currently only support a constant spacing of times
         uv_obj.integration_time = (
-            np.ones_like(uv_obj.time_array, dtype=np.float64)
-            * np.diff(np.unique(uv_obj.time_array))[0]
-            * (24. * 60 ** 2)  # Seconds
+            np.ones_like(uv_obj.time_array, dtype=np.float64) *
+            np.diff(np.unique(uv_obj.time_array))[0] *
+            (24. * 60 ** 2)  # Seconds
         )
 
     # Clear existing data, if any.

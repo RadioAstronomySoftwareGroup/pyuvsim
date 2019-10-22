@@ -11,6 +11,7 @@ import h5py
 import six
 import numpy as np
 from scipy.linalg import orthogonal_procrustes as ortho_procr
+
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy.time import Time
 from astropy.units import Quantity
@@ -312,13 +313,11 @@ class SkyModel(object):
             # If there are any polarized sources, do rotation.
             rotation_matrix = self._calc_coherency_rotation(telescope_location)
 
-
-<< << << < HEAD
             coherency_local = np.einsum(
                 'xab,bcx,cdx->adx', rotation_matrix.T,
                 self.coherency_radec,
                 rotation_matrix)
-== == == =
+
             # First need to calculate the sin & cos of the parallactic angle
             # See Meeus's astronomical algorithms eq 14.1
             # also see Astroplan.observer.parallactic_angle method
@@ -338,7 +337,6 @@ class SkyModel(object):
                 self.coherency_radec[:, :, :, polarized_sources],
                 rotation_matrix
             )
->>>>>> > a48749c... added frequency axis to SkyModel
 
         # Zero coherency on sources below horizon.
         coherency_local[:, :, :, self.horizon_mask] *= 0.0

@@ -22,4 +22,4 @@ dependencies:
   - flake8
   - sphinx
   - pypandoc
-  - atropy-healpix
+  - astropy-healpix
