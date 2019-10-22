@@ -29,6 +29,7 @@ def test_hat_errors():
         ValueError, 'theta and phi must have the same shape',
         scbt.phi_hat, [0, 0], [0])
 
+
 @pytest.mark.skip()
 def test_spherical_coordinates_map():
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
