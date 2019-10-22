@@ -394,10 +394,21 @@ class SkyModel(object):
 
 def read_healpix_hdf5(hdf5_filename):
     """
-    Read hdf5 files using h5py and get a healpix map, indices and frequencies
+    Read hdf5 healpix files using h5py and get a healpix map, indices and frequencies
 
-    Args:
-        hdf5_filename: path and name of the hdf5 file to read
+    Parameters
+    ----------
+    hdf5_filename : path and name of the hdf5 file to read
+
+    Returns
+    -------
+    hpmap : array_like of float
+        Stokes-I surface brightness in K, for a set of pixels
+        Shape (Ncomponents, Nfreqs)
+    indices : array_like, int
+        Corresponding HEALPix indices for hpmap.
+    freqs : array_like, float
+        Frequencies in Hz. Shape (Nfreqs)
     """
     f = h5py.File(hdf5_filename, 'r')
     hpmap = f['data'][0, ...]    # Remove Nskies axis.
