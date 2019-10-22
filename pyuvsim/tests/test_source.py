@@ -5,11 +5,9 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-#import healpy as hp
 import os
 import astropy.constants as const
 import astropy_healpix
-from astropy_healpix import HEALPix
 from astropy import units
 from astropy.coordinates import SkyCoord, EarthLocation, Angle, AltAz
 from astropy.time import Time
@@ -343,8 +341,8 @@ def test_read_healpix_hdf5():
 def test_healpix_to_sky():
     Nside = 32
     Npix = astropy_healpix.nside_to_npix(Nside)
-    #vec = hp.ang2vec(np.pi / 2, np.pi * 3 / 4)
-    #ipix_disc = hp.query_disc(nside=32, vec=vec, radius=np.radians(10))
+    # vec = hp.ang2vec(np.pi / 2, np.pi * 3 / 4)
+    # ipix_disc = hp.query_disc(nside=32, vec=vec, radius=np.radians(10))
     m = np.arange(Npix)
     ipix_disc = [5103, 5104, 5231, 5232, 5233, 5358, 5359, 5360, 5361, 5486, 5487, 5488, 5489, 5490,
                  5613, 5614, 5615, 5616, 5617, 5618, 5741, 5742, 5743, 5744, 5745, 5746, 5747, 5869,
@@ -369,7 +367,7 @@ def test_healpix_to_sky():
 def test_units_healpix_to_sky():
     Nside = 32
     beam_area = astropy_healpix.nside_to_pixel_area(Nside)  # * units.sr
-    #beam_area = hp.pixelfunc.nside2pixarea(Nside) * units.sr
+    # beam_area = hp.pixelfunc.nside2pixarea(Nside) * units.sr
     hpmap, inds, freqs = pyuvsim.source.read_healpix_hdf5(
         os.path.join(SIM_DATA_PATH, 'test_file.hdf5')
     )
@@ -409,7 +407,6 @@ def test_single_offzenith_source_uvfits():
                   3241827137.4792957, 3235366098.452164, 3228924355.702452]
 
     Nskies = 1
-    inds = np.arange(Npix)
     dataset = np.zeros((Nskies, Nfreqs, len(m)))
     for j in range(0, len(m)):
         dataset[0, :, j] = freqs
@@ -484,11 +481,12 @@ def test_single_offzenith_source_uvfits():
     assert np.allclose(beam_jones[:, :, ipix], jones.squeeze())
 
     uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
-    jones_T = np.swapaxes(jones, 0, 1)
+    # jones_T = np.swapaxes(jones, 0, 1)
     # Remove source axis from jones matrix
     jones = jones.squeeze()
     vis_analytic = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(2j * np.pi * (
-        uvw_wavelength_array[0, 0] * src_l + uvw_wavelength_array[0, 1] * src_m + uvw_wavelength_array[0, 2] * src_n))
+        uvw_wavelength_array[0, 0] * src_l + uvw_wavelength_array[0, 1] * src_m
+        + uvw_wavelength_array[0, 2] * src_n))
     vis_analytic = np.array([vis_analytic[0, 0], vis_analytic[1, 1],
                              vis_analytic[0, 1], vis_analytic[1, 0]])
 

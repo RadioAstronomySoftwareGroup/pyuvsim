@@ -27,10 +27,10 @@ from . import version as simversion
 def get_version_string():
     version_string = ('Simulated with pyuvsim version: ' + simversion.version + '.')
     if simversion.git_hash:
-        version_string += ('  Git origin: ' + simversion.git_origin +
-                           '.  Git hash: ' + simversion.git_hash +
-                           '.  Git branch: ' + simversion.git_branch +
-                           '.  Git description: ' + simversion.git_description + '.')
+        version_string += ('  Git origin: ' + simversion.git_origin
+                           + '.  Git hash: ' + simversion.git_hash
+                           + '.  Git branch: ' + simversion.git_branch
+                           + '.  Git description: ' + simversion.git_description + '.')
     return version_string
 
 

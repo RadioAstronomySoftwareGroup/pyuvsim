@@ -9,14 +9,12 @@ import sys
 import h5py
 
 import six
-import numpy as np
 from scipy.linalg import orthogonal_procrustes as ortho_procr
 
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy.time import Time
 from astropy.units import Quantity
 import astropy_healpix
-from astropy_healpix import HEALPix
 
 from . import utils as simutils
 from . import spherical_coordinates_basis_transformation as scbt
@@ -448,6 +446,7 @@ def healpix_to_sky(hpmap, indices, freqs):
     freq = Quantity(freqs, 'hertz')
     stokes = np.zeros((4, len(freq), len(indices)))
     stokes[0] = (hpmap.T / simutils.jy2Tsr(freq,
-                                           bm=astropy_healpix.nside_to_pixel_area(Nside), mK=False)).T
+                                           bm=astropy_healpix.nside_to_pixel_area(Nside), mK=False)
+                 ).T
     sky = SkyModel(indices.astype('str'), ra, dec, stokes, freq_array=freq, Nfreqs=len(freq))
     return sky
