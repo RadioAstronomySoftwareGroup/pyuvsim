@@ -23,7 +23,7 @@ from . import simsetup
 from . import utils as simutils
 from .antenna import Antenna
 from .baseline import Baseline
-from .source import estimate_skymodel_memory_usage
+from .utils import estimate_skymodel_memory_usage
 from .telescope import Telescope
 
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim',

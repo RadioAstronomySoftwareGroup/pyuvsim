@@ -139,17 +139,6 @@ def test_catalog_from_params():
     catalog_str = pyuvsim.simsetup.array_to_skymodel(catalog_str)
     assert np.all(catalog_str == catalog_uv)
 
-
-def test_param_flux_cuts():
-    # Check that min/max flux limits in test params work.
-
-    catalog, srclistname = pyuvsim.simsetup.initialize_catalog_from_params(gleam_param_file)
-
-    catalog = pyuvsim.simsetup.array_to_skymodel(catalog)
-    for sI in catalog.stokes[0, 0, :]:
-        assert np.all(0.2 < sI < 1.5)
-
-
 # parametrize will loop over all the give values
 @pytest.mark.parametrize("config_num", list([0, 2]))
 def test_param_reader(config_num):
@@ -753,65 +742,7 @@ def test_uvfits_to_config():
     assert simtest.compare_dictionaries(param_dict, orig_param_dict)
 
 
-def test_point_catalog_reader():
-    catfile = os.path.join(SIM_DATA_PATH, 'test_config', 'pointsource_catalog.txt')
-    srcs = pyuvsim.simsetup.read_text_catalog(catfile)
 
-    with open(catfile, 'r') as fhandle:
-        header = fhandle.readline()
-    header = [h.strip() for h in header.split()]
-    dt = np.format_parser(
-        ['U10', 'f8', 'f8', 'f8', 'f8'],
-        ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'],
-        header
-    )
-
-    catalog_table = np.genfromtxt(
-        catfile, autostrip=True, skip_header=1, dtype=dt.dtype
-    )
-
-    assert sorted(srcs.name) == sorted(catalog_table['source_id'])
-    assert srcs.ra.deg in catalog_table['ra_j2000']
-    assert srcs.dec.deg in catalog_table['dec_j2000']
-    assert srcs.stokes[0] in catalog_table['flux_density_I']
-
-    # Check cuts
-    source_select_kwds = {'min_flux': 1.0}
-    catalog = pyuvsim.simsetup.read_text_catalog(
-        catfile, source_select_kwds=source_select_kwds, return_table=True
-    )
-    assert len(catalog) == 2
-
-
-def test_flux_cuts():
-    uv_in, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(manytimes_config)
-    Nsrcs = 20
-    uv_in.select(times=np.unique(uv_in.time_array)[:50], bls=[(0, 1)])
-
-    dt = np.format_parser(
-        ['U10', 'f8', 'f8', 'f8', 'f8'],
-        ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'],
-        []
-    )
-
-    minflux = 0.5
-    maxflux = 3.0
-
-    catalog_table = np.recarray(Nsrcs, dtype=dt.dtype)
-    catalog_table['source_id'] = ["src{}".format(i) for i in range(Nsrcs)]
-    catalog_table['ra_j2000'] = np.random.uniform(0, 360., Nsrcs)
-    catalog_table['dec_j2000'] = np.linspace(-90, 90, Nsrcs)
-    catalog_table['flux_density_I'] = np.linspace(minflux, maxflux, Nsrcs)
-    catalog_table['frequency'] = np.ones(Nsrcs) * 200e6
-
-    minI_cut = 1.0
-    maxI_cut = 2.3
-
-    cut_sourcelist = pyuvsim.simsetup.source_cuts(
-        catalog_table, input_uv=uv_in, min_flux=minI_cut, max_flux=maxI_cut
-    )
-    assert np.all(cut_sourcelist['flux_density_I'] > minI_cut)
-    assert np.all(cut_sourcelist['flux_density_I'] < maxI_cut)
 
 
 def test_circumpolar_nonrising():
