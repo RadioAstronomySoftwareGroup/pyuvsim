@@ -311,22 +311,9 @@ class SkyModel(object):
             # If there are any polarized sources, do rotation.
             rotation_matrix = self._calc_coherency_rotation(telescope_location)
 
-            coherency_local = np.einsum(
-                'xab,bcx,cdx->adx', rotation_matrix.T,
-                self.coherency_radec,
-                rotation_matrix)
-
-            # First need to calculate the sin & cos of the parallactic angle
-            # See Meeus's astronomical algorithms eq 14.1
-            # also see Astroplan.observer.parallactic_angle method
-
             polarized_sources = np.where(~Ionly_mask)[0]
-            sinX = np.sin(self.hour_angle)
-            cosX = (np.tan(telescope_location.lat) * np.cos(self.dec)
-                    - np.sin(self.dec) * np.cos(self.hour_angle))
 
             # shape (2, 2, Ncomponents)
-            rotation_matrix = np.array([[cosX, sinX], [-sinX, cosX]]).astype(float)
             rotation_matrix = rotation_matrix[..., polarized_sources]
 
             rotation_matrix_T = np.swapaxes(rotation_matrix, 0, 1)

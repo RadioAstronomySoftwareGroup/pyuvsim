@@ -215,15 +215,18 @@ def test_stokes_tofrom_coherency():
     expected_coherency = .5 * np.array([[4.2, 1.2 + 0.15j], [1.2 - 0.15j, 4.8]])
 
     coherency = simutils.stokes_to_coherency(stokes)
-    assert np.allclose(expected_coherency, coherency)
+
+    assert np.allclose(expected_coherency, coherency.squeeze())
 
     back_to_stokes = simutils.coherency_to_stokes(coherency)
 
     assert np.allclose(stokes, back_to_stokes)
 
-    # again, with multiple sources
+    # again, with multiple sources and a frequency axis.
     stokes = np.array([[stokesI, stokesQ, stokesU, stokesV],
                        [stokesI, stokesQ, stokesU, stokesV]]).T
+
+    stokes = stokes[:, np.newaxis, :]
 
     coherency = simutils.stokes_to_coherency(stokes)
     back_to_stokes = simutils.coherency_to_stokes(coherency)
