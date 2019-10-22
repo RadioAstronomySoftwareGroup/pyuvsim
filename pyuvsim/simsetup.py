@@ -104,11 +104,11 @@ def skymodel_to_array(sky):
 
     fieldtypes = ['U10', 'f8', 'f8', 'f8', 'f8']
     fieldnames = ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency']
-    fieldshapes = [()]*3 + [(sky.Nfreqs,)]*2
+    fieldshapes = [()] * 3 + [(sky.Nfreqs,)] * 2
 
     dt = np.dtype(list(zip(fieldnames, fieldtypes, fieldshapes)))
     if sky.Nfreqs == 1:
-        sky.freq_array = sky.freq_array[:,None]
+        sky.freq_array = sky.freq_array[:, None]
     arr = np.empty(sky.Ncomponents, dtype=dt)
     arr['source_id'] = sky.name
     arr['ra_j2000'] = sky.ra.value
@@ -138,7 +138,8 @@ def array_to_skymodel(catalog_table):
     if 'rise_lst' in catalog_table.dtype.names:
         rise_lst = catalog_table['rise_lst']
         set_lst = catalog_table['set_lst']
-    sourcelist = SkyModel(ids, ra, dec, stokes, Nfreqs=source_freqs.size, freq_array=source_freqs, rise_lst=rise_lst, set_lst=set_lst)
+    sourcelist = SkyModel(ids, ra, dec, stokes, Nfreqs=source_freqs.size,
+                          freq_array=source_freqs, rise_lst=rise_lst, set_lst=set_lst)
 
     return sourcelist
 
@@ -344,7 +345,8 @@ def write_catalog_to_file(filename, catalog):
         arr = skymodel_to_array(catalog)
         for src in arr:
             srcid, ra, dec, flux_i, freq = src
-            fo.write("{}\t{:f}\t{:f}\t{:0.2f}\t{:0.2f}\n".format(srcid, ra, dec, flux_i[0], freq[0]))
+            fo.write("{}\t{:f}\t{:f}\t{:0.2f}\t{:0.2f}\n".format(
+                srcid, ra, dec, flux_i[0], freq[0]))
 
 
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,

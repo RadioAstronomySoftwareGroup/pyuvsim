@@ -25,7 +25,6 @@ EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 single_offzenith_healpix_hdf5_file = os.path.join(SIM_DATA_PATH, 'single_off_zenith_healpix.hdf5')
 
 
-
 def test_source_zenith_from_icrs():
     """Test single source position at zenith constructed using icrs."""
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
@@ -161,7 +160,7 @@ def analytic_beam_jones(za, az, sigma=0.3):
     # B = np.exp(-np.tan(za/2.)**2. / 2. / sigma**2.)
     B = 1
     J = np.array([[np.cos(za) * np.sin(az), np.cos(az)],
-                 [np.cos(az) * np.cos(za), -np.sin(az)]])
+                  [np.cos(az) * np.cos(za), -np.sin(az)]])
     return B * J
 
 
@@ -303,7 +302,6 @@ def test_polarized_source_smooth_visibilities():
         assert np.max(np.abs(real_derivative_diff)) < 1e-6
         imag_stokes = stokes_instr_local[pol_i, :].imag
         assert np.all(imag_stokes == 0)
-
 
 
 def test_read_healpix_hdf5():

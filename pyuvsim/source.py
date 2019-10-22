@@ -78,7 +78,6 @@ class SkyModel(object):
 
     _member_funcs = ['coherency_calc', 'update_positions']
 
-
     def __init__(self, name, ra, dec, stokes,
                  Nfreqs=1, freq_array=None, rise_lst=None, set_lst=None,
                  spectral_type=None, pos_tol=np.finfo(float).eps):
@@ -105,7 +104,6 @@ class SkyModel(object):
             pos_tol: float, defaults to minimum float in numpy
                 position tolerance in degrees
         """
-
 
         if not isinstance(ra, Angle):
             raise ValueError('ra must be an astropy Angle object. '
@@ -314,12 +312,13 @@ class SkyModel(object):
             # If there are any polarized sources, do rotation.
             rotation_matrix = self._calc_coherency_rotation(telescope_location)
 
-<<<<<<< HEAD
+
+<< << << < HEAD
             coherency_local = np.einsum(
                 'xab,bcx,cdx->adx', rotation_matrix.T,
                 self.coherency_radec,
                 rotation_matrix)
-=======
+== == == =
             # First need to calculate the sin & cos of the parallactic angle
             # See Meeus's astronomical algorithms eq 14.1
             # also see Astroplan.observer.parallactic_angle method
@@ -339,7 +338,7 @@ class SkyModel(object):
                 self.coherency_radec[:, :, :, polarized_sources],
                 rotation_matrix
             )
->>>>>>> a48749c... added frequency axis to SkyModel
+>>>>>> > a48749c... added frequency axis to SkyModel
 
         # Zero coherency on sources below horizon.
         coherency_local[:, :, :, self.horizon_mask] *= 0.0
