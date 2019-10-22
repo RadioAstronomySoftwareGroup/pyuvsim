@@ -125,8 +125,7 @@ def test_calc_basis_rotation_matrix():
     telescope_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
 
     source = pyuvsim.source.SkyModel('Test', Angle(12. * units.hr),
-                                     Angle(-30. * units.deg),
-                                     150 * units.MHz, [1., 0., 0., 0.])
+                                     Angle(-30. * units.deg), [1., 0., 0., 0.])
     source.update_positions(time, telescope_location)
 
     basis_rot_matrix = source._calc_average_rotation_matrix(telescope_location)
@@ -145,8 +144,7 @@ def test_calc_vector_rotation():
     telescope_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
 
     source = pyuvsim.source.SkyModel('Test', Angle(12. * units.hr),
-                                     Angle(-30. * units.deg),
-                                     150 * units.MHz, [1., 0., 0., 0.])
+                                     Angle(-30. * units.deg), [1., 0., 0., 0.])
     source.update_positions(time, telescope_location)
 
     coherency_rotation = np.squeeze(source._calc_coherency_rotation(telescope_location))
@@ -190,14 +188,13 @@ def test_polarized_source_visibilities():
     src_astropy_altaz = src_astropy.transform_to('altaz')
     assert np.isclose(src_astropy_altaz.alt.rad[zero_indx], np.pi / 2)
 
-    freq = (150e6 * units.Hz)
     stokes_radec = [1, -0.2, 0.3, 0.1]
 
     decoff = 0.0 * units.arcmin  # -0.17 * units.arcsec
     raoff = 0.0 * units.arcsec
 
     source = pyuvsim.SkyModel('icrs_zen', zenith_icrs.ra + raoff,
-                              zenith_icrs.dec + decoff, freq, stokes_radec)
+                              zenith_icrs.dec + decoff, stokes_radec)
 
     coherency_matrix_local = np.zeros([2, 2, ntimes], dtype='complex128')
     alts = np.zeros(ntimes)
@@ -258,11 +255,10 @@ def test_polarized_source_smooth_visibilities():
     src_astropy_altaz = src_astropy.transform_to('altaz')
     assert np.isclose(src_astropy_altaz.alt.rad[zero_indx], np.pi / 2)
 
-    freq = (150e6 * units.Hz)
     stokes_radec = [1, -0.2, 0.3, 0.1]
 
     source = pyuvsim.SkyModel('icrs_zen', zenith_icrs.ra,
-                              zenith_icrs.dec, freq, stokes_radec)
+                              zenith_icrs.dec, stokes_radec)
 
     coherency_matrix_local = np.zeros([2, 2, ntimes], dtype='complex128')
     alts = np.zeros(ntimes)
