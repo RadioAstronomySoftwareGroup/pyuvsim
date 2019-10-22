@@ -4,14 +4,17 @@
 
 from __future__ import absolute_import, division, print_function
 
+import numpy as np
 import sys
+import h5py
 
 import six
-import numpy as np
 from scipy.linalg import orthogonal_procrustes as ortho_procr
+
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy.time import Time
 from astropy.units import Quantity
+import astropy_healpix
 
 from . import utils as simutils
 from . import spherical_coordinates_basis_transformation as scbt
@@ -74,8 +77,33 @@ class SkyModel(object):
 
     _member_funcs = ['coherency_calc', 'update_positions']
 
-    def __init__(self, name, ra, dec, freq, stokes,
-                 rise_lst=None, set_lst=None, pos_tol=np.finfo(float).eps):
+    def __init__(self, name, ra, dec, stokes,
+                 Nfreqs=1, freq_array=None, rise_lst=None, set_lst=None,
+                 spectral_type=None, pos_tol=np.finfo(float).eps):
+        """
+        Args:
+            name: Unique identifier for the source.
+            ra: astropy Angle object, shape (Ncomponents,)
+                source RA in J2000 (or ICRS) coordinates
+            dec: astropy Angle object, shape (Ncomponents,)
+                source Dec in J2000 (or ICRS) coordinates
+            stokes: shape (4, Nfreqs, Ncomponents)
+                4 element vector giving the source [I, Q, U, V]
+            Nfreqs: (integer)
+                length of frequency axis
+            freq_array: shape(Nfreqs,)
+                corresponding frequencies for each flux density
+            rise_lst: (float), shape (Ncomponents,)
+                Approximate lst (radians) when the source rises.
+                Set by coarse horizon cut in simsetup.
+                Default is nan, meaning the source never rises.
+            set_lst: (float), shape (Ncomponents,)
+                Approximate lst (radians) when the source sets.
+                Default is None, meaning the source never sets.
+            pos_tol: float, defaults to minimum float in numpy
+                position tolerance in degrees
+        """
+
         if not isinstance(ra, Angle):
             raise ValueError('ra must be an astropy Angle object. '
                              'value was: {ra}'.format(ra=ra))
@@ -84,18 +112,16 @@ class SkyModel(object):
             raise ValueError('dec must be an astropy Angle object. '
                              'value was: {dec}'.format(dec=dec))
 
-        if not isinstance(freq, Quantity):
-            raise ValueError('freq must be an astropy Quantity object. '
-                             'value was: {f}'.format(f=freq))
-
         self.Ncomponents = ra.size
 
         self.name = np.atleast_1d(np.asarray(name))
-        self.freq = np.atleast_1d(freq)
+        self.freq_array = np.atleast_1d(freq_array)
+        self.Nfreqs = Nfreqs
         self.stokes = np.asarray(stokes)
         self.ra = np.atleast_1d(ra)
         self.dec = np.atleast_1d(dec)
         self.pos_tol = pos_tol
+        self.spectral_type = spectral_type
 
         self.has_rise_set_lsts = False
         if (rise_lst is not None) and (set_lst is not None):
@@ -109,19 +135,27 @@ class SkyModel(object):
         self.horizon_mask = np.zeros(self.Ncomponents).astype(
             bool)  # If true, source component is below horizon.
 
-        if self.Ncomponents == 1:
-            self.stokes = self.stokes.reshape(4, 1)
+        # TODO -- Need a way of passing the spectral_type from catalog to each rank.
+        # For now, if there are multiple frequencies, assume we have one per simulation frequency.
+        if self.spectral_type is None:
+            self.spectral_type = 'flat'
+        if self.Nfreqs > 1:
+            self.spectral_type = 'full'
 
-        # The coherency is a 2x2 matrix giving electric field correlation in Jy.
+        if self.Ncomponents == 1:
+            self.stokes = self.stokes.reshape(4, Nfreqs, 1)
+
+        # The coherency is a 2x2 matrix giving electric field correlation in Jy
         # Multiply by .5 to ensure that Trace sums to I not 2*I
         # Shape = (2,2,Ncomponents)
+
         self.coherency_radec = simutils.stokes_to_coherency(self.stokes)
 
         self.time = None
 
-        assert np.all([self.Ncomponents == l for l in
-                       [self.ra.size, self.dec.size, self.freq.size,
-                        self.stokes.shape[1]]]), 'Inconsistent quantity dimensions.'
+        assert np.all(
+            [self.Ncomponents == l for l in [self.ra.size, self.dec.size, self.stokes.shape[2]]]
+        ), 'Inconsistent quantity dimensions.'
 
     def _calc_average_rotation_matrix(self, telescope_location):
         """
@@ -267,8 +301,8 @@ class SkyModel(object):
             raise ValueError('telescope_location must be an astropy EarthLocation object. '
                              'value was: {al}'.format(al=telescope_location))
 
-        Ionly_mask = np.sum(self.stokes[1:, :], axis=0) == 0.0
-        NstokesI = np.sum(Ionly_mask)  # Number of unpolarized sources
+        Ionly_mask = np.sum(self.stokes[1:, :, :], axis=0) == 0.0
+        NstokesI = np.sum(Ionly_mask)   # Number of unpolarized sources
 
         # For unpolarized sources, there's no need to rotate the coherency matrix.
         coherency_local = self.coherency_radec.copy()
@@ -277,13 +311,20 @@ class SkyModel(object):
             # If there are any polarized sources, do rotation.
             rotation_matrix = self._calc_coherency_rotation(telescope_location)
 
-            coherency_local = np.einsum(
-                'xab,bcx,cdx->adx', rotation_matrix.T,
-                self.coherency_radec,
-                rotation_matrix)
+            polarized_sources = np.where(~Ionly_mask)[0]
+
+            # shape (2, 2, Ncomponents)
+            rotation_matrix = rotation_matrix[..., polarized_sources]
+
+            rotation_matrix_T = np.swapaxes(rotation_matrix, 0, 1)
+            coherency_local[:, :, :, polarized_sources] = np.einsum(
+                'aby,bcxy,cdy->adxy', rotation_matrix_T,
+                self.coherency_radec[:, :, :, polarized_sources],
+                rotation_matrix
+            )
 
         # Zero coherency on sources below horizon.
-        coherency_local[:, :, self.horizon_mask] *= 0.0
+        coherency_local[:, :, :, self.horizon_mask] *= 0.0
 
         return coherency_local
 
@@ -342,11 +383,68 @@ class SkyModel(object):
         return (np.allclose(self.ra.deg, other.ra.deg, atol=self.pos_tol)
                 and np.allclose(self.stokes, other.stokes)
                 and np.all(self.name == other.name)
-                and time_check
-                and np.all(self.freq == other.freq))
+                and time_check)
 
     def get_size(self):
         """
         Estimate the SkyModel memory footprint in bytes
         """
         return self.Ncomponents * self._basesize
+
+
+def read_healpix_hdf5(hdf5_filename):
+    """
+    Read hdf5 healpix files using h5py and get a healpix map, indices and frequencies
+
+    Parameters
+    ----------
+    hdf5_filename : path and name of the hdf5 file to read
+
+    Returns
+    -------
+    hpmap : array_like of float
+        Stokes-I surface brightness in K, for a set of pixels
+        Shape (Ncomponents, Nfreqs)
+    indices : array_like, int
+        Corresponding HEALPix indices for hpmap.
+    freqs : array_like, float
+        Frequencies in Hz. Shape (Nfreqs)
+    """
+    f = h5py.File(hdf5_filename, 'r')
+    hpmap = f['data'][0, ...]    # Remove Nskies axis.
+    indices = f['indices'][()]
+    freqs = f['freqs'][()]
+    return hpmap, indices, freqs
+
+
+def healpix_to_sky(hpmap, indices, freqs):
+    """
+    Convert a healpix map in K to a set of point source components in Jy.
+
+    Parameters
+    ----------
+    hpmap : array_like of float
+        Stokes-I surface brightness in K, for a set of pixels
+        Shape (Ncomponents, Nfreqs)
+    indices : array_like, int
+        Corresponding HEALPix indices for hpmap.
+    freqs : array_like, float
+        Frequencies in Hz. Shape (Nfreqs)
+
+    Returns
+    -------
+    SkyModel
+
+    Notes
+    -----
+    Currently, this function only converts a HEALPix map with a frequency axis.
+    """
+    Nside = astropy_healpix.npix_to_nside(hpmap.shape[-1])
+    ra, dec = astropy_healpix.healpix_to_lonlat(indices, Nside)
+    freq = Quantity(freqs, 'hertz')
+    stokes = np.zeros((4, len(freq), len(indices)))
+    stokes[0] = (hpmap.T / simutils.jy2Tsr(freq,
+                                           bm=astropy_healpix.nside_to_pixel_area(Nside), mK=False)
+                 ).T
+    sky = SkyModel(indices.astype('str'), ra, dec, stokes, freq_array=freq, Nfreqs=len(freq))
+    return sky

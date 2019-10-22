@@ -18,6 +18,7 @@ from astropy import _erfa as erfa
 from astropy.coordinates import Angle
 from astropy.coordinates.builtin_frames.utils import get_jd12
 from astropy.time import Time
+from astropy.constants import c
 from six.moves import range
 
 from . import version as simversion
@@ -302,7 +303,7 @@ def stokes_to_coherency(stokes_vector):
     Parameters
     ----------
     stokes_vector : array_like of float
-        Vector(s) of stokes parameters in order [I, Q, U, V], shape(4,) or (4, Ncomponents)
+        Vector(s) of stokes parameters in order [I, Q, U, V], shape(4,) or (4, Nfreqs, Ncomponents)
 
     Returns
     -------
@@ -315,12 +316,12 @@ def stokes_to_coherency(stokes_vector):
         raise ValueError('First dimension of stokes_vector must be length 4.')
 
     if stokes_arr.size == 4 and len(initial_shape) == 1:
-        stokes_arr = stokes_arr[:, np.newaxis]
+        stokes_arr = stokes_arr[:, np.newaxis, np.newaxis]
 
-    coherency = .5 * np.array([[stokes_arr[0, :] + stokes_arr[1, :],
-                                stokes_arr[2, :] - 1j * stokes_arr[3, :]],
-                               [stokes_arr[2, :] + 1j * stokes_arr[3, :],
-                                stokes_arr[0, :] - stokes_arr[1, :]]])
+    coherency = .5 * np.array([[stokes_arr[0, :, :] + stokes_arr[1, :, :],
+                                stokes_arr[2, :, :] - 1j * stokes_arr[3, :, :]],
+                               [stokes_arr[2, :, :] + 1j * stokes_arr[3, :, :],
+                                stokes_arr[0, :, :] - stokes_arr[1, :, :]]])
 
     if stokes_arr.size == 4 and len(initial_shape) == 1:
         coherency = np.squeeze(coherency)
@@ -357,3 +358,19 @@ def coherency_to_stokes(coherency_matrix):
         stokes = np.squeeze(stokes)
 
     return stokes
+
+
+def jy2Tsr(f, bm=1.0, mK=False):
+    '''Return [K sr] / [Jy] vs. frequency (in Hz)
+        Arguments:
+            f = frequencies (Hz)
+            bm = Reference solid angle in steradians (Defaults to 1)
+            mK = Return in mK sr instead of K sr
+    '''
+    c_cmps = c.to('cm/s').value  # cm/s
+    k_boltz = 1.380658e-16   # erg/K
+    lam = c_cmps / f  # cm
+    fac = 1.0
+    if mK:
+        fac = 1e3
+    return 1e-23 * lam**2 / (2 * k_boltz * bm) * fac

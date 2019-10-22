@@ -4,14 +4,12 @@
 
 from __future__ import absolute_import, division, print_function
 
-import sys
-
-import astropy.constants as const
-import astropy.units as units
 import numpy as np
+import sys
 import six
 import yaml
 from astropy.coordinates import EarthLocation
+import astropy.units as units
 from astropy.time import Time
 from astropy.units import Quantity
 from pyuvdata import UVData
@@ -36,12 +34,13 @@ class UVTask(object):
     # holds all the information necessary to calculate a visibility for a set of sources at a
     # single (t, f, bl)
 
-    def __init__(self, sources, time, freq, baseline, telescope):
+    def __init__(self, sources, time, freq, baseline, telescope, freq_i=0):
         self.time = time
         self.freq = freq
         self.sources = sources  # SkyModel object
         self.baseline = baseline
         self.telescope = telescope
+        self.freq_i = freq_i
         self.visibility_vector = None
         self.uvdata_index = None  # Where to add the visibility in the uvdata object.
 
@@ -49,6 +48,8 @@ class UVTask(object):
             self.time = Time(self.time, format='jd')
         if isinstance(self.freq, float):
             self.freq = self.freq * units.Hz
+        if sources.spectral_type == 'flat':
+            self.freq_i = 0
 
     def __eq__(self, other):
         return (np.isclose(self.time.jd, other.time.jd, atol=1e-4)
@@ -119,6 +120,7 @@ class UVEngine(object):
             )
 
         coherency = sources.coherency_calc(self.task.telescope.location)
+        coherency = coherency[:, :, self.task.freq_i, :]
         beam2_jones = np.swapaxes(beam2_jones, 0, 1).conj()  # Transpose at each component.
         this_apparent_coherency = np.einsum("abz,bcz,cdz->adz", beam1_jones, coherency, beam2_jones)
 
@@ -140,7 +142,7 @@ class UVEngine(object):
         self.apply_beam()
 
         # need to convert uvws from meters to wavelengths
-        uvw_wavelength = self.task.baseline.uvw / const.c * self.task.freq.to('1/s')
+        uvw_wavelength = self.task.baseline.uvw / simutils.c * self.task.freq.to('1/s')
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
         vij = self.apparent_coherency * fringe
         # Sum over source component axis:
@@ -242,17 +244,18 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
     tasks_shape = (Ntimes, Nfreqs, Nbls)
     time_ax, freq_ax, bl_ax = range(3)
 
-    telescope = Telescope(
-        input_uv.telescope_name,
-        EarthLocation.from_geocentric(*input_uv.telescope_location, unit='m'),
-        beam_list
-    )
+    tloc = [np.float64(x) for x in input_uv.telescope_location]
+    telescope = Telescope(input_uv.telescope_name,
+                          EarthLocation.from_geocentric(*tloc, unit='m'),
+                          beam_list)
 
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
 
     for src_i in src_iter:
         sky = simsetup.array_to_skymodel(catalog[src_i])
+        if sky.spectral_type == 'values':
+            assert np.allclose(sky.freq_array, input_uv.freq_array)
         for task_index in task_ids:
             # Shape indicates slowest to fastest index.
             if not isinstance(task_index, tuple):
@@ -275,8 +278,8 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
             bl = baselines[bl_i]
             freq = freq_array[0, freq_i]  # 0 = spw axis
 
-            task = UVTask(sky, time, freq, bl, telescope)
-            task.uvdata_index = (blti, 0, freq_i)  # 0 = spectral window index
+            task = UVTask(sky, time, freq, bl, telescope, freq_i)
+            task.uvdata_index = (blti, 0, freq_i)    # 0 = spectral window index
 
             yield task
 

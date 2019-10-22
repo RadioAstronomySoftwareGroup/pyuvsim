@@ -38,11 +38,11 @@ def test_uniform_beam():
     sources.update_positions(time, array_location)
     za_vals = np.pi / 2. - sources.alt_az[1]  # rad
     az_vals = sources.alt_az[1]
-    freq_vals = sources.freq
+    freq_vals = [10**8]
 
-    n_freqs = len(freq_vals)
+    n_freqs = 1
     interpolated_beam, interp_basis_vector = beam.interp(
-        az_array=az_vals, za_array=za_vals, freq_array=freq_vals
+        az_array=az_vals, za_array=za_vals, freq_array=np.array(freq_vals)
     )
     expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=np.float)
     expected_data[1, 0, 0, :, :] = 1
@@ -69,13 +69,13 @@ def test_airy_beam_values():
     sources.update_positions(time, array_location)
     za_vals = np.pi / 2. - sources.alt_az[1]  # rad
     az_vals = sources.alt_az[1]
-    freq_vals = sources.freq.to("Hz").value
+    freq_vals = np.array([10**8])
 
     interpolated_beam, interp_basis_vector = beam.interp(
         az_array=az_vals, za_array=za_vals, freq_array=freq_vals
     )
 
-    expected_data = np.zeros((2, 1, 2, freq_vals.size, az_vals.size), dtype=np.float)
+    expected_data = np.zeros((2, 1, 2, 1, az_vals.size), dtype=np.float)
     za_grid, f_grid = np.meshgrid(za_vals, freq_vals)
     xvals = diameter_m / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8
     airy_values = np.zeros_like(xvals)
@@ -144,9 +144,9 @@ def test_achromatic_gaussian_beam():
     sources.update_positions(time, array_location)
     za_vals = np.pi / 2. - sources.alt_az[1]  # rad
     az_vals = sources.alt_az[1]
-    freq_vals = sources.freq.to("Hz").value
+    freq_vals = [10**8]
 
-    n_freqs = len(freq_vals)
+    n_freqs = 1
     interpolated_beam, interp_basis_vector = beam.interp(
         az_array=np.array(az_vals), za_array=np.array(za_vals), freq_array=np.array(freq_vals)
     )

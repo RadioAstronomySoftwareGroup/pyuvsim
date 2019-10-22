@@ -29,7 +29,7 @@ try:
 except ImportError:
     def get_rank():
         return 0
-from .source import SkyModel
+from .source import SkyModel, read_healpix_hdf5, healpix_to_sky
 from .utils import check_file_exists_and_increment
 
 
@@ -102,15 +102,20 @@ def skymodel_to_array(sky):
     Return a recarray of source components from a given SkyModel object.
     """
 
-    dt = np.format_parser(['U10', 'f8', 'f8', 'f8', 'f8'],
-                          ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency'], [])
+    fieldtypes = ['U10', 'f8', 'f8', 'f8', 'f8']
+    fieldnames = ['source_id', 'ra_j2000', 'dec_j2000', 'flux_density_I', 'frequency']
+    fieldshapes = [()] * 3 + [(sky.Nfreqs,)] * 2
 
-    arr = np.empty(sky.Ncomponents, dtype=dt.dtype)
+    dt = np.dtype(list(zip(fieldnames, fieldtypes, fieldshapes)))
+    if sky.Nfreqs == 1:
+        sky.freq_array = sky.freq_array[:, None]
+
+    arr = np.empty(sky.Ncomponents, dtype=dt)
     arr['source_id'] = sky.name
     arr['ra_j2000'] = sky.ra.value
     arr['dec_j2000'] = sky.dec.value
-    arr['flux_density_I'] = sky.stokes[0, :]
-    arr['frequency'] = sky.freq
+    arr['flux_density_I'] = sky.stokes[0, :, :].T   # Swaps component and frequency axes
+    arr['frequency'] = sky.freq_array
 
     return arr
 
@@ -123,15 +128,20 @@ def array_to_skymodel(catalog_table):
     ra = Angle(catalog_table['ra_j2000'], units.deg)
     dec = Angle(catalog_table['dec_j2000'], units.deg)
     ids = catalog_table['source_id']
-    freqs = catalog_table['frequency'] * units.Hz
     flux_I = np.atleast_1d(catalog_table['flux_density_I'])
-    stokes = np.pad(np.expand_dims(flux_I, 1), ((0, 0), (0, 3)), 'constant').T
+    if flux_I.ndim == 1:
+        flux_I = flux_I[:, None]
+    stokes = np.pad(np.expand_dims(flux_I, 2), ((0, 0), (0, 0), (0, 3)), 'constant').T
     rise_lst = None
     set_lst = None
+    source_freqs = np.atleast_1d(catalog_table['frequency'][0])
+
     if 'rise_lst' in catalog_table.dtype.names:
         rise_lst = catalog_table['rise_lst']
         set_lst = catalog_table['set_lst']
-    sourcelist = SkyModel(ids, ra, dec, freqs, stokes, rise_lst=rise_lst, set_lst=set_lst)
+
+    sourcelist = SkyModel(ids, ra, dec, stokes, Nfreqs=source_freqs.size,
+                          freq_array=source_freqs, rise_lst=rise_lst, set_lst=set_lst)
 
     return sourcelist
 
@@ -336,7 +346,10 @@ def write_catalog_to_file(filename, catalog):
         fo.write("SOURCE_ID\tRA_J2000 [deg]\tDec_J2000 [deg]\tFlux [Jy]\tFrequency [Hz]\n")
         arr = skymodel_to_array(catalog)
         for src in arr:
-            fo.write("{}\t{:f}\t{:f}\t{:0.2f}\t{:0.2f}\n".format(*src))
+            srcid, ra, dec, flux_i, freq = src
+
+            fo.write("{}\t{:f}\t{:f}\t{:0.2f}\t{:0.2f}\n".format(
+                srcid, ra, dec, flux_i[0], freq[0]))
 
 
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
@@ -492,10 +505,10 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     ra = icrs_coord.ra
     dec = icrs_coord.dec
     names = np.array(['src' + str(si) for si in range(Nsrcs)])
-    stokes = np.zeros((4, Nsrcs))
+    stokes = np.zeros((4, 1, Nsrcs))
     stokes[0, :] = fluxes
     freqs = np.ones(Nsrcs) * freq
-    catalog = SkyModel(names, ra, dec, freqs, stokes)
+    catalog = SkyModel(names, ra, dec, stokes, freq_array=freqs)
     if return_table:
         return skymodel_to_array(catalog), mock_keywords
     if get_rank() == 0 and save:
@@ -591,6 +604,10 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
             catalog = read_text_catalog(catalog, return_table=True)
         elif catalog.endswith('vot'):
             catalog = read_votable_catalog(catalog, return_table=True)
+        elif catalog.endswith('hdf5'):
+            hpmap, inds, freqs = read_healpix_hdf5(catalog)
+            sky = healpix_to_sky(hpmap, inds, freqs)
+            catalog = skymodel_to_array(sky)
 
     # Do source selections, if any.
     catalog = source_cuts(catalog, input_uv=input_uv, **source_select_kwds)
@@ -708,8 +725,8 @@ def parse_telescope_params(tele_params, config_path=''):
     antpos_enu = np.vstack((E, N, U)).T
     return_dict['antenna_positions'] = (
         uvutils.ECEF_from_ENU(antpos_enu, *telescope_location)
-        - tele_params['telescope_location']
-    )
+        - tele_params['telescope_location'])
+
     return_dict['array_layout'] = layout_csv
     return_dict['telescope_location'] = tuple(tele_params['telescope_location'])
     return_dict['telescope_location_lat_lon_alt'] = tuple(telescope_location_latlonalt)
@@ -807,8 +824,8 @@ def parse_frequency_params(freq_params):
                 freq_params['bandwidth'] = (
                     freq_params['end_freq']
                     - freq_params['start_freq']
-                    + freq_params['channel_width']
-                )
+                    + freq_params['channel_width'])
+
                 bw = True
             if bw:
                 Nfreqs = float(freq_params['bandwidth'] / freq_params['channel_width'])
@@ -831,15 +848,14 @@ def parse_frequency_params(freq_params):
                 freq_params['start_freq'] = (
                     freq_params['end_freq']
                     - freq_params['bandwidth']
-                    + freq_params['channel_width']
-                )
+                    + freq_params['channel_width'])
+
         if not ef:
             if sf and bw:
                 freq_params['end_freq'] = (
                     freq_params['start_freq']
                     + freq_params['bandwidth']
-                    - freq_params['channel_width']
-                )
+                    - freq_params['channel_width'])
 
         if not np.isclose(freq_params['Nfreqs'] % 1, 0):
             raise ValueError("end_freq - start_freq must be evenly divisible by channel_width")
@@ -920,8 +936,8 @@ def parse_time_params(time_params):
                 time_params['duration'] = (
                     time_params['end_time']
                     - time_params['start_time']
-                    + time_params['integration_time'] * dayspersec
-                )
+                    + time_params['integration_time'] * dayspersec)
+
                 dd = True
             if dd:
                 time_params['Ntimes'] = int(
@@ -948,15 +964,14 @@ def parse_time_params(time_params):
                 time_params['start_time'] = (
                     time_params['end_time']
                     - time_params['duration']
-                    + inttime_days
-                )
+                    + inttime_days)
+
         if not et:
             if st and dd:
                 time_params['end_time'] = (
                     time_params['start_time']
                     + time_params['duration']
-                    - inttime_days
-                )
+                    - inttime_days)
 
         time_arr = np.linspace(time_params['start_time'],
                                time_params['end_time'] + inttime_days,

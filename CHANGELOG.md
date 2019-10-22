@@ -7,6 +7,7 @@
 - init_uvdata_out function is more modular.
 - unit tests check error messages raised.
 - Polarization selection is now allowed in setup. Will break if incorrect polarization is used in pyuvsim.
+- Added functions to read healpix maps and added support for frequency axis
 
 ### Fixed
 - No longer calling UVBeam.interp with freq_interp_kind, for updated pyuvdata.
