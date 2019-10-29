@@ -1,5 +1,6 @@
 name: pyuvsim
 channels:
+  - astropy
   - conda-forge
   - defaults
 dependencies:
