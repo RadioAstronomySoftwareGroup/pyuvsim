@@ -14,11 +14,7 @@ try:
     HAVE_PSUTIL = True
 except ImportError:
     HAVE_PSUTIL = False
-from astropy import _erfa as erfa
 from astropy.coordinates import Angle
-from astropy.coordinates.builtin_frames.utils import get_jd12
-from astropy.time import Time
-from astropy.constants import c
 from six.moves import range
 
 from . import version as simversion

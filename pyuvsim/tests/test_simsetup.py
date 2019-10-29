@@ -32,7 +32,6 @@ param_filenames = [
 
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
-GLEAM_vot = os.path.join(SIM_DATA_PATH, 'gleam_50srcs.vot')
 manytimes_config = os.path.join(
     SIM_DATA_PATH, 'test_config', 'param_100times_1.5days_triangle.yaml'
 )
@@ -742,64 +741,6 @@ def test_uvfits_to_config():
     assert simtest.compare_dictionaries(param_dict, orig_param_dict)
 
 
-
-
-
-def test_circumpolar_nonrising():
-    # Check that the source_cut function correctly identifies sources that are circumpolar or
-    # won't rise.
-    # Working with an observatory at the HERA latitude
-
-    lat = -31.0
-    lon = 0.0
-
-    Ntimes = 100
-    Nsrcs = 50
-
-    j2000 = 2451545.0
-    times = Time(np.linspace(j2000 - 0.5, j2000 + 0.5, Ntimes), format='jd', scale='utc')
-
-    ra = np.zeros(Nsrcs)
-    dec = np.linspace(-90, 90, Nsrcs)
-
-    ra = Angle(ra, units.deg)
-    dec = Angle(dec, units.deg)
-
-    coord = SkyCoord(ra=ra, dec=dec, frame='icrs')
-    alts = []
-    azs = []
-
-    loc = EarthLocation.from_geodetic(lat=lat, lon=lon)
-    for i in range(Ntimes):
-        altaz = coord.transform_to(AltAz(obstime=times[i], location=loc))
-        alts.append(altaz.alt.deg)
-        azs.append(altaz.az.deg)
-    alts = np.array(alts)
-
-    nonrising = np.where(np.all(alts < 0, axis=0))[0]
-    circumpolar = np.where(np.all(alts > 0, axis=0))[0]
-
-    tans = np.tan(np.radians(lat)) * np.tan(dec.rad)
-    nonrising_check = np.where(tans < -1)
-    circumpolar_check = np.where(tans > 1)
-    assert np.all(circumpolar_check == circumpolar)
-    assert np.all(nonrising_check == nonrising)
-
-
-def test_read_gleam():
-    sourcelist = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot)
-
-    assert sourcelist.Ncomponents == 50
-
-    # Check cuts
-    source_select_kwds = {'min_flux': 1.0}
-    catalog = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot,
-                                                    source_select_kwds=source_select_kwds,
-                                                    return_table=True)
-
-    assert len(catalog) < sourcelist.Ncomponents
-
-
 def test_mock_catalogs():
     time = Time(2458098.27471265, scale='utc', format='jd')
 
@@ -842,16 +783,6 @@ def test_mock_catalogs():
     alt, az = cat.alt_az
     assert np.all(alt > np.radians(30.))
     assert np.allclose(alts_reload, np.degrees(alt))
-    os.remove(fname)
-
-
-def test_catalog_file_writer():
-    time = Time(2458098.27471265, scale='utc', format='jd')
-    mock_zenith, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, 'zenith')
-    fname = os.path.join(simtest.TESTDATA_PATH, 'temp_cat.txt')
-    pyuvsim.simsetup.write_catalog_to_file(fname, mock_zenith)
-    mock_zenith_loop = pyuvsim.simsetup.read_text_catalog(fname)
-    assert np.all(mock_zenith_loop == mock_zenith)
     os.remove(fname)
 
 
