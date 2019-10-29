@@ -17,7 +17,6 @@ import yaml
 
 from pyuvdata import utils as uvutils, UVBeam, UVData
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
-from astropy.io.votable import parse
 from astropy.time import Time
 from numpy.lib import recfunctions
 from six.moves import map, range
