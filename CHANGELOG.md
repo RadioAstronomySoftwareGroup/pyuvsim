@@ -10,6 +10,7 @@
 - Added functions to read healpix maps and added support for frequency axis
 
 ### Fixed
+- Flush stderr in excepthook, so stack trace is printed when an exception is raised in MPI.
 - No longer calling UVBeam.interp with freq_interp_kind, for updated pyuvdata.
 - Circular-installation bug
 - Bug in how integration_time array is set in setup
