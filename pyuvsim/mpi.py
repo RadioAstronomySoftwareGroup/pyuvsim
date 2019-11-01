@@ -27,6 +27,7 @@ def set_mpi_excepthook(mpi_comm):
 
     def mpi_excepthook(exctype, value, traceback):  # pragma: no cover
         sys.__excepthook__(exctype, value, traceback)
+        sys.stderr.flush()
         mpi_comm.Abort(1)
 
     sys.excepthook = mpi_excepthook
@@ -54,7 +55,6 @@ def start_mpi():
     if not rank == 0:  # pragma: no cover
         # For non-root ranks, do not print to stdout.
         # (Uncovered until we have multi-rank tests)
-        global stdout
         sys.stdout = open('/dev/null', 'w')
 
 
