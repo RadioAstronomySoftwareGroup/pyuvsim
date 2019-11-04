@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+
+## Added
+- A means for monitoring the memory usage on each Node
+
 ### Changed
 - Replaced init_uvdata_out function with complete_uvdata
 - init_uvdata_out function is more modular.
@@ -10,6 +14,7 @@
 - Added functions to read healpix maps and added support for frequency axis
 
 ### Fixed
+- skymodel splitting was not working correctly to avoid running out of memory.
 - Flush stderr in excepthook, so stack trace is printed when an exception is raised in MPI.
 - No longer calling UVBeam.interp with freq_interp_kind, for updated pyuvdata.
 - Circular-installation bug
