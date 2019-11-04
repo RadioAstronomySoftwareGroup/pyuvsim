@@ -206,8 +206,13 @@ def get_max_node_rss(return_per_node=False):
         Only returns to the zero-th rank on the world_comm.
     """
 
-    # KiB -> GiB
-    memory_usage_GiB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 2**10 / 2**30
+    # On linux, getrusage returns in kiB
+    # On Mac systems, getrusage returns in B
+    scale = 1.0
+    if sys.platform == 'linux':
+        scale = 2**10
+
+    memory_usage_GiB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 2**30
     node_mem_tot = node_comm.allreduce(memory_usage_GiB, op=MPI.SUM)
     if return_per_node:
         return node_mem_tot

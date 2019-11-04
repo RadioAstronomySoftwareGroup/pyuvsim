@@ -160,7 +160,7 @@ def test_mem_usage():
     arr = bytearray(incsize)
     time.sleep(1)
     change = mpi.get_max_node_rss() - memory_usage_GiB
-    assert np.isclose(change, incsize / 2**30, atol=1e-2)
+    assert np.isclose(change, incsize / 2**30, atol=5e-2)
     del arr
 
 
