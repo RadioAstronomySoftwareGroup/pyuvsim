@@ -20,18 +20,45 @@ from . import utils as simutils
 from . import spherical_coordinates_basis_transformation as scbt
 
 
-def _skymodel_basesize():
+def estimate_skymodel_memory_usage(Ncomponents, Nfreqs):
     """
-    Estimate the memory footprint of a SkyModel with a single source.
+    Estimate the memory footprint of a SkyModel by summing the sizes
+    of the data types that go into SkyModel.
 
-    Sum the sizes of the data types that go into SkyModel
+    This aims to anticipate the full memory required to handle a SkyModel
+    class in simulation, accounting for its attributes as well as temporary
+    and intermediate data.
+
+    Parameters
+    ----------
+
+    Ncomponents : int
+        Number of source components.
+    Nfreqs : int
+        Number of frequencies per source component.
+        (size of SkyModel.freq_array)
+
+    Returns
+    -------
+    mem_est : float
+        Estimate of memory usage in bytes
     """
-    attrs = [
-        '', Quantity(1.0, 'Hz'), [0.0] * 4,
-        Angle(np.pi, 'rad'), Angle(np.pi, 'rad'),
-        [1.5] * 4, [0.3] * 2, [0.0] * 3
-    ]
-    return np.sum([sys.getsizeof(a) for a in attrs])
+
+    base_float = [1.5]    # A float
+    base_bool = [True]
+    base_str = ["source_name"]
+
+    Ncomp_attrs = {'ra': base_float, 'dec': base_float,
+                   'alt_az': 2 * base_float, 'rise_lst': base_float, 'set_lst': base_float,
+                   'pos_lmn': 3 * base_float, 'name': base_str, 'horizon_mask': base_bool}
+    Ncomp_Nfreq_attrs = {'stokes': 4 * base_float,
+                         'coherency_radec': 4 * base_float,
+                         'coherency_local': 4 * base_float}
+
+    mem_est = np.sum([sys.getsizeof(v) * Ncomponents for k, v in six.iteritems(Ncomp_attrs)])
+    mem_est += np.sum([sys.getsizeof(v) * Ncomponents * Nfreqs
+                       for k, v in six.iteritems(Ncomp_Nfreq_attrs)])
+    return mem_est
 
 
 class SkyModel(object):
@@ -67,8 +94,6 @@ class SkyModel(object):
     """
 
     Ncomponents = None  # Number of point source components represented here.
-
-    _basesize = _skymodel_basesize()
 
     _Ncomp_attrs = ['ra', 'dec', 'coherency_radec', 'coherency_local',
                     'stokes', 'alt_az', 'rise_lst', 'set_lst', 'freq',
@@ -389,7 +414,7 @@ class SkyModel(object):
         """
         Estimate the SkyModel memory footprint in bytes
         """
-        return self.Ncomponents * self._basesize
+        return estimate_skymodel_memory_usage(self.Ncomponents, self.Nfreqs)
 
 
 def read_healpix_hdf5(hdf5_filename):
