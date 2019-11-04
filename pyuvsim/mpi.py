@@ -209,7 +209,7 @@ def get_max_node_rss(return_per_node=False):
     # On linux, getrusage returns in kiB
     # On Mac systems, getrusage returns in B
     scale = 1.0
-    if sys.platform == 'linux':
+    if 'linux' in sys.platform:
         scale = 2**10
 
     memory_usage_GiB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 2**30
