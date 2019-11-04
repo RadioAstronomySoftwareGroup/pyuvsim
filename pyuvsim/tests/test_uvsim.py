@@ -603,6 +603,7 @@ def test_task_coverage():
             task_inds, src_inds, Ntasks_local, Nsrcs_local = pyuvsim.uvsim._make_task_inds(
                 Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus
             )
+            src_inds = range(Nsrcs)[src_inds]   # Turn slice into iterator
             tasks = itertools.product(task_inds, src_inds)
             tasks_all.append(tasks)
         tasks_all = itertools.chain(*tasks_all)
@@ -652,7 +653,7 @@ def test_source_splitting():
     )
 
     # Spoof environmental parameters.
-    # Choose an absurdlly large number of Npus per node and very small available memory
+    # Choose an absurdly large number of tasks per node and very small available memory
     # to trigger the source splitting condition in uvdata_to_task_iter
     # The alternative would be to make a very large source catalog, but that's not ideal in a test.
     Npus_node = 2000
@@ -667,13 +668,6 @@ def test_source_splitting():
     Nsrcs = len(sources)
     Ntasks = Nblts * Nfreqs
     beam_dict = None
-    taskiter = pyuvsim.uvdata_to_task_iter(
-        np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict
-    )
-    uvtask_list = uvtest.checkWarnings(
-        list, [taskiter], message='The default for the `center` keyword has changed.',
-        category=DeprecationWarning
-    )
 
     skymodel = pyuvsim.array_to_skymodel(sources)
     skymodel_mem_footprint = skymodel.get_size() * Npus_node
@@ -682,14 +676,20 @@ def test_source_splitting():
     Nsky_parts = np.ceil(skymodel_mem_footprint / float(mem_avail))
     partsize = int(np.floor(Nsrcs / Nsky_parts))
 
-    assert partsize * pyuvsim.SkyModel._basesize * Npus_node < mem_avail
-    print(skymodel_mem_footprint / 1e6,
-          partsize * pyuvsim.SkyModel._basesize * Npus_node / 1e6,
-          mem_avail / 1e6)
+    taskiter = pyuvsim.uvdata_to_task_iter(
+        np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict, Nsky_parts=Nsky_parts
+    )
+
+    uvtask_list = uvtest.checkWarnings(
+        list, [taskiter], message='The default for the `center` keyword has changed.',
+        category=DeprecationWarning
+    )
+
+    assert pyuvsim.estimate_skymodel_memory_usage(partsize, 1) * Npus_node < mem_avail
 
     # Normally, the number of tasks is Nbls * Ntimes * Nfreqs (partsize = Nsrcs)
     # If the source list is split within the task iterator, then it will be larger.
-    assert len(uvtask_list) == Ntasks * Nsrcs / partsize
+    assert len(uvtask_list) == Ntasks * Nsky_parts
 
     # Reset spoofed parameters.
     del os.environ['SLURM_MEM_PER_NODE']
