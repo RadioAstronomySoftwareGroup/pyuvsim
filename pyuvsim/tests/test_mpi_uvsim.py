@@ -9,6 +9,8 @@ import os
 import mpi4py
 import numpy as np
 import yaml
+import resource
+import time
 
 mpi4py.rc.initialize = False  # noqa
 import pytest
@@ -141,6 +143,25 @@ def test_shared_mem():
 
     # Shared array should be read-only
     pytest.raises(ValueError, sA.itemset, 0, 3.0)
+
+
+def test_mem_usage():
+    # Check that the mpi-enabled memory check is consistent
+    # with a local memory check.
+
+    # Also check that making a variable of a given size
+    # increases memory usage by the expected amount.
+
+    mpi.start_mpi()
+
+    memory_usage_GiB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 2**10 / 2**30
+    assert memory_usage_GiB == mpi.get_max_node_rss()
+    incsize = 50 * 2**20    # 50 MiB
+    arr = bytearray(incsize)
+    time.sleep(1)
+    change = mpi.get_max_node_rss() - memory_usage_GiB
+    assert np.isclose(change, incsize / 2**30, atol=1e-2)
+    del arr
 
 
 @pytest.mark.skip
