@@ -23,7 +23,7 @@ from . import simsetup
 from . import utils as simutils
 from .antenna import Antenna
 from .baseline import Baseline
-from .source import SkyModel
+from .source import estimate_skymodel_memory_usage
 from .telescope import Telescope
 
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim',
@@ -178,13 +178,13 @@ def _make_task_inds(Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus):
         Ntasks_local = Nbltf
     else:
         task_inds, Ntasks_local = simutils.iter_array_split(rank, Nbltf, Npus)
-        src_inds = range(Nsrcs)
+        src_inds = slice(None)
         Nsrcs_local = Nsrcs
 
     return task_inds, src_inds, Ntasks_local, Nsrcs_local
 
 
-def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
+def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_parts=1):
     """
     Generate local tasks, reusing quantities where possible.
 
@@ -212,17 +212,12 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
         raise TypeError("catalog must be a record array")
 
     # Splitting the catalog for memory's sake.
-    # Total memory footprint will be \approx Npus (on node) * (size of skymodel)
     Nsrcs_total = len(catalog)
-    mem_avail = simutils.get_avail_memory()
-    Npus_node = mpi.Npus_node
-    skymodel_mem_footprint = SkyModel._basesize * Nsrcs_total * Npus_node
-    if skymodel_mem_footprint > mem_avail:
-        Nsky_parts = np.ceil(skymodel_mem_footprint / float(mem_avail))
-        partsize = int(np.floor(Nsrcs_total / Nsky_parts))
-        src_iter = [range(s, s + partsize) for s in range(0, Nsrcs_total, partsize)]
+    if Nsky_parts > 1:
+        Nsky_parts = int(Nsky_parts)
+        src_iter = [simutils.iter_array_split(s, Nsrcs_total, Nsky_parts)[0]
+                    for s in range(Nsky_parts)]
     else:
-        Nsky_parts = 1
         src_iter = [slice(None)]
 
     # Build the antenna list.
@@ -282,6 +277,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict):
             task.uvdata_index = (blti, 0, freq_i)    # 0 = spectral window index
 
             yield task
+        del sky
 
 
 def serial_gather(uvtask_list, uv_out):
@@ -340,6 +336,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
         print('Ntimes:', input_uv.Ntimes)
         print('Nfreqs:', input_uv.Nfreqs)
         print('Nsrcs:', len(catalog))
+        sys.stdout.flush()
         uv_container = simsetup._complete_uvdata(input_uv, inplace=False)
 
     Nbls = input_uv.Nbls
@@ -356,20 +353,36 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     for bm in beam_models:
         bm.interpolation_function = 'az_za_simple'
 
+    # Estimating required memory to decide how to split source array.
+
+    Nsrcs_total = len(catalog)
+    Nsrcfreqs = np.atleast_1d(catalog['frequency'][0]).size
+    mem_avail = (simutils.get_avail_memory()
+                 - mpi.get_max_node_rss(return_per_node=True) * 2**30)
+
+    Npus_node = mpi.node_comm.Get_size()
+    skymodel_mem_footprint = estimate_skymodel_memory_usage(Nsrcs_total, Nsrcfreqs) * Npus_node
+
+    # Allow up to 50% of available memory for SkyModel data.
+    skymodel_mem_max = 0.5 * mem_avail
+
+    Nsky_parts = np.ceil(skymodel_mem_footprint / float(skymodel_mem_max))
+
+    Ntasks_tot = Ntimes * Nbls * Nfreqs * Nsky_parts
+
     local_task_iter = uvdata_to_task_iter(
-        task_inds, input_uv, catalog[src_inds], beam_models, beam_dict
+        task_inds, input_uv, catalog[src_inds], beam_models, beam_dict, Nsky_parts=Nsky_parts
     )
 
     summed_task_dict = {}
+    Ntasks_tot = comm.reduce(Ntasks_tot, op=mpi.MPI.MAX, root=0)
     if rank == 0:
-        tot = Ntimes * Nbls * Nfreqs
-        print("Tasks: ", Ntimes * Nbls * Nfreqs)
+        print("Tasks: ", Ntasks_tot)
         sys.stdout.flush()
-        pbar = simutils.progsteps(maxval=tot)
+        pbar = simutils.progsteps(maxval=Ntasks_tot)
 
     engine = UVEngine()
     count = mpi.Counter()
-
     for task in local_task_iter:
         engine.set_task(task)
         if task.uvdata_index not in summed_task_dict.keys():
@@ -378,9 +391,12 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
             summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
         else:
             summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
+
+        max_mem = mpi.get_max_node_rss()
         count.next()
         if rank == 0:
-            pbar.update(count.current_value())
+            pbar.update(count.current_value(), max_mem)
+
     comm.Barrier()
     count.free()
     if rank == 0:
