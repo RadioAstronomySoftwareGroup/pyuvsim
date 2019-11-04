@@ -4,7 +4,7 @@
 
 
 ## Added
-- A means for monitoring the memory usage on each Node
+- A function for checking the memory usage on each Node
 
 ### Changed
 - Replaced init_uvdata_out function with complete_uvdata
