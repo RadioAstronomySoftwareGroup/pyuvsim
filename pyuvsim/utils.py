@@ -36,7 +36,14 @@ def get_version_string():
 
 class progsteps:
     """
-        Similar to a progress bar, this prints a percentage of task completion.
+    Similar to a progress bar, this prints a percentage of task completion.
+
+    Parameters
+    ----------
+
+    maxval : int
+        Maximum value to count to.
+
     """
 
     def __init__(self, maxval=None):
@@ -50,15 +57,32 @@ class progsteps:
         self.step = step
         self.curval = -1
 
-    def update(self, count):
+    def update(self, count, mem=None):
+        """
+        Update the progress bar.
+
+        Parameters
+        ----------
+
+        count : int
+            Current value of counter
+        mem : float (optional)
+            Maximum current per-node memory usage in GB.
+            If provided, this information will also be printed.
+        """
         if count >= self.curval + self.step:
             doprint = False
             if not self.curval == count:
                 doprint = True
                 self.curval = count
             if doprint:
-                print("{:0.2f}% completed. {:0.3f} minutes elapsed \n".format(
-                    (count / self.maxval) * 100., (pytime.time() - self.t0) / 60.))
+                ostr = "{:0.2f}% completed. {:0.3f} minutes elapsed".format(
+                    (count / self.maxval) * 100., (pytime.time() - self.t0) / 60.)
+                if mem is not None:
+                    ostr += ", MaxRSS = {:0.3f} GB\n".format(mem)
+                else:
+                    ostr += '\n'
+                print(ostr)
             sys.stdout.flush()
 
     def finish(self):

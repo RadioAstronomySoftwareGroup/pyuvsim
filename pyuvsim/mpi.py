@@ -7,6 +7,7 @@ from __future__ import absolute_import, division, print_function
 import sys
 from array import array
 from threading import Thread
+import resource
 
 import mpi4py
 import numpy as np
@@ -16,7 +17,6 @@ from mpi4py import MPI
 
 rank = 0  # COMM_WORLD rank
 Npus = 1
-Npus_node = 1
 world_comm = None
 node_comm = None
 rank_comm = None
@@ -33,10 +33,17 @@ def set_mpi_excepthook(mpi_comm):
     sys.excepthook = mpi_excepthook
 
 
-def start_mpi():
+def start_mpi(block_nonroot_stdout=True):
     """
     Check if MPI has already been initialized. If so, just set the communicators,
     Npus, and rank variables.
+
+    Parameters
+    ----------
+
+    block_nonroot_stdout : bool (True)
+        Redirect stdout on nonzero ranks to /dev/null, for cleaner output.
+
     """
     global world_comm, node_comm, rank_comm, rank, Npus
     if not MPI.Is_initialized():
@@ -52,7 +59,7 @@ def start_mpi():
 
     world_comm.Barrier()
 
-    if not rank == 0:  # pragma: no cover
+    if (not rank == 0) and block_nonroot_stdout:  # pragma: no cover
         # For non-root ranks, do not print to stdout.
         # (Uncovered until we have multi-rank tests)
         sys.stdout = open('/dev/null', 'w')
@@ -97,7 +104,7 @@ def shared_mem_bcast(arr, root=0):
 
     if node_comm.rank == root:
         # Now fill the window on each node with the data.
-        sh_arr[:] = arr
+        sh_arr[:] = arr[()]
 
     sh_arr.flags['WRITEABLE'] = False  # Do not want ranks overwriting the data.
 
@@ -178,6 +185,35 @@ class Counter(object):
         self.comm.Recv([ival, MPI.INT], 0, 0)
         val = ival[0]
         return val
+
+
+def get_max_node_rss(return_per_node=False):
+    """
+    Find the maximum memory usage on any node in the job in bytes.
+
+    Parameters
+    ----------
+
+    return_per_node : bool (optional)
+        Return the total memory on the node to each rank on
+        that node. (Default is False)
+
+    Returns
+    -------
+
+    max_mem : float
+        Maximum memory usage in GiB across the job.
+        Only returns to the zero-th rank on the world_comm.
+    """
+
+    # KiB -> GiB
+    memory_usage_GiB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 2**10 / 2**30
+    node_mem_tot = node_comm.allreduce(memory_usage_GiB, op=MPI.SUM)
+    if return_per_node:
+        return node_mem_tot
+
+    max_mem = world_comm.reduce(node_mem_tot, op=MPI.MAX, root=0)
+    return max_mem
 
 
 def get_rank():
