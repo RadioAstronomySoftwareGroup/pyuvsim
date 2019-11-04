@@ -246,7 +246,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
 
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
-
     for src_i in src_iter:
         sky = simsetup.array_to_skymodel(catalog[src_i])
         if sky.spectral_type == 'values':
@@ -392,10 +391,9 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
         else:
             summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
 
-        max_mem = mpi.get_max_node_rss()
         count.next()
         if rank == 0:
-            pbar.update(count.current_value(), max_mem)
+            pbar.update(count.current_value())
 
     comm.Barrier()
     count.free()
