@@ -9,7 +9,7 @@ dependencies:
   - scipy>=1.0.1
   - PyYAML>=5.1
   - mpi4py>=3.0.0
-  - astropy>=2.0
+  - astropy>=2.0.16
   - pip
   - psutil
   - line_profiler
