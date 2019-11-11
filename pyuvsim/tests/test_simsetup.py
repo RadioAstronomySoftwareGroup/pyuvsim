@@ -968,3 +968,18 @@ def test_keyword_param_loop():
     uvd.extra_keywords = {}  # These will not match
 
     assert uv2 == uvd
+
+
+def test_array_to_skymodel_loop():
+    sky = uvtest.checkWarnings(
+        pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
+        message=GLEAM_vot, nwarnings=11,
+        category=[astropy.io.votable.exceptions.W27] + [astropy.io.votable.exceptions.W50] * 10
+    )
+    sky.ra = Angle(sky.ra.rad, 'rad')
+    sky.dec = Angle(sky.dec.rad, 'rad')
+    arr = pyuvsim.simsetup.skymodel_to_array(sky)
+    sky2 = pyuvsim.simsetup.array_to_skymodel(arr)
+
+    assert np.allclose((sky.ra - sky2.ra).rad, 0.0)
+    assert np.allclose((sky.dec - sky2.dec).rad, 0.0)

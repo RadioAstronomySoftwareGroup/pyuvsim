@@ -13,7 +13,6 @@ from scipy.linalg import orthogonal_procrustes as ortho_procr
 
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy.time import Time
-from astropy.units import Quantity
 import astropy_healpix
 
 from . import utils as simutils
@@ -327,7 +326,7 @@ class SkyModel(object):
                              'value was: {al}'.format(al=telescope_location))
 
         Ionly_mask = np.sum(self.stokes[1:, :, :], axis=0) == 0.0
-        NstokesI = np.sum(Ionly_mask[0,:])   # Number of unpolarized sources
+        NstokesI = np.sum(Ionly_mask[0, :])   # Number of unpolarized sources
 
         # For unpolarized sources, there's no need to rotate the coherency matrix.
         coherency_local = self.coherency_radec.copy()
@@ -467,7 +466,7 @@ def healpix_to_sky(hpmap, indices, freqs):
     ra, dec = astropy_healpix.healpix_to_lonlat(indices, Nside)
     stokes = np.zeros((4, len(freqs), len(indices)))
     stokes[0] = (hpmap.T / simutils.jy2Tsr(freqs,
-                                           bm=astropy_healpix.nside_to_pixel_area(Nside).value, mK=False)
+                 bm=astropy_healpix.nside_to_pixel_area(Nside).value, mK=False)
                  ).T
     sky = SkyModel(indices.astype('str'), ra, dec, stokes, freq_array=freqs, Nfreqs=len(freqs))
     return sky
