@@ -112,8 +112,8 @@ def skymodel_to_array(sky):
 
     arr = np.empty(sky.Ncomponents, dtype=dt)
     arr['source_id'] = sky.name
-    arr['ra_j2000'] = sky.ra.value
-    arr['dec_j2000'] = sky.dec.value
+    arr['ra_j2000'] = sky.ra.deg
+    arr['dec_j2000'] = sky.dec.deg
     arr['flux_density_I'] = sky.stokes[0, :, :].T   # Swaps component and frequency axes
     arr['frequency'] = sky.freq_array
 

@@ -14,6 +14,7 @@
 - Added functions to read healpix maps and added support for frequency axis
 
 ### Fixed
+- Fixed a serious bug with improper conversion of Angle to rad/deg in simsetup.py
 - skymodel splitting was not working correctly to avoid running out of memory.
 - Flush stderr in excepthook, so stack trace is printed when an exception is raised in MPI.
 - No longer calling UVBeam.interp with freq_interp_kind, for updated pyuvdata.
