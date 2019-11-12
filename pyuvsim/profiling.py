@@ -26,7 +26,7 @@ except ImportError:  # pragma: no cover
         return None
 
 default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params',
-                         'coherency_calc', 'update_positions', 'apply_beam', 'make_visibility',
+                         'apply_beam', 'make_visibility',
                          'uvdata_to_task_iter', 'run_uvsim']
 
 

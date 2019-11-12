@@ -16,6 +16,7 @@ from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
 from astropy.time import Time
 from pyuvdata import UVBeam, UVData
+import pyradiosky
 from six.moves import range
 
 import pyuvsim
@@ -54,7 +55,7 @@ def test_mock_catalog_zenith_source():
     ra = icrs_coord.ra
     dec = icrs_coord.dec
 
-    test_source = pyuvsim.SkyModel('src0', ra, dec, [1, 0, 0, 0])
+    test_source = pyradiosky.SkyModel('src0', ra, dec, [1, 0, 0, 0], [1e8], 'flat')
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
@@ -78,7 +79,7 @@ def test_mock_catalog_off_zenith_source():
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    test_source = pyuvsim.SkyModel('src0', ra, dec, [1.0, 0, 0, 0])
+    test_source = pyradiosky.SkyModel('src0', ra, dec, [1.0, 0, 0, 0], [1e8], 'flat')
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith',
                                                      alt=src_alt.deg)
@@ -117,7 +118,7 @@ def test_catalog_from_params():
     catalog_uv, srclistname = pyuvsim.simsetup.initialize_catalog_from_params(
         {'sources': source_dict}, hera_uv
     )
-    catalog_uv = pyuvsim.simsetup.array_to_skymodel(catalog_uv)
+    catalog_uv = pyradiosky.array_to_skymodel(catalog_uv)
     source_dict['array_location'] = arrloc
     del source_dict['time']
 
@@ -135,7 +136,7 @@ def test_catalog_from_params():
         [{'sources': source_dict}, hera_uv],
         message="Warning: No julian date given for mock catalog. Defaulting to first time step."
     )
-    catalog_str = pyuvsim.simsetup.array_to_skymodel(catalog_str)
+    catalog_str = pyradiosky.array_to_skymodel(catalog_str)
     assert np.all(catalog_str == catalog_uv)
 
 # parametrize will loop over all the give values
@@ -769,7 +770,7 @@ def test_mock_catalogs():
     )
 
     for arr in arrangements:
-        radec_catalog = pyuvsim.simsetup.read_text_catalog(
+        radec_catalog = pyradiosky.read_text_catalog(
             os.path.join(SIM_DATA_PATH, 'test_catalogs', text_catalogs[arr])
         )
         assert np.all(radec_catalog == cats[arr])

@@ -9,9 +9,7 @@ import warnings
 import numpy as np
 import pyuvdata.utils as uvutils
 from scipy.special import j1
-
-from .utils import c
-
+from .utils import speed_of_light
 
 def diameter_to_sigma(diam, freqs):
     """
@@ -27,7 +25,7 @@ def diameter_to_sigma(diam, freqs):
                with the given diameter.
     """
 
-    c_ms = c.to('m/s').value
+    c_ms = speed_of_light.to('m/s').value
     wavelengths = c_ms / freqs
 
     scalar = 2.2150894  # Found by fitting a Gaussian to an Airy disk function
