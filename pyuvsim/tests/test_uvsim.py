@@ -17,6 +17,7 @@ from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy.time import Time
 from pyuvdata import UVData
 from pyuvdata.data import DATA_PATH
+import pyradiosky
 
 import pyuvsim
 import pyuvsim.tests as simtest
@@ -111,8 +112,8 @@ def test_visibility_source_below_horizon_radec():
     source_coord = SkyCoord(ra=Angle('13h20m'), dec=Angle('-30d43m17.5s'),
                             obstime=time, frame='icrs', location=array_location)
 
-    source = pyuvsim.SkyModel('src_down', source_coord.ra, source_coord.dec,
-                              np.array([1.0, 0, 0, 0]).reshape(4, 1))
+    source = pyradiosky.SkyModel('src_down', source_coord.ra, source_coord.dec,
+                              np.array([1.0, 0, 0, 0]).reshape(4, 1), [1e8], 'flat')
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
@@ -464,7 +465,7 @@ def test_file_to_tasks():
         index = np.where(hera_uv.antenna_numbers == antnum)[0][0]
         antennas2.append(antennas[index])
 
-    sources = pyuvsim.array_to_skymodel(sources)
+    sources = pyradiosky.array_to_skymodel(sources)
     for idx, antenna1 in enumerate(antennas1):
         antenna2 = antennas2[idx]
         baseline = pyuvsim.Baseline(antenna1, antenna2)
@@ -650,7 +651,7 @@ def test_source_splitting():
     # The alternative would be to make a very large source catalog, but that's not ideal in a test.
     Npus_node = 2000
     pyuvsim.mpi.Npus_node = Npus_node  # Absurdly large
-    os.environ['SLURM_MEM_PER_NODE'] = str(4.0)  # Only 4MB of memory
+    os.environ['SLURM_MEM_PER_NODE'] = str(400.0)  # Only 4MB of memory
 
     beam = pyuvsim.analyticbeam.AnalyticBeam('uniform')
     beam_list = [beam]
@@ -661,8 +662,8 @@ def test_source_splitting():
     Ntasks = Nblts * Nfreqs
     beam_dict = None
 
-    skymodel = pyuvsim.array_to_skymodel(sources)
-    skymodel_mem_footprint = skymodel.get_size() * Npus_node
+    skymodel = pyradiosky.array_to_skymodel(sources)
+    skymodel_mem_footprint = simutils.estimate_skymodel_memory_usage(skymodel.Ncomponents, skymodel.Nfreqs) * Npus_node
     mem_avail = pyuvsim.utils.get_avail_memory()
 
     Nsky_parts = np.ceil(skymodel_mem_footprint / float(mem_avail))

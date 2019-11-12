@@ -28,7 +28,8 @@ try:
 except ImportError:
     def get_rank():
         return 0
-from .source import SkyModel, read_healpix_hdf5, healpix_to_sky
+#from pyradiosky import SkyModel, read_healpix_hdf5, healpix_to_sky, skymodel_to_array, array_to_skymodel
+import pyradiosky
 from .utils import check_file_exists_and_increment
 
 
@@ -253,9 +254,9 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     stokes = np.zeros((4, 1, Nsrcs))
     stokes[0, :] = fluxes
     freqs = np.ones(Nsrcs) * freq
-    catalog = SkyModel(names, ra, dec, stokes, freq_array=freqs)
+    catalog = pyradiosky.SkyModel(names, ra, dec, stokes, freqs, 'flat')
     if return_table:
-        return skymodel_to_array(catalog), mock_keywords
+        return pyradiosky.skymodel_to_array(catalog), mock_keywords
     if get_rank() == 0 and save:
         np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs,
                  fluxes=fluxes)
@@ -346,16 +347,18 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         if not os.path.isfile(catalog):
             catalog = os.path.join(param_dict['config_path'], catalog)
         if catalog.endswith("txt"):
-            catalog = read_text_catalog(catalog, return_table=True)
+            catalog = pyradiosky.read_text_catalog(catalog, return_table=True)
         elif catalog.endswith('vot'):
-            catalog = read_votable_catalog(catalog, return_table=True)
+            catalog = pyradiosky.read_votable_catalog(catalog, return_table=True)
         elif catalog.endswith('hdf5'):
-            hpmap, inds, freqs = read_healpix_hdf5(catalog)
-            sky = healpix_to_sky(hpmap, inds, freqs)
-            catalog = skymodel_to_array(sky)
+            hpmap, inds, freqs = pyradiosky.read_healpix_hdf5(catalog)
+            sky = pyradiosky.healpix_to_sky(hpmap, inds, freqs)
+            catalog = pyradiosky.skymodel_to_array(sky)
 
     # Do source selections, if any.
-    catalog = source_cuts(catalog, input_uv=input_uv, **source_select_kwds)
+    if input_uv is not None:
+        source_select_kwds['latitude_deg'] = input_uv.telescope_location_lat_lon_alt_degrees[0]
+    catalog = pyradiosky.source_cuts(catalog , **source_select_kwds)
 
     return np.asarray(catalog), source_list_name
 

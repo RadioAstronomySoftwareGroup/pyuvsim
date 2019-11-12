@@ -15,7 +15,9 @@ try:
 except ImportError:
     HAVE_PSUTIL = False
 from astropy.coordinates import Angle
+from astropy.constants import c as speed_of_light
 from six.moves import range
+import six
 
 from . import version as simversion
 

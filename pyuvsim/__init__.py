@@ -11,7 +11,6 @@ from .simsetup import *  # noqa
 from .analyticbeam import *  # noqa
 from .antenna import *  # noqa
 from .baseline import *  # noqa
-from .source import *  # noqa
 from .telescope import *  # noqa
 from .utils import *  # noqa
 

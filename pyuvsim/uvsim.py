@@ -13,6 +13,7 @@ import astropy.units as units
 from astropy.time import Time
 from astropy.units import Quantity
 from pyuvdata import UVData
+import pyradiosky
 from six.moves import range
 
 try:
@@ -142,7 +143,7 @@ class UVEngine(object):
         self.apply_beam()
 
         # need to convert uvws from meters to wavelengths
-        uvw_wavelength = self.task.baseline.uvw / simutils.c * self.task.freq.to('1/s')
+        uvw_wavelength = self.task.baseline.uvw / simutils.speed_of_light * self.task.freq.to('1/s')
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
         vij = self.apparent_coherency * fringe
         # Sum over source component axis:
@@ -247,7 +248,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
     for src_i in src_iter:
-        sky = simsetup.array_to_skymodel(catalog[src_i])
+        sky = pyradiosky.array_to_skymodel(catalog[src_i])
         if sky.spectral_type == 'values':
             assert np.allclose(sky.freq_array, input_uv.freq_array)
         for task_index in task_ids:
@@ -366,6 +367,9 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     skymodel_mem_max = 0.5 * mem_avail
 
     Nsky_parts = np.ceil(skymodel_mem_footprint / float(skymodel_mem_max))
+
+    if Nsky_parts > Nsrcs_total:
+        raise ValueError("Insufficient memory for simulation.")
 
     Ntasks_tot = Ntimes * Nbls * Nfreqs * Nsky_parts
 
