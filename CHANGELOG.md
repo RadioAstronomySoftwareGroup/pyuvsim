@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+## [1.1.1] - 2019-11-14
 
 ## Added
 - A function for checking the memory usage on each Node
