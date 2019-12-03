@@ -2,8 +2,6 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-from __future__ import absolute_import, division, print_function
-
 import copy
 import os
 import shutil
@@ -13,11 +11,10 @@ import pytest
 import pyuvdata.tests as uvtest
 import yaml
 from astropy import units
-from astropy.coordinates import Angle, SkyCoord, EarthLocation, AltAz
+from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy.time import Time
 from pyuvdata import UVBeam, UVData
 import pyradiosky
-from six.moves import range
 
 import pyuvsim
 import pyuvsim.tests as simtest

@@ -2,8 +2,6 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-from __future__ import absolute_import, division, print_function
-
 import ast
 import copy
 import os
@@ -12,14 +10,11 @@ import warnings
 
 import astropy.units as units
 import numpy as np
-import six
 import yaml
 
 from pyuvdata import utils as uvutils, UVBeam, UVData
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy.time import Time
-from numpy.lib import recfunctions
-from six.moves import map, range
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from .analyticbeam import AnalyticBeam
@@ -28,7 +23,6 @@ try:
 except ImportError:
     def get_rank():
         return 0
-#from pyradiosky import SkyModel, read_healpix_hdf5, healpix_to_sky, skymodel_to_array, array_to_skymodel
 import pyradiosky
 from .utils import check_file_exists_and_increment
 
@@ -40,10 +34,7 @@ def _parse_layout_csv(layout_csv):
         header = fhandle.readline()
 
     header = [h.strip() for h in header.split()]
-    if six.PY2:
-        str_format_code = 'a'
-    else:
-        str_format_code = 'U'
+    str_format_code = 'U'
 
     # get data types for each column
     dtypes = {
@@ -97,6 +88,7 @@ def _config_str_to_dict(config_str):
     param_dict['obs_param_file'] = os.path.basename(config_str)
 
     return param_dict
+
 
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
                         alt=None, save=False, min_alt=None, rseed=None, return_table=False):
@@ -340,7 +332,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         time = mock_keywords.pop('time')
 
         catalog, mock_keywords = create_mock_catalog(time, return_table=True, **mock_keywords)
-        mock_keyvals = [str(key) + str(val) for key, val in six.iteritems(mock_keywords)]
+        mock_keyvals = [str(key) + str(val) for key, val in mock_keywords.items()]
         source_list_name = 'mock_' + "_".join(mock_keyvals)
     elif isinstance(catalog, str):
         source_list_name = os.path.basename(catalog)
@@ -358,7 +350,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
     # Do source selections, if any.
     if input_uv is not None:
         source_select_kwds['latitude_deg'] = input_uv.telescope_location_lat_lon_alt_degrees[0]
-    catalog = pyradiosky.source_cuts(catalog , **source_select_kwds)
+    catalog = pyradiosky.source_cuts(catalog, **source_select_kwds)
 
     return np.asarray(catalog), source_list_name
 
@@ -511,7 +503,7 @@ def parse_telescope_params(tele_params, config_path=''):
     if 'array_layout' not in tele_params:
         raise KeyError('array_layout must be provided.')
     array_layout = tele_params.pop('array_layout')
-    if isinstance(array_layout, six.string_types):
+    if isinstance(array_layout, str):
         # Interpet as file path to layout csv file.
         layout_csv = array_layout
         # if array layout is a str, parse it as .csv filepath
@@ -883,7 +875,7 @@ def initialize_uvdata_from_params(obs_params):
         for key in ['telescope_config_name', 'array_layout']:
             if key in tele_dict:
                 val = tele_dict[key]
-                if isinstance(val, six.string_types):
+                if isinstance(val, str):
                     extra_keywords[key] = val
 
     uvparam_dict['extra_keywords'] = extra_keywords
@@ -965,13 +957,13 @@ def initialize_uvdata_from_params(obs_params):
         select_params = param_dict['select']
         no_autos = bool(select_params.pop('no_autos', False))
         select_params = dict(
-            [(k, v) for k, v in six.iteritems(select_params) if k in valid_select_keys])
+            [(k, v) for k, v in select_params.items() if k in valid_select_keys])
         if 'antenna_nums' in select_params:
             select_params['antenna_nums'] = list(map(int, select_params['antenna_nums']))
         redundant_threshold = param_dict['select'].get('redundant_threshold', None)
         if 'bls' in select_params:
             bls = select_params['bls']
-            if isinstance(bls, six.string_types):
+            if isinstance(bls, str):
                 # If read from file, this should be a string.
                 bls = ast.literal_eval(bls)
                 select_params['bls'] = bls
@@ -1102,7 +1094,7 @@ def initialize_uvdata_from_keywords(
 
     antenna_numbers = None
     if isinstance(array_layout, dict):
-        antenna_numbers = np.fromiter(six.viewkeys(array_layout), dtype=int)
+        antenna_numbers = np.fromiter(array_layout.keys(), dtype=int)
         antpos_enu = array_layout.values()
         if antenna_names is None:
             antenna_names = antenna_numbers.astype('str')
@@ -1138,17 +1130,18 @@ def initialize_uvdata_from_keywords(
         'array_layout': array_layout
     }
 
-    freq_params = {k: v for k, v in six.iteritems(freq_params) if v is not None}
-    time_params = {k: v for k, v in six.iteritems(time_params) if v is not None}
-    selection_params = {k: v for k, v in six.iteritems(selection_params) if v is not None}
-    tele_params = {k: v for k, v in six.iteritems(tele_params) if v is not None}
-    layout_params = {k: v for k, v in six.iteritems(layout_params) if v is not None}
+    freq_params = {k: v for k, v in freq_params.items() if v is not None}
+    time_params = {k: v for k, v in time_params.items() if v is not None}
+    selection_params = {k: v for k, v in selection_params.items()
+                        if v is not None}
+    tele_params = {k: v for k, v in tele_params.items() if v is not None}
+    layout_params = {k: v for k, v in layout_params.items() if v is not None}
 
     uv_obj = UVData()
 
     valid_param_names = [getattr(uv_obj, param).name for param in uv_obj]
 
-    extra_kwds = {k: v for k, v in six.iteritems(kwargs) if k in valid_param_names}
+    extra_kwds = {k: v for k, v in kwargs.items() if k in valid_param_names}
 
     # Convert str polarization array to int.
     if polarization_array is not None:

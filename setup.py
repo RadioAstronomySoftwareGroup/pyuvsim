@@ -42,7 +42,6 @@ setup_args = {
     'classifiers': ['Development Status :: 3 - Alpha',
                     'Intended Audience :: Science/Research',
                     'License :: OSI Approved :: BSD License',
-                    'Programming Language :: Python :: 2.7',
                     'Programming Language :: Python :: 3.6',
                     'Topic :: Scientific/Engineering :: Astronomy'],
     'keywords': 'radio astronomy interferometry',

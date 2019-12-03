@@ -14,30 +14,30 @@ general simulator design.
 A comparison to other simulators may be found at [ReadTheDocs](https://pyuvsim.readthedocs.io/en/latest/comparison.html).
 
 ## Motivation and Approach
-pyuvsim's two primary goals are interferometer simulation accuracy at the level of 
-precision necessary for 21cm cosmology science, and maximum flexibility in use cases. 
+pyuvsim's two primary goals are interferometer simulation accuracy at the level of
+precision necessary for 21cm cosmology science, and maximum flexibility in use cases.
 Key elements of this approach include:
 
 1. High level of test coverage including accuracy (design goal is 97%).
 2. Include analytic tests in unittests.
 3. Comparison with external simulations.
 4. Design for scalability across many cpus.
-5. Fully-polarized instrument response, floating-point source position accuracy, 
+5. Fully-polarized instrument response, floating-point source position accuracy,
    full-sky field of view, and exact antenna positions.
 6. Support for varied beam models across the array.
 7. Defining a clear, user-friendly standard for simulation design.
 
 ## Installation
-A user-installation is achieved simply with `pip install pyuvsim`, or to get the 
-bleeding-edge: `pip install https://github.com/RadioAstronomySoftwareGroup/pyuvsim`. 
-This will install all dependencies. 
+A user-installation is achieved simply with `pip install pyuvsim`, or to get the
+bleeding-edge: `pip install https://github.com/RadioAstronomySoftwareGroup/pyuvsim`.
+This will install all dependencies.
 
-By default, `mpi` capabilities are not enabled -- many of the utilities provided in 
+By default, `mpi` capabilities are not enabled -- many of the utilities provided in
 `pyuvsim` do not require it. To use the simulator within `pyuvsim`, you should install
 `pyuvsim` with  `pip install pyuvsim[sim]`.
 
 There are a few more optional dependencies for `pyuvsim` which enable some features,
-such as `line_profiler` to use the built-in profiling, and `h5py` to write to HDF5 
+such as `line_profiler` to use the built-in profiling, and `h5py` to write to HDF5
 file format. If you would like these tools as well as the full simulator, install
 `pyuvsim` with `pip install pyuvsim[all]`
 
@@ -48,10 +48,10 @@ Note that `pyuvsim` is intended to run on clusters running the linux operating s
 
 
 ### Dependencies
-If you are using `conda` to manage your environment, you may wish to install the 
+If you are using `conda` to manage your environment, you may wish to install the
 following before installing `pyuvsim`:
 
-    conda install -c conda-forge "numpy>=1.15" "astropy>=2.0" "scipy>1.0.1" "mpi4py>=3.0.0" "pyyaml>=5.1" "six>=1.11" "pyuvdata>=1.3.7"
+    conda install -c conda-forge "numpy>=1.15" "astropy>=3.0" "scipy>1.0.1" "mpi4py>=3.0.0" "pyyaml>=5.1" "pyuvdata>=1.3.7"
 
 ### Developing
 If you are developing `pyuvsim`, it is preferred that you do so in a fresh `conda`
@@ -64,7 +64,7 @@ environment. The following commands will install all relevant development packag
     $ conda env update -n pyuvsim -f environment.yml
     $ pip install -e .
 
-This will install extra dependencies required for testing/development as well as the 
+This will install extra dependencies required for testing/development as well as the
 standard ones.
 
 The second-to-last line may also be replaced by `pip install -r requirements.txt` if you

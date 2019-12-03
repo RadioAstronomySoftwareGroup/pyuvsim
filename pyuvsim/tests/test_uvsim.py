@@ -2,8 +2,6 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-from __future__ import absolute_import, division, print_function
-
 import copy
 import itertools
 import os
@@ -113,7 +111,7 @@ def test_visibility_source_below_horizon_radec():
                             obstime=time, frame='icrs', location=array_location)
 
     source = pyradiosky.SkyModel('src_down', source_coord.ra, source_coord.dec,
-                              np.array([1.0, 0, 0, 0]).reshape(4, 1), [1e8], 'flat')
+                                 np.array([1.0, 0, 0, 0]).reshape(4, 1), [1e8], 'flat')
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
@@ -663,7 +661,11 @@ def test_source_splitting():
     beam_dict = None
 
     skymodel = pyradiosky.array_to_skymodel(sources)
-    skymodel_mem_footprint = simutils.estimate_skymodel_memory_usage(skymodel.Ncomponents, skymodel.Nfreqs) * Npus_node
+    skymodel_mem_footprint = (
+        simutils.estimate_skymodel_memory_usage(
+            skymodel.Ncomponents, skymodel.Nfreqs)
+        * Npus_node
+    )
     mem_avail = pyuvsim.utils.get_avail_memory()
 
     Nsky_parts = np.ceil(skymodel_mem_footprint / float(mem_avail))

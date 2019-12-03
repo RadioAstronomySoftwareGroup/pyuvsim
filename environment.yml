@@ -4,12 +4,11 @@ channels:
   - defaults
 dependencies:
   - numpy>=1.15
-  - six>=1.11.0
   - setuptools>=38.4.0
   - scipy>=1.0.1
   - PyYAML>=5.1
   - mpi4py>=3.0.0
-  - astropy>=2.0.16
+  - astropy>=3.0
   - pip
   - psutil
   - line_profiler

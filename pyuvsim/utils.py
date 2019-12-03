@@ -2,8 +2,6 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-from __future__ import absolute_import, division, print_function
-
 import os
 import sys
 import time as pytime
@@ -15,9 +13,7 @@ try:
 except ImportError:
     HAVE_PSUTIL = False
 from astropy.coordinates import Angle
-from astropy.constants import c as speed_of_light
-from six.moves import range
-import six
+from astropy.units import Quantity
 
 from . import version as simversion
 
@@ -283,6 +279,7 @@ def iter_array_split(part_index, N, M):
 
     return range(start, end), end - start
 
+
 def _skymodel_basesize():
     """
     Estimate the memory footprint of a SkyModel with a single source.
@@ -303,7 +300,7 @@ def estimate_skymodel_memory_usage(Ncomponents, Nfreqs):
     of the data types that go into SkyModel.
 
     This aims to anticipate the full memory required to handle a SkyModel
-    class in simulation, accounting for its attributes as well as 
+    class in simulation, accounting for its attributes as well as
     data generated while used.
 
     Parameters
@@ -332,7 +329,7 @@ def estimate_skymodel_memory_usage(Ncomponents, Nfreqs):
                          'coherency_radec': 4 * base_float,
                          'coherency_local': 4 * base_float}
 
-    mem_est = np.sum([sys.getsizeof(v) * Ncomponents for k, v in six.iteritems(Ncomp_attrs)])
+    mem_est = np.sum([sys.getsizeof(v) * Ncomponents for k, v in Ncomp_attrs.items()])
     mem_est += np.sum([sys.getsizeof(v) * Ncomponents * Nfreqs
-                       for k, v in six.iteritems(Ncomp_Nfreq_attrs)])
+                       for k, v in Ncomp_Nfreq_attrs.items()])
     return mem_est
