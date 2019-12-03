@@ -2,17 +2,12 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-from __future__ import absolute_import, division, print_function
-
 import json
 import os
 import subprocess
-import sys
 
 # This must only be before MPI.INIT()
 pyuvsim_dir = os.path.dirname(os.path.realpath(__file__))
-
-PY2 = sys.version_info < (3, 0)
 
 
 def _get_git_output(args, capture_stderr=False):
@@ -26,8 +21,6 @@ def _get_git_output(args, capture_stderr=False):
 
     data = data.strip()
 
-    if PY2:
-        return data
     return data.decode('utf8')
 
 
@@ -37,7 +30,7 @@ def _get_gitinfo_file(git_file=None):
         git_file = os.path.join(pyuvsim_dir, 'GIT_INFO')
 
     with open(git_file) as data_file:
-        data = [_unicode_to_str(x) for x in json.loads(data_file.read().strip())]
+        data = [x for x in json.loads(data_file.read().strip())]
         git_origin = data[0]
         git_hash = data[1]
         git_description = data[2]
@@ -47,12 +40,6 @@ def _get_gitinfo_file(git_file=None):
         'git_origin': git_origin, 'git_hash': git_hash,
         'git_description': git_description, 'git_branch': git_branch
     }
-
-
-def _unicode_to_str(u):
-    if PY2:
-        return u.encode('utf8')
-    return u
 
 
 def construct_version_info():

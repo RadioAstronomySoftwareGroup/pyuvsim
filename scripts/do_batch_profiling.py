@@ -6,8 +6,6 @@
 # Run profiling jobs for multiple configurations
 # and with different numbers of cores.
 
-from __future__ import absolute_import, division, print_function
-
 import subprocess
 
 import numpy as np

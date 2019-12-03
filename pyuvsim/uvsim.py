@@ -2,19 +2,16 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 import sys
-import six
 import yaml
 from astropy.coordinates import EarthLocation
 import astropy.units as units
 from astropy.time import Time
 from astropy.units import Quantity
+from astropy.constants import c as speed_of_light
 from pyuvdata import UVData
 import pyradiosky
-from six.moves import range
 
 try:
     from . import mpi
@@ -24,7 +21,6 @@ from . import simsetup
 from . import utils as simutils
 from .antenna import Antenna
 from .baseline import Baseline
-from .utils import estimate_skymodel_memory_usage
 from .telescope import Telescope
 
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim',
@@ -143,7 +139,7 @@ class UVEngine(object):
         self.apply_beam()
 
         # need to convert uvws from meters to wavelengths
-        uvw_wavelength = self.task.baseline.uvw / simutils.speed_of_light * self.task.freq.to('1/s')
+        uvw_wavelength = self.task.baseline.uvw / speed_of_light * self.task.freq.to('1/s')
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
         vij = self.apparent_coherency * fringe
         # Sum over source component axis:
@@ -361,7 +357,9 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
                  - mpi.get_max_node_rss(return_per_node=True) * 2**30)
 
     Npus_node = mpi.node_comm.Get_size()
-    skymodel_mem_footprint = estimate_skymodel_memory_usage(Nsrcs_total, Nsrcfreqs) * Npus_node
+    skymodel_mem_footprint = (
+        simutils.estimate_skymodel_memory_usage(Nsrcs_total, Nsrcfreqs) * Npus_node
+    )
 
     # Allow up to 50% of available memory for SkyModel data.
     skymodel_mem_max = 0.5 * mem_avail
@@ -471,7 +469,7 @@ def run_uvsim(params, return_uv=False):
     uv_out = run_uvdata_uvsim(input_uv, beam_list, beam_dict=beam_dict, catalog=catalog)
 
     if rank == 0:
-        if isinstance(params, six.string_types):
+        if isinstance(params, str):
             with open(params, 'r') as pfile:
                 param_dict = yaml.safe_load(pfile)
         else:

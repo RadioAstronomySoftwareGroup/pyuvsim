@@ -2,14 +2,13 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-from __future__ import absolute_import, division, print_function
-
 import warnings
 
 import numpy as np
 import pyuvdata.utils as uvutils
 from scipy.special import j1
-from .utils import speed_of_light
+from astropy.constants import c as speed_of_light
+
 
 def diameter_to_sigma(diam, freqs):
     """

@@ -6,12 +6,8 @@
 Use the line profiler when requested.
 """
 
-from __future__ import absolute_import, division, print_function
-
 import atexit
 from inspect import isclass, isfunction
-
-import six
 
 import pyuvsim as _pyuvsim
 try:
@@ -72,7 +68,7 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
         atexit.register(prof.print_stats, stream=ofile)
         if dump_raw:
             outfile_raw_name = outfile_name + ".lprof"
-            if isinstance(dump_raw, six.string_types):
+            if isinstance(dump_raw, str):
                 outfile_raw_name = dump_raw
             atexit.register(prof.dump_stats, outfile_raw_name)
 
