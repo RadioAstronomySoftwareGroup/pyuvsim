@@ -84,6 +84,7 @@ def _config_str_to_dict(config_str):
     with open(config_str, 'r') as pfile:
         param_dict = yaml.safe_load(pfile)
 
+    config_str = os.path.abspath(config_str)
     param_dict['config_path'] = os.path.dirname(config_str)
     param_dict['obs_param_file'] = os.path.basename(config_str)
 
