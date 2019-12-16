@@ -795,7 +795,6 @@ def test_keyword_param_loop():
 
     assert uv2 == uvd
 
-
 def test_multi_analytic_beams():
     # Test inline definitions of beam attributes.
     # eg. (in beam configuration file):
@@ -845,3 +844,25 @@ def test_multi_analytic_beams():
         bid = beam_ids[i]
         assert beam_dict[nm] == bid
         assert beam_list[bid] == expected[bid]
+
+
+def test_direct_fname():
+    shutil.copyfile(
+        os.path.join(SIM_DATA_PATH, "test_config", "28m_triangle_10time_10chan.yaml"),
+        "28m_triangle_10time_10chan.yaml"
+    )
+    shutil.copyfile(
+        os.path.join(SIM_DATA_PATH, "test_config", "param_100times_1.5days_triangle.yaml"),
+        "param_100times_1.5days_triangle.yaml"
+    )
+    shutil.copyfile(
+        os.path.join(SIM_DATA_PATH, "test_config", "triangle_bl_layout.csv"),
+        "triangle_bl_layout.csv"
+    )
+
+    # This should now run without errors
+    pyuvsim.simsetup.initialize_catalog_from_params("param_100times_1.5days_triangle.yaml")
+
+    os.remove("28m_triangle_10time_10chan.yaml")
+    os.remove("param_100times_1.5days_triangle.yaml")
+    os.remove("triangle_bl_layout.csv")
