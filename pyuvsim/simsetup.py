@@ -67,15 +67,17 @@ def _parse_layout_csv(layout_csv):
                          dtype=dt.dtype)
 
 
-def _write_layout_csv(filepath, antpos_enu, antenna_names, antenna_numbers):
+def _write_layout_csv(filepath, antpos_enu, antenna_names, antenna_numbers, beam_ids=None):
     col_width = max([len(name) for name in antenna_names])
     header = ("{:" + str(col_width) + "} {:8} {:8} {:10} {:10} {:10}\n").format(
         "Name", "Number", "BeamID", "E", "N", "U"
     )
+    if beam_ids is None:
+        beam_ids = np.zeros(len(antenna_names), dtype=int)
     with open(filepath, 'w') as lfile:
         lfile.write(header + '\n')
         for i, (e, n, u) in enumerate(antpos_enu):
-            beam_id = 0
+            beam_id = beam_ids[i]
             name = antenna_names[i]
             num = antenna_numbers[i]
             line = (
