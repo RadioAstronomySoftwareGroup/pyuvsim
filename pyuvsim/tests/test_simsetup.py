@@ -159,9 +159,8 @@ def test_param_flux_cuts():
 # parametrize will loop over all the give values
 @pytest.mark.parametrize("config_num", list([0, 2]))
 def test_param_reader(config_num):
-    """
-        Part of test_param_reader
-    """
+
+    # Reading in various configuration files
 
     param_filename = param_filenames[config_num]
     hera_uv = UVData()
@@ -242,7 +241,7 @@ def test_param_reader(config_num):
         params_bad['telescope']['telescope_config_name'] = os.path.join(
             SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml'
         )
-        simtest.assert_raises_message(OSError, 'Could not find file',
+        simtest.assert_raises_message(ValueError, 'Undefined beam model',
                                       pyuvsim.initialize_uvdata_from_params, params_bad)
 
     # Check default configuration
@@ -983,3 +982,46 @@ def test_array_to_skymodel_loop():
 
     assert np.allclose((sky.ra - sky2.ra).rad, 0.0)
     assert np.allclose((sky.dec - sky2.dec).rad, 0.0)
+
+
+def test_multi_analytic_beams():
+    # Test inline definitions of beam attributes.
+    # eg. (in beam configuration file):
+    #
+    # beam_paths:
+    #   0 : airy, diameter=14
+    #   1 : airy, diameter=20
+    #   2 : gaussian, sigma=0.5
+
+    par_fname = os.path.join(simtest.TESTDATA_PATH, 'test_teleconfig.yaml')
+    layout_fname = os.path.join(simtest.TESTDATA_PATH, 'test_layout_5ant.csv')
+
+    telescope_location = (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
+    telescope_name = 'SKA'
+    beam_specs = {0: 'airy, diameter=14', 1: 'airy, diameter=20', 2: 'gaussian, sigma=0.5'}
+    expected = ['analytic_airy_diam_14', 'analytic_airy_diam_20', 'analytic_gaussian_sig_0.5']
+
+    Nants = 5
+    antenna_numbers = np.arange(Nants)
+    antpos = np.zeros((Nants, 3))
+    antpos[:, 0] = np.arange(Nants)
+    names = antenna_numbers.astype(str)
+    beam_ids = [0, 1, 2, 2, 0]
+
+    pyuvsim.simsetup._write_layout_csv(layout_fname, antpos, names, antenna_numbers, beam_ids)
+
+    # Write tele config to file.
+    with open(par_fname, 'w') as yfile:
+        pdict = dict(telescope_location=str(telescope_location),
+                     telescope_name=telescope_name, beam_paths=beam_specs)
+        yaml.dump(pdict, yfile, default_flow_style=False)
+
+    param_dict = {'telescope_config_name': par_fname, 'array_layout': layout_fname}
+
+    pdict, beam_list, beam_dict = pyuvsim.simsetup.parse_telescope_params(
+        param_dict, simtest.TESTDATA_PATH)
+
+    for i, nm in enumerate(names):
+        bid = beam_ids[i]
+        assert beam_dict[nm] == bid
+        assert beam_list[bid] == expected[bid]
