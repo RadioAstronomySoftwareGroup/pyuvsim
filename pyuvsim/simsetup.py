@@ -619,30 +619,37 @@ def parse_telescope_params(tele_params, config_path=''):
     """
     Parse the "telescope" section of obsparam.
 
-    Args:
-        tele_params: Dictionary of telescope parameters
-            See pyuvsim documentation for allowable keys.
-            https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#telescope-configuration
-        config_path: str
-            path to directory holding configuration and layout files.
+    Parameters
+    ----------
+    tele_params : dict
+        Telescope parameters
+        See pyuvsim documentation for allowable keys.
+        https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#telescope-configuration
+    config_path : str
+        Path to directory holding configuration and layout files.
 
-    Returns:
-        param_dict : dict
-            * `Nants_data`: Number of antennas
-            * `Nants_telescope`: Number of antennas
-            *  `antenna_names`: list of antenna names
-            * `antenna_numbers`: corresponding list of antenna numbers
-            * `antenna_positions`: Array of ECEF antenna positions
-            * `telescope_location`: ECEF array center location
-            * `telescope_location_lat_lon_alt`: Lat Lon Alt array center location
-            * `telescope_config_file`: Path to configuration yaml file
-            * `antenna_location_file`: Path to csv layout file
-            * `telescope_name`: observatory name
+    Returns
+    -------
+    param_dict : dict
+        Parameters related to the telescope and antenna layout, to be included in the
+        UVData object.
 
-        beam_list : list of :class:`pyuvdata.UVBeam` or `pyuvsim.AnalyticBeam`
-            Beam models in the configuration.
-        beam_dict : dict
-            Antenna numbers to beam indices
+        * `Nants_data`: Number of antennas
+        * `Nants_telescope`: Number of antennas
+        *  `antenna_names`: list of antenna names
+        * `antenna_numbers`: corresponding list of antenna numbers
+        * `antenna_positions`: Array of ECEF antenna positions
+        * `telescope_location`: ECEF array center location
+        * `telescope_location_lat_lon_alt`: Lat Lon Alt array center location
+        * `telescope_config_file`: Path to configuration yaml file
+        * `antenna_location_file`: Path to csv layout file
+        * `telescope_name`: observatory name
+    beam_list : list of str
+        Beam models in the configuration.
+        The strings provide either paths to beamfits files or the specifications to make
+        a :class:`pyuvsim.AnalyticBeam`.
+    beam_dict : dict
+        Antenna numbers to beam indices
     """
     tele_params = copy.deepcopy(tele_params)
     # check for telescope config
