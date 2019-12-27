@@ -755,37 +755,64 @@ def parse_telescope_params(tele_params, config_path=''):
         which_ants = antnames[np.where(beam_ids == beamID)]
         for a in which_ants:
             beam_dict[a] = beamID
-        if beam_model in AnalyticBeam.supported_types:
+
+        # First, check to see if the string specifies a beam path.
+        altpath = os.path.join(SIM_DATA_PATH, beam_model)
+        if os.path.exists(beam_model):
+            beam_list.append(beam_model)
+        elif os.path.exists(altpath):
+            beam_list.append(altpath)
+        # Failing that, try to parse the beam string as an analytic beam.
+        else:
+            find_type = [ t in beam_model for t in AnalyticBeam.supported_types]
+
+            if np.sum(find_type) > 1:
+                raise ValueError("Ambiguous beam specification: {}".format(beam_model))
+            if np.sum(find_type) == 0:
+                raise ValueError("Undefined beam model: {}".format(beam_model))
+
+            beam_type = AnalyticBeam.supported_types[find_type.index(True)]
+
+            beam_model = "".join(beam_model.split())    # Remove whitespace
+            mod_list = beam_model.split(',')
+            inline_beam_opts = {}
+            for opt in mod_list:
+                if '=' not in opt:
+                    continue
+                k,v = opt.split('=')
+                inline_beam_opts[k] = v
+
             # Gaussian beam requires either diameter or sigma
             # Airy beam requires diameter
-            if beam_model == 'uniform':
+
+            # Default to None for diameter and sigma.
+            # Values in the "beam_paths" override globally-defined options.
+            beam_opts = {'diameter' : None, 'sigma' : None}
+            for opt in beam_opts.keys():
+                val = telconfig.get(opt, None)
+                val = inline_beam_opts.get(opt, val)
+                beam_opts[opt] = val
+
+            diameter = beam_opts['diameter']
+            sigma = beam_opts['sigma']
+
+            if beam_type == 'uniform':
                 beam_model = 'analytic_uniform'
-            if beam_model == 'gaussian':
-                try:
-                    diam = telconfig['diameter']
-                    beam_model = '_'.join(['analytic', beam_model, 'diam', str(diam)])
-                except KeyError:
-                    try:
-                        sigma = telconfig['sigma']
-                        beam_model = '_'.join(['analytic', beam_model, 'sig', str(sigma)])
-                    except KeyError:
-                        raise KeyError(
-                            "Missing shape parameter for gaussian beam (diameter or sigma)."
-                        )
-            if beam_model == 'airy':
-                try:
-                    diam = telconfig['diameter']
-                    beam_model = '_'.join(['analytic', beam_model, 'diam', str(diam)])
-                except KeyError:
+
+            if beam_type == 'gaussian':
+                if diameter is not None:
+                    beam_model = '_'.join(['analytic_gaussian', 'diam', str(diameter)])
+                elif sigma is not None:
+                    beam_model = '_'.join(['analytic_gaussian', 'sig', str(sigma)])
+                else:
+                    raise KeyError("Missing shape parameter for gaussian beam (diameter or sigma).")
+            if beam_type == 'airy':
+                if diameter is not None:
+                    beam_model = '_'.join(['analytic_airy', 'diam', str(diameter)])
+                else:
                     raise KeyError("Missing diameter for airy beam.")
-        else:
-            # If not analytic, it's a beamfits file path.
-            if not os.path.exists(beam_model):
-                path = os.path.join(SIM_DATA_PATH, beam_model)
-                beam_model = path
-                if not os.path.exists(path):
-                    raise OSError("Could not find file " + beam_model)
-        beam_list.append(beam_model)
+
+            beam_list.append(beam_model)
 
     return return_dict, beam_list, beam_dict
 
