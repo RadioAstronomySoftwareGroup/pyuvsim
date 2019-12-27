@@ -79,7 +79,7 @@ class AnalyticBeam(object):
 
         self.sigma = sigma
         if self.type == 'gaussian' and self.sigma is not None:
-            warnings.warn("Achromatic gaussian beams will not be supported in the future."
+            warnings.warn("Achromatic gaussian beams will not be supported in the future. "
                           + "Define your gaussian beam by a dish diameter from now on.",
                           PendingDeprecationWarning)
 
