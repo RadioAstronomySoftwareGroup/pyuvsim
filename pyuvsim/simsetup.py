@@ -1231,14 +1231,14 @@ def initialize_uvdata_from_params(obs_params):
                 bls = ast.literal_eval(bls)
                 select_params['bls'] = bls
         if len(select_params) > 0:
-            select_params['metadata_only'] = True
+#            select_params['metadata_only'] = True
             uv_obj.select(**select_params)
 
         if no_autos:
-            uv_obj.select(ant_str='cross', metadata_only=True)
+            uv_obj.select(ant_str='cross')#, metadata_only=True)
 
         if redundant_threshold is not None:
-            uv_obj.compress_by_redundancy(tol=redundant_threshold, metadata_only=True)
+            uv_obj.compress_by_redundancy(tol=redundant_threshold)#, metadata_only=True)
 
     return uv_obj, beam_list, beam_dict
 

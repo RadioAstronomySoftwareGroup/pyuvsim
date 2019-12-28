@@ -90,9 +90,9 @@ def test_run_paramfile_uvsim():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
     uvtest.checkWarnings(
         pyuvsim.uvsim.run_uvsim, [param_filename],
-        nwarnings=11,
-        message=[SIM_DATA_PATH] * 10 + ['The default for the `center` keyword has changed'],
-        category=[astropy.io.votable.exceptions.W50] * 10 + [DeprecationWarning]
+        nwarnings=1,
+        message=['The default for the `center` keyword has changed'],
+        category=[DeprecationWarning]
     )
 
     uv_new_vot = UVData()

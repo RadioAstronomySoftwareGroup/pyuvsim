@@ -8,7 +8,6 @@ import copy
 import os
 import shutil
 
-import astropy
 import numpy as np
 import pytest
 import pyuvdata.tests as uvtest
@@ -144,12 +143,7 @@ def test_catalog_from_params():
 def test_param_flux_cuts():
     # Check that min/max flux limits in test params work.
 
-    gleam_path = os.path.join(SIM_DATA_PATH, 'test_config', '..', 'gleam_50srcs.vot')
-    catalog, srclistname = uvtest.checkWarnings(
-        pyuvsim.simsetup.initialize_catalog_from_params, [gleam_param_file],
-        message=gleam_path, nwarnings=11,
-        category=[astropy.io.votable.exceptions.W27] + [astropy.io.votable.exceptions.W50] * 10
-    )
+    catalog, srclistname = pyuvsim.simsetup.initialize_catalog_from_params(gleam_param_file)
 
     catalog = pyuvsim.simsetup.array_to_skymodel(catalog)
     for sI in catalog.stokes[0, 0, :]:
@@ -534,7 +528,7 @@ def test_param_select_cross():
     # test only keeping cross pols
     param_dict['select'] = {'ant_str': 'cross'}
     uv_obj_cross, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
-    uv_obj_cross2 = uv_obj_full.select(ant_str='cross', inplace=False, metadata_only=True)
+    uv_obj_cross2 = uv_obj_full.select(ant_str='cross', inplace=False)
 
     assert uv_obj_cross == uv_obj_cross2
 
@@ -549,7 +543,7 @@ def test_param_select_bls():
     uv_obj_bls, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
 
     uv_obj_bls2 = uv_obj_full.select(
-        bls=[(40, 41), (42, 43), (44, 45)], inplace=False, metadata_only=True
+        bls=[(40, 41), (42, 43), (44, 45)], inplace=False
     )
     uv_obj_bls.history, uv_obj_bls2.history = '', ''
     assert uv_obj_bls == uv_obj_bls2
@@ -567,7 +561,7 @@ def test_param_select_redundant():
     # test only keeping one baseline per redundant group
     param_dict['select'] = {'redundant_threshold': 0.1}
     uv_obj_red, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
-    uv_obj_red2 = uv_obj_full.compress_by_redundancy(tol=0.1, inplace=False, metadata_only=True)
+    uv_obj_red2 = uv_obj_full.compress_by_redundancy(tol=0.1, inplace=False)
     uv_obj_red.history, uv_obj_red2.history = '', ''
 
     assert uv_obj_red == uv_obj_red2
@@ -798,7 +792,7 @@ def test_point_catalog_reader():
 def test_flux_cuts():
     uv_in, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(manytimes_config)
     Nsrcs = 20
-    uv_in.select(times=np.unique(uv_in.time_array)[:50], bls=[(0, 1)], metadata_only=True)
+    uv_in.select(times=np.unique(uv_in.time_array)[:50], bls=[(0, 1)])
 
     dt = np.format_parser(
         ['U10', 'f8', 'f8', 'f8', 'f8'],
@@ -868,22 +862,15 @@ def test_circumpolar_nonrising():
 
 
 def test_read_gleam():
-    sourcelist = uvtest.checkWarnings(
-        pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
-        message=GLEAM_vot, nwarnings=11,
-        category=[astropy.io.votable.exceptions.W27] + [astropy.io.votable.exceptions.W50] * 10
-    )
+    sourcelist = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot)
 
     assert sourcelist.Ncomponents == 50
 
     # Check cuts
     source_select_kwds = {'min_flux': 1.0}
-    catalog = uvtest.checkWarnings(
-        pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
-        dict(source_select_kwds=source_select_kwds, return_table=True),
-        message=GLEAM_vot, nwarnings=11,
-        category=[astropy.io.votable.exceptions.W27] + [astropy.io.votable.exceptions.W50] * 10
-    )
+    catalog = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot,
+                                                    source_select_kwds=source_select_kwds,
+                                                    return_table=True)
 
     assert len(catalog) < sourcelist.Ncomponents
 
@@ -970,11 +957,7 @@ def test_keyword_param_loop():
 
 
 def test_array_to_skymodel_loop():
-    sky = uvtest.checkWarnings(
-        pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
-        message=GLEAM_vot, nwarnings=11,
-        category=[astropy.io.votable.exceptions.W27] + [astropy.io.votable.exceptions.W50] * 10
-    )
+    sky = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot)
     sky.ra = Angle(sky.ra.rad, 'rad')
     sky.dec = Angle(sky.dec.rad, 'rad')
     arr = pyuvsim.simsetup.skymodel_to_array(sky)
