@@ -15,7 +15,6 @@ import time
 mpi4py.rc.initialize = False  # noqa
 import pytest
 from mpi4py import MPI
-import astropy
 
 from pyuvdata import UVData
 from pyuvdata.data import DATA_PATH
