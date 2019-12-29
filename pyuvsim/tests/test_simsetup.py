@@ -990,14 +990,22 @@ def test_multi_analytic_beams():
     antpos[:, 0] = np.arange(Nants)
     names = antenna_numbers.astype(str)
     beam_ids = [0, 1, 2, 2, 0]
-
     pyuvsim.simsetup._write_layout_csv(layout_fname, antpos, names, antenna_numbers, beam_ids)
 
     # Write tele config to file.
+    pdict = dict(telescope_location=str(telescope_location),
+                 telescope_name=telescope_name, beam_paths=beam_specs)
     with open(par_fname, 'w') as yfile:
-        pdict = dict(telescope_location=str(telescope_location),
-                     telescope_name=telescope_name, beam_paths=beam_specs)
         yaml.dump(pdict, yfile, default_flow_style=False)
+
+    # Check error condition:
+    ambig_beam_specs = copy.copy(beam_specs)
+    ambig_beam_specs[0] = 'airy, gaussian, diameter=14'
+    bad_pdict = copy.copy(pdict)
+    bad_pdict['beam_paths'] = ambig_beam_specs
+
+    simtest.assert_raises_message(ValueError, "Ambiguous beam specification",
+                                  pyuvsim.simsetup._construct_beam_list, beam_ids, bad_pdict)
 
     param_dict = {'telescope_config_name': par_fname, 'array_layout': layout_fname}
 

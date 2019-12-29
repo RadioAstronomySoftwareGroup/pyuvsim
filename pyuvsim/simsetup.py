@@ -631,7 +631,6 @@ def _construct_beam_list(beam_ids, telconfig):
         # Failing that, try to parse the beam string as an analytic beam.
         else:
             find_type = [t in beam_model for t in AnalyticBeam.supported_types]
-
             if np.sum(find_type) > 1:
                 raise ValueError("Ambiguous beam specification: {}".format(beam_model))
             if np.sum(find_type) == 0:

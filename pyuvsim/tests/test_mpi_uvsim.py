@@ -11,6 +11,7 @@ import numpy as np
 import yaml
 import resource
 import time
+import six
 
 mpi4py.rc.initialize = False  # noqa
 import pytest
@@ -87,12 +88,15 @@ def test_run_paramfile_uvsim():
     os.remove(tempfilename)
 
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
-    uvtest.checkWarnings(
-        pyuvsim.uvsim.run_uvsim, [param_filename],
-        nwarnings=1,
-        message=['The default for the `center` keyword has changed'],
-        category=[DeprecationWarning]
-    )
+    if six.PY2:
+        pyuvsim.uvsim.run_uvsim(param_filename)
+    else:
+        uvtest.checkWarnings(
+            pyuvsim.uvsim.run_uvsim, [param_filename],
+            nwarnings=1,
+            message=['The default for the `center` keyword has changed'],
+            category=[DeprecationWarning]
+        )
 
     uv_new_vot = UVData()
     uvtest.checkWarnings(uv_new_vot.read_uvfits, [tempfilename], nwarnings=1,
