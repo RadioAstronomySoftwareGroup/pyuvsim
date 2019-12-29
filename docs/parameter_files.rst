@@ -139,7 +139,7 @@ Telescope Configuration
 
     .. literalinclude:: example_configs/bl_lite_mixed.yaml
 
-    This yaml file provides the telescope name, location in latitude/longitude/altitude in degrees/degrees/meters (respectively), and the `beam dictionary`. In this case, beam_id == 0 is the UVBeam file written out to hera.uvbeam, and beam_id == 1 is an Airy beam with diameter 16m. The dictionary only needs to be as long as the number of unique beams used in the array, while the layout file specifies which antennas will use which beam type. This allows for a mixture of beams to be used, as in this example.
+    This yaml file provides the telescope name, location in latitude/longitude/altitude in degrees/degrees/meters (respectively), and the `beam dictionary`. In this case, beam_id == 0 is the UVBeam file hera.uvbeam, beam_id == 1 is an Airy disk with diameter 14 m, beam_id == 2 is a Gaussian beam with sigma 0.03, and beam_id == 3 is another Airy beam. When no shape parameter is written inline in the beam_dictionary (as with 3), pyuvsim will look for a default parameter below. So in this case, the beam_id == 3 ends up with a diameter of 12 m. The dictionary only needs to be as long as the number of unique beams used in the array, while the layout file specifies which antennas will use which beam type. This allows for a mixture of beams to be used, as in this example. Unassigned beams will be ignored (the given layout file does not use beams 2 or 3).
 
     Analytic beams may require additional parameters.
 
@@ -147,7 +147,7 @@ Telescope Configuration
     - gaussian = Gaussian function shaped beam. Requires either an antenna diameter (in meters) or a standard deviation sigma (in radians). This standard deviation sets the width of the beam in zenith angle. Note that defining gaussian beams via `sigma` will be deprecated in the future.
     - airy = Airy disk (ie, diffraction pattern of a circular aperture). Requires an antenna diameter.
 
-    These extra keywords should be included after the beam dictionary in the telescope config file. Note that beams defined with an antenna diameter will be chromatic. That is, their widths on the sky will change with frequency.
+    Note that beams defined with an antenna diameter will be chromatic (their widths on the sky will change with frequency).
 
     The figure below shows the array created by these configurations, with beam type indicated by color.
 
