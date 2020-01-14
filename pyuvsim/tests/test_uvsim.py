@@ -339,8 +339,9 @@ def test_offzenith_source_multibl_uvfits():
     # get antennas positions into ENU
     antpos, ants = uvtest.checkWarnings(
         hera_uv.get_ENU_antpos, category=[DeprecationWarning],
-        message=['The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'],
-        nwarnings=1
+        message=['The default for the `center` ',
+                 'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'],
+        nwarnings=2
     )
     antenna1 = pyuvsim.Antenna('ant1', ants[0], np.array(antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna('ant2', ants[1], np.array(antpos[1, :]), 0)
