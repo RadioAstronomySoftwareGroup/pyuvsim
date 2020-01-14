@@ -11,7 +11,6 @@ import numpy as np
 import yaml
 import resource
 import time
-import six
 
 mpi4py.rc.initialize = False  # noqa
 import pytest
