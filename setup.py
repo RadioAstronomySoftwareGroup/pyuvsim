@@ -39,7 +39,7 @@ setup_args = {
     'install_requires': reqs,
     'test_requires': ['pytest', 'h5py'],
     'setup_requires': ['pytest-runner'],
-    'classifiers': ['Development Status :: 3 - Alpha',
+    'classifiers': ['Development Status :: 5 - Production/Stable',
                     'Intended Audience :: Science/Research',
                     'License :: OSI Approved :: BSD License',
                     'Programming Language :: Python :: 3.6',

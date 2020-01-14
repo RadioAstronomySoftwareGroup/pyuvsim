@@ -12,8 +12,6 @@ try:
     HAVE_PSUTIL = True
 except ImportError:
     HAVE_PSUTIL = False
-from astropy.coordinates import Angle
-from astropy.units import Quantity
 
 from . import version as simversion
 
@@ -278,20 +276,6 @@ def iter_array_split(part_index, N, M):
         end = start + length
 
     return range(start, end), end - start
-
-
-def _skymodel_basesize():
-    """
-    Estimate the memory footprint of a SkyModel with a single source.
-
-    Sum the sizes of the data types that go into SkyModel
-    """
-    attrs = [
-        '', Quantity(1.0, 'Hz'), [0.0] * 4,
-        Angle(np.pi, 'rad'), Angle(np.pi, 'rad'),
-        [1.5] * 4, [0.3] * 2, [0.0] * 3
-    ]
-    return np.sum([sys.getsizeof(a) for a in attrs])
 
 
 def estimate_skymodel_memory_usage(Ncomponents, Nfreqs):
