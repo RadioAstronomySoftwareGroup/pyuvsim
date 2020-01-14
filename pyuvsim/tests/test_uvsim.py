@@ -339,9 +339,8 @@ def test_offzenith_source_multibl_uvfits():
     # get antennas positions into ENU
     antpos, ants = uvtest.checkWarnings(
         hera_uv.get_ENU_antpos, category=[DeprecationWarning],
-        message=['The default for the `center` keyword has changed',
-                 'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'],
-        nwarnings=2
+        message=['The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'],
+        nwarnings=1
     )
     antenna1 = pyuvsim.Antenna('ant1', ants[0], np.array(antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna('ant2', ants[1], np.array(antpos[1, :]), 0)
@@ -417,10 +416,7 @@ def test_file_to_tasks():
     taskiter = pyuvsim.uvdata_to_task_iter(
         np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict
     )
-    uvtask_list = uvtest.checkWarnings(
-        list, [taskiter], message=['The default for the `center` keyword has changed'],
-        category=DeprecationWarning
-    )
+    uvtask_list = list(taskiter)
 
     tlist = copy.deepcopy(uvtask_list)
     # Test task comparisons
@@ -497,10 +493,7 @@ def test_gather():
     beam_dict = dict(zip(hera_uv.antenna_names, [0] * hera_uv.Nants_data))
     taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list,
                                            beam_dict)
-    uvtask_list = uvtest.checkWarnings(
-        list, [taskiter], message=['The default for the `center` keyword has changed'],
-        category=DeprecationWarning
-    )
+    uvtask_list = list(taskiter)
 
     uv_out = pyuvsim.simsetup._complete_uvdata(hera_uv, inplace=False)
     for task in uvtask_list:
@@ -544,10 +537,8 @@ def test_local_task_gen():
     taskiter = pyuvsim.uvdata_to_task_iter(
         np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict
     )
-    uvtask_list = uvtest.checkWarnings(
-        list, [taskiter], message=['The default for the `center` keyword has changed'],
-        category=DeprecationWarning
-    )
+    uvtask_list = list(taskiter)
+
     uvtask_iter = pyuvsim.uvdata_to_task_iter(
         np.arange(Ntasks), hera_uv, copy.deepcopy(sources),
         copy.deepcopy(beam_list), beam_dict
@@ -680,10 +671,7 @@ def test_source_splitting():
         np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict, Nsky_parts=Nsky_parts
     )
 
-    uvtask_list = uvtest.checkWarnings(
-        list, [taskiter], message='The default for the `center` keyword has changed.',
-        category=DeprecationWarning
-    )
+    uvtask_list = list(taskiter)
 
     assert pyuvsim.estimate_skymodel_memory_usage(partsize, 1) * Npus_node < mem_avail
 

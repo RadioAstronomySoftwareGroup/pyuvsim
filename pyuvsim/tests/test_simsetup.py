@@ -180,10 +180,7 @@ def test_param_reader(config_num):
     Ntasks = hera_uv.Nblts * hera_uv.Nfreqs
     taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources,
                                            beam_list, beam_dict=beam_dict)
-    expected_uvtask_list = uvtest.checkWarnings(
-        list, [taskiter], message='The default for the `center` keyword has changed',
-        category=DeprecationWarning
-    )
+    expected_uvtask_list = list(taskiter)
 
     # Check error conditions:
     if config_num == 0:
@@ -261,10 +258,7 @@ def test_param_reader(config_num):
     taskiter = pyuvsim.uvdata_to_task_iter(
         range(Ntasks), hera_uv, sources, beam_list, beam_dict=beam_dict
     )
-    uvtask_list = uvtest.checkWarnings(
-        list, [taskiter], message='The default for the `center` keyword has changed',
-        category=DeprecationWarning
-    )
+    uvtask_list = list(taskiter)
 
     # Tasks are not ordered in UVTask lists, so need to sort them.
     uvtask_list = sorted(uvtask_list)
