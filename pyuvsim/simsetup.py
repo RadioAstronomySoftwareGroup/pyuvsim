@@ -133,7 +133,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     if array_location is None:
         array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                        height=1073.)
-    freq_array = (np.array(150e6) * units.Hz)
+    freq_array = np.array([150e6]) * units.Hz
 
     if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text',
                            'random']:

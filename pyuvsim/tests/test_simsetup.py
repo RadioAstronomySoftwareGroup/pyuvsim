@@ -137,7 +137,7 @@ def test_catalog_from_params():
     assert np.all(catalog_str == catalog_uv)
 
 # parametrize will loop over all the give values
-@pytest.mark.parametrize("config_num", [[0, 2]])
+@pytest.mark.parametrize("config_num", [0, 2])
 def test_param_reader(config_num):
 
     # Reading in various configuration files
