@@ -8,7 +8,6 @@ import copy
 import os
 import shutil
 
-import astropy
 import numpy as np
 import pytest
 import pyuvdata.tests as uvtest
@@ -144,12 +143,7 @@ def test_catalog_from_params():
 def test_param_flux_cuts():
     # Check that min/max flux limits in test params work.
 
-    gleam_path = os.path.join(SIM_DATA_PATH, 'test_config', '..', 'gleam_50srcs.vot')
-    catalog, srclistname = uvtest.checkWarnings(
-        pyuvsim.simsetup.initialize_catalog_from_params, [gleam_param_file],
-        message=gleam_path, nwarnings=11,
-        category=[astropy.io.votable.exceptions.W27] + [astropy.io.votable.exceptions.W50] * 10
-    )
+    catalog, srclistname = pyuvsim.simsetup.initialize_catalog_from_params(gleam_param_file)
 
     catalog = pyuvsim.simsetup.array_to_skymodel(catalog)
     for sI in catalog.stokes[0, 0, :]:
@@ -159,9 +153,8 @@ def test_param_flux_cuts():
 # parametrize will loop over all the give values
 @pytest.mark.parametrize("config_num", list([0, 2]))
 def test_param_reader(config_num):
-    """
-        Part of test_param_reader
-    """
+
+    # Reading in various configuration files
 
     param_filename = param_filenames[config_num]
     hera_uv = UVData()
@@ -187,10 +180,7 @@ def test_param_reader(config_num):
     Ntasks = hera_uv.Nblts * hera_uv.Nfreqs
     taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources,
                                            beam_list, beam_dict=beam_dict)
-    expected_uvtask_list = uvtest.checkWarnings(
-        list, [taskiter], message='The default for the `center` keyword has changed',
-        category=DeprecationWarning
-    )
+    expected_uvtask_list = list(taskiter)
 
     # Check error conditions:
     if config_num == 0:
@@ -242,7 +232,7 @@ def test_param_reader(config_num):
         params_bad['telescope']['telescope_config_name'] = os.path.join(
             SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml'
         )
-        simtest.assert_raises_message(OSError, 'Could not find file',
+        simtest.assert_raises_message(ValueError, 'Undefined beam model',
                                       pyuvsim.initialize_uvdata_from_params, params_bad)
 
     # Check default configuration
@@ -268,10 +258,7 @@ def test_param_reader(config_num):
     taskiter = pyuvsim.uvdata_to_task_iter(
         range(Ntasks), hera_uv, sources, beam_list, beam_dict=beam_dict
     )
-    uvtask_list = uvtest.checkWarnings(
-        list, [taskiter], message='The default for the `center` keyword has changed',
-        category=DeprecationWarning
-    )
+    uvtask_list = list(taskiter)
 
     # Tasks are not ordered in UVTask lists, so need to sort them.
     uvtask_list = sorted(uvtask_list)
@@ -535,7 +522,7 @@ def test_param_select_cross():
     # test only keeping cross pols
     param_dict['select'] = {'ant_str': 'cross'}
     uv_obj_cross, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
-    uv_obj_cross2 = uv_obj_full.select(ant_str='cross', inplace=False, metadata_only=True)
+    uv_obj_cross2 = uv_obj_full.select(ant_str='cross', inplace=False)
 
     assert uv_obj_cross == uv_obj_cross2
 
@@ -550,7 +537,7 @@ def test_param_select_bls():
     uv_obj_bls, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
 
     uv_obj_bls2 = uv_obj_full.select(
-        bls=[(40, 41), (42, 43), (44, 45)], inplace=False, metadata_only=True
+        bls=[(40, 41), (42, 43), (44, 45)], inplace=False
     )
     uv_obj_bls.history, uv_obj_bls2.history = '', ''
     assert uv_obj_bls == uv_obj_bls2
@@ -568,7 +555,7 @@ def test_param_select_redundant():
     # test only keeping one baseline per redundant group
     param_dict['select'] = {'redundant_threshold': 0.1}
     uv_obj_red, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
-    uv_obj_red2 = uv_obj_full.compress_by_redundancy(tol=0.1, inplace=False, metadata_only=True)
+    uv_obj_red2 = uv_obj_full.compress_by_redundancy(tol=0.1, inplace=False)
     uv_obj_red.history, uv_obj_red2.history = '', ''
 
     assert uv_obj_red == uv_obj_red2
@@ -799,7 +786,7 @@ def test_point_catalog_reader():
 def test_flux_cuts():
     uv_in, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(manytimes_config)
     Nsrcs = 20
-    uv_in.select(times=np.unique(uv_in.time_array)[:50], bls=[(0, 1)], metadata_only=True)
+    uv_in.select(times=np.unique(uv_in.time_array)[:50], bls=[(0, 1)])
 
     dt = np.format_parser(
         ['U10', 'f8', 'f8', 'f8', 'f8'],
@@ -869,22 +856,15 @@ def test_circumpolar_nonrising():
 
 
 def test_read_gleam():
-    sourcelist = uvtest.checkWarnings(
-        pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
-        message=GLEAM_vot, nwarnings=11,
-        category=[astropy.io.votable.exceptions.W27] + [astropy.io.votable.exceptions.W50] * 10
-    )
+    sourcelist = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot)
 
     assert sourcelist.Ncomponents == 50
 
     # Check cuts
     source_select_kwds = {'min_flux': 1.0}
-    catalog = uvtest.checkWarnings(
-        pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
-        dict(source_select_kwds=source_select_kwds, return_table=True),
-        message=GLEAM_vot, nwarnings=11,
-        category=[astropy.io.votable.exceptions.W27] + [astropy.io.votable.exceptions.W50] * 10
-    )
+    catalog = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot,
+                                                    source_select_kwds=source_select_kwds,
+                                                    return_table=True)
 
     assert len(catalog) < sourcelist.Ncomponents
 
@@ -971,11 +951,7 @@ def test_keyword_param_loop():
 
 
 def test_array_to_skymodel_loop():
-    sky = uvtest.checkWarnings(
-        pyuvsim.simsetup.read_votable_catalog, [GLEAM_vot],
-        message=GLEAM_vot, nwarnings=11,
-        category=[astropy.io.votable.exceptions.W27] + [astropy.io.votable.exceptions.W50] * 10
-    )
+    sky = pyuvsim.simsetup.read_votable_catalog(GLEAM_vot)
     sky.ra = Angle(sky.ra.rad, 'rad')
     sky.dec = Angle(sky.dec.rad, 'rad')
     arr = pyuvsim.simsetup.skymodel_to_array(sky)
@@ -983,3 +959,54 @@ def test_array_to_skymodel_loop():
 
     assert np.allclose((sky.ra - sky2.ra).rad, 0.0)
     assert np.allclose((sky.dec - sky2.dec).rad, 0.0)
+
+
+def test_multi_analytic_beams():
+    # Test inline definitions of beam attributes.
+    # eg. (in beam configuration file):
+    #
+    # beam_paths:
+    #   0 : airy, diameter=14
+    #   1 : airy, diameter=20
+    #   2 : gaussian, sigma=0.5
+
+    par_fname = os.path.join(simtest.TESTDATA_PATH, 'test_teleconfig.yaml')
+    layout_fname = os.path.join(simtest.TESTDATA_PATH, 'test_layout_5ant.csv')
+
+    telescope_location = (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
+    telescope_name = 'SKA'
+    beam_specs = {0: 'airy, diameter=14', 1: 'airy, diameter=20', 2: 'gaussian, sigma=0.5'}
+    expected = ['analytic_airy_diam_14', 'analytic_airy_diam_20', 'analytic_gaussian_sig_0.5']
+
+    Nants = 5
+    antenna_numbers = np.arange(Nants)
+    antpos = np.zeros((Nants, 3))
+    antpos[:, 0] = np.arange(Nants)
+    names = antenna_numbers.astype(str)
+    beam_ids = [0, 1, 2, 2, 0]
+    pyuvsim.simsetup._write_layout_csv(layout_fname, antpos, names, antenna_numbers, beam_ids)
+
+    # Write tele config to file.
+    pdict = dict(telescope_location=str(telescope_location),
+                 telescope_name=telescope_name, beam_paths=beam_specs)
+    with open(par_fname, 'w') as yfile:
+        yaml.dump(pdict, yfile, default_flow_style=False)
+
+    # Check error condition:
+    ambig_beam_specs = copy.copy(beam_specs)
+    ambig_beam_specs[0] = 'airy, gaussian, diameter=14'
+    bad_pdict = copy.copy(pdict)
+    bad_pdict['beam_paths'] = ambig_beam_specs
+
+    simtest.assert_raises_message(ValueError, "Ambiguous beam specification",
+                                  pyuvsim.simsetup._construct_beam_list, beam_ids, bad_pdict)
+
+    param_dict = {'telescope_config_name': par_fname, 'array_layout': layout_fname}
+
+    pdict, beam_list, beam_dict = pyuvsim.simsetup.parse_telescope_params(
+        param_dict, simtest.TESTDATA_PATH)
+
+    for i, nm in enumerate(names):
+        bid = beam_ids[i]
+        assert beam_dict[nm] == bid
+        assert beam_list[bid] == expected[bid]

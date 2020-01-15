@@ -7,6 +7,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import shutil
+import warnings
 
 import pytest
 import six.moves.urllib as urllib
@@ -41,3 +42,9 @@ def setup_and_teardown_package():
     # clean up the test directory after
     if os.path.exists(testdir):
         shutil.rmtree(testdir)
+
+
+@pytest.fixture(autouse=True)
+def ignore_center_deprecation():
+    warnings.filterwarnings('ignore', message='The default for the `center` keyword has changed.',
+                            category=DeprecationWarning)

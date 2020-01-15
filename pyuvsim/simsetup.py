@@ -67,15 +67,17 @@ def _parse_layout_csv(layout_csv):
                          dtype=dt.dtype)
 
 
-def _write_layout_csv(filepath, antpos_enu, antenna_names, antenna_numbers):
+def _write_layout_csv(filepath, antpos_enu, antenna_names, antenna_numbers, beam_ids=None):
     col_width = max([len(name) for name in antenna_names])
     header = ("{:" + str(col_width) + "} {:8} {:8} {:10} {:10} {:10}\n").format(
         "Name", "Number", "BeamID", "E", "N", "U"
     )
+    if beam_ids is None:
+        beam_ids = np.zeros(len(antenna_names), dtype=int)
     with open(filepath, 'w') as lfile:
         lfile.write(header + '\n')
         for i, (e, n, u) in enumerate(antpos_enu):
-            beam_id = 0
+            beam_id = beam_ids[i]
             name = antenna_names[i]
             num = antenna_numbers[i]
             line = (
@@ -615,34 +617,105 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
     return np.asarray(catalog), source_list_name
 
 
+def _construct_beam_list(beam_ids, telconfig):
+    beam_list = []
+    for beamID in beam_ids:
+        beam_model = telconfig['beam_paths'][beamID]
+
+        # First, check to see if the string specifies a beam path.
+        altpath = os.path.join(SIM_DATA_PATH, beam_model)
+        if os.path.exists(beam_model):
+            beam_list.append(beam_model)
+        elif os.path.exists(altpath):
+            beam_list.append(altpath)
+        # Failing that, try to parse the beam string as an analytic beam.
+        else:
+            find_type = [t in beam_model for t in AnalyticBeam.supported_types]
+            if np.sum(find_type) > 1:
+                raise ValueError("Ambiguous beam specification: {}".format(beam_model))
+            if np.sum(find_type) == 0:
+                raise ValueError("Undefined beam model: {}".format(beam_model))
+
+            beam_type = AnalyticBeam.supported_types[find_type.index(True)]
+
+            beam_model = "".join(beam_model.split())    # Remove whitespace
+            mod_list = beam_model.split(',')
+            inline_beam_opts = {}
+            for opt in mod_list:
+                if '=' not in opt:
+                    continue
+                k, v = opt.split('=')
+                inline_beam_opts[k] = v
+
+            # Gaussian beam requires either diameter or sigma
+            # Airy beam requires diameter
+
+            # Default to None for diameter and sigma.
+            # Values in the "beam_paths" override globally-defined options.
+            beam_opts = {'diameter': None, 'sigma': None}
+            for opt in beam_opts.keys():
+                val = telconfig.get(opt, None)
+                val = inline_beam_opts.get(opt, val)
+                beam_opts[opt] = val
+
+            diameter = beam_opts['diameter']
+            sigma = beam_opts['sigma']
+
+            if beam_type == 'uniform':
+                beam_model = 'analytic_uniform'
+
+            if beam_type == 'gaussian':
+                if diameter is not None:
+                    beam_model = '_'.join(['analytic_gaussian', 'diam', str(diameter)])
+                elif sigma is not None:
+                    beam_model = '_'.join(['analytic_gaussian', 'sig', str(sigma)])
+                else:
+                    raise KeyError("Missing shape parameter for gaussian beam (diameter or sigma).")
+            if beam_type == 'airy':
+                if diameter is not None:
+                    beam_model = '_'.join(['analytic_airy', 'diam', str(diameter)])
+                else:
+                    raise KeyError("Missing diameter for airy beam.")
+
+            beam_list.append(beam_model)
+    return beam_list
+
+
 def parse_telescope_params(tele_params, config_path=''):
     """
     Parse the "telescope" section of obsparam.
 
-    Args:
-        tele_params: Dictionary of telescope parameters
-            See pyuvsim documentation for allowable keys.
-            https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#telescope-configuration
-        config_path: str
-            path to directory holding configuration and layout files.
+    Parameters
+    ----------
+    tele_params : dict
+        Telescope parameters
+        See pyuvsim documentation for allowable keys.
+        https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#telescope-configuration
+    config_path : str
+        Path to directory holding configuration and layout files.
 
-    Returns:
-        param_dict : dict
-            * `Nants_data`: Number of antennas
-            * `Nants_telescope`: Number of antennas
-            *  `antenna_names`: list of antenna names
-            * `antenna_numbers`: corresponding list of antenna numbers
-            * `antenna_positions`: Array of ECEF antenna positions
-            * `telescope_location`: ECEF array center location
-            * `telescope_location_lat_lon_alt`: Lat Lon Alt array center location
-            * `telescope_config_file`: Path to configuration yaml file
-            * `antenna_location_file`: Path to csv layout file
-            * `telescope_name`: observatory name
+    Returns
+    -------
+    param_dict : dict
+        Parameters related to the telescope and antenna layout, to be included in the
+        UVData object.
 
-        beam_list : list of :class:`pyuvdata.UVBeam` or `pyuvsim.AnalyticBeam`
-            Beam models in the configuration.
-        beam_dict : dict
-            Antenna numbers to beam indices
+        * `Nants_data`: Number of antennas
+        * `Nants_telescope`: Number of antennas
+        *  `antenna_names`: list of antenna names
+        * `antenna_numbers`: corresponding list of antenna numbers
+        * `antenna_positions`: Array of ECEF antenna positions
+        * `telescope_location`: ECEF array center location
+        * `telescope_location_lat_lon_alt`: Lat Lon Alt array center location
+        * `telescope_config_file`: Path to configuration yaml file
+        * `antenna_location_file`: Path to csv layout file
+        * `telescope_name`: observatory name
+    beam_list : list of str
+        Beam models in the configuration.
+        The strings provide either paths to beamfits files or the specifications to make
+        a :class:`pyuvsim.AnalyticBeam`.
+    beam_dict : dict
+        Antenna numbers to beam indices
     """
     tele_params = copy.deepcopy(tele_params)
     # check for telescope config
@@ -742,41 +815,11 @@ def parse_telescope_params(tele_params, config_path=''):
     beam_dict = {}
 
     for beamID in np.unique(beam_ids):
-        beam_model = telconfig['beam_paths'][beamID]
         which_ants = antnames[np.where(beam_ids == beamID)]
         for a in which_ants:
             beam_dict[a] = beamID
-        if beam_model in AnalyticBeam.supported_types:
-            # Gaussian beam requires either diameter or sigma
-            # Airy beam requires diameter
-            if beam_model == 'uniform':
-                beam_model = 'analytic_uniform'
-            if beam_model == 'gaussian':
-                try:
-                    diam = telconfig['diameter']
-                    beam_model = '_'.join(['analytic', beam_model, 'diam', str(diam)])
-                except KeyError:
-                    try:
-                        sigma = telconfig['sigma']
-                        beam_model = '_'.join(['analytic', beam_model, 'sig', str(sigma)])
-                    except KeyError:
-                        raise KeyError(
-                            "Missing shape parameter for gaussian beam (diameter or sigma)."
-                        )
-            if beam_model == 'airy':
-                try:
-                    diam = telconfig['diameter']
-                    beam_model = '_'.join(['analytic', beam_model, 'diam', str(diam)])
-                except KeyError:
-                    raise KeyError("Missing diameter for airy beam.")
-        else:
-            # If not analytic, it's a beamfits file path.
-            if not os.path.exists(beam_model):
-                path = os.path.join(SIM_DATA_PATH, beam_model)
-                beam_model = path
-                if not os.path.exists(path):
-                    raise OSError("Could not find file " + beam_model)
-        beam_list.append(beam_model)
+
+    beam_list = _construct_beam_list(np.unique(beam_ids), telconfig)
 
     return return_dict, beam_list, beam_dict
 
@@ -1187,14 +1230,13 @@ def initialize_uvdata_from_params(obs_params):
                 bls = ast.literal_eval(bls)
                 select_params['bls'] = bls
         if len(select_params) > 0:
-            select_params['metadata_only'] = True
             uv_obj.select(**select_params)
 
         if no_autos:
-            uv_obj.select(ant_str='cross', metadata_only=True)
+            uv_obj.select(ant_str='cross')
 
         if redundant_threshold is not None:
-            uv_obj.compress_by_redundancy(tol=redundant_threshold, metadata_only=True)
+            uv_obj.compress_by_redundancy(tol=redundant_threshold)
 
     return uv_obj, beam_list, beam_dict
 

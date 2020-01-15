@@ -15,7 +15,6 @@ import time
 mpi4py.rc.initialize = False  # noqa
 import pytest
 from mpi4py import MPI
-import astropy
 
 from pyuvdata import UVData
 from pyuvdata.data import DATA_PATH
@@ -78,9 +77,8 @@ def test_run_paramfile_uvsim():
     tempfilename = params_dict['filing']['outfile_name']
 
     # This test obsparam file has "single_source.txt" as its catalog.
-    uvtest.checkWarnings(pyuvsim.uvsim.run_uvsim, [param_filename], nwarnings=1,
-                         message=['The default for the `center` keyword'],
-                         category=[DeprecationWarning])
+    pyuvsim.uvsim.run_uvsim(param_filename)
+
     uv_new_txt = UVData()
     uvtest.checkWarnings(uv_new_txt.read_uvfits, [tempfilename],
                          message='antenna_diameters is not set')
@@ -88,12 +86,7 @@ def test_run_paramfile_uvsim():
     os.remove(tempfilename)
 
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
-    uvtest.checkWarnings(
-        pyuvsim.uvsim.run_uvsim, [param_filename],
-        nwarnings=11,
-        message=[SIM_DATA_PATH] * 10 + ['The default for the `center` keyword has changed'],
-        category=[astropy.io.votable.exceptions.W50] * 10 + [DeprecationWarning]
-    )
+    pyuvsim.uvsim.run_uvsim(param_filename)
 
     uv_new_vot = UVData()
     uvtest.checkWarnings(uv_new_vot.read_uvfits, [tempfilename], nwarnings=1,

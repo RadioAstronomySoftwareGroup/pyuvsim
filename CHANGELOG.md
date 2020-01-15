@@ -2,9 +2,17 @@
 
 ## [Unreleased]
 
+### Added
+- Support for individual shape parameters for analytic beams.
+
+### Changed
+
+### Fixed
+- Removed warning catch for astropy GLEAM read in tests -- new versions don't raise the warning.
+
 ## [1.1.1] - 2019-11-14
 
-## Added
+### Added
 - A function for checking the memory usage on each Node
 
 ### Changed
