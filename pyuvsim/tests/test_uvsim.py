@@ -8,7 +8,6 @@ import os
 
 import astropy.constants as const
 import numpy as np
-import pyuvdata.tests as uvtest
 import pyuvdata.utils as uvutils
 from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation

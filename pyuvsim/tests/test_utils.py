@@ -7,7 +7,6 @@ import shutil
 
 import numpy as np
 import pytest
-import pyuvdata.tests as uvtest
 from pyuvdata import UVData
 
 import pyuvsim.tests as simtest
@@ -137,7 +136,8 @@ def test_write_uvdata(save_format):
     uv = UVData()
     with pytest.warns(UserWarning) as telwarn:
         uv.read_uvfits(triangle_uvfits_file)
-    assert str(telwarn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
+    assert str(telwarn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml '
+                                                 'is not in known_telescopes.')
 
     ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
     filing_dict = {'outfile_name': ofname}
@@ -162,7 +162,8 @@ def test_write_error_with_no_format():
     uv = UVData()
     with pytest.warns(UserWarning) as telwarn:
         uv.read_uvfits(triangle_uvfits_file)
-    assert str(telwarn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
+    assert str(telwarn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml is '
+                                                 'not in known_telescopes.')
 
     ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
     filing_dict = {'outfile_name': ofname}
@@ -177,7 +178,8 @@ def test_file_format_in_filing_dict():
     uv = UVData()
     with pytest.warns(UserWarning) as telwarn:
         uv.read_uvfits(triangle_uvfits_file)
-    assert str(telwarn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
+    assert str(telwarn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml is '
+                                                 'not in known_telescopes.')
 
     ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
     filing_dict = {'outfile_name': ofname}

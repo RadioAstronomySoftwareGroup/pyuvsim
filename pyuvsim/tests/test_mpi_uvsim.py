@@ -16,7 +16,6 @@ from mpi4py import MPI
 
 from pyuvdata import UVData
 from pyuvdata.data import DATA_PATH
-import pyuvdata.tests as uvtest
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
