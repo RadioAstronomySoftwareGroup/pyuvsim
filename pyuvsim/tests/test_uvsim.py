@@ -8,7 +8,6 @@ import os
 
 import astropy.constants as const
 import numpy as np
-import pyuvdata.tests as uvtest
 import pyuvdata.utils as uvutils
 from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
@@ -336,12 +335,7 @@ def test_offzenith_source_multibl_uvfits():
     freq = hera_uv.freq_array[0, 0] * units.Hz
 
     # get antennas positions into ENU
-    antpos, ants = uvtest.checkWarnings(
-        hera_uv.get_ENU_antpos, category=[DeprecationWarning],
-        message=['The default for the `center` ',
-                 'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)'],
-        nwarnings=2
-    )
+    antpos, ants = hera_uv.get_ENU_antpos()
     antenna1 = pyuvsim.Antenna('ant1', ants[0], np.array(antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna('ant2', ants[1], np.array(antpos[1, :]), 0)
     antenna3 = pyuvsim.Antenna('ant3', ants[2], np.array(antpos[2, :]), 0)
