@@ -87,10 +87,9 @@ def test_mock_catalog_off_zenith_source():
 def test_catalog_from_params():
     # Pass in parameter dictionary as dict
     hera_uv = UVData()
-    uvtest.checkWarnings(
-        hera_uv.read_uvfits, [triangle_uvfits_file],
-        message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.'
-    )
+    with pytest.warns(UserWarning) as telwarn:
+        hera_uv.read_uvfits(triangle_uvfits_file)
+    assert str(telwarn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
 
     source_dict = {}
     simtest.assert_raises_message(
@@ -108,10 +107,9 @@ def test_catalog_from_params():
         'Nsrcs': 5,
         'time': hera_uv.time_array[0]
     }
-    uvtest.checkWarnings(
-        pyuvsim.simsetup.initialize_catalog_from_params, [{'sources': source_dict}],
-        message="No array_location specified. Defaulting to the HERA site."
-    )
+    with pytest.warns(UserWarning) as warn:
+        pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
+    assert str(warn.pop().message).startswith("No array_location specified. Defaulting to the HERA site.")
     catalog_uv, srclistname = pyuvsim.simsetup.initialize_catalog_from_params(
         {'sources': source_dict}, hera_uv
     )
@@ -128,11 +126,10 @@ def test_catalog_from_params():
                                   'specified julian date',
                                   pyuvsim.simsetup.initialize_catalog_from_params,
                                   {'sources': source_dict})
-    catalog_str, srclistname2 = uvtest.checkWarnings(
-        pyuvsim.simsetup.initialize_catalog_from_params,
-        [{'sources': source_dict}, hera_uv],
-        message="Warning: No julian date given for mock catalog. Defaulting to first time step."
-    )
+    with pytest.warns(UserWarning) as warn:
+     catalog_str, srclistname2 = pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict}, hera_uv)
+    assert str(warn.pop().message).startswith("Warning: No julian date given for mock catalog. Defaulting to first time step.")
+    
     catalog_str = pyradiosky.array_to_skymodel(catalog_str)
     assert np.all(catalog_str == catalog_uv)
 
@@ -144,10 +141,10 @@ def test_param_reader(config_num):
 
     param_filename = param_filenames[config_num]
     hera_uv = UVData()
-    uvtest.checkWarnings(
-        hera_uv.read_uvfits, [triangle_uvfits_file],
-        message='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.'
-    )
+    with pytest.warns(UserWarning) as warn:
+        hera_uv.read_uvfits(triangle_uvfits_file)
+    assert str(warn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.')
+
     hera_uv.telescope_name = 'HERA'
     if config_num == 5:
         hera_uv.select(bls=[(0, 1), (1, 2)])
@@ -684,44 +681,32 @@ def test_uvfits_to_config():
         'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3). Historically this '
         'function has supported (3, Npts) arrays, please verify that array ordering is as '
         'expected.']
-    path, telescope_config, layout_fname = uvtest.checkWarnings(
-        pyuvsim.simsetup.uvdata_to_telescope_config,
-        [uv0, herabeam_default], dict(path_out=opath, return_names=True),
-        nwarnings=2, category=DeprecationWarning, message=warningmessages
-    )
+    path, telescope_config, layout_fname = \
+            pyuvsim.simsetup.uvdata_to_telescope_config(uv0, herabeam_default,
+            path_out=opath, return_names=True)
+
     uv0.integration_time[-1] += 2  # Test case of non-uniform integration times
-    uvtest.checkWarnings(
-        pyuvsim.simsetup.uvdata_to_config_file, [uv0],
-        dict(
+    with pytest.warns(UserWarning) as warn:
+        pyuvsim.simsetup.uvdata_to_config_file(uv0,
             telescope_config_name=os.path.join(path, telescope_config),
             layout_csv_name=os.path.join(path, layout_fname),
             path_out=opath
-        ),
-        message='The integration time is not constant. Using the shortest integration time'
-    )
+        )
+    assert str(warn[0].message).startswith('The integration time is not constant. Using the shortest integration time')
 
     # From parameters, generate a uvdata object.
     param_dict = pyuvsim.simsetup._config_str_to_dict(os.path.join(opath, param_filename))
 
     orig_param_dict = copy.deepcopy(
         param_dict)  # The parameter dictionary gets modified in the function below.
-    uv1, new_beam_list, new_beam_dict = uvtest.checkWarnings(
-        pyuvsim.initialize_uvdata_from_params, [param_dict],
-        category=[DeprecationWarning] * 2,
-        nwarnings=2,
-        message=['The enu array in ECEF_from_ENU is being interpreted',
-                 'The xyz array in ENU_from_ECEF is being interpreted as (Npts, 3)']
-    )
+    uv1, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
     # Generate parameters from new uvfits and compare with old.
-    path, telescope_config, layout_fname = uvtest.checkWarnings(
-        pyuvsim.simsetup.uvdata_to_telescope_config, [uv1, herabeam_default],
-        dict(
+    path, telescope_config, layout_fname = \
+        pyuvsim.simsetup.uvdata_to_telescope_config(uv1, herabeam_default,
             telescope_config_name=telescope_config,
             layout_csv_name=layout_fname,
             path_out=opath, return_names=True
-        ),
-        category=DeprecationWarning, nwarnings=2, message=warningmessages
-    )
+        )
     pyuvsim.simsetup.uvdata_to_config_file(
         uv1, param_filename=second_param_filename,
         telescope_config_name=os.path.join(path, telescope_config),

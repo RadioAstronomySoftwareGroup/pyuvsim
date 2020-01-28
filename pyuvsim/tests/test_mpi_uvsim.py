@@ -78,8 +78,9 @@ def test_run_paramfile_uvsim():
     pyuvsim.uvsim.run_uvsim(param_filename)
 
     uv_new_txt = UVData()
-    uvtest.checkWarnings(uv_new_txt.read_uvfits, [tempfilename],
-                         message='antenna_diameters is not set')
+    with pytest.warns(UserWarning) as antdiam:
+        uv_new_txt.read_uvfits(tempfilename)
+    assert str(antdiam.pop().message).startswith('antenna_diameters is not set')
     uv_new_txt.unphase_to_drift(use_ant_pos=True)
     os.remove(tempfilename)
 
@@ -87,8 +88,9 @@ def test_run_paramfile_uvsim():
     pyuvsim.uvsim.run_uvsim(param_filename)
 
     uv_new_vot = UVData()
-    uvtest.checkWarnings(uv_new_vot.read_uvfits, [tempfilename], nwarnings=1,
-                         category=[UserWarning], message=['antenna_diameters is not set'])
+    with pytest.warns(UserWarning) as antdiam:
+        uv_new_vot.read_uvfits(tempfilename)
+    assert str(antdiam.pop().message).startswith('antenna_diameters is not set')
     uv_new_vot.unphase_to_drift(use_ant_pos=True)
     os.remove(tempfilename)
     uv_new_txt.history = uv_ref.history  # History includes irrelevant info for comparison
