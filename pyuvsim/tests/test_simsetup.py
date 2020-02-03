@@ -861,7 +861,7 @@ def test_direct_fname():
     )
 
     # This should now run without errors
-    pyuvsim.simsetup.initialize_catalog_from_params("param_100times_1.5days_triangle.yaml")
+    pyuvsim.simsetup.initialize_uvdata_from_params("param_100times_1.5days_triangle.yaml")
 
     os.remove("28m_triangle_10time_10chan.yaml")
     os.remove("param_100times_1.5days_triangle.yaml")
