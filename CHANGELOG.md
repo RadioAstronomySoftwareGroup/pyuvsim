@@ -29,7 +29,7 @@
 - No longer calling UVBeam.interp with freq_interp_kind, for updated pyuvdata.
 - Circular-installation bug
 - Bug in how integration_time array is set in setup
-
+- Bug in how filepath is interpreted in setup
 
 ## [1.1.0] - 2019-6-14
 
