@@ -795,6 +795,7 @@ def test_keyword_param_loop():
 
     assert uv2 == uvd
 
+
 def test_multi_analytic_beams():
     # Test inline definitions of beam attributes.
     # eg. (in beam configuration file):
