@@ -25,6 +25,7 @@ default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_par
                          'apply_beam', 'make_visibility',
                          'uvdata_to_task_iter', 'run_uvdata_uvsim', 'run_uvsim']
 
+
 def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_profile.out',
                  dump_raw=False):
     """
