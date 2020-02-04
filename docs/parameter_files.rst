@@ -33,8 +33,9 @@ Passed into ``run_param_pyuvsim.py``
           1.0064e+08, 1.0072e+08]
       bandwidth: 800000.0
     sources:
-      catalog: 'mock'       #Choice of catalog file name (or specify 'mock' to use a builtin catalog).
-      mock_arrangement: 'zenith'    # Choosing a mock layout
+      catalog: '../pyuvsim/data/gleam_50srcs.vot'   # Path to catalog file (txt, vot, hdf5, etc.) readable with pyradiosky.
+      catalog: 'mock'       # Alternatively, use 'mock' to use a builtin catalog).
+      mock_arrangement: 'zenith'    # If using the mock catalog, specify which one. Additional mock keywords are specified here.
     telescope:
       array_layout: 'triangle_bl_layout.csv'    # Antenna layout csv file
       telescope_config_name: '28m_triangle_10time_10chan.yaml'  # Telescope metadata file.
@@ -50,7 +51,7 @@ Passed into ``run_param_pyuvsim.py``
       antenna_nums: [1, 7, 9, 15]
       redundant_threshold: 0.1 # redundancy threshold in meters. Only simulate one baseline per redundant group
 
-**Note** The example above is shown with all allowed keywords, but many of these are redundant. This will be further explained below.
+**Note** The example above is shown with all allowed keywords, but many of these are redundant. This will be further explained below. Only one source catalog will be used at a time.
 
 Filing
 ^^^^^^
@@ -157,7 +158,7 @@ Telescope Configuration
 
 Sources
 ^^^^^^^
-    Specify the path to a text catalog file via ``catalog``.
+    Specify the path to a text catalog file via ``catalog``. The path can be given as an absolute path or relative to the location of the obsparam. This catalog should be readable with `pyradiosky`.
 
     An example catalog file:
 
@@ -180,8 +181,7 @@ Sources
 
     Flux limits can be made by providing the keywords ``min_flux`` and ``max_flux``. These specify the min/max stokes I flux to choose from the catalog.
 
-    The option ``horizon_buffer`` can be set (in radians) to adjust the tolerance on the coarse horizon cut. After reading in the catalog, ``pyuvsim`` roughly calculates the rise and set times (in local sidereal time, in radians) for each source. If the source never rises, it is excluded from the simulation, and if the source never sets its rise/set times are set to None. This calculation is less accurate than the astropy alt/az calculation used in the main task loop, so a "buffer" angle is added to the set lst (and subtracted from the rise lst) to ensure sources aren't accidentally excluded. Tests indicate that a 10 minute buffer is sufficient.
-    Pyuvsim also excludes sources below the horizon after calculating their AltAz coordinates, which is more accurate. The coarse cut is only to reduce computational load.
+    The option ``horizon_buffer`` can be set (in radians) to adjust the tolerance on the coarse horizon cut. After reading in the catalog, ``pyuvsim`` roughly calculates the rise and set times (in local sidereal time, in radians) for each source. If the source never rises, it is excluded from the simulation, and if the source never sets its rise/set times are set to None. This calculation is less accurate than the astropy alt/az calculation used in the main task loop, so a "buffer" angle is added to the set lst (and subtracted from the rise lst) to ensure sources aren't accidentally excluded. Tests indicate that a 10 minute buffer is sufficient. Pyuvsim also excludes sources below the horizon after calculating their AltAz coordinates, which is more accurate. The coarse cut is only to reduce computational load.
 
 Select
 ^^^^^^
