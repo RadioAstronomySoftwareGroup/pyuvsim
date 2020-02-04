@@ -48,6 +48,7 @@ class progsteps:
             step = 1
         self.step = step
         self.curval = -1
+        self.remain = None
 
     def update(self, count):
         """
@@ -64,10 +65,12 @@ class progsteps:
                 doprint = True
                 self.curval = count
             if doprint:
-                ostr = "{:0.2f}% completed. {:0.3f} minutes elapsed".format(
-                    (count / self.maxval) * 100., (pytime.time() - self.t0) / 60.)
-                ostr += '\n'
-                print(ostr)
+                dt = pytime.time() - self.t0
+                frac_done = count / self.maxval
+                self.remain = dt * (1 / frac_done - 1)
+                print(("{:0.2f}% completed. {:0.3f} minutes elapsed."
+                       + "{:0.3f} minutes remaining. \n").format(
+                    frac_done * 100., dt / 60., self.remain / 60.))
                 sys.stdout.flush()
 
     def finish(self):

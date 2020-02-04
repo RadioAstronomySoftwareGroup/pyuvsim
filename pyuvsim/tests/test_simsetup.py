@@ -276,7 +276,6 @@ def test_tele_parser():
     tpars, blist, bdict = pyuvsim.simsetup.parse_telescope_params(tdict)
     assert tpars['Nants_data'] == 6
     assert blist == []
-    assert bdict == {}
 
     tdict.pop('array_layout')
     simtest.assert_raises_message(

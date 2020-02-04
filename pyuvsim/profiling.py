@@ -23,7 +23,7 @@ except ImportError:  # pragma: no cover
 
 default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params',
                          'apply_beam', 'make_visibility',
-                         'uvdata_to_task_iter', 'run_uvsim']
+                         'uvdata_to_task_iter', 'run_uvdata_uvsim', 'run_uvsim']
 
 
 def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_profile.out',
@@ -35,7 +35,9 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
     functions to run at the end.
 
     Args:
-        func_list: list of function names (strings). Defaults to the list above.
+        func_list: list
+            List of function names (strings) to profile.
+            Defaults to ``profiling.default_profile_funcs``.
         rank: int, optional
             Which rank process should write out to file? (only one rank at a time will).
         outfile_name: Filename for printing profiling results.

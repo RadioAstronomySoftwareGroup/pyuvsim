@@ -255,12 +255,13 @@ def test_power_analytic_beam():
     az = np.zeros(Npix)
     za = np.linspace(0, np.pi / 2., Npix)
 
-    eb = pyuvsim.AnalyticBeam('gaussian', diameter=diam)
-    pb = pyuvsim.AnalyticBeam('gaussian', diameter=diam)
-    pb.efield_to_power()
-    evals = eb.interp(az, za, freqs)[0][0, 0, 1]
-    pvals = pb.interp(az, za, freqs)[0][0, 0, 0]
-    assert np.allclose(evals ** 2, pvals)
+    for b in ['gaussian', 'uniform', 'airy']:
+        eb = pyuvsim.AnalyticBeam(b, diameter=diam)
+        pb = pyuvsim.AnalyticBeam(b, diameter=diam)
+        pb.efield_to_power()
+        evals = eb.interp(az, za, freqs)[0][0, 0, 1]
+        pvals = pb.interp(az, za, freqs)[0][0, 0, 0]
+        assert np.allclose(evals**2, pvals)
 
     # Ensure uniform beam works
     pb = pyuvsim.AnalyticBeam('uniform')

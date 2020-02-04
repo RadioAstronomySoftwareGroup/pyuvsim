@@ -1,7 +1,7 @@
 name: pyuvsim
 channels:
-  - conda-forge
   - defaults
+  - conda-forge
 dependencies:
   - numpy>=1.15
   - setuptools>=38.4.0
