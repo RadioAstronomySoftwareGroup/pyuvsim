@@ -162,7 +162,7 @@ def test_param_reader(config_num):
     beam1 = pyuvsim.AnalyticBeam('uniform')
     beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
     beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.6)
-    beam_list = [beam0, beam1, beam2, beam3]
+    beam_list = pyuvsim.BeamList([beam0, beam1, beam2, beam3])
 
     beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2, 'ANT4': 3}
     Ntasks = hera_uv.Nblts * hera_uv.Nfreqs
@@ -225,8 +225,10 @@ def test_param_reader(config_num):
 
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_filename)
-    for i, bm in enumerate(new_beam_list):
-        new_beam_list[i] = pyuvsim.simsetup.beam_string_to_object(bm)
+    new_beam_list.set_obj_mode()
+    print(new_beam_list)
+#    for i, bm in enumerate(new_beam_list):
+#        new_beam_list[i] = pyuvsim.simsetup.beam_string_to_object(bm)
     # write_uvdata tests with different configs:
     with open(param_filename, 'r') as fhandle:
         param_dict = yaml.safe_load(fhandle)
@@ -804,14 +806,14 @@ def test_multi_analytic_beams():
     #   0 : airy, diameter=14
     #   1 : airy, diameter=20
     #   2 : gaussian, sigma=0.5
-
+    print(pyuvsim.BeamList()._str_beam_list)
     par_fname = os.path.join(simtest.TESTDATA_PATH, 'test_teleconfig.yaml')
     layout_fname = os.path.join(simtest.TESTDATA_PATH, 'test_layout_5ant.csv')
 
     telescope_location = (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
     telescope_name = 'SKA'
     beam_specs = {0: 'airy, diameter=14', 1: 'airy, diameter=20', 2: 'gaussian, sigma=0.5'}
-    expected = ['analytic_airy_diam_14', 'analytic_airy_diam_20', 'analytic_gaussian_sig_0.5']
+    expected = ['analytic_airy_diam=14', 'analytic_airy_diam=20', 'analytic_gaussian_sig=0.5']
 
     Nants = 5
     antenna_numbers = np.arange(Nants)

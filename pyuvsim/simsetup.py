@@ -18,6 +18,7 @@ from astropy.time import Time
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from .analyticbeam import AnalyticBeam
+from .telescope import BeamList
 try:
     from .mpi import get_rank
 except ImportError:
@@ -356,9 +357,13 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
 
 
 def _construct_beam_list(beam_ids, telconfig):
-    beam_list = []
+    beam_list = BeamList([])
     for beamID in beam_ids:
         beam_model = telconfig['beam_paths'][beamID]
+
+        for key in beam_list.uvb_params.keys():
+            if key in telconfig:
+                beam_list.uvb_params[key] = telconfig[key]
 
         # First, check to see if the string specifies a beam path.
         altpath = os.path.join(SIM_DATA_PATH, beam_model)
@@ -396,22 +401,22 @@ def _construct_beam_list(beam_ids, telconfig):
                 val = inline_beam_opts.get(opt, val)
                 beam_opts[opt] = val
 
-            diameter = beam_opts['diameter']
-            sigma = beam_opts['sigma']
+            diameter = beam_opts.pop('diameter')
+            sigma = beam_opts.pop('sigma')
 
             if beam_type == 'uniform':
                 beam_model = 'analytic_uniform'
 
             if beam_type == 'gaussian':
                 if diameter is not None:
-                    beam_model = '_'.join(['analytic_gaussian', 'diam', str(diameter)])
+                    beam_model = '_'.join(['analytic_gaussian', 'diam=' + str(diameter)])
                 elif sigma is not None:
-                    beam_model = '_'.join(['analytic_gaussian', 'sig', str(sigma)])
+                    beam_model = '_'.join(['analytic_gaussian', 'sig=' + str(sigma)])
                 else:
                     raise KeyError("Missing shape parameter for gaussian beam (diameter or sigma).")
             if beam_type == 'airy':
                 if diameter is not None:
-                    beam_model = '_'.join(['analytic_airy', 'diam', str(diameter)])
+                    beam_model = '_'.join(['analytic_airy', 'diam=' + str(diameter)])
                 else:
                     raise KeyError("Missing diameter for airy beam.")
 
@@ -1368,25 +1373,26 @@ def _complete_uvdata(uv_in, inplace=False):
 
     return uv_obj
 
-
-def beam_string_to_object(beam_model):
-    """
-    Make a beam object given an identifying string.
-    """
-    # Identify analytic beams
-    if beam_model.startswith('analytic'):
-        if beam_model.startswith('analytic_uniform'):
-            return AnalyticBeam('uniform')
-
-        _, model, par, val = beam_model.split('_')
-        if par == 'sig':
-            return AnalyticBeam(model, sigma=float(val))
-        if par == 'diam':
-            return AnalyticBeam(model, diameter=float(val))
-
-    path = beam_model  # beam_model = path to beamfits
-    uvb = UVBeam()
-    uvb.read_beamfits(path)
-    if uvb.freq_interp_kind is None:
-        uvb.freq_interp_kind = 'cubic'
-    return uvb
+#
+#def beam_string_to_object(beam_model):
+#    """
+#    Make a beam object given an identifying string.
+#    """
+#    # Identify analytic beams
+#    if beam_model.startswith('analytic'):
+#        if beam_model.startswith('analytic_uniform'):
+#            return AnalyticBeam('uniform')
+#
+#        _, model, par, val = beam_model.split('_')
+#        if par == 'sig':
+#            return AnalyticBeam(model, sigma=float(val))
+#        if par == 'diam':
+#            return AnalyticBeam(model, diameter=float(val))
+#
+#    path = beam_model  # beam_model = path to beamfits
+#    uvb = UVBeam()
+#
+#    uvb.read_beamfits(path)
+#    for key, val in global_beam_attrs.values():
+#        setattr(uvb, key, val)
+#    return uvb
