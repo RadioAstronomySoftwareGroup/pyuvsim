@@ -46,10 +46,10 @@ class BeamList(object):
     """
     A container for the set of beam models and related parameters.
     """
-    float_params = {'sig' : 'sigma', 'diam' : 'diameter',
-                    'reff' : 'ref_freq', 'ind' : 'spectral_index'}
+    float_params = {'sig': 'sigma', 'diam': 'diameter',
+                    'reff': 'ref_freq', 'ind': 'spectral_index'}
 
-    uvb_params = {'freq_interp_kind' : 'cubic',
+    uvb_params = {'freq_interp_kind': 'cubic',
                   'interpolation_function': 'az_za_simple'}
 
     string_mode = True
@@ -94,7 +94,7 @@ class BeamList(object):
         if beam_model.startswith('analytic'):
             bspl = beam_model.split('_')
             model = bspl[1]
-            
+
             to_set = {}
             for extra in bspl[2:]:
                 par, val = extra.split('=')
@@ -137,7 +137,7 @@ class BeamList(object):
 
     def set_str_mode(self):
         if not self._obj_beam_list == []:
-            ## Convert object beams to string definitions
+            # Convert object beams to string definitions
             self._str_beam_list = [self._obj_to_str(bobj) for bobj in self._obj_beam_list]
         self._obj_beam_list = []
         self.string_mode = True

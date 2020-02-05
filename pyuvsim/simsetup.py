@@ -12,7 +12,7 @@ import astropy.units as units
 import numpy as np
 import yaml
 
-from pyuvdata import utils as uvutils, UVBeam, UVData
+from pyuvdata import utils as uvutils, UVData
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy.time import Time
 
@@ -1372,27 +1372,3 @@ def _complete_uvdata(uv_in, inplace=False):
     uv_obj.check()
 
     return uv_obj
-
-#
-#def beam_string_to_object(beam_model):
-#    """
-#    Make a beam object given an identifying string.
-#    """
-#    # Identify analytic beams
-#    if beam_model.startswith('analytic'):
-#        if beam_model.startswith('analytic_uniform'):
-#            return AnalyticBeam('uniform')
-#
-#        _, model, par, val = beam_model.split('_')
-#        if par == 'sig':
-#            return AnalyticBeam(model, sigma=float(val))
-#        if par == 'diam':
-#            return AnalyticBeam(model, diameter=float(val))
-#
-#    path = beam_model  # beam_model = path to beamfits
-#    uvb = UVBeam()
-#
-#    uvb.read_beamfits(path)
-#    for key, val in global_beam_attrs.values():
-#        setattr(uvb, key, val)
-#    return uvb

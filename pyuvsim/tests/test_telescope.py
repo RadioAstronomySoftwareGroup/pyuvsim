@@ -1,19 +1,9 @@
 
-import copy
 import os
-import shutil
 
-import numpy as np
-import pytest
-import yaml
-from astropy import units
-from astropy.coordinates import Angle, SkyCoord, EarthLocation
-from astropy.time import Time
-from pyuvdata import UVBeam, UVData
-import pyradiosky
+from pyuvdata import UVBeam
 
 import pyuvsim
-import pyuvsim.tests as simtest
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 
@@ -34,7 +24,8 @@ def test_beam_list():
     sigma = 0.03
     beams.append(pyuvsim.AnalyticBeam('gaussian', sigma=sigma))
     ref_freq, alpha = 100e6, -0.5
-    beams.append(pyuvsim.AnalyticBeam('gaussian', sigma=sigma, ref_freq=ref_freq, spectral_index=alpha))
+    beams.append(pyuvsim.AnalyticBeam('gaussian', sigma=sigma,
+                 ref_freq=ref_freq, spectral_index=alpha))
 
     beamlist = pyuvsim.BeamList(beams)
 
@@ -44,11 +35,9 @@ def test_beam_list():
         assert isinstance(bs, str)
     assert beamlist._obj_beam_list == []
 
-    beamlist.set_obj_mode()                                                                                                                                                                                    
+    beamlist.set_obj_mode()
 
-    for bi,b in enumerate(beamlist): 
+    for bi, b in enumerate(beamlist):
         assert b == beams[bi]
 
     assert beamlist._str_beam_list == []
-
-
