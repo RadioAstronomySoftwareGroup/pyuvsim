@@ -254,8 +254,6 @@ class BeamList(object):
         # If not AnalyticBeam, it's UVBeam.
         path = beam_model.extra_keywords['beam_path']
 
-#        for key, val in self.uvb_params.items():
-#            self.uvb_params[key] = getattr(beam_model, key)
         return path
 
     def set_str_mode(self):
