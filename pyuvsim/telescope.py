@@ -49,29 +49,52 @@ class BeamList(object):
     float_params = {'sig': 'sigma', 'diam': 'diameter',
                     'reff': 'ref_freq', 'ind': 'spectral_index'}
 
-    uvb_params = {'freq_interp_kind': 'cubic',
-                  'interpolation_function': 'az_za_simple'}
-
     string_mode = True
 
     def __init__(self, beam_list=None, uvb_params={}):
+
+        self.uvb_params = {'freq_interp_kind': 'cubic',
+                           'interpolation_function': 'az_za_simple'}
+
         self._str_beam_list = []
         self._obj_beam_list = []
         if beam_list is not None:
             if all([isinstance(b, str) for b in beam_list]):
-                self._str_beam_list = beam_list
+                self._str_beam_list[:] = beam_list[:]
                 self.string_mode = True
             elif all([not isinstance(b, str) for b in beam_list]):
-                self._obj_beam_list = beam_list
+                self._obj_beam_list[:] = beam_list[:]
                 self.string_mode = False
             else:
                 raise ValueError("Invalid beam list: " + str(beam_list))
 
+        # If any UVBeam objects are passed in, update uvb_params:
+        self._update_uvb_params()
         self.uvb_params.update(uvb_params)    # Optional parameters for the UVBeam objects
+
+    def _update_uvb_params(self, ind=slice(None)):
+        # Ensure that uvb_params are consisten with existing UVBeams.
+
+        if self.string_mode:
+            return
+
+        new_pars = {k: [] for k in self.uvb_params.keys()}
+        for bm in np.atleast_1d(self._obj_beam_list[ind]):
+            if isinstance(bm, UVBeam):
+                for key in self.uvb_params.keys():
+                    val = getattr(bm, key)
+                    new_pars[key].append(val)
+        for key, vals in new_pars.items():
+            svals = set(vals)
+            if len(svals) == 1:
+                self.uvb_params[key] = svals.pop()
+            elif len(svals) > 1:
+                raise ValueError('Conflicting settings for {}: {}'.format(key, str(svals)))
 
     def append(self, value):
         if self.string_mode:
             self._str_beam_list.append(self._obj_to_str(value))
+            self._update_uvb_params(ind=-1)
         self._obj_beam_list.append(self._str_to_obj(value))
 
     def __len__(self):
@@ -85,7 +108,9 @@ class BeamList(object):
     def __setitem__(self, ind, value):
         if self.string_mode:
             self._str_beam_list[ind] = self._obj_to_str(value)
-        self._obj_beam_list[ind] = self._str_to_obj(value)
+        else:
+            self._obj_beam_list[ind] = self._str_to_obj(value)
+            self._update_uvb_params(ind=ind)
 
     def _str_to_obj(self, beam_model):
         # Convert beam strings to objects.
@@ -99,8 +124,6 @@ class BeamList(object):
             for extra in bspl[2:]:
                 par, val = extra.split('=')
                 full = self.float_params[par]
-                if (par == 'sig') and ('diameter' in to_set.keys()):
-                    continue    # Do not overwrite if diameter is already set.
                 to_set[full] = float(val)
 
             return AnalyticBeam(model, **to_set)
@@ -131,6 +154,7 @@ class BeamList(object):
 
         # If not AnalyticBeam, it's UVBeam.
         path = beam_model.extra_keywords['beam_path']
+
         for key, val in self.uvb_params.items():
             self.uvb_params[key] = getattr(beam_model, key)
         return path
@@ -145,5 +169,6 @@ class BeamList(object):
     def set_obj_mode(self):
         if not self._str_beam_list == []:
             self._obj_beam_list = [self._str_to_obj(bstr) for bstr in self._str_beam_list]
+        self._update_uvb_params()
         self._str_beam_list = []
         self.string_mode = False
