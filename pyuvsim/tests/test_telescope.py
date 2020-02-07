@@ -129,3 +129,17 @@ class TestBeamList():
             assert new_pars == beamlist.uvb_params
         except ValueError:
             assert False
+
+    def test_no_overwrite(self):
+        # Ensure UVBeam keywords are not overwritten by BeamList.uvb_params
+        # while in object mode.
+        newbeams = copy.deepcopy(self.beams)
+        beamlist = pyuvsim.BeamList(newbeams)
+        assert beamlist.uvb_params['freq_interp_kind'] == 'cubic'
+
+        uvb = copy.deepcopy(newbeams[0])
+        uvb.freq_interp_kind = 'quintic'
+
+        beamlist.append(uvb)
+        assert uvb.freq_interp_kind == 'quintic'
+        assert beamlist.uvb_params['freq_interp_kind'] == 'cubic'
