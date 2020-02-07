@@ -226,10 +226,7 @@ def test_param_reader(config_num):
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_filename)
     new_beam_list.set_obj_mode()
-    print(new_beam_list)
-#    for i, bm in enumerate(new_beam_list):
-#        new_beam_list[i] = pyuvsim.simsetup.beam_string_to_object(bm)
-    # write_uvdata tests with different configs:
+
     with open(param_filename, 'r') as fhandle:
         param_dict = yaml.safe_load(fhandle)
     expected_ofilepath = pyuvsim.utils.write_uvdata(
@@ -806,7 +803,6 @@ def test_multi_analytic_beams():
     #   0 : airy, diameter=14
     #   1 : airy, diameter=20
     #   2 : gaussian, sigma=0.5
-    print(pyuvsim.BeamList()._str_beam_list)
     par_fname = os.path.join(simtest.TESTDATA_PATH, 'test_teleconfig.yaml')
     layout_fname = os.path.join(simtest.TESTDATA_PATH, 'test_layout_5ant.csv')
 

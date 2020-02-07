@@ -3,6 +3,7 @@
 # Licensed under the 3-clause BSD License
 
 import numpy as np
+import warnings
 from pyuvdata import UVBeam
 
 from .analyticbeam import AnalyticBeam
@@ -82,15 +83,10 @@ class BeamList(object):
     Raises
     ------
     ValueError :
-        For invalid beam_list, or if UVBeams in the input beam_list have
-        conflicting parameters (e.g., one has freq_interp_kind == 'cubic' and
-        another has freq_interp_kind == 'linear').
+        For an invalid beam_list (mix of strings and objects).
 
     Notes
     -----
-    When a UVBeam is appended to the beam list, its parameters override any in
-    uvb_params.
-
     If an object beam is added while in string mode, it will be converted to a string
     before being inserted, and vice versa. ***In order to be converted to a string, a UVBeam
     needs to have the entry 'beam_path' in its extra_keywords, giving the path to the beamfits
@@ -103,7 +99,7 @@ class BeamList(object):
 
     string_mode = True
 
-    def __init__(self, beam_list=None, uvb_params={}):
+    def __init__(self, beam_list=None, uvb_params=None):
 
         self.uvb_params = {'freq_interp_kind': 'cubic',
                            'interpolation_function': 'az_za_simple'}
@@ -121,8 +117,12 @@ class BeamList(object):
                 raise ValueError("Invalid beam list: " + str(beam_list))
 
         # If any UVBeam objects are passed in, update uvb_params:
-        if uvb_params == {} and not self.string_mode:
-            uvb_params = self._scrape_uvb_params(self._obj_beam_list)
+        list_uvb_params = {}
+        if uvb_params is None:
+            uvb_params = {}
+            if not self.string_mode:
+                list_uvb_params = self._scrape_uvb_params(self._obj_beam_list, strict=False)
+        self.uvb_params.update(list_uvb_params)
         self.uvb_params.update(uvb_params)    # Optional parameters for the UVBeam objects
 
     def _scrape_uvb_params(self, beam_objs, strict=True):
@@ -151,37 +151,33 @@ class BeamList(object):
                     val = getattr(bm, key)
                     if key not in new_pars:
                         new_pars[key] = []
-                    new_pars[key].append(val)
+                    if val is not None:
+                        new_pars[key].append(val)
         for key, vals in new_pars.items():
             svals = set(vals)
             if len(svals) == 1:
                 new_pars[key] = svals.pop()
-            elif strict and len(svals) > 1:
-                raise ValueError('Conflicting settings for {}: {}'.format(key, str(svals)))
+            elif len(svals) > 1:
+                try:
+                    raise ValueError('Conflicting settings for {}: {}'.format(key, str(svals)))
+                except ValueError as err:
+                    if strict:
+                        raise err
+                    else:
+                        warnings.warn(err.args[0])  # Use exception message as warning message.
+
+        new_pars = {k: v for k, v in new_pars.items() if not v == []}
 
         return new_pars
 
-    def _set_params_on_uvbeams(self, ind=slice(None)):
+    def _set_params_on_uvbeams(self, beam_objs):
         """
         Set parameters on UVBeam objects using uvb_params.
         """
-        for bm in np.atleast_1d(self._obj_beam_list[ind]):
+        for bm in np.atleast_1d(beam_objs):
             if isinstance(bm, UVBeam):
                 for key, val in self.uvb_params.items():
                     setattr(bm, key, val)
-
-    def append(self, value):
-        """
-        Append to the beam list, converting objects to strings if in object mode,
-        or vice versa if in string mode.
-
-        If in string mode, this will override the uvb_params if the new object
-        """
-        if self.string_mode:
-            self._str_beam_list.append('')
-        else:
-            self._obj_beam_list.append('')
-        self.__setitem__(-1, value)
 
     def __len__(self):
         # Note that only one of these lists has nonzero length at a given time.
@@ -198,18 +194,47 @@ class BeamList(object):
         or vice versa if in string mode.
         """
         if self.string_mode:
-            self.uvb_params.update(
-                self._scrape_uvb_params([value], strict=False)
-            )   # If value is a string, then _scrape_uvb_params returns an empty dictionary.
+            # If value is a string, then _scrape_uvb_params returns an empty dictionary.
+            newobj_params = self._scrape_uvb_params([value], strict=False)
+            mismatches = []
+            for key, val in newobj_params.items():
+                if key in self.uvb_params:
+                    if not val == self.uvb_params[key]:
+                        mismatches.append(key)
+            if len(mismatches) > 0:
+                compare = "\n\t".join([
+                    "current = {}, new = {}".format(self.uvb_params[key], newobj_params[key])
+                    for key in mismatches]
+                )
+                raise ValueError('UVBeam parameters do not match '
+                                 'those currently set: \n\t' + compare)
 
             self._str_beam_list[ind] = self._obj_to_str(value)
         else:
             value = self._str_to_obj(value)
-            self.uvb_params.update(
-                self._scrape_uvb_params([value], strict=False)
-            )  # Override existing uvb params
             self._obj_beam_list[ind] = value
-            self._set_params_on_uvbeams()  # Set on all UVBeam objects
+            self._scrape_uvb_params(self._obj_beam_list, strict=False)
+
+    def append(self, value):
+        """
+        Append to the beam list, converting objects to strings if in object mode,
+        or vice versa if in string mode.
+
+        If in string mode, this will overwrite the uvb_params with the added
+        object's parameters.
+        """
+        if self.string_mode:
+            self._str_beam_list.append('')
+        else:
+            self._obj_beam_list.append('')
+        try:
+            self.__setitem__(-1, value)
+        except ValueError as err:
+            if self.string_mode:
+                self._str_beam_list.pop()
+            else:
+                self._obj_beam_list.pop()
+            raise err
 
     def _str_to_obj(self, beam_model):
         # Convert beam strings to objects.
@@ -252,7 +277,10 @@ class BeamList(object):
             return bm_str
 
         # If not AnalyticBeam, it's UVBeam.
-        path = beam_model.extra_keywords['beam_path']
+        try:
+            path = beam_model.extra_keywords['beam_path']
+        except KeyError:
+            raise ValueError("Need to set 'beam_path' key in extra_keywords for UVBeam objects.")
 
         return path
 
@@ -261,6 +289,14 @@ class BeamList(object):
         Set string_mode = True, converting object beams to their
         string representations and putting UVBeam parameters into the
         uvb_params dictionary.
+
+        Raises
+        ------
+        ValueError:
+            If UVBeam objects in the list have inconsistent UVBeam parameters.
+        ValueError:
+            If any UVBeam objects lack a "beam_path" keyword in the "extra_keywords"
+            attribute, specifying the path to the beamfits file that generates it.
         """
         if not self._obj_beam_list == []:
             # Convert object beams to string definitions
@@ -277,6 +313,6 @@ class BeamList(object):
         """
         if not self._str_beam_list == []:
             self._obj_beam_list = [self._str_to_obj(bstr) for bstr in self._str_beam_list]
-        self._set_params_on_uvbeams()
+        self._set_params_on_uvbeams(self._obj_beam_list)
         self._str_beam_list = []
         self.string_mode = False
