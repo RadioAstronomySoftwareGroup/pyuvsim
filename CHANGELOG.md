@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- BeamList class for handling the set of beams, and their string representations.
 - Support for individual shape parameters for analytic beams.
 
 ### Changed

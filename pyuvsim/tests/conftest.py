@@ -20,7 +20,6 @@ def setup_and_teardown_package():
     """Make data/test directory to put test output files in."""
     testdir = os.path.join(DATA_PATH, 'temporary_test_data/')
     if not os.path.exists(testdir):
-        print('making test directory')
         os.mkdir(testdir)
 
     # try to download the iers table. If it fails, turn off auto downloading for the tests

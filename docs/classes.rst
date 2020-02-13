@@ -47,6 +47,10 @@ Shared properties of all antennas, such as array center location and primary bea
 .. autoclass:: pyuvsim.Telescope
     :members:
 
+
+.. autoclass:: pyuvsim.BeamList
+    :members:
+
 UV Simulation functions
 -----------------------
 

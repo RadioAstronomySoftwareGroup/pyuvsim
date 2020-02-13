@@ -345,9 +345,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     )
 
     # Construct beam objects from strings
-    beam_models = [simsetup.beam_string_to_object(bm) for bm in beam_list]
-    for bm in beam_models:
-        bm.interpolation_function = 'az_za_simple'
+    beam_list.set_obj_mode()
 
     # Estimating required memory to decide how to split source array.
 
@@ -372,7 +370,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     Ntasks_tot = Ntimes * Nbls * Nfreqs * Nsky_parts
 
     local_task_iter = uvdata_to_task_iter(
-        task_inds, input_uv, catalog[src_inds], beam_models, beam_dict, Nsky_parts=Nsky_parts
+        task_inds, input_uv, catalog[src_inds], beam_list, beam_dict, Nsky_parts=Nsky_parts
     )
 
     summed_task_dict = {}

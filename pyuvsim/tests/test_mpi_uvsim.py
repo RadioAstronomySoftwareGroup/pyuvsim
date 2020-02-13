@@ -44,7 +44,7 @@ def test_run_uvsim():
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beamfile = os.path.join(simtest.TESTDATA_PATH, "temp.uvbeam")
     beam.write_beamfits(beamfile)
-    beam_list = [beamfile]
+    beam_list = pyuvsim.BeamList([beamfile])
     mock_keywords = {"Nsrcs": 3}
     simtest.assert_raises_message(
         TypeError, 'input_uv must be UVData object',
