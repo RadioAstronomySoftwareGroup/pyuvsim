@@ -16,7 +16,7 @@ The goal of a reference simulation is to provide a simulated instrument output f
 
 
 
-The total number of data points is constrained by the current level of optimization and availability of computing resources. pyuvsim is currently running on the Oscar cluster at Brown, given limitations of memory and processor availability.
+The total number of data points is constrained by the current level of optimization and availability of computing resources. pyuvsim is currently running on the Oscar cluster at Brown University, given limitations of memory and processor availability.
 
 
 For a full description of how antenna layouts, instrument configuration, and catalogs are all written into parameter files, please see the documentation at https://pyuvsim.readthedocs.io/en/latest/parameter_files.html. As a quick summary: antenna layout is specified by a csv file, overall array configuration and primary beam assignments are defined by a yaml file, and catalogs are defined either by VOTable files or csv files. The "obsparam" yaml files define the simulations themselves, including the catalog, telescope configuration, array layout, and time/frequency array structures, as well as output filing information and any additional UVData parameters that may be desired.
@@ -25,19 +25,19 @@ For a full description of how antenna layouts, instrument configuration, and cat
 
 mock_catalog_heratext_2458098.38824015.txt:
 
-     This is a set of point sources near zenith at JD 2458098.38824015 for an observer at the HERA location. They spell out the word "HERA" from east to west across the sky with the tops of the letters to the north.
+   - This is a set of point sources near zenith at JD 2458098.38824015 for an observer at the HERA location. They spell out the word "HERA" from east to west across the sky with the tops of the letters to the north.
 
-two_distant_points_2458098.38824015.txt
+two_distant_points_2458098.38824015.txt:
 
-     This is two points near the opposite horizons at the specified julian date for an observer at the HERA location. This is chosen so that one source will rise and cross the sky for a given time, and we can see if the other sets appropriately.
+   - This is two points near the opposite horizons at the specified julian date for an observer at the HERA location. This is chosen so that one source will rise and cross the sky for a given time, and we can see if the other sets appropriately.
 
-letter_R_12pt_2458098.38824015.txt
+letter_R_12pt_2458098.38824015.txt:
 
-     This is just the letter "R" from the HERA text catalog. It was chosen to have a smaller catalog with a recognizable orientation on the sky.
+   - This is just the letter "R" from the HERA text catalog. It was chosen to have a smaller catalog with a recognizable orientation on the sky.
 
 gleam.vot
 
-     The GLEAM catalog. It's too large to fit on github, so it's not included in the data directory, but it's on lustre.
+   - The GLEAM catalog. It's too large to fit on github, so it's not included in the data directory, but it's on lustre.
 
 
 
@@ -46,18 +46,27 @@ gleam.vot
 
 MWA_nocore:
 
-     This is the MWA128 layout with the core 40 antennas removed (88 antennas remain). The layout is written in mwa_nocore_layout.csv and the telescope configuration is in mwa88_nocore_config.yaml. The configuration specifies that all antennas have the unphysical "uniform" beam.
+   - This is the MWA128 Phase I layout with the core 40 antennas removed (88 antennas remain).
+   - The layout is written in mwa_nocore_layout.csv and the telescope configuration is in mwa88_nocore_config.yaml. The configuration specifies that all antennas have the unphysical "uniform" beam.
 
-baseline_lite:
-     This consists of a right triangle of antennas with an additional antenna sqrt(2) meters off of the center of the hypotenuse. This provides a perfectly N-S and E-W and diagonal baselines, as well as some that don't perfectly fit the symmetry.
-     The layout is in baseline_lite.csv, and the bl_lite_gauss.yaml and bl_lite_uniform.yaml files respectively assign gaussian and uniform beams to all four antennas.
+![mwa88_layout.png](figures/mwa88_layout.png "MWA-88 layout")
+
+
+baseline-lite:
+
+   - This consists of a right triangle of antennas with an additional antenna sqrt(2) meters off of the center of the hypotenuse. This provides a perfectly N-S and E-W and diagonal baselines, as well as some that don't perfectly fit the symmetry.
+   - The layout is in baseline_lite.csv, and the bl_lite_gauss.yaml and bl_lite_uniform.yaml files respectively assign gaussian and uniform beams to all four antennas.
+
+![bllite_layout.png](figures/bllite_layout.png "Baseline-lite layout")
+
+
 
 5km triangle:
-     An isosceles triangle consisting of two 5km baselines.
-     Layout and configuration (gaussian beam) are in 5km_triangle_layout.csv and 5km_triangle_config.yaml.
 
-The images below show the layouts:
-< Insert images of antenna layouts >
+   - An isosceles triangle consisting of two 5km baselines.
+   - Layout and configuration (gaussian beam) are in 5km_triangle_layout.csv and 5km_triangle_config.yaml.
+
+![5km_triangle_layout.png](figures/5km_triangle_layout.png "5km triangle layout")
 
 ### Beams
 

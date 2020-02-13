@@ -16,7 +16,7 @@ antnames = antpos['number']
 
 plt.scatter(enu['e'], enu['n'])
 for i, t in enumerate(enu):
-    plt.annotate(antnames[i], (enu['e'][i], enu['n'][i]))
+    plt.annotate(antnames[i], (enu['e'][i]+0.5, enu['n'][i]))
 
 plt.xlabel('East [m]')
 plt.ylabel('North [m]')
