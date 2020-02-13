@@ -11,6 +11,8 @@ from .analyticbeam import AnalyticBeam
 
 class Telescope(object):
     """
+    Container for data common to all antennas in the array.
+
     Defines the location and name of the observing site, and holds the list
     of beam objects used by the array.
     """
@@ -171,9 +173,7 @@ class BeamList(object):
         return new_pars
 
     def _set_params_on_uvbeams(self, beam_objs):
-        """
-        Set parameters on UVBeam objects using uvb_params.
-        """
+        """Set parameters on UVBeam objects using uvb_params."""
         for bm in np.atleast_1d(beam_objs):
             if isinstance(bm, UVBeam):
                 for key, val in self.uvb_params.items():
@@ -190,7 +190,9 @@ class BeamList(object):
 
     def __setitem__(self, ind, value):
         """
-        Insert into the beam list, converting objects to strings if in object mode,
+        Insert into the beam list.
+        
+        Converts objects to strings if in object mode,
         or vice versa if in string mode.
         """
         if self.string_mode:
@@ -217,11 +219,10 @@ class BeamList(object):
 
     def append(self, value):
         """
-        Append to the beam list, converting objects to strings if in object mode,
+        Append to the beam list.
+        
+        Converts objects to strings if in object mode,
         or vice versa if in string mode.
-
-        If in string mode, this will overwrite the uvb_params with the added
-        object's parameters.
         """
         if self.string_mode:
             self._str_beam_list.append('')
@@ -286,9 +287,20 @@ class BeamList(object):
 
     def set_str_mode(self):
         """
-        Set string_mode = True, converting object beams to their
-        string representations and putting UVBeam parameters into the
-        uvb_params dictionary.
+        Convert object beams to their strings representations.
+
+        Convert AnalyticBeam objects to a string representation
+        that can be used to generate them. Replaces UVBeam objects with
+        the path to the beamfits file they originate from. Additional
+        UVBeam attributes are stored in the BeamList.uvb_params dictionary.
+
+        Any UVBeams in the list must have the path to their beamfits files
+        stored as 'beam_path' in the `extra_keywords` dictionary.
+
+        Sets
+        ----
+        string_mode : bool
+            Sets to True
 
         Raises
         ------
@@ -308,8 +320,15 @@ class BeamList(object):
 
     def set_obj_mode(self):
         """
-        Set string_mode = False, initializing beam objects from the strings.
-        Additional parameters on UVBeam objects will be set from the uvb_params dictionary.
+        Initialize AnalyticBeam and UVBeam objects from string representations.
+
+        For any UVBeams, additional attributes will be set by the BeamList.uvb_params
+        dictionary. This overwrites any settings that may have been read from file.
+
+        Sets
+        ----
+        string_mode : bool
+            Sets to False
         """
         if not self._str_beam_list == []:
             self._obj_beam_list = [self._str_to_obj(bstr) for bstr in self._str_beam_list]
