@@ -191,7 +191,7 @@ class BeamList(object):
     def __setitem__(self, ind, value):
         """
         Insert into the beam list.
-        
+
         Converts objects to strings if in object mode,
         or vice versa if in string mode.
         """
@@ -220,7 +220,7 @@ class BeamList(object):
     def append(self, value):
         """
         Append to the beam list.
-        
+
         Converts objects to strings if in object mode,
         or vice versa if in string mode.
         """
