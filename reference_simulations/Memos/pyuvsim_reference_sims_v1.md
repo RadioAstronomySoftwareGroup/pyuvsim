@@ -4,15 +4,25 @@ The goal of a reference simulation is to provide a simulated instrument output f
 
 
 ## First Reference Simulations
+ | Name (beam) | Purpose | 
+ |:-----|:------|
+ |1.1 | Test imaging and source orientation.|
+ |1.2 (gauss) | Check that sources move appropriate and rise/set, and pass through the beam properly.|
+ |1.2 (uniform) | Check that sources move appropriate and rise/set (stay visible near horizon). | 
+ |1.3 (gauss) | Check that visibilities have sensible frequency evolution. Get observable fringes. Realistic primary beam.|
+ |1.3 (uniform) | Check that visibilities have sensible frequency evolution. Get observable fringes. |
+ |1.4 | Check phasing precision and simulate realistic data.|
+ 
 
-|         Obsparam File         |                   Catalog                  | Ntimes | Nfreqs |     Layout    |        Beam       |    Results Filename    |                                                                                                 Purpose(s) |
-|:-----------------------------:|:------------------------------------------:|:------:|:------:|:-------------:|:-----------------:|:----------------------:|-----------------------------------------------------------------------------------------------------------:|
-|     obsparam_ref_1.1.yaml     | mock_catalog_heratext_2458098.38824015.txt |    1   |    1   |   MWA_nocore  |      uniform      | ref_1.1_uniform.uvfits |                                                                       Test imaging and source orientation. |
-|  obsparam_ref_1.2_gauss.yaml  |   two_distant_points_2458098.38824015.txt  |  86400 |    1   | Baseline-lite | 11° FWHM gaussian |  ref_1.2_gauss.uvfits  |                      Check that sources move appropriate and rise/set, and pass through the beam properly. |
-| obsparam_ref_1.2_uniform.yaml |   two_distant_points_2458098.38824015.txt  |  86400 |    1   | Baseline-lite |      uniform      | ref_1.2_uniform.uvfits |                              Check that sources move appropriate and rise/set (stay visible near horizon). |
-|  obsparam_ref_1.3_gauss.yaml  |     letter_R_12pt_2458098.38824015.txt     |    2   |  64400 | Baseline-lite | 11° FWHM gaussian |  ref_1.3_gauss.uvfits  |                                 Check that visibilities have sensible frequency evolution and get fringes. |
-| obsparam_ref_1.3_uniform.yaml |     letter_R_12pt_2458098.38824015.txt     |    2   |  64400 | Baseline-lite |      uniform      | ref_1.3_uniform.uvfits | Check that visibilities have sensible frequency evolution. Get observable fringes. Realistic primary beam. |
-|     obsparam_ref_1.4.yaml     |                  gleam.vot                 |    1   |    1   |  5km triangle | 11° FWHM gaussian | ref_1.4_uniform.uvfits |                                                       Check phasing precision and simulate realistic data. |
+### Details
+|         Obsparam File         |                   Catalog                  | Ntimes | Nfreqs |     Layout    |        Beam       |    Results Filename    | 
+|:-----------------------------:|:------------------------------------------:|:------:|:------:|:-------------:|:-----------------:|:----------------------:|
+|     obsparam_ref_1.1.yaml     | mock_catalog_heratext_2458098.38824015.txt |    1   |    1   |   MWA_nocore  |      uniform      | ref_1.1_uniform.uvfits |      
+|  obsparam_ref_1.2_gauss.yaml  |   two_distant_points_2458098.38824015.txt  |  86400 |    1   | Baseline-lite | 11° FWHM gaussian |  ref_1.2_gauss.uvfits  |     
+| obsparam_ref_1.2_uniform.yaml |   two_distant_points_2458098.38824015.txt  |  86400 |    1   | Baseline-lite |      uniform      | ref_1.2_uniform.uvfits | 
+|  obsparam_ref_1.3_gauss.yaml  |     letter_R_12pt_2458098.38824015.txt     |    2   |  64400 | Baseline-lite | 11° FWHM gaussian |  ref_1.3_gauss.uvfits  |
+| obsparam_ref_1.3_uniform.yaml |     letter_R_12pt_2458098.38824015.txt     |    2   |  64400 | Baseline-lite |      uniform      | ref_1.3_uniform.uvfits |
+|     obsparam_ref_1.4.yaml     |                  gleam.vot                 |    1   |    1   |  5km triangle | 11° FWHM gaussian | ref_1.4_uniform.uvfits | 
 
 
 
