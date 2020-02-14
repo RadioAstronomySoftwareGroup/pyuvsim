@@ -29,7 +29,7 @@ install:
   - source activate test-environment
   - conda env update -n test-environment -f environment.yml
   - pip install .
-  - python -c "from pyuvdata import version; version.main()"
+  - python -c "import pyuvdata; print(pyuvdata.__version__)"
   - conda list
 
 script:
