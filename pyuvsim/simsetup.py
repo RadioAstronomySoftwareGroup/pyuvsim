@@ -457,8 +457,8 @@ def parse_telescope_params(tele_params, config_path=''):
         * `telescope_config_file`: Path to configuration yaml file
         * `antenna_location_file`: Path to csv layout file
         * `telescope_name`: observatory name
-    beam_list : list of str
-        Beam models in the configuration.
+    beam_list : :class:`pyuvsim.BeamList`
+        This is a BeamList object in string mode.
         The strings provide either paths to beamfits files or the specifications to make
         a :class:`pyuvsim.AnalyticBeam`.
     beam_dict : dict

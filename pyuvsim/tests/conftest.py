@@ -42,6 +42,8 @@ def setup_and_teardown_package():
 
 
 @pytest.fixture(autouse=True)
-def ignore_center_deprecation():
+def ignore_deprecation():
     warnings.filterwarnings('ignore', message='The default for the `center` keyword has changed.',
                             category=DeprecationWarning)
+    warnings.filterwarnings('ignore', message='Achromatic gaussian beams will not be supported in the future.',
+                            category=PendingDeprecationWarning)

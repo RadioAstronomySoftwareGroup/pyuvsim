@@ -259,8 +259,9 @@ def test_tele_parser():
 
     tdict['telescope_name'] = 'tele'
     tpars, blist, bdict = pyuvsim.simsetup.parse_telescope_params(tdict)
+
     assert tpars['Nants_data'] == 6
-    assert blist == []
+    assert len(blist) == 0
 
     tdict.pop('array_layout')
     with pytest.raises(KeyError, match="array_layout must be provided."):
