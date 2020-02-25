@@ -5,6 +5,7 @@
 import os
 import sys
 import time as pytime
+from datetime import timedelta
 
 import numpy as np
 try:
@@ -68,9 +69,10 @@ class progsteps:
                 dt = pytime.time() - self.t0
                 frac_done = count / self.maxval
                 self.remain = dt * (1 / frac_done - 1)
-                print(("{:0.2f}% completed. {:0.3f} minutes elapsed."
-                       + "{:0.3f} minutes remaining. \n").format(
-                    frac_done * 100., dt / 60., self.remain / 60.))
+                print(("{:0.2f}% completed. {}  elapsed. "
+                       + "{} remaining. \n").format(
+                    frac_done * 100., str(timedelta(seconds=dt)),
+                    str(timedelta(seconds=self.remain))))
                 sys.stdout.flush()
 
     def finish(self):
@@ -238,10 +240,9 @@ def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_fo
 
 def get_avail_memory():
     """
-    Method for estimating the virtual memory available (in bytes)
-    on the current node to a running process.
+    Method for estimating the virtual memory available (in bytes).
 
-    Currently only supports the SLURM array scheduler.
+    This gives the available memory on the current node to a running process.
 
     If this is not called from within a SLURM task, it will estimate
     using psutils methods.
