@@ -26,11 +26,6 @@ Nfreqs = 100
 Ntimes = 70
 Nside = 16
 
-#Nbls = 5 
-#Nfreqs = 7
-#Ntimes = 9
-#Nside = 8
-
 
 Nsrcs = 12 * Nside**2
 
