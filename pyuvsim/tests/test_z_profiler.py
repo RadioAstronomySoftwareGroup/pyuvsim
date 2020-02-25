@@ -3,6 +3,8 @@
 # Licensed under the 3-clause BSD License
 
 import os
+import shutil
+import atexit
 
 import numpy as np
 
@@ -14,12 +16,24 @@ try:
 except ImportError:
     LineProfiler = False
 
-testprof_fname = '/dev/null'
+
+def profdata_dir_setup():
+    # The pytest temporary test directory doesn't work with the profiling outputs
+    # because they are only created after the exit functions are run, and pytest
+    # deletes its temporary directory before then.
+    # As a workaround, make a temporary directory for profiling data and register
+    # its deletion in the exit functions.
+    outpath = os.path.join(SIM_DATA_PATH, 'temporary_profiling_data')
+    os.mkdir(outpath)
+    atexit.register(shutil.rmtree, outpath)
+    return outpath
 
 
 def test_profiler():
     if LineProfiler:
-        pyuvsim.profiling.set_profiler(outfile_name=testprof_fname, dump_raw='/dev/null')
+        outpath = profdata_dir_setup()
+        testprof_fname = os.path.join(outpath, 'time_profile')
+        pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname, dump_raw=True)
         param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
         pyuvsim.uvsim.run_uvsim(param_filename, return_uv=True)
 

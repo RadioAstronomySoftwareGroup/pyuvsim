@@ -403,6 +403,21 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     if rank == 0:
         print("Calculations Complete.")
 
+    # If profiling is active, save axis sizes:
+    from .profiling import prof     # noqa
+    if hasattr(prof, 'axis_file'):
+        # Saving axis sizes on current rank only.
+        task_inds = np.array(list(summed_task_dict.keys()))
+        bl_inds = task_inds[:,0] % Nbls
+        time_inds = (task_inds[:, 0] - bl_inds) // Nbls
+        Ntimes_loc = np.unique(time_inds).size
+        Nbls_loc = np.unique(bl_inds).size
+        Nfreqs_loc = np.unique(task_inds[:,2]).size
+        np.savez(prof.axis_file,
+                 Ntimes=[Ntimes_loc], Nbls=[Nbls_loc],
+                 Nfreqs=[Nfreqs_loc], Nsrcs_loc=[Nsky_parts]
+                 )
+
     # All the sources in this summed list are foobar-ed
     # Source are summed over but only have 1 name
     # Some source may be correct

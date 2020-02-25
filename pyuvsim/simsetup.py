@@ -535,7 +535,7 @@ def parse_telescope_params(tele_params, config_path=''):
 
     # fill in outputs with just array info
     return_dict = {}
-    beam_list = []
+    beam_list = BeamList([])
     beam_dict = {}
 
     return_dict['Nants_data'] = antnames.size
@@ -559,7 +559,6 @@ def parse_telescope_params(tele_params, config_path=''):
 
     return_dict['telescope_config_name'] = telescope_config_name
     beam_ids = ant_layout['beamid']
-    beam_list = []
     beam_dict = {}
 
     for beamID in np.unique(beam_ids):
