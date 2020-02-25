@@ -9,6 +9,7 @@ import pyuvdata.utils as uvutils
 from scipy.special import j1
 from astropy.constants import c as speed_of_light
 
+c_ms = speed_of_light.to('m/s').value
 
 def diameter_to_sigma(diam, freqs):
     """
@@ -24,7 +25,6 @@ def diameter_to_sigma(diam, freqs):
                with the given diameter.
     """
 
-    c_ms = speed_of_light.to('m/s').value
     wavelengths = c_ms / freqs
 
     scalar = 2.2150894  # Found by fitting a Gaussian to an Airy disk function
@@ -156,7 +156,7 @@ class AnalyticBeam(object):
                 raise ValueError("Dish diameter needed for airy beam -- units: meters")
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=np.float)
             za_grid, f_grid = np.meshgrid(za_array, freq_array)
-            xvals = self.diameter / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8
+            xvals = self.diameter / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / c_ms
             values = np.zeros_like(xvals)
             nz = xvals != 0.
             ze = xvals == 0.
