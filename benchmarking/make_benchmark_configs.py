@@ -6,16 +6,15 @@ from pyradiosky import write_healpix_hdf5
 
 from pyuvsim.simsetup import _write_layout_csv, freq_array_to_params
 
-# To be set by calling function:
 
 confdir = 'configdir'
 outdir = 'simfiles'
-
+profdir = 'profdata'
 obsparam_name = 'obsparam_benchmark.yaml'
 
-if not os.path.exists(confdir):
-    os.mkdir(confdir)
-
+for odir in [confdir, outdir, profdir]:
+    if not os.path.exists(odir):
+        os.mkdir(odir)
 
 # Nbls = 150
 # Nfreqs = 256
@@ -32,8 +31,24 @@ Nsrcs = 12 * Nside**2
 # ----------------
 # Copy telescope config
 # ----------------
-teleconfig_file = 'benchmark_analytic_config.yaml'
-copyfile(teleconfig_file, os.path.join(confdir, teleconfig_file))
+teleconfig_file = 'benchmark_tele_config.yaml'
+teleconfig_path = os.path.join(confdir, teleconfig_file)
+
+beamtype='gaussian'
+beamsig = 0.08449
+
+teleconfig = {
+    'beam_paths': {
+        0: "{}, sigma={:.5f}".format(beamtype, beamsig)
+      },
+    'telescope_location': '(-30.72153, 21.42831, 1073.00000)',
+    'telescope_name': 'test_array'
+}
+
+with open(teleconfig_path, 'w') as yfile:
+    yaml.dump(teleconfig, yfile, default_flow_style=False)
+
+#copyfile(teleconfig_file, os.path.join(confdir, teleconfig_file))
 
 
 # ----------------

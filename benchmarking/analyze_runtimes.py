@@ -57,3 +57,4 @@ for comb in combos:
     Nlist.append(length)
 
 results = _func_times(lstat.timings, Nlist, dt=lstat.unit)
+print(results)
