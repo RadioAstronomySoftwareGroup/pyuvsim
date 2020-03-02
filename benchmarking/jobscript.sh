@@ -4,7 +4,7 @@
 #SBATCH --mem=50G
 #SBATCH --time=3-00:00:00
 #SBATCH --cpus-per-task=4
-#SBATCH --nodes=2-2
+#SBATCH --nodes=1-1
 #SBATCH --ntasks=10
 #SBATCH -m cyclic
 

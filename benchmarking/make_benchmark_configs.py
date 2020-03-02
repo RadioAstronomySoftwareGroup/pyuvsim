@@ -35,11 +35,11 @@ teleconfig_file = 'benchmark_tele_config.yaml'
 teleconfig_path = os.path.join(confdir, teleconfig_file)
 
 beamtype='gaussian'
-beamsig = 0.08449
+beamshape = "sigma=0.08449"
 
 teleconfig = {
     'beam_paths': {
-        0: "{}, sigma={:.5f}".format(beamtype, beamsig)
+        0: "{}, {}".format(beamtype, beamshape)
       },
     'telescope_location': '(-30.72153, 21.42831, 1073.00000)',
     'telescope_name': 'test_array'
