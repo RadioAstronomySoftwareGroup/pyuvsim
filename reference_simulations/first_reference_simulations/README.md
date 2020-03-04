@@ -31,6 +31,7 @@ comparisons with PRISim below, for more detailed writeups see the Memos folder.
 
 The total number of data points is constrained by the current level of optimization and availability of computing resources. pyuvsim is currently running on the Oscar cluster at Brown University, given limitations of memory and processor availability.
 
+The catalogs may be found in the **catalog_files** folder, and the beam/layout files are in the **telescope_config** folder.
 
 For a full description of how antenna layouts, instrument configuration, and catalogs are all written into parameter files, please see the documentation at https://pyuvsim.readthedocs.io/en/latest/parameter_files.html. As a quick summary: antenna layout is specified by a csv file, overall array configuration and primary beam assignments are defined by a yaml file, and catalogs are defined either by VOTable files or csv files. The "obsparam" yaml files define the simulations themselves, including the catalog, telescope configuration, array layout, and time/frequency array structures, as well as output filing information and any additional UVData parameters that may be desired.
 
