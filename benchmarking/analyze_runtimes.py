@@ -1,7 +1,8 @@
 
 import numpy as np
 import line_profiler as lp
-
+import sys
+import os
 
 # Estimate scalings on different axes from profiling data.
 
@@ -18,7 +19,6 @@ def _func_times(timings, Nlist, dt=1e-6):
         if key[2] not in funcs_to_check:
             continue
         for lnum, nhits, time in values:
-            print(key, lnum, nhits, nhits in Nlist)
             if nhits in Nlist:
                 ind = Nlist.index(nhits)
                 outarr[ind] += dt * time / nhits    # Time per hit.
@@ -31,6 +31,10 @@ funcs_to_check = ['interp', 'get_beam_jones', 'apply_beam', 'make_visibility',
 profname = 'profdata/time_profile.lprof'
 axesname = 'profdata/time_profile_axes.npz'
 
+# Prepend path
+basepath = sys.argv[1]
+profname = os.path.join(basepath, profname)
+axesname = os.path.join(basepath, axesname)
 
 lstat = lp.load_stats(profname)
 axes_npz = np.load(axesname)
@@ -51,10 +55,11 @@ if not axes['Nsrcs_loc'] == 1:
 Nlist = []
 for comb in combos:
     length = 1
-    print(comb)
     for key in comb:
         length *= axes[key]
     Nlist.append(length)
 
 results = _func_times(lstat.timings, Nlist, dt=lstat.unit)
-print(results)
+print(Nlist)
+print(dict(zip(combos, results)))
+print(np.sum(np.array(Nlist) * np.array(results)))
