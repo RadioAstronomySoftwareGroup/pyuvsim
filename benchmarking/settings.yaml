@@ -4,7 +4,7 @@
 # Axis sizes
 Nbls : 500
 Nfreqs : 256
-Ntimes : 70
+Ntimes : 21
 Nside : 16      # HEALPix Nside parameter.
 
 # Beam info
@@ -12,7 +12,7 @@ beamtype : 'gaussian'
 beamshape: 'sigma=0.08449'
 
 # Resources
-Ntasks : 20
+Ntasks : 10
 Nnodes : 1
 memory : 50G        # GiB
 walltime: "3-00:00:00"  #d-HH:MM:SS

@@ -63,7 +63,7 @@ if args.jobscript:
                    settings['memory'])
 
 if args.submit:
-    output = check_call(['sbatch', 'jobscript.sh'])
+    output = check_call(['sbatch', '-o', os.path.join(args.outdir, 'slurm_%A.out'), 'jobscript.sh'])
 
 
 if args.cleanup:
