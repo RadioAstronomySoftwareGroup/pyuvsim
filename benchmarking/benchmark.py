@@ -1,7 +1,6 @@
 import numpy as np
 import yaml
 import os
-from shutil import copyfile
 from pyradiosky import write_healpix_hdf5
 
 from pyuvsim.simsetup import _write_layout_csv, freq_array_to_params
@@ -30,20 +29,19 @@ def make_benchmark_configuration(config_dir=None, data_out=None, profiles=None, 
     teleconfig_file = 'benchmark_tele_config.yaml'
     teleconfig_path = os.path.join(confdir, teleconfig_file)
 
-    beamtype='gaussian'
+    beamtype = 'gaussian'
     beamshape = "sigma=0.08449"
 
     teleconfig = {
         'beam_paths': {
             0: "{}, {}".format(beamtype, beamshape)
-          },
+        },
         'telescope_location': '(-30.72153, 21.42831, 1073.00000)',
         'telescope_name': 'test_array'
     }
 
     with open(teleconfig_path, 'w') as yfile:
         yaml.dump(teleconfig, yfile, default_flow_style=False)
-
 
     # ----------------
     # Frequency setup
@@ -52,7 +50,6 @@ def make_benchmark_configuration(config_dir=None, data_out=None, profiles=None, 
     f0 = 1e8
     df = 195312.5
     freqs = np.arange(Nfreqs) * df + f0
-
 
     # ----------------
     # Array layout setup
@@ -67,8 +64,8 @@ def make_benchmark_configuration(config_dir=None, data_out=None, profiles=None, 
 
     layout_fname = 'benchmark_layout.csv'
 
-    _write_layout_csv(os.path.join(confdir, layout_fname), antpos_enu, antnums.astype('str'), antnums)
-
+    _write_layout_csv(os.path.join(confdir, layout_fname),
+                      antpos_enu, antnums.astype('str'), antnums)
 
     blsel = []
     bi = 0
@@ -78,7 +75,6 @@ def make_benchmark_configuration(config_dir=None, data_out=None, profiles=None, 
                 break
             blsel.append('({},{})'.format(a1, a2))
             bi += 1
-
 
     # ----------------
     # Sky Model setup
@@ -102,7 +98,6 @@ def make_benchmark_configuration(config_dir=None, data_out=None, profiles=None, 
     }
 
     freqdict = freq_array_to_params(freqs)
-
 
     srcdict = {
         'catalog': hpx_fname
