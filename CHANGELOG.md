@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- Scripts for running / verifying reference simulations.
+
 ## [1.1.2] - 2020-2-14
 
 ### Added

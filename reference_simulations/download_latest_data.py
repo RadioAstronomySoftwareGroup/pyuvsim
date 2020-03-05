@@ -1,6 +1,5 @@
 #!/bin/env python
 
-import numpy as np
 import requests
 import os
 
@@ -17,7 +16,7 @@ if not os.path.exists(target_dir):
 
 urlbase = 'https://drive.google.com/uc?export=download'
 
-fileids= 'gdrive_file_ids.dat' 
+fileids = 'gdrive_file_ids.dat'
 
 dat = []
 
@@ -30,9 +29,8 @@ with open(fileids, 'r') as dfile:
 for d in dat:
     fname = d[1]
     fid = d[0]
-    r = requests.get(urlbase, params={'id' : fid})
+    r = requests.get(urlbase, params={'id': fid})
     print(fname)
     fname = os.path.join(target_dir, fname)
     with open(fname, 'wb') as ofile:
-            ofile.write(r.content)
-
+        ofile.write(r.content)
