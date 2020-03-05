@@ -30,7 +30,7 @@ for k in new_files.keys():
         warnings.warn("File {} not in reference data.".format(k))
         continue
     with warnings.catch_warnings():
-        warnings.simplefilter('ignore') # Ignore known_telescopes warning
+        warnings.simplefilter('ignore')     # Ignore known_telescopes warning
         uv_old = h5py.File(old_files[k], 'r')['Data']
         uv_new = h5py.File(new_files[k], 'r')['Data']
 
