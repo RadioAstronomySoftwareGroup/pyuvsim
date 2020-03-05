@@ -1,0 +1,26 @@
+
+# Settings for benchmarking simulation.
+
+# Axis sizes
+Nbls : 500
+Nfreqs : 256
+Ntimes : 70
+Nside : 16      # HEALPix Nside parameter.
+
+# Beam info
+beamtype : 'gaussian'
+beamshape: 'sigma=0.08449'
+
+# Resources
+Ntasks : 20
+Nnodes : 1
+memory : 50G        # GiB
+walltime: "3-00:00:00"  #d-HH:MM:SS
+Ncpus_per_task: 2
+
+# Directory setup
+config_dir: 'configdir'
+data_out: 'simfiles'
+profiles: 'profdata'
+obsparam_name: 'obsparam_benchmark.yaml'
+profile_prefix: 'time_profile'
