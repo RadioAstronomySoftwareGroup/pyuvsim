@@ -9,9 +9,10 @@ import numpy as np
 import yaml
 import resource
 import time
-
-mpi4py.rc.initialize = False  # noqa
 import pytest
+
+pytest.importorskip('mpi4py')  # noqa
+mpi4py.rc.initialize = False  # noqa
 from mpi4py import MPI
 
 from pyuvdata import UVData
