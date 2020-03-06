@@ -7,7 +7,8 @@ if [[ ! $OS == 'macos-latest' ]]; then
   sudo apt-get install -y gcc g++
 fi
 conda config --set always_yes yes --set changeps1 no
-conda update -q conda
+# try commenting out the conda update call to see if it fixes issues on mac tests
+# conda update -q conda
 conda info -a
 conda create --name=${ENV_NAME}  python=$PYTHON --quiet
 conda env update -f ci/${ENV_NAME}.yaml
