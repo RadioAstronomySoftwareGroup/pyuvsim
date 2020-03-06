@@ -394,6 +394,7 @@ def test_offzenith_source_multibl_uvfits():
 
 
 def test_file_to_tasks():
+    pytest.importorskip('mpi4py')
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
@@ -473,6 +474,7 @@ def test_file_to_tasks():
 
 
 def test_gather():
+    pytest.importorskip('mpi4py')
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
@@ -502,6 +504,7 @@ def test_gather():
 
 def test_local_task_gen():
     # Confirm I get the same results looping over the task list as I do with the generator function.
+    pytest.importorskip('mpi4py')
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_10time10chan)
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
@@ -551,6 +554,7 @@ def test_local_task_gen():
 
 def test_pol_error():
     # Check that running with a uvdata object without the proper polarizations will fail.
+    pytest.importorskip('mpi4py')
 
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
@@ -629,6 +633,7 @@ def test_task_coverage():
 def test_source_splitting():
     # Check that if the available memory is less than the expected size of the source catalog,
     # then the task iterator will loop over chunks of the source array.
+    pytest.importorskip('mpi4py')
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_10time10chan)
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))

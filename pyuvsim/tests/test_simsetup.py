@@ -133,7 +133,7 @@ def test_catalog_from_params():
 # parametrize will loop over all the give values
 @pytest.mark.parametrize("config_num", [0, 2])
 def test_param_reader(config_num):
-
+    pytest.importorskip('mpi4py')
     # Reading in various configuration files
 
     param_filename = param_filenames[config_num]
