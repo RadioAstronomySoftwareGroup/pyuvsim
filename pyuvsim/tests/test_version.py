@@ -101,6 +101,8 @@ def test_construct_version_info():
         'git_branch': git_branch
     }
 
+    print(pyuvsim.version.construct_version_info())
+    print(test_version_info)
     assert pyuvsim.version.construct_version_info() == test_version_info
 
 
