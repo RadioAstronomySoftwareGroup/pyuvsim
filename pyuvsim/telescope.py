@@ -109,10 +109,10 @@ class BeamList(object):
         self._str_beam_list = []
         self._obj_beam_list = []
         if beam_list is not None:
-            if all([isinstance(b, str) for b in beam_list]):
+            if all(isinstance(b, str) for b in beam_list):
                 self._str_beam_list[:] = beam_list[:]
                 self.string_mode = True
-            elif all([not isinstance(b, str) for b in beam_list]):
+            elif all(not isinstance(b, str) for b in beam_list):
                 self._obj_beam_list[:] = beam_list[:]
                 self.string_mode = False
             else:

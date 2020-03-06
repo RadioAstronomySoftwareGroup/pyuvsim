@@ -60,7 +60,7 @@ def _parse_layout_csv(layout_csv):
 
 
 def _write_layout_csv(filepath, antpos_enu, antenna_names, antenna_numbers, beam_ids=None):
-    col_width = max([len(name) for name in antenna_names])
+    col_width = max(len(name) for name in antenna_names)
     header = ("{:" + str(col_width) + "} {:8} {:8} {:10} {:10} {:10}\n").format(
         "Name", "Number", "BeamID", "E", "N", "U"
     )
@@ -966,8 +966,7 @@ def initialize_uvdata_from_params(obs_params):
     if 'select' in param_dict:
         select_params = param_dict['select']
         no_autos = bool(select_params.pop('no_autos', False))
-        select_params = dict(
-            [(k, v) for k, v in select_params.items() if k in valid_select_keys])
+        select_params = {k: v for k, v in select_params.items() if k in valid_select_keys}
         if 'antenna_nums' in select_params:
             select_params['antenna_nums'] = list(map(int, select_params['antenna_nums']))
         redundant_threshold = param_dict['select'].get('redundant_threshold', None)
@@ -1243,14 +1242,12 @@ def uvdata_to_telescope_config(
     )
 
     # Write the rest to a yaml file.
-    yaml_dict = dict(
-        telescope_name=uvdata_in.telescope_name,
-        telescope_location=repr(uvdata_in.telescope_location_lat_lon_alt_degrees),
-        Nants=uvdata_in.Nants_telescope,
-        beam_paths={
-            0: beam_filepath
-        }
-    )
+    yaml_dict = {
+        "telescope_name": uvdata_in.telescope_name,
+        "telescope_location": repr(uvdata_in.telescope_location_lat_lon_alt_degrees),
+        "Nants": uvdata_in.Nants_telescope,
+        "beam_paths": {0: beam_filepath}
+    }
 
     with open(os.path.join(path_out, telescope_config_name), 'w+') as yfile:
         yaml.dump(yaml_dict, yfile, default_flow_style=False)
@@ -1295,24 +1292,20 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
     if 'time_array' in tdict:
         tdict.pop('time_array')
 
-    param_dict = dict(
-        time=tdict,
-        freq=fdict,
-        sources=dict(
-            catalog=catalog
-        ),
-
-        telescope=dict(
-            telescope_config_name=telescope_config_name,
-            array_layout=layout_csv_name
-        ),
-
-        filing=dict(
-            outdir='.',
-            outfile_name='',
-            outfile_prefix=''
-        )
-    )
+    param_dict = {
+        "time": tdict,
+        "freq": fdict,
+        "sources": {"catalog": catalog},
+        "telescope": {
+            "telescope_config_name": telescope_config_name,
+            "array_layout": layout_csv_name
+        },
+        "filing": {
+            "outdir": '.',
+            "outfile_name": '',
+            "outfile_prefix": ''
+        }
+    }
 
     if catalog == 'mock':
         param_dict['sources']['mock_arrangement'] = 'zenith'

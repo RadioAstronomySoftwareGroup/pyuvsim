@@ -75,7 +75,7 @@ def shared_mem_bcast(arr, root=0):
     itemsize = 0
     dtype = None
     Nitems = 0
-    shape = tuple()
+    shape = tuple()  # noqa
 
     if node_comm.rank == root:
         # Data cannot be shared across nodes.

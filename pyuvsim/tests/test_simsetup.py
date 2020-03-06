@@ -272,12 +272,13 @@ def test_freq_parser():
     Check all valid input parameter cases for frequencies.
     """
 
-    fdict_base = dict(
-        Nfreqs=10,
-        channel_width=0.5,
-        start_freq=0.0,
-        end_freq=4.5,
-        bandwidth=5.0)
+    fdict_base = {
+        "Nfreqs": 10,
+        "channel_width": 0.5,
+        "start_freq": 0.0,
+        "end_freq": 4.5,
+        "bandwidth": 5.0
+    }
 
     freq_array = np.linspace(
         fdict_base['start_freq'],
@@ -528,13 +529,22 @@ def test_param_select_redundant():
 
 @pytest.mark.parametrize('case', np.arange(6))
 def check_uvdata_keyword_init(case):
-    base_kwargs = dict(
-        antenna_layout_filepath=os.path.join(SIM_DATA_PATH, "test_config/triangle_bl_layout.csv"),
-        telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
-        telescope_name="HERA", Nfreqs=10, start_freq=1e8, bandwidth=1e8, Ntimes=60,
-        integration_time=100.0, start_time=2458101.0, polarization_array=['xx'],
-        no_autos=True, write_files=False, run_check=True
-    )
+    base_kwargs = {
+        "antenna_layout_filepath": os.path.join(SIM_DATA_PATH,
+                                                "test_config/triangle_bl_layout.csv"),
+        "telescope_location": (-30.72152777777791, 21.428305555555557, 1073.0000000093132),
+        "telescope_name": "HERA",
+        "Nfreqs": 10,
+        "start_freq": 1e8,
+        "bandwidth": 1e8,
+        "Ntimes": 60,
+        "integration_time": 100.0,
+        "start_time": 2458101.0,
+        "polarization_array": ['xx'],
+        "no_autos": True,
+        "write_files": False,
+        "run_check": True
+    }
 
     if case == 0:
         # check it runs through
@@ -797,8 +807,11 @@ def test_multi_analytic_beams():
     pyuvsim.simsetup._write_layout_csv(layout_fname, antpos, names, antenna_numbers, beam_ids)
 
     # Write tele config to file.
-    pdict = dict(telescope_location=str(telescope_location),
-                 telescope_name=telescope_name, beam_paths=beam_specs)
+    pdict = {
+        "telescope_location": str(telescope_location),
+        "telescope_name": telescope_name,
+        "beam_paths": beam_specs
+    }
     with open(par_fname, 'w') as yfile:
         yaml.dump(pdict, yfile, default_flow_style=False)
 
