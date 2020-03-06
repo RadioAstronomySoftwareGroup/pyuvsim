@@ -1,7 +1,9 @@
 # pyuvsim
 
+![](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/workflows/Tests/badge.svg?branch=master)
 [![Build Status](https://travis-ci.org/RadioAstronomySoftwareGroup/pyuvsim.svg?branch=master)](https://travis-ci.org/RadioAstronomySoftwareGroup/pyuvsim)
 [![Coverage Status](https://coveralls.io/repos/github/RadioAstronomySoftwareGroup/pyuvsim/badge.svg?branch=master)](https://coveralls.io/github/RadioAstronomySoftwareGroup/pyuvsim?branch=master)
+[![codecov](https://codecov.io/gh/RadioAstronomySoftwareGroup/pyuvsim/branch/master/graph/badge.svg)](https://codecov.io/gh/RadioAstronomySoftwareGroup/pyuvsim)
 
 pyuvsim is a comprehensive simulation package for radio interferometers in python.
 
