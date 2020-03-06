@@ -403,20 +403,27 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     if rank == 0:
         print("Calculations Complete.")
 
-    # If profiling is active, save axis sizes:
+    # If profiling is active, save meta data:
     from .profiling import prof     # noqa
-    if hasattr(prof, 'axis_file'):
-        # Saving axis sizes on current rank only.
+    if hasattr(prof, 'meta_file'):
+        # Saving axis sizes on current rank (local) and for the whole job (global).
         task_inds = np.array(list(summed_task_dict.keys()))
-        bl_inds = task_inds[:,0] % Nbls
+        bl_inds = task_inds[:, 0] % Nbls
         time_inds = (task_inds[:, 0] - bl_inds) // Nbls
         Ntimes_loc = np.unique(time_inds).size
         Nbls_loc = np.unique(bl_inds).size
-        Nfreqs_loc = np.unique(task_inds[:,2]).size
-        np.savez(prof.axis_file,
-                 Ntimes=[Ntimes_loc], Nbls=[Nbls_loc],
-                 Nfreqs=[Nfreqs_loc], Nsrcs_loc=[Nsky_parts]
-                 )
+        Nfreqs_loc = np.unique(task_inds[:, 2]).size
+        axes_dict = {
+            'Ntimes_loc': Ntimes_loc,
+            'Nbls_loc': Nbls_loc,
+            'Nfreqs_loc': Nfreqs_loc,
+            'Nsrcs_loc': Nsky_parts,
+            'prof_rank': prof.rank
+        }
+
+        with open(prof.meta_file, 'w') as afile:
+            for k, v in axes_dict.items():
+                afile.write("{} \t {:d}\n".format(k, int(v)))
 
     # All the sources in this summed list are foobar-ed
     # Source are summed over but only have 1 name

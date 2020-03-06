@@ -6,31 +6,60 @@ from pyradiosky import write_healpix_hdf5
 from pyuvsim.simsetup import _write_layout_csv, freq_array_to_params
 
 
-def make_benchmark_configuration(config_dir=None, data_out=None, profiles=None, obsparam_name=None,
-                                 Nbls=None, Nfreqs=None, Ntimes=None, Nside=None):
+def settings_setup(settings_file, outdir=None):
+    """ Parse settings file and make other variables."""
+    with open(settings_file, 'r') as yfile:
+        settings = yaml.safe_load(yfile)
+
+    odir_keys = ['config_dir', 'profiles', 'data_out']
+    if outdir is not None:
+        for key in odir_keys:
+            settings[key] = os.path.join(outdir, settings[key])
+
+    if 'Nside' in settings.keys():
+        settings['Nsrcs'] = 12 * settings['Nside']**2
+
+    settings['teleconfig_file'] = 'tele_config.yaml'
+    settings['layout_fname'] = 'layout.csv'
+    settings['hpx_fname'] = 'skymodel.hdf5'
+    settings['beamtype'] = 'gaussian'
+    settings['beamshape'] = "sigma=0.08449"
+    settings['profile_path'] = os.path.join(settings['profiles'], settings['profile_prefix'])
+    settings['jobscript'] = os.path.join(outdir, 'jobscript.sh')
+
+    return settings
+
+
+def make_benchmark_configuration(settings_dict):
     """
     Setup configuration files and directories for benchmarking simulation.
-
     """
 
-    confdir = config_dir
-    outdir = data_out
-    profdir = profiles
+    confdir = settings_dict['config_dir']
+    outdir = settings_dict['data_out']
+    Nside = settings_dict['Nside']
+    teleconfig_file = settings_dict['teleconfig_file']
+    beamshape = settings_dict['beamshape']
+    beamtype = settings_dict['beamtype']
+    layout_fname = settings_dict['layout_fname']
+    hpx_fname = settings_dict['hpx_fname']
 
-    for odir in [confdir, outdir, profdir]:
+    Nfreqs = settings_dict['Nfreqs']
+    Nbls = settings_dict['Nbls']
+    Ntimes = settings_dict['Ntimes']
+
+    odir_keys = ['config_dir', 'profiles', 'data_out']
+    for key in odir_keys:
+        odir = settings_dict[key]
         if not os.path.exists(odir):
             os.makedirs(odir)
 
     Nsrcs = 12 * Nside**2
 
     # ----------------
-    # Copy telescope config
+    # Telescope config
     # ----------------
-    teleconfig_file = 'benchmark_tele_config.yaml'
     teleconfig_path = os.path.join(confdir, teleconfig_file)
-
-    beamtype = 'gaussian'
-    beamshape = "sigma=0.08449"
 
     teleconfig = {
         'beam_paths': {
@@ -62,8 +91,6 @@ def make_benchmark_configuration(config_dir=None, data_out=None, profiles=None, 
     antpos_enu[:, 2] = 0.0   # Set heights to zero.
     antnums = np.arange(Nants)
 
-    layout_fname = 'benchmark_layout.csv'
-
     _write_layout_csv(os.path.join(confdir, layout_fname),
                       antpos_enu, antnums.astype('str'), antnums)
 
@@ -84,7 +111,6 @@ def make_benchmark_configuration(config_dir=None, data_out=None, profiles=None, 
     fmin, fmax = 0.0, 1.0   # K (fluxes)
     skydat = np.random.uniform(fmin, fmax, (Nfreqs, Nsrcs))
 
-    hpx_fname = 'benchmark_skymodel.hdf5'
     write_healpix_hdf5(os.path.join(confdir, hpx_fname), skydat, range(Nsrcs), freqs)
 
     # ----------------
@@ -127,25 +153,21 @@ def make_benchmark_configuration(config_dir=None, data_out=None, profiles=None, 
         'select': seldict
     }
 
-    obspath = os.path.join(confdir, obsparam_name)
-
-    with open(obspath, 'w') as yfile:
-        print(obspath)
+    obsparam_path = os.path.join(settings_dict['config_dir'], settings_dict['obsparam_name'])
+    with open(obsparam_path, 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)
 
-    # Append a string giving the axis sizes:
-    with open(obspath, 'a') as ofile:
-        ofile.write(
-            "#Ntimes={:d}, Nfreqs={:d}, Nbls={:d}, Nsrcs={:d}\n".format(
-                Ntimes, Nfreqs, Nbls, Nsrcs
-            )
-        )
 
-    return obspath
-
-
-def make_jobscript(obspath, profile_path, Ntasks, Nnodes, Ncpus_per_task, walltime, mem):
+def make_jobscript(settings_dict):
     """Write out a submittable jobscript."""
+
+    mem = settings_dict['MemoryLimit']
+    walltime = settings_dict['walltime']
+    Ncpus_per_task = settings_dict['Ncpus_per_task']
+    Nnodes = settings_dict['Nnodes']
+    Ntasks = settings_dict['Ntasks']
+    profile_path = settings_dict['profile_path']
+    obspath = os.path.join(settings_dict['config_dir'], settings_dict['obsparam_name'])
 
     script = "#!/bin/bash\n\n"
     script += "#SBATCH -J pyuvsim_benchmark\n"
@@ -159,5 +181,47 @@ def make_jobscript(obspath, profile_path, Ntasks, Nnodes, Ncpus_per_task, wallti
     script += "srun --mpi=pmi2 python ../scripts/run_param_pyuvsim.py "\
               + "{} --profile='{}' --raw_profile".format(obspath, profile_path)
 
-    with open("jobscript.sh", 'w') as jfile:
+    with open(settings_dict['jobscript'], 'w') as jfile:
         jfile.write(script)
+
+
+def update_runlog(settings_dict, settings_file, logfile='BENCHMARKS.log'):
+
+    meta_file = settings_dict['profile_path'] + "_meta.out"
+
+    header = '\t'.join([
+        "Time", 'SettingsFile', 'cpus-per-task', 'Ntasks', 'Nnodes', 'MemLimit',
+        'Ntimes', 'Nbls', 'Nfreqs', 'Nsrcs', 'Nsrcs_part', 'MaxRSS [GiB]', 'Runtime'
+    ])
+
+    if not os.path.exists(logfile):
+        log = open(logfile, 'w')
+        log.write(header)
+    else:
+        log = open(logfile, 'a')
+
+    with open(meta_file, 'r') as mfile:
+        lines = mfile.readlines()
+    lines = (l.split() for l in lines)
+    meta = {l[0]: l[1] for l in lines}
+
+    results = [
+        meta['Date/Time'],
+        settings_file,
+        settings_dict['Ncpus_per_task'],
+        settings_dict['Ntasks'],
+        settings_dict['Nnodes'],
+        settings_dict['MemoryLimit'],
+        settings_dict['Ntimes'],
+        settings_dict['Nbls'],
+        settings_dict['Nfreqs'],
+        settings_dict['Nsrcs'],
+        meta['Nsrcs_loc'],
+        meta['MaxRSS'],
+        meta['Runtime']
+    ]
+
+    results = [str(r) for r in results]
+
+    log.write('\n' + '\t'.join(results))
+    log.close()

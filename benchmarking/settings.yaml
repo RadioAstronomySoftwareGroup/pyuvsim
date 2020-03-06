@@ -14,7 +14,7 @@ beamshape: 'sigma=0.08449'
 # Resources
 Ntasks : 10
 Nnodes : 1
-memory : 50G        # GiB
+MemoryLimit : 50G        # GiB
 walltime: "3-00:00:00"  #d-HH:MM:SS
 Ncpus_per_task: 2
 

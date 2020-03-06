@@ -98,7 +98,7 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
             outfile_raw_name = outfile_prefix + ".lprof"
             atexit.register(prof.dump_stats, outfile_raw_name)
         setattr(prof, 'rank', rank)     # Add "rank" as an attribute to the profiler.
-        setattr(prof, 'axis_file', outfile_prefix + '_axes.npz')
+        setattr(prof, 'meta_file', outfile_prefix + '_meta.out')
         prof.enable_by_count()
 
 
