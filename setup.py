@@ -36,7 +36,7 @@ setup_args = {
     'scripts': glob.glob('scripts/*'),
     'version': version.version,
     'include_package_data': True,
-    'install_requires': reqs,
+    'install_requires': ['numpy>=1.15', 'scipy', 'astropy>=4.0', 'pyyaml', 'pyuvdata'],
     'test_requires': ['pytest', 'h5py'],
     'setup_requires': ['pytest-runner'],
     'classifiers': ['Development Status :: 5 - Production/Stable',

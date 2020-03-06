@@ -46,10 +46,10 @@ def test_run_uvsim():
     beam.write_beamfits(beamfile)
     beam_list = pyuvsim.BeamList([beamfile])
     mock_keywords = {"Nsrcs": 3}
-    simtest.assert_raises_message(
-        TypeError, 'input_uv must be UVData object',
-        pyuvsim.run_uvdata_uvsim, 'not_uvdata', beam_list
-    )
+
+    with pytest.raises(TypeError, match='input_uv must be UVData object'):
+        pyuvsim.run_uvdata_uvsim('not_uvdata', beam_list)
+
     mpi.start_mpi()
     catalog, mock_kwds = pyuvsim.simsetup.create_mock_catalog(
         hera_uv.time_array[0], return_table=True, **mock_keywords

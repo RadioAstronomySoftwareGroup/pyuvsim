@@ -8,11 +8,11 @@ import numpy as np
 from astropy import units
 from astropy.coordinates import Angle, EarthLocation
 from astropy.time import Time
+import pytest
 from pyuvdata import UVData
 from scipy.special import j1
 
 import pyuvsim
-import pyuvsim.tests as simtest
 import pyuvsim.utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
@@ -228,11 +228,10 @@ def test_chromatic_gaussian():
     za = np.linspace(0, np.pi / 2., Npix)
 
     # Error if trying to define chromatic beam without a reference frequency
+    with pytest.raises(ValueError,
+                       match='ref_freq must be set for nonzero gaussian beam spectral index'):
+        pyuvsim.AnalyticBeam('gaussian', sigma=sigma, spectral_index=alpha)
 
-    simtest.assert_raises_message(
-        ValueError, 'ref_freq must be set for nonzero gaussian beam spectral index',
-        pyuvsim.AnalyticBeam, 'gaussian', sigma=sigma, spectral_index=alpha
-    )
     A = pyuvsim.AnalyticBeam('gaussian', sigma=sigma, ref_freq=freqs[0], spectral_index=alpha)
 
     # Get the widths at each frequency.
@@ -286,25 +285,22 @@ def test_beamerrs():
     """
     Error cases.
     """
-    simtest.assert_raises_message(
-        ValueError, 'type not recognized', pyuvsim.AnalyticBeam, 'unsupported_type'
-    )
+    with pytest.raises(ValueError, match='type not recognized'):
+        pyuvsim.AnalyticBeam('unsupported_type')
+
     beam = pyuvsim.AnalyticBeam('gaussian')
     az, za = np.random.uniform(0.0, np.pi, (2, 5))
     freq_arr = np.linspace(1e8, 1.5e8, 10)
-    simtest.assert_raises_message(
-        ValueError, 'Dish diameter needed for gaussian beam -- units: meters',
-        beam.interp, az, za, freq_arr
-    )
+    with pytest.raises(ValueError, match='Dish diameter needed for gaussian beam'):
+        beam.interp(az, za, freq_arr)
+
     beam.type = 'airy'
-    simtest.assert_raises_message(
-        ValueError, 'Dish diameter needed for airy beam -- units: meters',
-        beam.interp, az, za, freq_arr
-    )
+    with pytest.raises(ValueError, match='Dish diameter needed for airy beam'):
+        beam.interp(az, za, freq_arr)
+
     beam.type = 'noninterpolable'
-    simtest.assert_raises_message(
-        ValueError, 'no interp for this type: noninterpolable', beam.interp, az, za, freq_arr
-    )
+    with pytest.raises(ValueError, match='no interp for this type: noninterpolable'):
+        beam.interp(az, za, freq_arr)
 
 
 def test_diameter_to_sigma():

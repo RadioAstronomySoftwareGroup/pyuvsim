@@ -92,14 +92,9 @@ def test_catalog_from_params():
                                                  'is not in known_telescopes.')
 
     source_dict = {}
-    simtest.assert_raises_message(
-        KeyError, "No catalog defined.",
-        pyuvsim.simsetup.initialize_catalog_from_params,
-        {'sources': source_dict}
-    )
-    pytest.raises(
-        KeyError, pyuvsim.simsetup.initialize_catalog_from_params, {'sources': source_dict}
-    )
+    with pytest.raises(KeyError, match='No catalog defined.'):
+        pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
+
     arrloc = '{:.5f},{:.5f},{:.5f}'.format(*hera_uv.telescope_location_lat_lon_alt_degrees)
     source_dict = {
         'catalog': 'mock',
@@ -118,15 +113,13 @@ def test_catalog_from_params():
     source_dict['array_location'] = arrloc
     del source_dict['time']
 
-    simtest.assert_raises_message(TypeError, 'input_uv must be UVData object',
-                                  pyuvsim.simsetup.initialize_catalog_from_params,
-                                  {'sources': source_dict},
-                                  input_uv='not_uvdata')
-    simtest.assert_raises_message(ValueError,
-                                  'input_uv must be supplied if using mock catalog without '
-                                  'specified julian date',
-                                  pyuvsim.simsetup.initialize_catalog_from_params,
-                                  {'sources': source_dict})
+    with pytest.raises(TypeError, match="input_uv must be UVData object"):
+        pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict},
+                                                        input_uv='not_uvdata')
+
+    with pytest.raises(ValueError, match="input_uv must be supplied if using mock catalog"):
+        pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
+
     with pytest.warns(UserWarning) as warn:
         catalog_str, srclistname2 = pyuvsim.simsetup.initialize_catalog_from_params(
             {'sources': source_dict}, hera_uv
@@ -179,23 +172,17 @@ def test_param_reader(config_num):
         params_bad['config_path'] = os.path.join(
             SIM_DATA_PATH, 'nonexistent_directory', 'nonexistent_file'
         )
-        simtest.assert_raises_message(
-            ValueError, 'nonexistent_directory is not a directory',
-            pyuvsim.initialize_uvdata_from_params, params_bad
-        )
+        with pytest.raises(ValueError, match="nonexistent_directory is not a directory"):
+            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
         params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
         params_bad['telescope']['array_layout'] = 'nonexistent_file'
-        simtest.assert_raises_message(
-            ValueError, 'nonexistent_file from yaml does not exist',
-            pyuvsim.initialize_uvdata_from_params, params_bad
-        )
+        with pytest.raises(ValueError, match="nonexistent_file from yaml does not exist"):
+            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
         params_bad['telescope']['telescope_config_name'] = 'nonexistent_file'
-        simtest.assert_raises_message(
-            ValueError, 'telescope_config_name file from yaml does not exist',
-            pyuvsim.initialize_uvdata_from_params, params_bad
-        )
+        with pytest.raises(ValueError, match="telescope_config_name file from yaml does not exist"):
+            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
         # Missing beam keywords
         params_bad = copy.deepcopy(bak_params_bad)
@@ -206,22 +193,21 @@ def test_param_reader(config_num):
         params_bad['telescope']['telescope_config_name'] = os.path.join(
             SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_gaussnoshape.yaml'
         )
-        simtest.assert_raises_message(
-            KeyError, 'Missing shape parameter for gaussian beam (diameter or sigma).',
-            pyuvsim.initialize_uvdata_from_params, params_bad
-        )
+        with pytest.raises(KeyError,
+                           match="Missing shape parameter for gaussian beam"):
+            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+
         params_bad['telescope']['telescope_config_name'] = os.path.join(
             SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml'
         )
-        simtest.assert_raises_message(
-            KeyError, 'Missing diameter for airy beam.',
-            pyuvsim.initialize_uvdata_from_params, params_bad
-        )
+        with pytest.raises(KeyError, match="Missing diameter for airy beam."):
+            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+
         params_bad['telescope']['telescope_config_name'] = os.path.join(
             SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml'
         )
-        simtest.assert_raises_message(ValueError, 'Undefined beam model',
-                                      pyuvsim.initialize_uvdata_from_params, params_bad)
+        with pytest.raises(ValueError, match="Undefined beam model"):
+            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_filename)
@@ -258,18 +244,18 @@ def test_tele_parser():
     Check a variety of cases not already tested by param reader
     """
     # check no tele config passed
-    tdict = dict(array_layout=os.path.join(SIM_DATA_PATH, 'test_layout_6ant.csv'))
-    tel_error = 'If telescope_config_name not provided in `telescope` obsparam section, ' \
-                'you must provide telescope_location'
-    simtest.assert_raises_message(
-        KeyError, tel_error, pyuvsim.simsetup.parse_telescope_params, tdict
-    )
+    tdict = {'array_layout': os.path.join(SIM_DATA_PATH, 'test_layout_6ant.csv')}
+    tel_error = ('If telescope_config_name not provided in `telescope` obsparam section, '
+                 'you must provide telescope_location')
+
+    with pytest.raises(KeyError, match=tel_error):
+        pyuvsim.simsetup.parse_telescope_params(tdict)
+
     tdict['telescope_location'] = '(-30.72152777777791, 21.428305555555557, 1073.0000000093132)'
     tel_error = 'If telescope_config_name not provided in `telescope` obsparam section, ' \
                 'you must provide telescope_name'
-    simtest.assert_raises_message(
-        KeyError, tel_error, pyuvsim.simsetup.parse_telescope_params, tdict
-    )
+    with pytest.raises(KeyError, match=tel_error):
+        pyuvsim.simsetup.parse_telescope_params(tdict)
 
     tdict['telescope_name'] = 'tele'
     tpars, blist, bdict = pyuvsim.simsetup.parse_telescope_params(tdict)
@@ -277,10 +263,8 @@ def test_tele_parser():
     assert blist == []
 
     tdict.pop('array_layout')
-    simtest.assert_raises_message(
-        KeyError, 'array_layout must be provided.',
-        pyuvsim.simsetup.parse_telescope_params, tdict
-    )
+    with pytest.raises(KeyError, match="array_layout must be provided."):
+        pyuvsim.simsetup.parse_telescope_params(tdict)
 
 
 def test_freq_parser():
@@ -336,34 +320,29 @@ def test_freq_parser():
     ]
     for ei, er in enumerate(err_cases):
         subdict = {key: fdict_base[key] for key in er}
-        simtest.assert_raises_message(
-            ValueError, err_mess[ei], pyuvsim.parse_frequency_params, subdict
-        )
+        with pytest.raises(ValueError, match=err_mess[ei]):
+            pyuvsim.parse_frequency_params(subdict)
 
     subdict = {'freq_array': freq_array[0]}
-    simtest.assert_raises_message(
-        ValueError, 'Channel width must be specified if freq_arr has length 1',
-        pyuvsim.parse_frequency_params, subdict
-    )
+    with pytest.raises(ValueError,
+                       match='Channel width must be specified if freq_arr has length 1'):
+        pyuvsim.parse_frequency_params(subdict)
 
     subdict = {'freq_array': freq_array[[0, 1, 4, 8]]}
-    simtest.assert_raises_message(ValueError, 'Spacing in frequency array is uneven.',
-                                  pyuvsim.parse_frequency_params,
-                                  subdict)
+    with pytest.raises(ValueError, match='Spacing in frequency array is uneven.'):
+        pyuvsim.parse_frequency_params(subdict)
 
     subdict = {'channel_width': 3.14, 'start_freq': 1.0, 'end_freq': 8.3}
-    simtest.assert_raises_message(
-        ValueError, 'end_freq - start_freq must be evenly divisible by channel_width',
-        pyuvsim.parse_frequency_params, subdict
-    )
+    with pytest.raises(ValueError,
+                       match='end_freq - start_freq must be evenly divisible by channel_width'):
+        pyuvsim.parse_frequency_params(subdict)
 
     subdict = fdict_base.copy()
     subdict['Nfreqs'] = 7
     del subdict['freq_array']
-    simtest.assert_raises_message(
-        ValueError, 'Frequency array spacings are not equal to channel width.',
-        pyuvsim.parse_frequency_params, subdict
-    )
+    with pytest.raises(ValueError,
+                       match='Frequency array spacings are not equal to channel width.'):
+        pyuvsim.parse_frequency_params(subdict)
 
 
 def test_time_parser():
@@ -431,21 +410,20 @@ def test_time_parser():
 
     for ei, er in enumerate(err_cases):
         subdict = {key: tdict_base[key] for key in er}
-        simtest.assert_raises_message(ValueError, err_mess[ei], pyuvsim.parse_time_params, subdict)
+        with pytest.raises(ValueError, match=err_mess[ei]):
+            pyuvsim.parse_time_params(subdict)
 
     subdict = {'integration_time': 3.14, 'start_time': 10000.0, 'end_time': 80000.3, 'Ntimes': 30}
-    simtest.assert_raises_message(
-        ValueError, 'Calculated time array is not consistent with set '
-        'integration_time', pyuvsim.parse_time_params, subdict
-    )
+    with pytest.raises(ValueError,
+                       match='Calculated time array is not consistent with set integration_time'):
+        pyuvsim.parse_time_params(subdict)
 
     subdict = tdict_base.copy()
     subdict['Ntimes'] = 7
     del subdict['time_array']
-    simtest.assert_raises_message(
-        ValueError, 'Calculated time array is not consistent with set '
-        'integration_time.', pyuvsim.parse_time_params, subdict
-    )
+    with pytest.raises(ValueError,
+                       match='Calculated time array is not consistent with set integration_time'):
+        pyuvsim.parse_time_params(subdict)
 
 
 def test_single_input_time():
@@ -745,10 +723,8 @@ def test_mock_catalogs():
         'random': 'mock_random_2458098.27471.txt',
         'zenith': 'mock_zenith_2458098.27471.txt'
     }
-    simtest.assert_raises_message(
-        KeyError, "Invalid mock catalog arrangement: invalid_catalog_name",
-        pyuvsim.simsetup.create_mock_catalog, time, 'invalid_catalog_name'
-    )
+    with pytest.raises(KeyError, match="Invalid mock catalog arrangement: invalid_catalog_name"):
+        pyuvsim.create_mock_catalog(time, 'invalid_catalog_name')
 
     for arr in arrangements:
         radec_catalog = pyradiosky.read_text_catalog(
@@ -807,7 +783,9 @@ def test_multi_analytic_beams():
 
     telescope_location = (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
     telescope_name = 'SKA'
-    beam_specs = {0: 'airy, diameter=14', 1: 'airy, diameter=20', 2: 'gaussian, sigma=0.5'}
+    beam_specs = {0: {'type': 'airy', 'diameter': 14},
+                  1: {'type': 'airy', 'diameter': 20},
+                  2: {'type': 'gaussian', 'sigma': 0.5}}
     expected = ['analytic_airy_diam=14', 'analytic_airy_diam=20', 'analytic_gaussian_sig=0.5']
 
     Nants = 5
@@ -823,15 +801,6 @@ def test_multi_analytic_beams():
                  telescope_name=telescope_name, beam_paths=beam_specs)
     with open(par_fname, 'w') as yfile:
         yaml.dump(pdict, yfile, default_flow_style=False)
-
-    # Check error condition:
-    ambig_beam_specs = copy.copy(beam_specs)
-    ambig_beam_specs[0] = 'airy, gaussian, diameter=14'
-    bad_pdict = copy.copy(pdict)
-    bad_pdict['beam_paths'] = ambig_beam_specs
-
-    simtest.assert_raises_message(ValueError, "Ambiguous beam specification",
-                                  pyuvsim.simsetup._construct_beam_list, beam_ids, bad_pdict)
 
     param_dict = {'telescope_config_name': par_fname, 'array_layout': layout_fname}
 
