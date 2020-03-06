@@ -9,6 +9,7 @@ import yaml
 import resource
 import time
 import pytest
+import sys
 
 pytest.importorskip('mpi4py')  # noqa
 import mpi4py
@@ -147,7 +148,11 @@ def test_mem_usage():
 
     mpi.start_mpi()
 
-    memory_usage_GiB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 2**10 / 2**30
+    scale = 1.0
+    if 'linux' in sys.platform:
+        scale = 2**10
+
+    memory_usage_GiB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 2**30
     assert memory_usage_GiB == mpi.get_max_node_rss()
     incsize = 50 * 2**20    # 50 MiB
     arr = bytearray(incsize)
