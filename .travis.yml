@@ -28,6 +28,7 @@ install:
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION coveralls
   - source activate test-environment
   - conda env update -n test-environment -f environment.yml
+  - conda install flake8
   - pip install .
   - python -c "import pyuvdata; print(pyuvdata.__version__)"
   - conda list

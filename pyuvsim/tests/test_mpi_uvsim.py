@@ -4,7 +4,6 @@
 
 import os
 
-import mpi4py
 import numpy as np
 import yaml
 import resource
@@ -12,6 +11,7 @@ import time
 import pytest
 
 pytest.importorskip('mpi4py')  # noqa
+import mpi4py
 mpi4py.rc.initialize = False  # noqa
 from mpi4py import MPI
 
