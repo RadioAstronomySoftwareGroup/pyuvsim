@@ -4,7 +4,6 @@ channels:
   - conda-forge
 dependencies:
   - astropy>=4.0
-  - astropy-healpix
   - h5py
   - line_profiler
   - mpi4py>=3.0.0

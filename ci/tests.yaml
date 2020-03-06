@@ -4,7 +4,6 @@ channels:
   - defaults
 dependencies:
   - astropy>=4.0
-  - astropy-healpix
   - coverage
   - h5py
   - line_profiler
