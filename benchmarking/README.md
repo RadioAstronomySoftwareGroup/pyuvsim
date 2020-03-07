@@ -24,7 +24,8 @@ of the various simulation axes (baselines, times, frequencies) as well as the re
 configuration uses a HEALPix sky model, so the Nside parameter of that map must also be given.
 
 The script `run_benchmarking.py` makes the configuration files and SLURM job script, and can submit the SLURM
-job or update the BENCHMARKS.log log file with the latest run. To make the configuration files, run:
+job or update the BENCHMARKS.log log file with the latest run. To make the configuration files, run the following
+from the benchmarking directory:
 ```
     python run_benchmarking.py settings.yaml --init_config
 ```

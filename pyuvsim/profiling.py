@@ -29,6 +29,7 @@ default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_par
 
 prof = None
 
+
 def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_profile.out',
                  dump_raw=False):
     """

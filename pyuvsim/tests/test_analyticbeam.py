@@ -20,6 +20,7 @@ EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 
 c_ms = pyuvsim.analyticbeam.c_ms
 
+
 def test_uniform_beam():
     beam = pyuvsim.AnalyticBeam('uniform')
     beam.peak_normalize()

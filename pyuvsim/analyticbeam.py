@@ -11,6 +11,7 @@ from astropy.constants import c as speed_of_light
 
 c_ms = speed_of_light.to('m/s').value
 
+
 def diameter_to_sigma(diam, freqs):
     """
     Find the stddev of a gaussian with fwhm equal to that of

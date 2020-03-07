@@ -40,7 +40,7 @@ if args.profile:
     if isinstance(maxrss, float):
         print('\tRuntime: {} \n\tMaxRSS: {:.3f} GiB'.format(
             rtime, maxrss
-            ))
+        ))
     if hasattr(pyuvsim.profiling.prof, 'meta_file'):
         with open(pyuvsim.profiling.prof.meta_file, 'a') as afile:
             afile.write("Runtime \t {}\nMaxRSS \t {:.3f}\n".format(rtime, maxrss))
