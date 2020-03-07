@@ -12,15 +12,15 @@ beamtype : 'gaussian'
 beamshape: 'sigma=0.08449'
 
 # Resources
-Ntasks : 10
-Nnodes : 1
-MemoryLimit : 50G        # GiB
-walltime: "3-00:00:00"  #d-HH:MM:SS
-Ncpus_per_task: 2
+Ntasks : 10         # Number of MPI processes
+Nnodes : 1          # Number of nodes to use.
+MemoryLimit : 50G        # Available memory in GiB
+walltime: "3-00:00:00"  # Time limit (d-HH:MM:SS)
+Ncpus_per_task: 2   # Number of cpus cores per MPI process.
 
 # Directory setup
-config_dir: 'configdir'
-data_out: 'simfiles'
-profiles: 'profdata'
-obsparam_name: 'obsparam_benchmark.yaml'
-profile_prefix: 'time_profile'
+config_dir: 'configdir'     # Where to put obsparam, telescope config, and layout files.
+data_out: 'simfiles'        # Where to save the simulated data files (uvh5).
+profiles: 'profdata'        # Where to put profiling data.
+obsparam_name: 'obsparam_benchmark.yaml'    # Name for the obsparam file.
+profile_prefix: 'time_profile'  # Prefi for profiling output files.
