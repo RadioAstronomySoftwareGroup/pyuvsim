@@ -20,9 +20,6 @@ with open(os.path.join('pyuvsim', 'GIT_INFO'), 'w') as outfile:
 with io.open('README.md', 'r', encoding='utf-8') as readme_file:
     readme = readme_file.read()
 
-with io.open("requirements.txt", 'r') as req_file:
-    reqs = list(req_file.readlines())
-
 setup_args = {
     'name': 'pyuvsim',
     'author': 'Radio Astronomy Software Group',
@@ -48,6 +45,8 @@ setup_args = {
     'extras_require': {
         'sim': ['mpi4py>=3.0.0', 'psutil'],
         'all': ['mpi4py>=3.0.0', 'psutil', 'line_profiler', 'h5py'],
+        'dev': ['mpi4py>=3.0.0', 'psutil', 'line_profiler', 'h5py', 'pypandoc',
+                'pytest', 'pytest-cov', 'sphinx', 'pre-commit']
     }
 }
 

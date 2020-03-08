@@ -32,7 +32,9 @@ Key elements of this approach include:
 ## Installation
 A user-installation is achieved simply with `pip install pyuvsim`, or to get the
 bleeding-edge: `pip install https://github.com/RadioAstronomySoftwareGroup/pyuvsim`.
-This will install all dependencies.
+This will install all dependencies except pyradiosky, which is under active
+development and does not yet have a pip package on PyPI. To get pyradiosky, run
+`pip install https://github.com/RadioAstronomySoftwareGroup/pyradiosky`.
 
 By default, `mpi` capabilities are not enabled -- many of the utilities provided in
 `pyuvsim` do not require it. To use the simulator within `pyuvsim`, you should install
@@ -56,22 +58,18 @@ following before installing `pyuvsim`:
     conda install -c conda-forge "numpy>=1.15" "astropy>=3.0" "scipy>1.0.1" "mpi4py>=3.0.0" "pyyaml>=5.1" "pyuvdata>=1.3.7"
 
 ### Developing
-If you are developing `pyuvsim`, it is preferred that you do so in a fresh `conda`
-environment. The following commands will install all relevant development packages:
+If you are developing `pyuvsim`, you will need to download and install the
+repository using `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim.git`.
+If you use conda, you may wish to use a fresh environment, in which case you can
+use the included `environment.yaml` file to make a conda environment with all
+the extra dependencies required for testing/development as well as the
+standard ones using `conda env create -f environment.yml`.
+Finally do a developer install of pyuvsim using `pip install -e .`.
 
-    $ git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim.git
-    $ cd pyuvsim
-    $ conda create -n pyuvsim python=3
-    $ conda activate pyuvsim
-    $ conda env update -n pyuvsim -f environment.yml
-    $ pip install -e .
-
-This will install extra dependencies required for testing/development as well as the
-standard ones.
-
-The second-to-last line may also be replaced by `pip install -r requirements.txt` if you
-do not care about using `conda`.
-
+If you do not use conda, after downloading the repository, install using
+`pip install -e .[dev]` and `pip install https://github.com/RadioAstronomySoftwareGroup/pyradiosky`
+to install all the extra dependencies required for testing/development as well
+as the standard ones.
 
 ## Inputs
 
