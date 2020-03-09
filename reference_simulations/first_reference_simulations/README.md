@@ -2,27 +2,30 @@
 
 The goal of a reference simulation is to provide a simulated instrument output for a set of precisely defined inputs (sky model, antenna positions, primary beam, etc.) to serve as a point of comparison for other simulators and later versions of pyuvsim. Ideally, these tests should span multiple axes at once, but computational limitations in the earlier versions of pyuvsim prohibited this. Therefore, the version 1 reference simulations span these axes separately (e.g., time, frequency, baselines, sources), and each serve to test for different expected behavior.
 
+We detail the set of reference simulations and the high-level outcomes of
+comparisons with PRISim below, for more detailed writeups see the Memos folder.
+
 
 ## First Reference Simulations
- | Name (beam) | Purpose | 
+ | Name (beam) | Purpose |
  |:-----|:------|
  |1.1 | Test imaging and source orientation.|
  |1.2 (gauss) | Check that sources move appropriate and rise/set, and pass through the beam properly.|
- |1.2 (uniform) | Check that sources move appropriate and rise/set (stay visible near horizon). | 
+ |1.2 (uniform) | Check that sources move appropriate and rise/set (stay visible near horizon). |
  |1.3 (gauss) | Check that visibilities have sensible frequency evolution. Get observable fringes. Realistic primary beam.|
  |1.3 (uniform) | Check that visibilities have sensible frequency evolution. Get observable fringes. |
  |1.4 | Check phasing precision and simulate realistic data.|
- 
+
 
 ### Details
-|         Obsparam File         |                   Catalog                  | Ntimes | Nfreqs |     Layout    |        Beam       |    Results Filename    | 
+|         Obsparam File         |                   Catalog                  | Ntimes | Nfreqs |     Layout    |        Beam       |    Results Filename    |
 |:-----------------------------:|:------------------------------------------:|:------:|:------:|:-------------:|:-----------------:|:----------------------:|
 |     obsparam_ref_1.1.yaml     | mock_catalog_heratext_2458098.38824015.txt |    1   |    1   |   MWA_nocore  |      uniform      | ref_1.1_uniform.uvfits |      
 |  obsparam_ref_1.2_gauss.yaml  |   two_distant_points_2458098.38824015.txt  |  86400 |    1   | Baseline-lite | 11° FWHM gaussian |  ref_1.2_gauss.uvfits  |     
-| obsparam_ref_1.2_uniform.yaml |   two_distant_points_2458098.38824015.txt  |  86400 |    1   | Baseline-lite |      uniform      | ref_1.2_uniform.uvfits | 
+| obsparam_ref_1.2_uniform.yaml |   two_distant_points_2458098.38824015.txt  |  86400 |    1   | Baseline-lite |      uniform      | ref_1.2_uniform.uvfits |
 |  obsparam_ref_1.3_gauss.yaml  |     letter_R_12pt_2458098.38824015.txt     |    2   |  64400 | Baseline-lite | 11° FWHM gaussian |  ref_1.3_gauss.uvfits  |
 | obsparam_ref_1.3_uniform.yaml |     letter_R_12pt_2458098.38824015.txt     |    2   |  64400 | Baseline-lite |      uniform      | ref_1.3_uniform.uvfits |
-|     obsparam_ref_1.4.yaml     |                  gleam.vot                 |    1   |    1   |  5km triangle | 11° FWHM gaussian | ref_1.4_uniform.uvfits | 
+|     obsparam_ref_1.4.yaml     |                  gleam.vot                 |    1   |    1   |  5km triangle | 11° FWHM gaussian | ref_1.4_uniform.uvfits |
 
 
 
@@ -59,7 +62,7 @@ MWA_nocore:
    - This is the MWA128 Phase I layout with the core 40 antennas removed (88 antennas remain).
    - The layout is written in mwa_nocore_layout.csv and the telescope configuration is in mwa88_nocore_config.yaml. The configuration specifies that all antennas have the unphysical "uniform" beam.
 
-![mwa88_layout.png](figures/mwa88_layout.png "MWA-88 layout")
+![mwa88_layout.png](Memos/figures/mwa88_layout.png "MWA-88 layout")
 
 
 baseline-lite:
@@ -67,7 +70,7 @@ baseline-lite:
    - This consists of a right triangle of antennas with an additional antenna sqrt(2) meters off of the center of the hypotenuse. This provides a perfectly N-S and E-W and diagonal baselines, as well as some that don't perfectly fit the symmetry.
    - The layout is in baseline_lite.csv, and the bl_lite_gauss.yaml and bl_lite_uniform.yaml files respectively assign gaussian and uniform beams to all four antennas.
 
-![bllite_layout.png](figures/bllite_layout.png "Baseline-lite layout")
+![bllite_layout.png](Memos/figures/bllite_layout.png "Baseline-lite layout")
 
 
 
@@ -76,7 +79,7 @@ baseline-lite:
    - An isosceles triangle consisting of two 5km baselines.
    - Layout and configuration (gaussian beam) are in 5km_triangle_layout.csv and 5km_triangle_config.yaml.
 
-![5km_triangle_layout.png](figures/5km_triangle_layout.png "5km triangle layout")
+![5km_triangle_layout.png](Memos/figures/5km_triangle_layout.png "5km triangle layout")
 
 ### Beams
 
