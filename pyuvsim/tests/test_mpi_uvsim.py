@@ -4,14 +4,16 @@
 
 import os
 
-import mpi4py
 import numpy as np
 import yaml
 import resource
 import time
-
-mpi4py.rc.initialize = False  # noqa
 import pytest
+import sys
+
+pytest.importorskip('mpi4py')  # noqa
+import mpi4py
+mpi4py.rc.initialize = False  # noqa
 from mpi4py import MPI
 
 from pyuvdata import UVData
@@ -46,10 +48,10 @@ def test_run_uvsim():
     beam.write_beamfits(beamfile)
     beam_list = pyuvsim.BeamList([beamfile])
     mock_keywords = {"Nsrcs": 3}
-    simtest.assert_raises_message(
-        TypeError, 'input_uv must be UVData object',
-        pyuvsim.run_uvdata_uvsim, 'not_uvdata', beam_list
-    )
+
+    with pytest.raises(TypeError, match='input_uv must be UVData object'):
+        pyuvsim.run_uvdata_uvsim('not_uvdata', beam_list)
+
     mpi.start_mpi()
     catalog, mock_kwds = pyuvsim.simsetup.create_mock_catalog(
         hera_uv.time_array[0], return_table=True, **mock_keywords
@@ -146,7 +148,11 @@ def test_mem_usage():
 
     mpi.start_mpi()
 
-    memory_usage_GiB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 2**10 / 2**30
+    scale = 1.0
+    if 'linux' in sys.platform:
+        scale = 2**10
+
+    memory_usage_GiB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 2**30
     assert memory_usage_GiB == mpi.get_max_node_rss()
     incsize = 50 * 2**20    # 50 MiB
     arr = bytearray(incsize)

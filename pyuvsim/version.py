@@ -30,7 +30,7 @@ def _get_gitinfo_file(git_file=None):
         git_file = os.path.join(pyuvsim_dir, 'GIT_INFO')
 
     with open(git_file) as data_file:
-        data = [x for x in json.loads(data_file.read().strip())]
+        data = list(json.loads(data_file.read().strip()))
         git_origin = data[0]
         git_hash = data[1]
         git_description = data[2]
@@ -54,7 +54,9 @@ def construct_version_info():
 
     try:
         git_origin = _get_git_output(['config', '--get', 'remote.origin.url'], capture_stderr=True)
-        if git_origin.split('/')[-1] != 'pyuvsim.git':  # pragma: no cover
+        print('git origin:', git_origin)
+        print(git_origin.split('/')[-1].startswith('pyuvsim'))
+        if not git_origin.split('/')[-1].startswith('pyuvsim'):  # pragma: no cover
             # this is version info for a non-pyuvsim repo, don't use it
             raise ValueError('This is not a pyuvsim repo')
 

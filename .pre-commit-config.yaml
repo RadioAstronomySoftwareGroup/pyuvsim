@@ -1,0 +1,33 @@
+exclude: '(^docs/conf.py|^user_data/External_tables/*|^pyuvsim/data/.+uvfits|^pyuvsim/data/.+uvbeam|^pyuvsim/data/.+hdf5|^pyuvsim/data/.+npz|^pyuvsim/data/.+vot)'
+
+repos:
+    - repo: git://github.com/pre-commit/pre-commit-hooks
+      rev: v2.5.0
+      hooks:
+          - id: trailing-whitespace
+          - id: check-added-large-files
+          - id: check-ast
+          - id: check-json
+          - id: check-merge-conflict
+          - id: check-xml
+          - id: check-yaml
+          - id: debug-statements
+          - id: end-of-file-fixer
+          - id: mixed-line-ending
+            args: ['--fix=no']
+    -   repo: https://gitlab.com/pycqa/flake8
+        rev: '3.7.9'
+        hooks:
+        -   id: flake8
+            additional_dependencies:
+              - flake8-builtins
+              - flake8-comprehensions
+              # - flake8-docstrings
+              - flake8-pytest
+              # - flake8-rst-docstrings
+              # - pep8-naming
+
+    # - repo: https://github.com/psf/black
+    #   rev: 19.10b0
+    #   hooks:
+    #       - id: black

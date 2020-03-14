@@ -60,7 +60,7 @@ def _parse_layout_csv(layout_csv):
 
 
 def _write_layout_csv(filepath, antpos_enu, antenna_names, antenna_numbers, beam_ids=None):
-    col_width = max([len(name) for name in antenna_names])
+    col_width = max(len(name) for name in antenna_names)
     header = ("{:" + str(col_width) + "} {:8} {:8} {:10} {:10} {:10}\n").format(
         "Name", "Number", "BeamID", "E", "N", "U"
     )
@@ -365,30 +365,34 @@ def _construct_beam_list(beam_ids, telconfig):
             if key in telconfig:
                 beam_list.uvb_params[key] = telconfig[key]
 
-        # First, check to see if the string specifies a beam path.
-        altpath = os.path.join(SIM_DATA_PATH, beam_model)
-        if os.path.exists(beam_model):
-            beam_list.append(beam_model)
-        elif os.path.exists(altpath):
-            beam_list.append(altpath)
+        if not isinstance(beam_model, (str, dict)):
+            raise ValueError('Beam model is not properly specified in telescope config file.')
+
+        # first check to see if the beam_model is a string giving a file location
+        if (isinstance(beam_model, str)
+                and (os.path.exists(beam_model)
+                     or os.path.exists(os.path.join(SIM_DATA_PATH, beam_model)))):
+            if os.path.exists(beam_model):
+                beam_list.append(beam_model)
+            else:
+                beam_list.append(os.path.join(SIM_DATA_PATH, beam_model))
         # Failing that, try to parse the beam string as an analytic beam.
         else:
-            find_type = [t in beam_model for t in AnalyticBeam.supported_types]
-            if np.sum(find_type) > 1:
-                raise ValueError("Ambiguous beam specification: {}".format(beam_model))
-            if np.sum(find_type) == 0:
-                raise ValueError("Undefined beam model: {}".format(beam_model))
+            if isinstance(beam_model, str):
+                beam_type = beam_model
+            elif 'type' in beam_model:
+                beam_type = beam_model['type']
+            else:
+                raise ValueError("Beam model must have a 'type' field.")
 
-            beam_type = AnalyticBeam.supported_types[find_type.index(True)]
+            if beam_type not in AnalyticBeam.supported_types:
+                raise ValueError("Undefined beam model type: {}".format(beam_type))
 
-            beam_model = "".join(beam_model.split())    # Remove whitespace
-            mod_list = beam_model.split(',')
-            inline_beam_opts = {}
-            for opt in mod_list:
-                if '=' not in opt:
-                    continue
-                k, v = opt.split('=')
-                inline_beam_opts[k] = v
+            this_beam_opts = {}
+            if isinstance(beam_model, dict):
+                for key in beam_model:
+                    if key != 'type':
+                        this_beam_opts[key] = beam_model[key]
 
             # Gaussian beam requires either diameter or sigma
             # Airy beam requires diameter
@@ -398,7 +402,7 @@ def _construct_beam_list(beam_ids, telconfig):
             beam_opts = {'diameter': None, 'sigma': None}
             for opt in beam_opts.keys():
                 val = telconfig.get(opt, None)
-                val = inline_beam_opts.get(opt, val)
+                val = this_beam_opts.get(opt, val)
                 beam_opts[opt] = val
 
             diameter = beam_opts.pop('diameter')
@@ -962,8 +966,7 @@ def initialize_uvdata_from_params(obs_params):
     if 'select' in param_dict:
         select_params = param_dict['select']
         no_autos = bool(select_params.pop('no_autos', False))
-        select_params = dict(
-            [(k, v) for k, v in select_params.items() if k in valid_select_keys])
+        select_params = {k: v for k, v in select_params.items() if k in valid_select_keys}
         if 'antenna_nums' in select_params:
             select_params['antenna_nums'] = list(map(int, select_params['antenna_nums']))
         redundant_threshold = param_dict['select'].get('redundant_threshold', None)
@@ -1239,14 +1242,12 @@ def uvdata_to_telescope_config(
     )
 
     # Write the rest to a yaml file.
-    yaml_dict = dict(
-        telescope_name=uvdata_in.telescope_name,
-        telescope_location=repr(uvdata_in.telescope_location_lat_lon_alt_degrees),
-        Nants=uvdata_in.Nants_telescope,
-        beam_paths={
-            0: beam_filepath
-        }
-    )
+    yaml_dict = {
+        "telescope_name": uvdata_in.telescope_name,
+        "telescope_location": repr(uvdata_in.telescope_location_lat_lon_alt_degrees),
+        "Nants": uvdata_in.Nants_telescope,
+        "beam_paths": {0: beam_filepath}
+    }
 
     with open(os.path.join(path_out, telescope_config_name), 'w+') as yfile:
         yaml.dump(yaml_dict, yfile, default_flow_style=False)
@@ -1291,24 +1292,20 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
     if 'time_array' in tdict:
         tdict.pop('time_array')
 
-    param_dict = dict(
-        time=tdict,
-        freq=fdict,
-        sources=dict(
-            catalog=catalog
-        ),
-
-        telescope=dict(
-            telescope_config_name=telescope_config_name,
-            array_layout=layout_csv_name
-        ),
-
-        filing=dict(
-            outdir='.',
-            outfile_name='',
-            outfile_prefix=''
-        )
-    )
+    param_dict = {
+        "time": tdict,
+        "freq": fdict,
+        "sources": {"catalog": catalog},
+        "telescope": {
+            "telescope_config_name": telescope_config_name,
+            "array_layout": layout_csv_name
+        },
+        "filing": {
+            "outdir": '.',
+            "outfile_name": '',
+            "outfile_prefix": ''
+        }
+    }
 
     if catalog == 'mock':
         param_dict['sources']['mock_arrangement'] = 'zenith'

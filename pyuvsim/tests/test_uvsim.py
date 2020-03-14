@@ -12,6 +12,7 @@ import pyuvdata.utils as uvutils
 from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy.time import Time
+import pytest
 from pyuvdata import UVData
 from pyuvdata.data import DATA_PATH
 import pyradiosky
@@ -393,6 +394,7 @@ def test_offzenith_source_multibl_uvfits():
 
 
 def test_file_to_tasks():
+    pytest.importorskip('mpi4py')
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
@@ -472,6 +474,7 @@ def test_file_to_tasks():
 
 
 def test_gather():
+    pytest.importorskip('mpi4py')
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
@@ -501,6 +504,7 @@ def test_gather():
 
 def test_local_task_gen():
     # Confirm I get the same results looping over the task list as I do with the generator function.
+    pytest.importorskip('mpi4py')
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_10time10chan)
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
@@ -521,11 +525,12 @@ def test_local_task_gen():
     uv_iter0 = pyuvsim.uvdata_to_task_iter(
         np.arange(Ntasks), 'not_uvdata', sources, beam_list, beam_dict
     )
-    simtest.assert_raises_message(TypeError, 'input_uv must be UVData object', next, uv_iter0)
-    uv_iter1 = pyuvsim.uvdata_to_task_iter(
-        np.arange(Ntasks), hera_uv, 'not_ndarray', beam_list, beam_dict
-    )
-    simtest.assert_raises_message(TypeError, 'catalog must be a record array', next, uv_iter1)
+    with pytest.raises(TypeError, match='input_uv must be UVData object'):
+        next(uv_iter0)
+    uv_iter1 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv,
+                                           'not_ndarray', beam_list, beam_dict)
+    with pytest.raises(TypeError, match='catalog must be a record array'):
+        next(uv_iter1)
 
     # Copy sources and beams so we don't accidentally reuse quantities.
     taskiter = pyuvsim.uvdata_to_task_iter(
@@ -549,16 +554,15 @@ def test_local_task_gen():
 
 def test_pol_error():
     # Check that running with a uvdata object without the proper polarizations will fail.
+    pytest.importorskip('mpi4py')
 
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
 
     hera_uv.select(polarizations=['xx'])
 
-    simtest.assert_raises_message(
-        ValueError, 'input_uv must have XX,YY,XY,YX polarization',
-        pyuvsim.run_uvdata_uvsim, hera_uv, ['beamlist']
-    )
+    with pytest.raises(ValueError, match='input_uv must have XX,YY,XY,YX polarization'):
+        pyuvsim.run_uvdata_uvsim(hera_uv, ['beamlist'])
 
 
 def test_task_coverage():
@@ -629,6 +633,7 @@ def test_task_coverage():
 def test_source_splitting():
     # Check that if the available memory is less than the expected size of the source catalog,
     # then the task iterator will loop over chunks of the source array.
+    pytest.importorskip('mpi4py')
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_10time10chan)
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
@@ -696,8 +701,8 @@ def test_get_beam_jones():
     source_altaz = np.array([[0.0], [np.pi / 4.]])
     freq = 100e6 * units.Hz
 
-    simtest.assert_raises_message(ValueError, 'freq_interp_kind must be set',
-                                  antenna1.get_beam_jones, array, source_altaz, freq)
+    with pytest.raises(ValueError, match='freq_interp_kind must be set'):
+        antenna1.get_beam_jones(array, source_altaz, freq)
 
     jones = antenna1.get_beam_jones(array, source_altaz, freq, freq_interp_kind='cubic')
     assert beam.freq_interp_kind == 'cubic'

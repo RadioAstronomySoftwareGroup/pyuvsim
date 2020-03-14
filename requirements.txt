@@ -1,9 +1,0 @@
-numpy>=1.15
-setuptools>=38.4.0
-scipy>=1.0.1
-PyYAML>=5.1
-astropy>=3.0
-pytest
-pytest-runner
-pytest-cov
-flake8

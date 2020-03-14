@@ -32,7 +32,7 @@ def test_get_gitinfo_file():
         git_file = temp_git_file
 
     with open(git_file) as data_file:
-        data = [x for x in json.loads(data_file.read().strip())]
+        data = list(json.loads(data_file.read().strip()))
         git_origin = data[0]
         git_hash = data[1]
         git_description = data[2]
@@ -85,7 +85,7 @@ def test_construct_version_info():
             # Check if a GIT_INFO file was created when installing package
             git_file = os.path.join(pyuvsim_dir, 'GIT_INFO')
             with open(git_file) as data_file:
-                data = [x for x in json.loads(data_file.read().strip())]
+                data = list(json.loads(data_file.read().strip()))
                 git_origin = data[0]
                 git_hash = data[1]
                 git_description = data[2]
@@ -101,6 +101,8 @@ def test_construct_version_info():
         'git_branch': git_branch
     }
 
+    print(pyuvsim.version.construct_version_info())
+    print(test_version_info)
     assert pyuvsim.version.construct_version_info() == test_version_info
 
 

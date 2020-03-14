@@ -1,7 +1,9 @@
 # pyuvsim
 
+![](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/workflows/Tests/badge.svg?branch=master)
 [![Build Status](https://travis-ci.org/RadioAstronomySoftwareGroup/pyuvsim.svg?branch=master)](https://travis-ci.org/RadioAstronomySoftwareGroup/pyuvsim)
 [![Coverage Status](https://coveralls.io/repos/github/RadioAstronomySoftwareGroup/pyuvsim/badge.svg?branch=master)](https://coveralls.io/github/RadioAstronomySoftwareGroup/pyuvsim?branch=master)
+[![codecov](https://codecov.io/gh/RadioAstronomySoftwareGroup/pyuvsim/branch/master/graph/badge.svg)](https://codecov.io/gh/RadioAstronomySoftwareGroup/pyuvsim)
 
 pyuvsim is a comprehensive simulation package for radio interferometers in python.
 
@@ -28,47 +30,68 @@ Key elements of this approach include:
 7. Defining a clear, user-friendly standard for simulation design.
 
 ## Installation
+Simple installation via pip is available for users, developers should follow
+the directions under [Developer Installation](#developer-installation) below.
+
 A user-installation is achieved simply with `pip install pyuvsim`, or to get the
 bleeding-edge: `pip install https://github.com/RadioAstronomySoftwareGroup/pyuvsim`.
-This will install all dependencies.
+This will install all dependencies except pyradiosky, which is under active
+development and does not yet have a pip package on PyPI. To get pyradiosky, run
+`pip install https://github.com/RadioAstronomySoftwareGroup/pyradiosky`.
 
-By default, `mpi` capabilities are not enabled -- many of the utilities provided in
-`pyuvsim` do not require it. To use the simulator within `pyuvsim`, you should install
-`pyuvsim` with  `pip install pyuvsim[sim]`.
+By default, `mpi` capabilities are not enabled -- many of the utilities provided
+in `pyuvsim` do not require it. To use the simulator within `pyuvsim`, you
+should install `pyuvsim` with  `pip install pyuvsim[sim]`. Note that the
+`pyuvsim` simulator is intended to run on clusters running the linux operating
+system, but we do test against Mac OSX as well.
 
 There are a few more optional dependencies for `pyuvsim` which enable some features,
 such as `line_profiler` to use the built-in profiling, and `h5py` to write to HDF5
 file format. If you would like these tools as well as the full simulator, install
 `pyuvsim` with `pip install pyuvsim[all]`
 
-If you wish to manage dependencies manually, or are developing `pyuvsim` yourself, read
-on.
-
-Note that `pyuvsim` is intended to run on clusters running the linux operating system.
-
+If you wish to manage dependencies manually read on.
 
 ### Dependencies
 If you are using `conda` to manage your environment, you may wish to install the
-following before installing `pyuvsim`:
+following packages before installing `pyuvsim`:
 
-    conda install -c conda-forge "numpy>=1.15" "astropy>=3.0" "scipy>1.0.1" "mpi4py>=3.0.0" "pyyaml>=5.1" "pyuvdata>=1.3.7"
+Required:
 
-### Developing
-If you are developing `pyuvsim`, it is preferred that you do so in a fresh `conda`
-environment. The following commands will install all relevant development packages:
+* numpy>=1.15
+* astropy>=4.0
+* scipy>1.0.1
+* pyyaml>=5.1
+* pyuvdata>=1.3.7
 
-    $ git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim.git
-    $ cd pyuvsim
-    $ conda create -n pyuvsim python=3
-    $ conda activate pyuvsim
-    $ conda env update -n pyuvsim -f environment.yml
-    $ pip install -e .
+Optional:
 
-This will install extra dependencies required for testing/development as well as the
-standard ones.
+* mpi4py>=3.0.0
+* psutil
+* h5py
+* line_profiler
 
-The second-to-last line may also be replaced by `pip install -r requirements.txt` if you
-do not care about using `conda`.
+### Developer Installation
+If you are developing `pyuvsim`, you will need to download and install the
+repository using `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim.git`.
+
+If you use conda, you may wish to use a fresh environment, in which case you can
+use the included `environment.yaml` file to make a conda environment with all
+the extra dependencies required for testing/development as well as the
+standard ones using `conda env create -f environment.yml`. If you do not wish to
+make a fresh dedicated environment, you should verify that the environment you
+are using contains the packages listed in that file.
+Then do a developer install of pyuvsim using `pip install -e .` (or
+`pip install --no-deps -e .` if you do not want pip to install any missing
+requirements).
+
+If you do not use conda, after downloading the repository, install using
+`pip install -e .[dev]` and `pip install https://github.com/RadioAstronomySoftwareGroup/pyradiosky`
+to install all the extra dependencies required for testing/development as well
+as the standard ones.
+
+Finally, install the pre-commit hook using `pre-commit install` to help prevent
+committing code that does not meet our style guidelines.
 
 
 ## Inputs

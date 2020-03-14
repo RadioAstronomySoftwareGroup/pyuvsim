@@ -5,7 +5,6 @@
 import os
 
 import numpy as np
-import pytest
 from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
 
@@ -107,21 +106,3 @@ def make_cst_beams(freqs=None):
     )
 
     return beam
-
-
-def assert_raises_message(exception_type, message, func, *args, **kwargs):
-    """
-    Check that the correct error message is raised.
-    """
-    nocatch = kwargs.pop('nocatch', False)
-    if nocatch:
-        func(*args, **kwargs)
-
-    with pytest.raises(exception_type) as err:
-        func(*args, **kwargs)
-
-    try:
-        assert message in str(err.value)
-    except AssertionError as excp:
-        print("{} not in {}".format(message, str(err.value)))
-        raise excp

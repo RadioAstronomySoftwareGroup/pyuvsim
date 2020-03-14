@@ -37,7 +37,7 @@ New feature checklist:
 - [ ] I have checked that I reproduce the reference simulations or if there are differences they are explained below (if appropriate). If there are changes that are correct, I will update the reference simulation files after this PR is merged.
 - [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/master/CHANGELOG.md).
 
-Breaking change checklist:  
+Breaking change checklist:
 - [ ] I have updated the docstrings associated with my change using the [numpy docstring format](https://numpydoc.readthedocs.io/en/latest/format.html).
 - [ ] I have updated the documentation to reflect my changes (if appropriate).
 - [ ] My change includes backwards compatibility and deprecation warnings (if possible).

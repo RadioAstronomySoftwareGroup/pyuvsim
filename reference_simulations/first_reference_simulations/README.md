@@ -20,8 +20,8 @@ comparisons with PRISim below, for more detailed writeups see the Memos folder.
 ### Details
 |         Obsparam File         |                   Catalog                  | Ntimes | Nfreqs |     Layout    |        Beam       |    Results Filename    |
 |:-----------------------------:|:------------------------------------------:|:------:|:------:|:-------------:|:-----------------:|:----------------------:|
-|     obsparam_ref_1.1.yaml     | mock_catalog_heratext_2458098.38824015.txt |    1   |    1   |   MWA_nocore  |      uniform      | ref_1.1_uniform.uvfits |      
-|  obsparam_ref_1.2_gauss.yaml  |   two_distant_points_2458098.38824015.txt  |  86400 |    1   | Baseline-lite | 11° FWHM gaussian |  ref_1.2_gauss.uvfits  |     
+|     obsparam_ref_1.1.yaml     | mock_catalog_heratext_2458098.38824015.txt |    1   |    1   |   MWA_nocore  |      uniform      | ref_1.1_uniform.uvfits |
+|  obsparam_ref_1.2_gauss.yaml  |   two_distant_points_2458098.38824015.txt  |  86400 |    1   | Baseline-lite | 11° FWHM gaussian |  ref_1.2_gauss.uvfits  |
 | obsparam_ref_1.2_uniform.yaml |   two_distant_points_2458098.38824015.txt  |  86400 |    1   | Baseline-lite |      uniform      | ref_1.2_uniform.uvfits |
 |  obsparam_ref_1.3_gauss.yaml  |     letter_R_12pt_2458098.38824015.txt     |    2   |  64400 | Baseline-lite | 11° FWHM gaussian |  ref_1.3_gauss.uvfits  |
 | obsparam_ref_1.3_uniform.yaml |     letter_R_12pt_2458098.38824015.txt     |    2   |  64400 | Baseline-lite |      uniform      | ref_1.3_uniform.uvfits |
