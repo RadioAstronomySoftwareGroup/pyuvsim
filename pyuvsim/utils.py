@@ -61,7 +61,7 @@ class progsteps:
         """
         if count >= self.curval + self.step:
             doprint = False
-            if not self.curval == count:
+            if (not self.curval == count) or (count == 0):
                 doprint = True
                 self.curval = count
             if doprint:
