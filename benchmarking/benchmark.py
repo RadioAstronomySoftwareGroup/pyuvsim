@@ -189,21 +189,17 @@ def update_runlog(settings_dict, settings_file, logfile='BENCHMARKS.log'):
 
     meta_file = settings_dict['profile_path'] + "_meta.out"
 
-    header = '\t'.join([
-        "Time", 'SettingsFile', 'cpus-per-task', 'Ntasks', 'Nnodes', 'MemLimit',
+    header_vals = [
+        "Date/Time", 'SettingsFile', 'cpus-per-task', 'Ntasks', 'Nnodes', 'MemLimit',
         'Ntimes', 'Nbls', 'Nfreqs', 'Nsrcs', 'Nsrcs_part', 'MaxRSS [GiB]', 'Runtime'
-    ])
+    ]
 
-    if not os.path.exists(logfile):
-        log = open(logfile, 'w')
-        log.write(header)
-    else:
-        log = open(logfile, 'a')
+    widths = [len(s) for s in header_vals]
 
     with open(meta_file, 'r') as mfile:
         lines = mfile.readlines()
     lines = (l.split() for l in lines)
-    meta = {l[0]: l[1] for l in lines}
+    meta = {l[0]: '-'.join(l[1:]) for l in lines}
 
     results = [
         meta['Date/Time'],
@@ -221,7 +217,21 @@ def update_runlog(settings_dict, settings_file, logfile='BENCHMARKS.log'):
         meta['Runtime']
     ]
 
-    results = [str(r) for r in results]
+    results = [str(res) for res in results]
+    for ii, wid in enumerate(widths):
+        widths[ii] = max(len(results[ii]), wid)
+
+    formats = ['{' + ': <{}'.format(w) + '}' for w in widths]
+
+    header = '\t'.join([formats[i].format(hkey) for i, hkey in enumerate(header_vals)])
+
+    if not os.path.exists(logfile):
+        log = open(logfile, 'w')
+        log.write(header)
+    else:
+        log = open(logfile, 'a')
+
+    results = [formats[i].format(str(r)) for i, r in enumerate(results)]
 
     log.write('\n' + '\t'.join(results))
     log.close()
