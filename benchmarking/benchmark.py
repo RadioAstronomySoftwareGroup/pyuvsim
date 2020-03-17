@@ -1,6 +1,7 @@
 import numpy as np
 import yaml
 import os
+import h5py
 from pyradiosky import write_healpix_hdf5
 
 from pyuvsim.simsetup import _write_layout_csv, freq_array_to_params
@@ -189,8 +190,17 @@ def update_runlog(settings_dict, settings_file, logfile='BENCHMARKS.log'):
 
     meta_file = settings_dict['profile_path'] + "_meta.out"
 
+    data_file = os.path.join(settings_dict['data_out'], 'benchmark.uvh5')
+
+    pyuvsim_version = ''
+    with h5py.File(data_file, 'r') as dfile:
+        hist = dfile['Header/history'][()].decode('UTF-8')
+        for line in hist.split('  '):    # Two spaces
+            if 'pyuvsim version' in line:
+                pyuvsim_version = line.split(': ')[-1]
+
     header_vals = [
-        "Date/Time", 'SettingsFile', 'cpus-per-task', 'Ntasks', 'Nnodes', 'MemLimit',
+        "Date/Time", 'uvsim_version', 'SettingsFile', 'cpus-per-task', 'Ntasks', 'Nnodes', 'MemLimit',
         'Ntimes', 'Nbls', 'Nfreqs', 'Nsrcs', 'Nsrcs_part', 'MaxRSS [GiB]', 'Runtime'
     ]
 
@@ -203,6 +213,7 @@ def update_runlog(settings_dict, settings_file, logfile='BENCHMARKS.log'):
 
     results = [
         meta['Date/Time'],
+        pyuvsim_version,
         settings_file,
         settings_dict['Ncpus_per_task'],
         settings_dict['Ntasks'],
@@ -214,7 +225,7 @@ def update_runlog(settings_dict, settings_file, logfile='BENCHMARKS.log'):
         settings_dict['Nsrcs'],
         meta['Nsrcs_loc'],
         meta['MaxRSS'],
-        meta['Runtime']
+        meta['Runtime'],
     ]
 
     results = [str(res) for res in results]
