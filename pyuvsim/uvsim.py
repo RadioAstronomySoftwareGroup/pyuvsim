@@ -405,7 +405,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
 
     # If profiling is active, save meta data:
     from .profiling import prof     # noqa
-    if hasattr(prof, 'meta_file'):
+    if hasattr(prof, 'meta_file'):  # pragma: nocover
         # Saving axis sizes on current rank (local) and for the whole job (global).
         task_inds = np.array(list(summed_task_dict.keys()))
         bl_inds = task_inds[:, 0] % Nbls
