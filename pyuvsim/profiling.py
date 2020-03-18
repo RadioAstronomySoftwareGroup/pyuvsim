@@ -28,6 +28,7 @@ default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_par
                          'uvdata_to_task_iter', 'run_uvdata_uvsim', 'run_uvsim']
 
 prof = None
+_exit_funcs = []
 
 
 def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_profile.out',
@@ -63,8 +64,9 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
         saving profiler data to file.
 
     """
-    global prof
+    global prof, _exit_funcs
     prof = LineProfiler()
+    _exit_funcs = []
     if mpi is None or prof is None:  # pragma: no cover
         raise ImportError("You need mpi4py and line_profiler to use the "
                           "profiling module. Install them both by running pip "
@@ -90,17 +92,28 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
         if not outfile_name.endswith(".out"):
             outfile_name += '.out'
         else:
-            outfile_prefix = outfile_prefix[:-3]    # Strip extension
+            outfile_prefix = outfile_prefix[:-4]    # Strip extension
 
         ofile = open(outfile_name, 'w')
+        _exit_funcs.append(ofile.close)
+        _exit_funcs.append(prof.print_stats)
         atexit.register(ofile.close)
         atexit.register(prof.print_stats, stream=ofile)
         if dump_raw:
             outfile_raw_name = outfile_prefix + ".lprof"
+            _exit_funcs.append(prof.dump_stats)
             atexit.register(prof.dump_stats, outfile_raw_name)
         setattr(prof, 'rank', rank)     # Add "rank" as an attribute to the profiler.
         setattr(prof, 'meta_file', outfile_prefix + '_meta.out')
         prof.enable_by_count()
+
+
+def unset_profiler():
+    """Remove the profiler and clear registered exit functions."""
+    global prof, _exit_funcs
+    for func in _exit_funcs:
+        atexit.unregister(func)
+    prof = None
 
 
 def get_profiler():

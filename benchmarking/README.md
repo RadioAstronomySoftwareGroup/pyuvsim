@@ -19,7 +19,7 @@ or in pip using
     pip install -e
 ```
 
-The file `setting.yaml` contains the parameters describing the simulation. This includes the scales 
+The file `setting.yaml` contains the parameters describing the simulation. This includes the scales
 of the various simulation axes (baselines, times, frequencies) as well as the resources. The current
 configuration uses a HEALPix sky model, so the Nside parameter of that map must also be given.
 

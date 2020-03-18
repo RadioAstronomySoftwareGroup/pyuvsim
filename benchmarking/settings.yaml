@@ -23,4 +23,4 @@ config_dir: 'configdir'     # Where to put obsparam, telescope config, and layou
 data_out: 'simfiles'        # Where to save the simulated data files (uvh5).
 profiles: 'profdata'        # Where to put profiling data.
 obsparam_name: 'obsparam_benchmark.yaml'    # Name for the obsparam file.
-profile_prefix: 'time_profile'  # Prefi for profiling output files.
+profile_prefix: 'time_profile'  # Prefix for profiling output files.

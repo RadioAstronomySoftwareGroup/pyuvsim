@@ -200,8 +200,10 @@ def update_runlog(settings_dict, settings_file, logfile='BENCHMARKS.log'):
                 pyuvsim_version = line.split(': ')[-1]
 
     header_vals = [
-        "Date/Time", 'uvsim_version', 'SettingsFile', 'cpus-per-task', 'Ntasks', 'Nnodes', 'MemLimit',
-        'Ntimes', 'Nbls', 'Nfreqs', 'Nsrcs', 'Nsrcs_part', 'MaxRSS [GiB]', 'Runtime'
+        "Date/Time", 'uvsim_version', 'SettingsFile',
+        'cpus-per-task', 'Ntasks', 'Nnodes', 'MemLimit',
+        'Ntimes', 'Nbls', 'Nfreqs', 'Nsrcs', 'Nsrcs_part',
+        'MaxRSS [GiB]', 'Runtime'
     ]
 
     widths = [len(s) for s in header_vals]

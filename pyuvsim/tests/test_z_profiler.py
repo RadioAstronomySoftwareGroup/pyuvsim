@@ -34,9 +34,10 @@ def test_profiler():
         outpath = profdata_dir_setup()
         testprof_fname = os.path.join(outpath, 'time_profile')
         pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname, dump_raw=True)
+        pyuvsim.profiling.unset_profiler()
+        pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname + ".out", dump_raw=True)
         param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
         pyuvsim.uvsim.run_uvsim(param_filename, return_uv=True)
-
         time_profiler = pyuvsim.profiling.get_profiler()
         assert isinstance(time_profiler, LineProfiler)
         lstats = time_profiler.get_stats()
