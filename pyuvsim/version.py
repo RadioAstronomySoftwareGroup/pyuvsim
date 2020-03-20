@@ -54,8 +54,6 @@ def construct_version_info():
 
     try:
         git_origin = _get_git_output(['config', '--get', 'remote.origin.url'], capture_stderr=True)
-        print('git origin:', git_origin)
-        print(git_origin.split('/')[-1].startswith('pyuvsim'))
         if not git_origin.split('/')[-1].startswith('pyuvsim'):  # pragma: no cover
             # this is version info for a non-pyuvsim repo, don't use it
             raise ValueError('This is not a pyuvsim repo')
