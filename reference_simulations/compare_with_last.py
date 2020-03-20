@@ -3,16 +3,12 @@
 # Compare the visibilities in a given set of simulation outputs to the corresponding
 # values in a reference set.
 
-import numpy as np
 import sys
 import glob
 import warnings
 import os
 
-import h5py
-
-# Loading data using h5py directly instead of reading the full uvh5 files.
-#   (The 1.2 reference sims recalculate all lsts when reloaded, which takes a long time.)
+from pyuvdata import UVData
 
 ref_set_path = 'latest_ref_data/v1'
 
@@ -29,9 +25,14 @@ for k in new_files.keys():
     if k not in old_files.keys():
         warnings.warn("File {} not in reference data.".format(k))
         continue
+    uv_old = UVData()
+    uv_new = UVData()
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')     # Ignore known_telescopes warning
-        uv_old = h5py.File(old_files[k], 'r')['Data']
-        uv_new = h5py.File(new_files[k], 'r')['Data']
+#        uv_old = h5py.File(old_files[k], 'r')['Data']
+#        uv_new = h5py.File(new_files[k], 'r')['Data']
+        uv_old.read_uvh5(old_files[k], run_check_acceptability=False)
+        uv_new.read_uvh5(new_files[k], run_check_acceptability=False)
 
-    print(k, np.allclose(uv_old['visdata'][()], uv_new['visdata'][()]))
+#    print(k, np.allclose(uv_old['visdata'][()], uv_new['visdata'][()]))
+    print(k, uv_old == uv_new)
