@@ -20,7 +20,14 @@ do
         then
                 v2files+=($fnme)
         fi
+        if [[ "$fnme" == *"1.4"*  && ! -f 'first_reference_simulations/catalog_files/gleam.vot' ]]
+        then
+            echo -e "Need to download the GLEAM catalog to run refsim 1.4."\
+                    "\nRun \"python get_gleam.py\" to do this automatically, and then rerun run_ref_sims.sh"
+            exit
+        fi
 done
+
 prevdir=$(pwd -P)
 dirname=$(date +%Y-%m-%d)       # Name directory with today's date.
 
