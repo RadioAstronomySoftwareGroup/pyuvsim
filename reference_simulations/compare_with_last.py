@@ -29,10 +29,7 @@ for k in new_files.keys():
     uv_new = UVData()
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')     # Ignore known_telescopes warning
-#        uv_old = h5py.File(old_files[k], 'r')['Data']
-#        uv_new = h5py.File(new_files[k], 'r')['Data']
         uv_old.read_uvh5(old_files[k], run_check_acceptability=False)
         uv_new.read_uvh5(new_files[k], run_check_acceptability=False)
 
-#    print(k, np.allclose(uv_old['visdata'][()], uv_new['visdata'][()]))
     print(k, uv_old == uv_new)
