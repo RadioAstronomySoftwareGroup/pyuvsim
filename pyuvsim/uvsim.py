@@ -363,6 +363,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     skymodel_mem_max = 0.5 * mem_avail
 
     Nsky_parts = np.ceil(skymodel_mem_footprint / float(skymodel_mem_max))
+    Nsky_parts = max(Nsky_parts, 1)
 
     if Nsky_parts > Nsrcs_total:
         raise ValueError("Insufficient memory for simulation.")
