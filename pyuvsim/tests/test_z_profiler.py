@@ -2,11 +2,11 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
+from numpy import unique
 import os
 import shutil
 import atexit
-
-import numpy as np
+import pytest
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -34,8 +34,8 @@ def test_profiler():
         outpath = profdata_dir_setup()
         testprof_fname = os.path.join(outpath, 'time_profile')
         pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname, dump_raw=True)
-        pyuvsim.profiling.unset_profiler()
-        pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname + ".out", dump_raw=True)
+        with pytest.warns(UserWarning, match='Profiler already set'):
+            pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname + ".out", dump_raw=True)
         param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
         pyuvsim.uvsim.run_uvsim(param_filename, return_uv=True)
         time_profiler = pyuvsim.profiling.get_profiler()
@@ -44,5 +44,5 @@ def test_profiler():
 
         assert len(lstats.timings) != 0
         func_names = [k[2] for k in lstats.timings.keys()]
-        assert np.unique(func_names).tolist() == sorted(pyuvsim.profiling.default_profile_funcs)
+        assert unique(func_names).tolist() == sorted(pyuvsim.profiling.default_profile_funcs)
         time_profiler.disable()

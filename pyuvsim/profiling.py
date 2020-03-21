@@ -9,6 +9,7 @@ Use the line profiler when requested.
 import atexit
 from inspect import isclass, isfunction
 from itertools import chain
+import warnings
 
 import pyuvsim as _pyuvsim
 import pyradiosky as _pyradiosky
@@ -28,7 +29,6 @@ default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_par
                          'uvdata_to_task_iter', 'run_uvdata_uvsim', 'run_uvsim']
 
 prof = None
-_exit_funcs = []
 
 
 def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_profile.out',
@@ -64,9 +64,21 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
         saving profiler data to file.
 
     """
-    global prof, _exit_funcs
+
+    global prof
+
+    outfile_name = outfile_prefix
+    if not outfile_name.endswith(".out"):
+        outfile_name += '.out'
+    else:
+        outfile_prefix = outfile_prefix[:-4]    # Strip extension
+
+    # Can only set up profiling once per Python session.
+    if prof is not None:
+        warnings.warn("Profiler already set. Returning now.")
+        return
+
     prof = LineProfiler()
-    _exit_funcs = []
     if mpi is None or prof is None:  # pragma: no cover
         raise ImportError("You need mpi4py and line_profiler to use the "
                           "profiling module. Install them both by running pip "
@@ -88,32 +100,15 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
 
     # Write out profiling report to file.
     if mpi.get_rank() == rank:
-        outfile_name = outfile_prefix
-        if not outfile_name.endswith(".out"):
-            outfile_name += '.out'
-        else:
-            outfile_prefix = outfile_prefix[:-4]    # Strip extension
-
         ofile = open(outfile_name, 'w')
-        _exit_funcs.append(ofile.close)
-        _exit_funcs.append(prof.print_stats)
         atexit.register(ofile.close)
         atexit.register(prof.print_stats, stream=ofile)
         if dump_raw:
             outfile_raw_name = outfile_prefix + ".lprof"
-            _exit_funcs.append(prof.dump_stats)
             atexit.register(prof.dump_stats, outfile_raw_name)
         setattr(prof, 'rank', rank)     # Add "rank" as an attribute to the profiler.
         setattr(prof, 'meta_file', outfile_prefix + '_meta.out')
         prof.enable_by_count()
-
-
-def unset_profiler():
-    """Remove the profiler and clear registered exit functions."""
-    global prof, _exit_funcs
-    for func in _exit_funcs:
-        atexit.unregister(func)
-    prof = None
 
 
 def get_profiler():
