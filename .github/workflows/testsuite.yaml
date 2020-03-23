@@ -67,12 +67,14 @@ jobs:
         run: |
           export PATH="$HOME/miniconda/bin:$PATH"
           source activate $ENV_NAME
-          python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+          export COVFILE="coverage_"${{ matrix.os }}"_"${{ matrix.python-version }}".xml"
+          echo ${COVFILE}
+          python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./${COVFILE} --junitxml=test-reports/xunit.xml
       - uses: codecov/codecov-action@master
         if: matrix.os == 'ubuntu-latest' && success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
-          file: ./coverage.xml #optional
+          file: ./${COVFILE} #optional
 
   min_deps:
     env:
