@@ -4,18 +4,20 @@
 
 import glob
 import io
-import json
-import os
-import sys
 
 from setuptools import setup
 
-sys.path.append("pyuvsim")
-import version  # noqa
 
-data = [version.git_origin, version.git_hash, version.git_description, version.git_branch]
-with open(os.path.join('pyuvsim', 'GIT_INFO'), 'w') as outfile:
-    json.dump(data, outfile)
+def branch_scheme(version):
+    """Local version scheme that adds the branch name for absolute reproducibility."""
+    if version.exact or version.node is None:
+        return version.format_choice("", "+d{time:{time_format}}", time_format="%Y%m%d")
+    else:
+        if version.branch == "master":
+            return version.format_choice("+{node}", "+{node}.dirty")
+        else:
+            return version.format_choice("+{node}.{branch}", "+{node}.{branch}.dirty")
+
 
 with io.open('README.md', 'r', encoding='utf-8') as readme_file:
     readme = readme_file.read()
@@ -31,7 +33,7 @@ setup_args = {
     'package_dir': {'pyuvsim': 'pyuvsim'},
     'packages': ['pyuvsim', 'pyuvsim.tests'],
     'scripts': glob.glob('scripts/*'),
-    'version': version.version,
+    'use_scm_version': {'local_scheme': branch_scheme},
     'include_package_data': True,
     'install_requires': ['numpy>=1.15', 'scipy', 'astropy>=4.0', 'pyyaml', 'pyuvdata'],
     'test_requires': ['pytest'],
@@ -43,8 +45,8 @@ setup_args = {
     'keywords': 'radio astronomy interferometry',
     'extras_require': {
         'sim': ['mpi4py>=3.0.0', 'psutil'],
-        'all': ['mpi4py>=3.0.0', 'psutil', 'line_profiler', 'h5py'],
-        'dev': ['mpi4py>=3.0.0', 'psutil', 'line_profiler', 'h5py', 'pypandoc',
+        'all': ['mpi4py>=3.0.0', 'psutil', 'line_profiler'],
+        'dev': ['mpi4py>=3.0.0', 'psutil', 'line_profiler', 'pypandoc',
                 'pytest', 'pytest-cov', 'sphinx', 'pre-commit']
     }
 }
