@@ -39,9 +39,11 @@ def test_profiler():
         param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
         pyuvsim.uvsim.run_uvsim(param_filename, return_uv=True)
         time_profiler = pyuvsim.profiling.get_profiler()
+        time_profiler.disable_by_count()
         assert isinstance(time_profiler, LineProfiler)
+        assert hasattr(time_profiler, 'rank')
+        assert hasattr(time_profiler, 'meta_file')
         lstats = time_profiler.get_stats()
-
         assert len(lstats.timings) != 0
         func_names = [k[2] for k in lstats.timings.keys()]
         assert unique(func_names).tolist() == sorted(pyuvsim.profiling.default_profile_funcs)

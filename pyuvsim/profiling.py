@@ -67,14 +67,13 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
 
     global prof
 
-    outfile_name = outfile_prefix
-    if not outfile_name.endswith(".out"):
-        outfile_name += '.out'
-    else:
+    if outfile_prefix.endswith(".out"):
         outfile_prefix = outfile_prefix[:-4]    # Strip extension
 
+    outfile_name = outfile_prefix + '.out'
+
     # Can only set up profiling once per Python session.
-    if prof is not None:
+    if prof is not None:    # pragma: nocover
         warnings.warn("Profiler already set. Returning now.")
         return
 
@@ -111,5 +110,5 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
         prof.enable_by_count()
 
 
-def get_profiler():
+def get_profiler():  # pragma: nocover
     return prof
