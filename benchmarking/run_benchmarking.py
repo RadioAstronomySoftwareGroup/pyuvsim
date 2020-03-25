@@ -53,4 +53,4 @@ if args.submit:
 
 if args.update_log:
     # Can only be run after the job is complete.
-    bmk.update_runlog(settings, args.yaml_file)
+    bmk.update_runlog(settings)

@@ -6,10 +6,6 @@ import os
 
 # Estimate scalings on different axes from profiling data.
 
-
-# TODO -- Update to handle text-based meta file.
-
-
 # NB -- This script cannot tell the difference between lines that are
 #          hit once and axes with length 1.
 #       It is only useful for jobs where the number of MPI processes is smaller

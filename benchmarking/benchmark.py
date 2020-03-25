@@ -2,6 +2,7 @@ import numpy as np
 import yaml
 import os
 import h5py
+import socket
 from pyradiosky import write_healpix_hdf5
 
 from pyuvsim.simsetup import _write_layout_csv, freq_array_to_params
@@ -22,7 +23,6 @@ def settings_setup(settings_file, outdir=None):
     -------
     settings: dict
         Dictionary of configuration and output file parameters.
-
     """
     with open(settings_file, 'r') as yfile:
         settings = yaml.safe_load(yfile)
@@ -34,12 +34,14 @@ def settings_setup(settings_file, outdir=None):
 
     if 'Nside' in settings.keys():
         settings['Nsrcs'] = 12 * settings['Nside']**2
+
+    settings['hostname'] = socket.getfqdn()
     settings['settings_file'] = settings_file
     settings['teleconfig_file'] = 'tele_config.yaml'
     settings['layout_fname'] = 'layout.csv'
     settings['hpx_fname'] = 'skymodel.hdf5'
     settings['beamtype'] = 'gaussian'
-    settings['beamshape'] = "sigma=0.08449"
+    settings['beamshape'] = {'sigma' : 0.08449}
     settings['profile_path'] = os.path.join(settings['profiles'], settings['profile_prefix'])
     settings['jobscript'] = os.path.join(outdir, 'jobscript.sh')
 
@@ -83,10 +85,10 @@ def make_benchmark_configuration(settings_dict):
     # Telescope config
     # ----------------
     teleconfig_path = os.path.join(confdir, teleconfig_file)
-
+    shapekey, shapeval = beamshape.popitem()
     teleconfig = {
         'beam_paths': {
-            0: "{}, {}".format(beamtype, beamshape)
+            0: {'type': beamtype, shapekey: shapeval}
         },
         'telescope_location': '(-30.72153, 21.42831, 1073.00000)',
         'telescope_name': 'test_array'
@@ -182,7 +184,14 @@ def make_benchmark_configuration(settings_dict):
 
 
 def make_jobscript(settings_dict):
-    """Write out a submittable jobscript."""
+    """
+    Write out a SLURM submittable jobscript.
+
+    Parameters
+    ----------
+    settings_dict: dict
+        Dictionary of parameters from benchmark.settings_setup
+    """
 
     mem = settings_dict['MemoryLimit']
     walltime = settings_dict['walltime']
@@ -215,7 +224,7 @@ def update_runlog(settings_dict, logfile='BENCHMARKS.log'):
     Parameters
     ----------
     settings_dict: dict
-        Settings dictionary used for the benchmarking simulation.
+        Dictionary of parameters from benchmark.settings_setup
     logfile: str
         Name of log file (Default: BENCHMARKS.log)
     """
@@ -232,7 +241,7 @@ def update_runlog(settings_dict, logfile='BENCHMARKS.log'):
                 pyuvsim_version = line.split(': ')[-1]
 
     header_vals = [
-        "Date/Time", 'uvsim_version', 'SettingsFile',
+        "Date/Time", 'uvsim_version', 'HostName', 'SettingsFile',
         'cpus-per-task', 'Ntasks', 'Nnodes', 'MemLimit',
         'Ntimes', 'Nbls', 'Nfreqs', 'Nsrcs', 'Nsrcs_part',
         'MaxRSS [GiB]', 'Runtime'
@@ -248,6 +257,7 @@ def update_runlog(settings_dict, logfile='BENCHMARKS.log'):
     results = [
         meta['Date/Time'],
         pyuvsim_version,
+        settings_dict['hostname'],
         settings_dict['settings_file'],
         settings_dict['Ncpus_per_task'],
         settings_dict['Ntasks'],
