@@ -408,6 +408,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     from .profiling import prof     # noqa
     if hasattr(prof, 'meta_file'):  # pragma: nocover
         # Saving axis sizes on current rank (local) and for the whole job (global).
+        # These lines are affected by issue 179 of line_profiler, so the nocover
+        # above will need to stay until this issue is resolved (see profiling.py).
         task_inds = np.array(list(summed_task_dict.keys()))
         bl_inds = task_inds[:, 0] % Nbls
         time_inds = (task_inds[:, 0] - bl_inds) // Nbls

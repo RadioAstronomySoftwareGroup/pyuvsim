@@ -8,7 +8,22 @@ from pyuvsim.simsetup import _write_layout_csv, freq_array_to_params
 
 
 def settings_setup(settings_file, outdir=None):
-    """ Parse settings file and make other variables."""
+    """
+    Parse settings file and make other variables.
+
+    Parameters
+    ----------
+    settings_file: str
+        Path to settings yaml file
+    outdir: str
+        Output file directory (optional)
+
+    Returns
+    -------
+    settings: dict
+        Dictionary of configuration and output file parameters.
+
+    """
     with open(settings_file, 'r') as yfile:
         settings = yaml.safe_load(yfile)
 
@@ -19,7 +34,7 @@ def settings_setup(settings_file, outdir=None):
 
     if 'Nside' in settings.keys():
         settings['Nsrcs'] = 12 * settings['Nside']**2
-
+    settings['settings_file'] = settings_file
     settings['teleconfig_file'] = 'tele_config.yaml'
     settings['layout_fname'] = 'layout.csv'
     settings['hpx_fname'] = 'skymodel.hdf5'
@@ -34,6 +49,13 @@ def settings_setup(settings_file, outdir=None):
 def make_benchmark_configuration(settings_dict):
     """
     Setup configuration files and directories for benchmarking simulation.
+
+    Creates input/output directories and configuration files for a benchmarking simulation.
+
+    Parameters
+    ----------
+    settings_dict: dict
+        Dictionary of parameters from benchmark.settings_setup
     """
 
     confdir = settings_dict['config_dir']
@@ -186,7 +208,17 @@ def make_jobscript(settings_dict):
         jfile.write(script)
 
 
-def update_runlog(settings_dict, settings_file, logfile='BENCHMARKS.log'):
+def update_runlog(settings_dict, logfile='BENCHMARKS.log'):
+    """
+    Read results from a benchmarking simulation and update a log file.
+
+    Parameters
+    ----------
+    settings_dict: dict
+        Settings dictionary used for the benchmarking simulation.
+    logfile: str
+        Name of log file (Default: BENCHMARKS.log)
+    """
 
     meta_file = settings_dict['profile_path'] + "_meta.out"
 
@@ -216,7 +248,7 @@ def update_runlog(settings_dict, settings_file, logfile='BENCHMARKS.log'):
     results = [
         meta['Date/Time'],
         pyuvsim_version,
-        settings_file,
+        settings_dict['settings_file'],
         settings_dict['Ncpus_per_task'],
         settings_dict['Ntasks'],
         settings_dict['Nnodes'],

@@ -20,7 +20,7 @@ except ImportError:
 
 try:
     from line_profiler import LineProfiler
-except ImportError:  # pragma: no cover
+except ImportError:
     def LineProfiler():
         return None
 
@@ -30,6 +30,11 @@ default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_par
 
 prof = None
 
+
+# Note that enabling the profiler interferes with pytest-cov, so several lines here are
+# marked with "nocover" though they are hit by tests.
+# These "nocover" comments will need to remain until issue 179 on line_profiler is resolved.
+# https://github.com/rkern/line_profiler/issues/179
 
 def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_profile.out',
                  dump_raw=False):
@@ -107,6 +112,7 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
             atexit.register(prof.dump_stats, outfile_raw_name)
         setattr(prof, 'rank', rank)     # Add "rank" as an attribute to the profiler.
         setattr(prof, 'meta_file', outfile_prefix + '_meta.out')
+
         prof.enable_by_count()
 
 
