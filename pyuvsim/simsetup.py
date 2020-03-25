@@ -457,8 +457,8 @@ def parse_telescope_params(tele_params, config_path=''):
         * `telescope_config_file`: Path to configuration yaml file
         * `antenna_location_file`: Path to csv layout file
         * `telescope_name`: observatory name
-    beam_list : list of str
-        Beam models in the configuration.
+    beam_list : :class:`pyuvsim.BeamList`
+        This is a BeamList object in string mode.
         The strings provide either paths to beamfits files or the specifications to make
         a :class:`pyuvsim.AnalyticBeam`.
     beam_dict : dict
@@ -535,7 +535,7 @@ def parse_telescope_params(tele_params, config_path=''):
 
     # fill in outputs with just array info
     return_dict = {}
-    beam_list = []
+    beam_list = BeamList([])
     beam_dict = {}
 
     return_dict['Nants_data'] = antnames.size
@@ -559,7 +559,6 @@ def parse_telescope_params(tele_params, config_path=''):
 
     return_dict['telescope_config_name'] = telescope_config_name
     beam_ids = ant_layout['beamid']
-    beam_list = []
     beam_dict = {}
 
     for beamID in np.unique(beam_ids):

@@ -53,7 +53,7 @@ beam_dict = None
 input_uv = UVData()
 mock_keywords = None
 catalog = None
-profiling.set_profiler(outfile_name=args.prof_out)
+profiling.set_profiler(outfile_prefix=args.prof_out)
 
 if rank == 0:
     print("{} freqs, {} times, {} bls, {} srcs, {} beam".format(

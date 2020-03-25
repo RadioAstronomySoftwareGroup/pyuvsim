@@ -8,8 +8,11 @@ Use the line profiler when requested.
 
 import atexit
 from inspect import isclass, isfunction
+from itertools import chain
+import warnings
 
 import pyuvsim as _pyuvsim
+import pyradiosky as _pyradiosky
 try:
     from . import mpi
 except ImportError:
@@ -17,33 +20,68 @@ except ImportError:
 
 try:
     from line_profiler import LineProfiler
-except ImportError:  # pragma: no cover
+except ImportError:
     def LineProfiler():
         return None
 
 default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params',
-                         'apply_beam', 'make_visibility',
+                         'apply_beam', 'make_visibility', 'update_positions', 'coherency_calc',
                          'uvdata_to_task_iter', 'run_uvdata_uvsim', 'run_uvsim']
 
+prof = None
 
-def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_profile.out',
+
+# Note that enabling the profiler interferes with pytest-cov, so several lines here are
+# marked with "nocover" though they are hit by tests.
+# These "nocover" comments will need to remain until issue 179 on line_profiler is resolved.
+# https://github.com/rkern/line_profiler/issues/179
+
+def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_profile.out',
                  dump_raw=False):
     """
     Applies a line profiler to the listed functions, wherever they appear in pyuvsim.
 
-    Places a LineProfiler object in the builtins list, and registers its dumping/printing
+    Places a LineProfiler object in the module namespace, and registers its dumping/printing
     functions to run at the end.
 
-    Args:
-        func_list: list
-            List of function names (strings) to profile.
-            Defaults to ``profiling.default_profile_funcs``.
-        rank: int, optional
-            Which rank process should write out to file? (only one rank at a time will).
-        outfile_name: Filename for printing profiling results.
-        dump_raw: Write out a pickled LineStats object to <outfile_name>.lprof (Default False)
+    Parameters
+    ----------
+    func_list: list
+        List of function names (strings) to profile.
+        Defaults to ``profiling.default_profile_funcs``.
+    rank: int, optional
+        Which rank process should write out to file? (only one rank at a time will).
+    outfile_prefix: str
+        Filename prefix for printing profiling results.
+            Human-readable line by line profiling goes to <outfile_prefix>.out
+            LineStats data goes to <outfile_prefix>.lprof (if dump_raw)
+            Axis sizes go to <outfile_prefix>_axes.npz
+    dump_raw: bool
+        Write out a pickled LineStats object to <outfile_name>.lprof (Default False)
+
+    Sets
+    ----
+    prof : LineProfiler
+        An instance of LineProfiler in the module namespace.
+    exit functions:
+        When the Python environment closes, the profiler functions
+        print_stats (and dump_stats, if dump_raw is True) will execute,
+        saving profiler data to file.
+
     """
+
     global prof
+
+    if outfile_prefix.endswith(".out"):
+        outfile_prefix = outfile_prefix[:-4]    # Strip extension
+
+    outfile_name = outfile_prefix + '.out'
+
+    # Can only set up profiling once per Python session.
+    if prof is not None:    # pragma: nocover
+        warnings.warn("Profiler already set. Returning now.")
+        return
+
     prof = LineProfiler()
     if mpi is None or prof is None:  # pragma: no cover
         raise ImportError("You need mpi4py and line_profiler to use the "
@@ -53,7 +91,8 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
     mpi.start_mpi()
 
     # Add module functions to profiler.
-    for mod_it in _pyuvsim.__dict__.values():
+    mod_iter = chain(_pyuvsim.__dict__.values(), _pyradiosky.__dict__.values())
+    for mod_it in mod_iter:
         if isfunction(mod_it):
             if mod_it.__name__ in func_list:
                 prof.add_function(mod_it)
@@ -69,13 +108,13 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_name='time_pro
         atexit.register(ofile.close)
         atexit.register(prof.print_stats, stream=ofile)
         if dump_raw:
-            outfile_raw_name = outfile_name + ".lprof"
-            if isinstance(dump_raw, str):
-                outfile_raw_name = dump_raw
+            outfile_raw_name = outfile_prefix + ".lprof"
             atexit.register(prof.dump_stats, outfile_raw_name)
+        setattr(prof, 'rank', rank)     # Add "rank" as an attribute to the profiler.
+        setattr(prof, 'meta_file', outfile_prefix + '_meta.out')
 
         prof.enable_by_count()
 
 
-def get_profiler():
+def get_profiler():  # pragma: nocover
     return prof

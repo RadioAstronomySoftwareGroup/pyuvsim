@@ -18,6 +18,8 @@ from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 
+c_ms = pyuvsim.analyticbeam.c_ms
+
 
 def test_uniform_beam():
     beam = pyuvsim.AnalyticBeam('uniform')
@@ -75,7 +77,7 @@ def test_airy_beam_values():
 
     expected_data = np.zeros((2, 1, 2, 1, az_vals.size), dtype=np.float)
     za_grid, f_grid = np.meshgrid(za_vals, freq_vals)
-    xvals = diameter_m / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / 3e8
+    xvals = diameter_m / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / c_ms
     airy_values = np.zeros_like(xvals)
     nz = xvals != 0.
     ze = xvals == 0.
@@ -95,7 +97,7 @@ def test_uv_beam_widths():
 
     Nfreqs = 20
     freq_vals = np.linspace(100e6, 130e6, Nfreqs)
-    lams = 3e8 / freq_vals
+    lams = c_ms / freq_vals
 
     N = 250
     Npix = 500
@@ -310,7 +312,7 @@ def test_diameter_to_sigma():
 
     Nfreqs = 20
     freq_vals = np.linspace(100e6, 130e6, Nfreqs)
-    lams = 3e8 / freq_vals
+    lams = c_ms / freq_vals
 
     N = 250
     Npix = 501

@@ -188,7 +188,7 @@ class Counter(object):
 
 def get_max_node_rss(return_per_node=False):
     """
-    Find the maximum memory usage on any node in the job in bytes.
+    Find the maximum memory usage on any node in the job in GiB.
 
     Parameters
     ----------
