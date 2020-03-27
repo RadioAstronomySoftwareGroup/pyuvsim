@@ -228,16 +228,24 @@ def _make_task_inds(Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus):
 
 def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_parts=1):
     """
-    Generate local tasks, reusing quantities where possible.
+    Generates UVTask objects.
 
-    Args:
-        task_ids: (range iterator) Task index in the full flattened meshgrid of parameters.
-        input_uv (UVData): UVData object to use
-        catalog: a recarray of source components
-        beam_list: list of UVBeam or AnalyticBeam objects
-        beam_dict: dict mapping antenna number to beam index in beam_list
-    Yields:
-        Iterable of task objects to be done on current rank.
+    Parameters
+    ----------
+    task_ids: range
+        Task indices in the full flattened meshgrid of parameters.
+    input_uv: :class:~`pyuvdata.UVData`
+        UVData object to be filled with data.
+    catalog: recarray
+        Array of source components that can be converted to a :class:~`pyradiosky.SkyModel`.
+    beam_list: :class:~`pyuvsim.BeamList
+        BeamList carrying beam model (in object mode).
+    beam_dict: dict
+        Map of antenna numbers to index in beam_list.
+
+    Yields
+    ------
+        Iterable of UVTask objects.
     """
     if mpi is None:
         raise ImportError("You need mpi4py to use the uvsim module. "
