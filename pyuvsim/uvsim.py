@@ -84,21 +84,68 @@ class UVTask(object):
 
 class UVEngine(object):
 
-    def __init__(self, task=None, reuse_spline=True):
+    def __init__(self, task=None, update_positions=True, update_beams=True, reuse_spline=True):
         self.reuse_spline = reuse_spline  # Reuse spline fits in beam interpolation
+        self.update_positions = update_positions
+        self.update_beams = update_beams
+
+        self.current_time = None
+        self.current_freq = None
+        self.current_beam_pair = None
+        self.beam1_jones = None
+        self.beam2_jones = None
+
         if task is not None:
             self.set_task(task)
 
     def set_task(self, task):
         self.task = task
+        if not self.current_time == task.time:
+            self.update_positions = True
+            self.update_local_coherency = True
+            self.update_beams = True
+        else:
+            self.update_beams = False
+            self.update_positions = False
+            self.update_beams = False
+            self.update_local_coherency = False
 
-    def apply_beam(self):
-        """ Get apparent coherency from jones matrices and source coherency. """
+        if not self.current_freq == task.freq:
+            self.update_beams = True
+
+        self.current_time = task.time.jd
+        self.current_freq = task.freq.to("Hz").value
         baseline = self.task.baseline
+        beam_pair = (baseline.antenna1.beam_id, baseline.antenna2.beam_id)
+        if not self.current_beam_pair == beam_pair:
+            self.current_beam_pair = beam_pair
+            self.update_beams = True
+
+    def update_beam_jones(self):
+
+        beam1_id, beam2_id = self.current_beam_pair
+
         sources = self.task.sources
+        baseline = self.task.baseline
 
         if sources.alt_az is None:
             sources.update_positions(self.task.time, self.task.telescope.location)
+
+        self.beam1_jones = baseline.antenna1.get_beam_jones(
+            self.task.telescope, sources.alt_az, self.task.freq, reuse_spline=self.reuse_spline
+        )
+
+        if beam1_id == beam2_id:
+            self.beam2_jones = np.copy(self.beam1_jones)
+        else:
+            self.beam2_jones = baseline.antenna2.get_beam_jones(
+                self.task.telescope, sources.alt_az, self.task.freq, reuse_spline=self.reuse_spline
+            )
+
+    def apply_beam(self):
+        """ Set apparent coherency from jones matrices and source coherency. """
+
+        sources = self.task.sources
 
         # coherency is a 2x2 matrix
         # [ |Ex|^2, Ex* Ey, Ey* Ex |Ey|^2 ]
@@ -106,22 +153,18 @@ class UVEngine(object):
 
         # Apparent coherency gives the direction and polarization dependent baseline response to
         # a source.
-        beam1_jones = baseline.antenna1.get_beam_jones(
-            self.task.telescope, sources.alt_az, self.task.freq, reuse_spline=self.reuse_spline
+        if self.update_local_coherency:
+            self.local_coherency = sources.coherency_calc(self.task.telescope.location)
+
+        if self.update_beams:
+            self.update_beam_jones()
+
+        coherency = self.local_coherency[:, :, self.task.freq_i, :]
+
+        self.beam2_jones = np.swapaxes(self.beam2_jones, 0, 1).conj()  # Transpose at each component
+        self.apparent_coherency = np.einsum(
+            "abz,bcz,cdz->adz", self.beam1_jones, coherency, self.beam2_jones
         )
-        if baseline.antenna1.beam_id == baseline.antenna2.beam_id:
-            beam2_jones = np.copy(beam1_jones)
-        else:
-            beam2_jones = baseline.antenna2.get_beam_jones(
-                self.task.telescope, sources.alt_az, self.task.freq, reuse_spline=self.reuse_spline
-            )
-
-        coherency = sources.coherency_calc(self.task.telescope.location)
-        coherency = coherency[:, :, self.task.freq_i, :]
-        beam2_jones = np.swapaxes(beam2_jones, 0, 1).conj()  # Transpose at each component.
-        this_apparent_coherency = np.einsum("abz,bcz,cdz->adz", beam1_jones, coherency, beam2_jones)
-
-        self.apparent_coherency = this_apparent_coherency
 
     def make_visibility(self):
         """ Visibility contribution from a set of source components """
@@ -132,7 +175,8 @@ class UVEngine(object):
         location = self.task.telescope.location
 
         # This will only be run if time has changed
-        srcs.update_positions(time, location)
+        if self.update_positions:
+            srcs.update_positions(time, location)
 
         pos_lmn = srcs.pos_lmn
 
@@ -142,6 +186,7 @@ class UVEngine(object):
         uvw_wavelength = self.task.baseline.uvw / speed_of_light * self.task.freq.to('1/s')
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
         vij = self.apparent_coherency * fringe
+
         # Sum over source component axis:
         vij = np.sum(vij, axis=2)
 
