@@ -94,13 +94,21 @@ class UVEngine(object):
         self.current_beam_pair = None
         self.beam1_jones = None
         self.beam2_jones = None
+        self.local_coherency = None
+        self.apparent_coherency = None
 
         if task is not None:
             self.set_task(task)
 
     def set_task(self, task):
         self.task = task
-        if not self.current_time == task.time:
+
+        # These flags control whether quantities can be re-used from the last task:
+        #   Update local coherency for all frequencies when time changes.
+        #   Update source positions when time changes.
+        #   Update saved beam jones matrices when time, frequency, or beam pair changes.
+
+        if not self.current_time == task.time.jd:
             self.update_positions = True
             self.update_local_coherency = True
             self.update_beams = True
@@ -110,7 +118,7 @@ class UVEngine(object):
             self.update_beams = False
             self.update_local_coherency = False
 
-        if not self.current_freq == task.freq:
+        if not self.current_freq == task.freq.to('Hz').value:
             self.update_beams = True
 
         self.current_time = task.time.jd
@@ -121,7 +129,8 @@ class UVEngine(object):
             self.current_beam_pair = beam_pair
             self.update_beams = True
 
-    def update_beam_jones(self):
+    def apply_beam(self):
+        """ Set apparent coherency from jones matrices and source coherency. """
 
         beam1_id, beam2_id = self.current_beam_pair
 
@@ -142,22 +151,12 @@ class UVEngine(object):
                 self.task.telescope, sources.alt_az, self.task.freq, reuse_spline=self.reuse_spline
             )
 
-    def apply_beam(self):
-        """ Set apparent coherency from jones matrices and source coherency. """
-
-        sources = self.task.sources
-
         # coherency is a 2x2 matrix
         # [ |Ex|^2, Ex* Ey, Ey* Ex |Ey|^2 ]
         # where x and y vectors along the local alt/az axes.
 
         # Apparent coherency gives the direction and polarization dependent baseline response to
         # a source.
-        if self.update_local_coherency:
-            self.local_coherency = sources.coherency_calc(self.task.telescope.location)
-
-        if self.update_beams:
-            self.update_beam_jones()
 
         coherency = self.local_coherency[:, :, self.task.freq_i, :]
 
@@ -174,13 +173,16 @@ class UVEngine(object):
         time = self.task.time
         location = self.task.telescope.location
 
-        # This will only be run if time has changed
         if self.update_positions:
             srcs.update_positions(time, location)
 
-        pos_lmn = srcs.pos_lmn
+        if self.update_local_coherency:
+            self.local_coherency = srcs.coherency_calc(self.task.telescope.location)
 
-        self.apply_beam()
+        if self.update_beams:
+            self.apply_beam()
+
+        pos_lmn = srcs.pos_lmn
 
         # need to convert uvws from meters to wavelengths
         uvw_wavelength = self.task.baseline.uvw / speed_of_light * self.task.freq.to('1/s')

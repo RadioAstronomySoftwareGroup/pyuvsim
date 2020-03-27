@@ -714,3 +714,77 @@ def test_get_beam_jones():
     assert (np.all(jones2 == jones0)
             and np.all(jones1 == jones)
             and np.all(jones1 == jones0))
+
+
+def test_quantity_reuse():
+    # Check that the right quantities on the UVEngine are changed when
+    # the time/frequency/antenna pair change.
+    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
+    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
+    param_dict['select'] = {'redundant_threshold': 0.1}
+    uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+
+    # Add more beams to the list.
+    # Don't use the uniform beam (need to see coherency change with positions).
+    ref_freq, alpha = 100e6, -0.5
+    beam_list[0] = pyuvsim.AnalyticBeam('airy', diameter=13.0)
+    beam_list.append(pyuvsim.AnalyticBeam('airy', diameter=14.6))
+    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.03))
+    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.03,
+                     ref_freq=ref_freq, spectral_index=alpha))
+
+    # Assign the last few antennas to use these other beams.
+    beam_dict['ANT36'] = 1
+    beam_dict['ANT35'] = 2
+    beam_dict['ANT34'] = 3
+
+    Ntasks = uv_obj.Nblts * uv_obj.Nfreqs
+
+    time = Time(uv_obj.time_array[0], format='jd', scale='utc')
+    sources, kwds = pyuvsim.create_mock_catalog(
+        time, arrangement='random', Nsrcs=30, return_table=True
+    )
+    beam_list.set_obj_mode()
+    taskiter = pyuvsim.uvdata_to_task_iter(
+        np.arange(Ntasks), uv_obj, sources, beam_list, beam_dict
+    )
+    uvtask_list = list(taskiter)
+    engine = pyuvsim.UVEngine()
+
+    def allclose_or_none(first, second):
+        if first is None or second is None:
+            return False
+        return np.allclose(first, second)
+
+    for ti, task in enumerate(uvtask_list):
+        sky = task.sources
+        prev_freq = engine.current_freq
+        prev_time = engine.current_time
+        prev_beam_pair = engine.current_beam_pair
+
+        # prev_local_coherency = copy.deepcopy(engine.local_coherency)
+        prev_apparent_coherency = copy.deepcopy(engine.apparent_coherency)
+        prev_jones1 = copy.deepcopy(engine.beam1_jones)
+        prev_jones2 = copy.deepcopy(engine.beam2_jones)
+        prev_source_pos = copy.deepcopy(sky.alt_az)
+
+        engine.set_task(task)
+        engine.make_visibility()
+        apcoh_changed = not allclose_or_none(engine.apparent_coherency, prev_apparent_coherency)
+        jones_changed = (not allclose_or_none(engine.beam1_jones, prev_jones1)
+                         or not allclose_or_none(engine.beam2_jones, prev_jones2))
+        # locoh_changed = not allclose_or_none(engine.local_coherency, prev_local_coherency)
+        srcpos_changed = not allclose_or_none(sky.alt_az, prev_source_pos)
+
+        freq = task.freq.to("Hz").value
+        time = task.time.jd
+        beampair = (task.baseline.antenna1.beam_id, task.baseline.antenna2.beam_id)
+
+        # check that when time, freq, or beam pair changes, the relevant quantities also change.
+        if (freq != prev_freq) or (time != prev_time) or (beampair != prev_beam_pair):
+            assert apcoh_changed and jones_changed
+        if time != prev_time:
+            # Note -- local_coherency will only change if the sources are polarized.
+            # Will need to uncomment the second half of this line later when
+            # polarization is enabled.
+            assert srcpos_changed  # and locoh_changed

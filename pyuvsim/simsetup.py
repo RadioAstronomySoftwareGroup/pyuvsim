@@ -858,11 +858,20 @@ def initialize_uvdata_from_params(obs_params):
 
     If the polarization array is not specified, it defaults to (XX, XY, YX, YY).
 
-    Args:
-        obs_params: Either an obs_param file name or a dictionary of parameters read in.
-                    Any uvdata parameters may be passed in through here.
-    Returns:
-        uv_obj, beam_list, beam_dict
+    Parameters
+    ----------
+    obs_params: dict or str
+        Either an obs_param file name or a dictionary of parameters read in.
+        Additional UVData parameters may be passed in through here.
+
+    Returns
+    -------
+    uv_obj: :class:~`pyuvdata.UVData`
+        Initialized UVData object.
+    beam_list: :class:~`pyuvsim.BeamList`
+        List of beam specifiers as strings.
+    beam_dict: dict
+        Map of antenna numbers to index in beam_list.
     """
     uvparam_dict = {}  # Parameters that will go into UVData
     if isinstance(obs_params, str):
