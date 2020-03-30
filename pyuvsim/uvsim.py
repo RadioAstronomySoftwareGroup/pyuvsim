@@ -132,6 +132,9 @@ class UVEngine(object):
     def apply_beam(self):
         """ Set apparent coherency from jones matrices and source coherency. """
 
+        if not self.update_beams:
+            return
+
         beam1_id, beam2_id = self.current_beam_pair
 
         sources = self.task.sources
@@ -158,6 +161,9 @@ class UVEngine(object):
         # Apparent coherency gives the direction and polarization dependent baseline response to
         # a source.
 
+        if self.update_local_coherency:
+            self.local_coherency = sources.coherency_calc(self.task.telescope.location)
+
         coherency = self.local_coherency[:, :, self.task.freq_i, :]
 
         self.beam2_jones = np.swapaxes(self.beam2_jones, 0, 1).conj()  # Transpose at each component
@@ -175,9 +181,6 @@ class UVEngine(object):
 
         if self.update_positions:
             srcs.update_positions(time, location)
-
-        if self.update_local_coherency:
-            self.local_coherency = srcs.coherency_calc(self.task.telescope.location)
 
         if self.update_beams:
             self.apply_beam()
