@@ -144,14 +144,16 @@ class UVEngine(object):
             sources.update_positions(self.task.time, self.task.telescope.location)
 
         self.beam1_jones = baseline.antenna1.get_beam_jones(
-            self.task.telescope, sources.alt_az, self.task.freq, reuse_spline=self.reuse_spline
+            self.task.telescope, sources.alt_az[..., sources.above_horizon],
+            self.task.freq, reuse_spline=self.reuse_spline
         )
 
         if beam1_id == beam2_id:
             self.beam2_jones = np.copy(self.beam1_jones)
         else:
             self.beam2_jones = baseline.antenna2.get_beam_jones(
-                self.task.telescope, sources.alt_az, self.task.freq, reuse_spline=self.reuse_spline
+                self.task.telescope, sources.alt_az[..., sources.above_horizon],
+                self.task.freq, reuse_spline=self.reuse_spline
             )
 
         # coherency is a 2x2 matrix
@@ -167,6 +169,7 @@ class UVEngine(object):
         coherency = self.local_coherency[:, :, self.task.freq_i, :]
 
         self.beam2_jones = np.swapaxes(self.beam2_jones, 0, 1).conj()  # Transpose at each component
+
         self.apparent_coherency = np.einsum(
             "abz,bcz,cdz->adz", self.beam1_jones, coherency, self.beam2_jones
         )
@@ -185,7 +188,7 @@ class UVEngine(object):
         if self.update_beams:
             self.apply_beam()
 
-        pos_lmn = srcs.pos_lmn
+        pos_lmn = srcs.pos_lmn[..., srcs.above_horizon]
 
         # need to convert uvws from meters to wavelengths
         uvw_wavelength = self.task.baseline.uvw / speed_of_light * self.task.freq.to('1/s')
@@ -495,6 +498,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     for task in summed_local_task_list:
         del task.time
         del task.freq
+        del task.freq_i
         del task.sources
         del task.baseline
         del task.telescope
