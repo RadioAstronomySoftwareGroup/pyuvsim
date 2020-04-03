@@ -8,7 +8,7 @@ import sys
 
 from setuptools import setup
 
-# add pyuvdata to our path in order to use the branch_scheme function
+# add pyuvsim to our path in order to use the branch_scheme function
 sys.path.append("pyuvsim")
 from branch_scheme import branch_scheme  # noqa
 
