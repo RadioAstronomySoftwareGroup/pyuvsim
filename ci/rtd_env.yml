@@ -7,5 +7,6 @@ dependencies:
   - astropy
   - mpi4py
   - pyyaml
+  - setuptools_scm
   - conda-forge::pyuvdata
   - conda-forge::pypandoc

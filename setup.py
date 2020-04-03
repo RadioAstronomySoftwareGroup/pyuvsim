@@ -4,18 +4,13 @@
 
 import glob
 import io
-import json
-import os
 import sys
 
 from setuptools import setup
 
+# add pyuvsim to our path in order to use the branch_scheme function
 sys.path.append("pyuvsim")
-import version  # noqa
-
-data = [version.git_origin, version.git_hash, version.git_description, version.git_branch]
-with open(os.path.join('pyuvsim', 'GIT_INFO'), 'w') as outfile:
-    json.dump(data, outfile)
+from branch_scheme import branch_scheme  # noqa
 
 with io.open('README.md', 'r', encoding='utf-8') as readme_file:
     readme = readme_file.read()
@@ -31,11 +26,11 @@ setup_args = {
     'package_dir': {'pyuvsim': 'pyuvsim'},
     'packages': ['pyuvsim', 'pyuvsim.tests'],
     'scripts': glob.glob('scripts/*'),
-    'version': version.version,
+    'use_scm_version': {'local_scheme': branch_scheme},
     'include_package_data': True,
-    'install_requires': ['numpy>=1.15', 'scipy', 'astropy>=4.0', 'pyyaml', 'pyuvdata'],
-    'test_requires': ['pytest', 'h5py'],
-    'setup_requires': ['pytest-runner'],
+    'install_requires': ['numpy>=1.15', 'scipy', 'astropy>=4.0', 'pyyaml',
+                         'pyuvdata', 'setuptools_scm'],
+    'test_requires': ['pytest'],
     'classifiers': ['Development Status :: 5 - Production/Stable',
                     'Intended Audience :: Science/Research',
                     'License :: OSI Approved :: BSD License',
@@ -44,8 +39,8 @@ setup_args = {
     'keywords': 'radio astronomy interferometry',
     'extras_require': {
         'sim': ['mpi4py>=3.0.0', 'psutil'],
-        'all': ['mpi4py>=3.0.0', 'psutil', 'line_profiler', 'h5py'],
-        'dev': ['mpi4py>=3.0.0', 'psutil', 'line_profiler', 'h5py', 'pypandoc',
+        'all': ['mpi4py>=3.0.0', 'psutil', 'line_profiler'],
+        'dev': ['mpi4py>=3.0.0', 'psutil', 'line_profiler', 'pypandoc',
                 'pytest', 'pytest-cov', 'sphinx', 'pre-commit']
     }
 }
