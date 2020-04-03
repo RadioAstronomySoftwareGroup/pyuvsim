@@ -5,6 +5,7 @@
 import numpy as np
 import sys
 import yaml
+import warnings
 from astropy.coordinates import EarthLocation
 import astropy.units as units
 from astropy.time import Time
@@ -139,6 +140,12 @@ class UVEngine(object):
 
         sources = self.task.sources
         baseline = self.task.baseline
+        if not hasattr(sources, 'above_horizon'):
+            warnings.warn("SkyModel class lacks horizon cut on position and coherency calculations."
+                          " This will slow evaluation considerably. Please update your pyradiosky"
+                          " installation to the latest version."
+                          , DeprecationWarning)
+            setattr(sources, "above_horizon", slice(None))
 
         if sources.alt_az is None:
             sources.update_positions(self.task.time, self.task.telescope.location)
