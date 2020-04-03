@@ -5,15 +5,6 @@ from setuptools_scm import get_version
 from pathlib import Path
 from pkg_resources import get_distribution, DistributionNotFound
 
-from .profiling import *  # noqa
-from .uvsim import *  # noqa
-from .simsetup import *  # noqa
-from .analyticbeam import *  # noqa
-from .antenna import *  # noqa
-from .baseline import *  # noqa
-from .telescope import *  # noqa
-from .utils import *  # noqa
-
 from .branch_scheme import branch_scheme
 
 
@@ -30,3 +21,12 @@ except (LookupError, ImportError):
     except DistributionNotFound:  # pragma: nocover
         # package is not installed
         pass
+
+from .profiling import *  # noqa
+from .uvsim import *  # noqa
+from .simsetup import *  # noqa
+from .analyticbeam import *  # noqa
+from .antenna import *  # noqa
+from .baseline import *  # noqa
+from .telescope import *  # noqa
+from .utils import *  # noqa
