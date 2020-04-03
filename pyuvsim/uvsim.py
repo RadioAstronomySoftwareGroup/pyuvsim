@@ -262,11 +262,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     ------
         Iterable of UVTask objects.
     """
-    if mpi is None:
-        raise ImportError("You need mpi4py to use the uvsim module. "
-                          "Install it by running pip install pyuvsim[sim] "
-                          "or pip install pyuvsim[all] if you also want h5py "
-                          "and line_profiler installed.")
 
     # The task_ids refer to tasks on the flattened meshgrid.
     if not isinstance(input_uv, UVData):

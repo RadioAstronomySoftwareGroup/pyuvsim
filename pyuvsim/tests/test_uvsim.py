@@ -394,7 +394,6 @@ def test_offzenith_source_multibl_uvfits():
 
 
 def test_file_to_tasks():
-    pytest.importorskip('mpi4py')
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
@@ -474,7 +473,6 @@ def test_file_to_tasks():
 
 
 def test_gather():
-    pytest.importorskip('mpi4py')
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
@@ -504,7 +502,6 @@ def test_gather():
 
 def test_local_task_gen():
     # Confirm I get the same results looping over the task list as I do with the generator function.
-    pytest.importorskip('mpi4py')
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_10time10chan)
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
@@ -753,6 +750,8 @@ def test_quantity_reuse():
 
     def allclose_or_none(first, second):
         if first is None or second is None:
+            return False
+        elif not first.shape == second.shape:
             return False
         return np.allclose(first, second)
 
