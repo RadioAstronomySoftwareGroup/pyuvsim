@@ -63,6 +63,7 @@ Required:
 * scipy>1.0.1
 * pyyaml>=5.1
 * pyuvdata>=1.3.7
+* setuptools_scm
 
 Optional:
 
