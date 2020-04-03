@@ -4,20 +4,13 @@
 
 import glob
 import io
+import sys
 
 from setuptools import setup
 
-
-def branch_scheme(version):
-    """Local version scheme that adds the branch name for absolute reproducibility."""
-    if version.exact or version.node is None:
-        return version.format_choice("", "+d{time:{time_format}}", time_format="%Y%m%d")
-    else:
-        if version.branch == "master":
-            return version.format_choice("+{node}", "+{node}.dirty")
-        else:
-            return version.format_choice("+{node}.{branch}", "+{node}.{branch}.dirty")
-
+# add pyuvdata to our path in order to use the branch_scheme function
+sys.path.append("pyuvsim")
+from branch_scheme import branch_scheme  # noqa
 
 with io.open('README.md', 'r', encoding='utf-8') as readme_file:
     readme = readme_file.read()
