@@ -5,6 +5,7 @@
 import numpy as np
 import sys
 import yaml
+import warnings
 from astropy.coordinates import EarthLocation
 import astropy.units as units
 from astropy.time import Time
@@ -84,21 +85,83 @@ class UVTask(object):
 
 class UVEngine(object):
 
-    def __init__(self, task=None, reuse_spline=True):
+    def __init__(self, task=None, update_positions=True, update_beams=True, reuse_spline=True):
         self.reuse_spline = reuse_spline  # Reuse spline fits in beam interpolation
+        self.update_positions = update_positions
+        self.update_beams = update_beams
+
+        self.current_time = None
+        self.current_freq = None
+        self.current_beam_pair = None
+        self.beam1_jones = None
+        self.beam2_jones = None
+        self.local_coherency = None
+        self.apparent_coherency = None
+
         if task is not None:
             self.set_task(task)
 
     def set_task(self, task):
         self.task = task
 
-    def apply_beam(self):
-        """ Get apparent coherency from jones matrices and source coherency. """
+        # These flags control whether quantities can be re-used from the last task:
+        #   Update local coherency for all frequencies when time changes.
+        #   Update source positions when time changes.
+        #   Update saved beam jones matrices when time, frequency, or beam pair changes.
+
+        if not self.current_time == task.time.jd:
+            self.update_positions = True
+            self.update_local_coherency = True
+            self.update_beams = True
+        else:
+            self.update_beams = False
+            self.update_positions = False
+            self.update_beams = False
+            self.update_local_coherency = False
+
+        if not self.current_freq == task.freq.to('Hz').value:
+            self.update_beams = True
+
+        self.current_time = task.time.jd
+        self.current_freq = task.freq.to("Hz").value
         baseline = self.task.baseline
+        beam_pair = (baseline.antenna1.beam_id, baseline.antenna2.beam_id)
+        if not self.current_beam_pair == beam_pair:
+            self.current_beam_pair = beam_pair
+            self.update_beams = True
+
+    def apply_beam(self):
+        """ Set apparent coherency from jones matrices and source coherency. """
+
+        if not self.update_beams:
+            return
+
+        beam1_id, beam2_id = self.current_beam_pair
+
         sources = self.task.sources
+        baseline = self.task.baseline
+        if not hasattr(sources, 'above_horizon'):
+            warnings.warn("SkyModel class lacks horizon cut on position and coherency calculations."
+                          " This will slow evaluation considerably. Please update your pyradiosky"
+                          " installation to the latest version."
+                          , DeprecationWarning)
+            setattr(sources, "above_horizon", slice(None))
 
         if sources.alt_az is None:
             sources.update_positions(self.task.time, self.task.telescope.location)
+
+        self.beam1_jones = baseline.antenna1.get_beam_jones(
+            self.task.telescope, sources.alt_az[..., sources.above_horizon],
+            self.task.freq, reuse_spline=self.reuse_spline
+        )
+
+        if beam1_id == beam2_id:
+            self.beam2_jones = np.copy(self.beam1_jones)
+        else:
+            self.beam2_jones = baseline.antenna2.get_beam_jones(
+                self.task.telescope, sources.alt_az[..., sources.above_horizon],
+                self.task.freq, reuse_spline=self.reuse_spline
+            )
 
         # coherency is a 2x2 matrix
         # [ |Ex|^2, Ex* Ey, Ey* Ex |Ey|^2 ]
@@ -106,22 +169,17 @@ class UVEngine(object):
 
         # Apparent coherency gives the direction and polarization dependent baseline response to
         # a source.
-        beam1_jones = baseline.antenna1.get_beam_jones(
-            self.task.telescope, sources.alt_az, self.task.freq, reuse_spline=self.reuse_spline
+
+        if self.update_local_coherency:
+            self.local_coherency = sources.coherency_calc(self.task.telescope.location)
+
+        coherency = self.local_coherency[:, :, self.task.freq_i, :]
+
+        self.beam2_jones = np.swapaxes(self.beam2_jones, 0, 1).conj()  # Transpose at each component
+
+        self.apparent_coherency = np.einsum(
+            "abz,bcz,cdz->adz", self.beam1_jones, coherency, self.beam2_jones
         )
-        if baseline.antenna1.beam_id == baseline.antenna2.beam_id:
-            beam2_jones = np.copy(beam1_jones)
-        else:
-            beam2_jones = baseline.antenna2.get_beam_jones(
-                self.task.telescope, sources.alt_az, self.task.freq, reuse_spline=self.reuse_spline
-            )
-
-        coherency = sources.coherency_calc(self.task.telescope.location)
-        coherency = coherency[:, :, self.task.freq_i, :]
-        beam2_jones = np.swapaxes(beam2_jones, 0, 1).conj()  # Transpose at each component.
-        this_apparent_coherency = np.einsum("abz,bcz,cdz->adz", beam1_jones, coherency, beam2_jones)
-
-        self.apparent_coherency = this_apparent_coherency
 
     def make_visibility(self):
         """ Visibility contribution from a set of source components """
@@ -131,17 +189,19 @@ class UVEngine(object):
         time = self.task.time
         location = self.task.telescope.location
 
-        # This will only be run if time has changed
-        srcs.update_positions(time, location)
+        if self.update_positions:
+            srcs.update_positions(time, location)
 
-        pos_lmn = srcs.pos_lmn
+        if self.update_beams:
+            self.apply_beam()
 
-        self.apply_beam()
+        pos_lmn = srcs.pos_lmn[..., srcs.above_horizon]
 
         # need to convert uvws from meters to wavelengths
         uvw_wavelength = self.task.baseline.uvw / speed_of_light * self.task.freq.to('1/s')
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
         vij = self.apparent_coherency * fringe
+
         # Sum over source component axis:
         vij = np.sum(vij, axis=2)
 
@@ -183,22 +243,25 @@ def _make_task_inds(Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus):
 
 def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_parts=1):
     """
-    Generate local tasks, reusing quantities where possible.
+    Generates UVTask objects.
 
-    Args:
-        task_ids: (range iterator) Task index in the full flattened meshgrid of parameters.
-        input_uv (UVData): UVData object to use
-        catalog: a recarray of source components
-        beam_list: list of UVBeam or AnalyticBeam objects
-        beam_dict: dict mapping antenna number to beam index in beam_list
-    Yields:
-        Iterable of task objects to be done on current rank.
+    Parameters
+    ----------
+    task_ids: range
+        Task indices in the full flattened meshgrid of parameters.
+    input_uv: :class:~`pyuvdata.UVData`
+        UVData object to be filled with data.
+    catalog: recarray
+        Array of source components that can be converted to a :class:~`pyradiosky.SkyModel`.
+    beam_list: :class:~`pyuvsim.BeamList
+        BeamList carrying beam model (in object mode).
+    beam_dict: dict
+        Map of antenna numbers to index in beam_list.
+
+    Yields
+    ------
+        Iterable of UVTask objects.
     """
-    if mpi is None:
-        raise ImportError("You need mpi4py to use the uvsim module. "
-                          "Install it by running pip install pyuvsim[sim] "
-                          "or pip install pyuvsim[all] if you also want h5py "
-                          "and line_profiler installed.")
 
     # The task_ids refer to tasks on the flattened meshgrid.
     if not isinstance(input_uv, UVData):
@@ -437,6 +500,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     for task in summed_local_task_list:
         del task.time
         del task.freq
+        del task.freq_i
         del task.sources
         del task.baseline
         del task.telescope

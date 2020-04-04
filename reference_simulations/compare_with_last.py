@@ -31,5 +31,5 @@ for k in new_files.keys():
         warnings.simplefilter('ignore')     # Ignore known_telescopes warning
         uv_old.read_uvh5(old_files[k], run_check_acceptability=False)
         uv_new.read_uvh5(new_files[k], run_check_acceptability=False)
-
+    uv_new.history = uv_old.history
     print(k, uv_old == uv_new)

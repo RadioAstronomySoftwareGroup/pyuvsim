@@ -1,2 +1,4 @@
 Date/Time                 	uvsim_version	HostName                   	SettingsFile 	cpus-per-task	Ntasks	Nnodes	MemLimit	Ntimes	Nbls	Nfreqs	Nsrcs	Nsrcs_part	MaxRSS [GiB]	Runtime       
 2020-03-06-21:40:47.584612	1.1.2.       	node474.oscar.ccv.brown.edu	settings.yaml	2            	10    	1     	50G     	21    	500 	256   	3072 	1         	13.071      	4:32:16.373965
+2020-03-26-17:54:43.959585	1.1.2.       	node474.oscar.ccv.brown.edu	settings.yaml	2            	10    	1     	50G     	21    	500 	256   	3072 	1         	12.187      	3:24:00.635442
+2020-04-02-15:50:16.314578	1.1.2.       	node473.oscar.ccv.brown.edu	settings.yaml	2            	10    	1     	50G     	21    	500 	256   	3072 	1         	11.475      	0:10:30.647003

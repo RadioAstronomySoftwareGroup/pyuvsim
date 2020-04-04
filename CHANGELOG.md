@@ -4,14 +4,18 @@
 
 ### Added
 - Scripts for running / verifying reference simulations.
+- Benchmarking tools.
+
+### Changed
+- Only do coherency calculation when the time changes
+- Only do beam eval when time, freq, or beam type changes.
+- The definition of the Airy beam now uses the exact value of c, not 3e8.
 
 ## [1.1.2] - 2020-2-14
 
 ### Added
 - BeamList class for handling the set of beams, and their string representations.
 - Support for individual shape parameters for analytic beams.
-
-### Changed
 
 ### Fixed
 - Removed warning catch for astropy GLEAM read in tests -- new versions don't raise the warning.
