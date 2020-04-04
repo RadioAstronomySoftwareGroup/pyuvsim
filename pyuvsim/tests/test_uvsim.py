@@ -739,8 +739,16 @@ def test_quantity_reuse():
 
     time = Time(uv_obj.time_array[0], format='jd', scale='utc')
     sources, kwds = pyuvsim.create_mock_catalog(
-        time, arrangement='random', Nsrcs=30, return_table=True
+        time, arrangement='long-line', Nsrcs=30, return_table=True
     )
+
+    # Temporary switch until PR #54 on pyradiosky is merged.
+    pol_in_rec = hasattr(pyradiosky.SkyModel, 'above_horizon')
+
+    if pol_in_rec:
+        # Give one source polarization
+        sources['flux_density'][15] = [0.3, 0.1, 2.0, 0.0]
+
     beam_list.set_obj_mode()
     taskiter = pyuvsim.uvdata_to_task_iter(
         np.arange(Ntasks), uv_obj, sources, beam_list, beam_dict
@@ -761,7 +769,7 @@ def test_quantity_reuse():
         prev_time = engine.current_time
         prev_beam_pair = engine.current_beam_pair
 
-        # prev_local_coherency = copy.deepcopy(engine.local_coherency)
+        prev_local_coherency = copy.deepcopy(engine.local_coherency)
         prev_apparent_coherency = copy.deepcopy(engine.apparent_coherency)
         prev_jones1 = copy.deepcopy(engine.beam1_jones)
         prev_jones2 = copy.deepcopy(engine.beam2_jones)
@@ -769,10 +777,11 @@ def test_quantity_reuse():
 
         engine.set_task(task)
         engine.make_visibility()
+
         apcoh_changed = not allclose_or_none(engine.apparent_coherency, prev_apparent_coherency)
         jones_changed = (not allclose_or_none(engine.beam1_jones, prev_jones1)
                          or not allclose_or_none(engine.beam2_jones, prev_jones2))
-        # locoh_changed = not allclose_or_none(engine.local_coherency, prev_local_coherency)
+        locoh_changed = not allclose_or_none(engine.local_coherency, prev_local_coherency)
         srcpos_changed = not allclose_or_none(sky.alt_az, prev_source_pos)
 
         freq = task.freq.to("Hz").value
@@ -784,6 +793,7 @@ def test_quantity_reuse():
             assert apcoh_changed and jones_changed
         if time != prev_time:
             # Note -- local_coherency will only change if the sources are polarized.
-            # Will need to uncomment the second half of this line later when
-            # polarization is enabled.
-            assert srcpos_changed  # and locoh_changed
+            if pol_in_rec:
+                assert srcpos_changed and locoh_changed
+            else:
+                assert srcpos_changed
