@@ -42,8 +42,8 @@ should install `pyuvsim` with  `pip install pyuvsim[sim]`. Note that the
 system, but we do test against Mac OSX as well.
 
 There are a few more optional dependencies for `pyuvsim` which enable some features,
-such as `line_profiler` to use the built-in profiling, and `h5py` to write to HDF5
-file format. If you would like these tools as well as the full simulator, install
+such as `line_profiler` to use the built-in profiling.
+If you would like these tools as well as the full simulator, install
 `pyuvsim` with `pip install pyuvsim[all]`
 
 If you wish to manage dependencies manually read on.
@@ -66,7 +66,6 @@ Optional:
 
 * mpi4py>=3.0.0
 * psutil
-* h5py
 * line_profiler
 
 ### Developer Installation

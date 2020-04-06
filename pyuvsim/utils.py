@@ -245,7 +245,7 @@ def get_avail_memory():
         raise ImportError("You need psutils to estimate available memory. "
                           "Install it by running pip install pyuvsim[sim] "
                           "or pip install pyuvsim[all] if you also want "
-                          "h5py and line_profiler installed.")
+                          "the line_profiler installed.")
 
     slurm_key = 'SLURM_MEM_PER_NODE'
     if slurm_key in os.environ:

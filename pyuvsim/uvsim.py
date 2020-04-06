@@ -374,8 +374,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     if mpi is None:
         raise ImportError("You need mpi4py to use the uvsim module. "
                           "Install it by running pip install pyuvsim[sim] "
-                          "or pip install pyuvsim[all] if you also want h5py "
-                          "and line_profiler installed.")
+                          "or pip install pyuvsim[all] if you also want the "
+                          "line_profiler installed.")
 
     mpi.start_mpi()
     rank = mpi.get_rank()
@@ -532,8 +532,8 @@ def run_uvsim(params, return_uv=False):
     if mpi is None:
         raise ImportError("You need mpi4py to use the uvsim module. "
                           "Install it by running pip install pyuvsim[sim] "
-                          "or pip install pyuvsim[all] if you also want h5py "
-                          "and line_profiler installed.")
+                          "or pip install pyuvsim[all] if you also want the "
+                          "line_profiler installed.")
 
     mpi.start_mpi()
     rank = mpi.get_rank()

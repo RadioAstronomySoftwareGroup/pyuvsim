@@ -126,9 +126,6 @@ def test_file_namer_extensions():
 @pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5'])
 def test_write_uvdata(save_format):
     """ Test function that defines filenames from parameter dict """
-    if save_format == 'uvh5':
-        pytest.importorskip('h5py')
-
     uv = UVData()
     with pytest.warns(UserWarning) as telwarn:
         uv.read_uvfits(triangle_uvfits_file)
