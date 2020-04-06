@@ -7,10 +7,12 @@ dependencies:
   - coverage
   - h5py
   - numpy>=1.15
-  - pyradiosky
+  - pip
   - pytest
   - pytest-cov
   - pyuvdata
   - pyyaml>=5.1
   - scipy
   - setuptools_scm
+  - pip:
+    - pyradiosky

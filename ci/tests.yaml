@@ -9,7 +9,7 @@ dependencies:
   - line_profiler
   - mpi4py>=3.0.0
   - numpy>=1.15
-  - pyradiosky
+  - pip
   - psutil
   - pytest
   - pytest-cov
@@ -17,3 +17,5 @@ dependencies:
   - pyyaml>=5.1
   - scipy
   - setuptools_scm
+  - pip:
+    - pyradiosky
