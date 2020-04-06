@@ -34,9 +34,6 @@ the directions under [Developer Installation](#developer-installation) below.
 
 A user-installation is achieved simply with `pip install pyuvsim`, or to get the
 bleeding-edge: `pip install https://github.com/RadioAstronomySoftwareGroup/pyuvsim`.
-This will install all dependencies except pyradiosky, which is under active
-development and does not yet have a pip package on PyPI. To get pyradiosky, run
-`pip install https://github.com/RadioAstronomySoftwareGroup/pyradiosky`.
 
 By default, `mpi` capabilities are not enabled -- many of the utilities provided
 in `pyuvsim` do not require it. To use the simulator within `pyuvsim`, you
@@ -45,8 +42,8 @@ should install `pyuvsim` with  `pip install pyuvsim[sim]`. Note that the
 system, but we do test against Mac OSX as well.
 
 There are a few more optional dependencies for `pyuvsim` which enable some features,
-such as `line_profiler` to use the built-in profiling, and `h5py` to write to HDF5
-file format. If you would like these tools as well as the full simulator, install
+such as `line_profiler` to use the built-in profiling.
+If you would like these tools as well as the full simulator, install
 `pyuvsim` with `pip install pyuvsim[all]`
 
 If you wish to manage dependencies manually read on.
@@ -62,13 +59,13 @@ Required:
 * scipy>1.0.1
 * pyyaml>=5.1
 * pyuvdata>=1.3.7
+* pyradiosky
 * setuptools_scm
 
 Optional:
 
 * mpi4py>=3.0.0
 * psutil
-* h5py
 * line_profiler
 
 ### Developer Installation
@@ -86,9 +83,8 @@ Then do a developer install of pyuvsim using `pip install -e .` (or
 requirements).
 
 If you do not use conda, after downloading the repository, install using
-`pip install -e .[dev]` and `pip install https://github.com/RadioAstronomySoftwareGroup/pyradiosky`
-to install all the extra dependencies required for testing/development as well
-as the standard ones.
+`pip install -e .[dev]` to install all the extra dependencies required for
+testing/development as well as the standard ones.
 
 Finally, install the pre-commit hook using `pre-commit install` to help prevent
 committing code that does not meet our style guidelines.
