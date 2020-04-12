@@ -73,13 +73,16 @@ class Antenna(object):
         if freq_interp_kind is not None:
             array.beam_list[self.beam_id].freq_interp_kind = freq_interp_kind
 
-        array.beam_list[self.beam_id].interpolation_function = interpolation_function
+        if interpolation_function is not None:
+            array.beam_list[self.beam_id].interpolation_function = interpolation_function
 
+        spline_opts = array.beam_list.spline_interp_opts
         interp_data, interp_basis_vector = \
             array.beam_list[self.beam_id].interp(az_array=source_az,
                                                  za_array=source_za,
                                                  freq_array=freq,
-                                                 reuse_spline=reuse_spline)
+                                                 reuse_spline=reuse_spline,
+                                                 spline_opts=spline_opts)
         Ncomponents = source_za.shape[-1]
 
         # interp_data has shape:

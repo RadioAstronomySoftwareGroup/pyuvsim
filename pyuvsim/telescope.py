@@ -105,7 +105,7 @@ class BeamList(object):
 
         self.uvb_params = {'freq_interp_kind': 'cubic',
                            'interpolation_function': 'az_za_simple'}
-
+        self.spline_interp_opts = None
         self._str_beam_list = []
         self._obj_beam_list = []
         if beam_list is not None:
