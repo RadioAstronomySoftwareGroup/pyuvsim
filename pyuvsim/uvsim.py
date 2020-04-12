@@ -303,7 +303,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     telescope = Telescope(input_uv.telescope_name,
                           EarthLocation.from_geocentric(*tloc, unit='m'),
                           beam_list)
-
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
     for src_i in src_iter:
@@ -408,7 +407,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     )
 
     # Construct beam objects from strings
-    beam_list.set_obj_mode()
+    beam_list.set_obj_mode(use_shared_mem=True)
 
     # Estimating required memory to decide how to split source array.
 
