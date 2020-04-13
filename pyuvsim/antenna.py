@@ -6,6 +6,7 @@ import astropy.units as units
 import numpy as np
 
 from . import utils as simutils
+from .telescope import BeamList
 
 
 class Antenna(object):
@@ -76,7 +77,9 @@ class Antenna(object):
         if interpolation_function is not None:
             array.beam_list[self.beam_id].interpolation_function = interpolation_function
 
-        spline_opts = array.beam_list.spline_interp_opts
+        spline_opts = None
+        if isinstance(array.beam_list, BeamList):
+            spline_opts = array.beam_list.spline_interp_opts
         interp_data, interp_basis_vector = \
             array.beam_list[self.beam_id].interp(az_array=source_az,
                                                  za_array=source_za,

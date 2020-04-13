@@ -104,7 +104,7 @@ class AnalyticBeam(object):
         pol_strings = ['XX', 'XY', 'YX', 'YY']
         self.polarization_array = np.array([uvutils.polstr2num(ps.upper()) for ps in pol_strings])
 
-    def interp(self, az_array, za_array, freq_array, reuse_spline=None):
+    def interp(self, az_array, za_array, freq_array, reuse_spline=None, spline_opts=None):
         """
         Evaluate the primary beam at given az, za locations (in radians).
 

@@ -264,6 +264,7 @@ class BeamList(object):
                 mpi.start_mpi()
             if mpi.rank == 0:
                 uvb.read_beamfits(path)
+                uvb.peak_normalize()
             for key, attr in uvb.__dict__.items():
                 if not isinstance(attr, parameter.UVParameter):
                     continue
