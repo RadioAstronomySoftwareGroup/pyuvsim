@@ -80,12 +80,20 @@ class Antenna(object):
         spline_opts = None
         if isinstance(array.beam_list, BeamList):
             spline_opts = array.beam_list.spline_interp_opts
-        interp_data, interp_basis_vector = \
-            array.beam_list[self.beam_id].interp(az_array=source_az,
-                                                 za_array=source_za,
-                                                 freq_array=freq,
-                                                 reuse_spline=reuse_spline,
-                                                 spline_opts=spline_opts)
+
+        interp_kwargs = {'az_array' : source_az, 'za_array' : source_za,
+                         'freq_array' : freq, 'reuse_spline' : reuse_spline,
+                         'spline_opts' : spline_opts}
+
+        # For backwards compatibility.
+        try:
+            interp_data, interp_basis_vector = \
+                array.beam_list[self.beam_id].interp(**interp_kwargs)
+        except TypeError:
+            interp_kwargs.pop('spline_opts')
+            interp_data, interp_basis_vector = \
+                array.beam_list[self.beam_id].interp(**interp_kwargs)
+
         Ncomponents = source_za.shape[-1]
 
         # interp_data has shape:
