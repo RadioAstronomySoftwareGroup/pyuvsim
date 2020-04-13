@@ -7,10 +7,7 @@ import warnings
 from pyuvdata import UVBeam, parameter
 
 from .analyticbeam import AnalyticBeam
-try:
-    from . import mpi
-except ImportError:
-    mpi = None
+from . import mpi
 
 
 class Telescope(object):
@@ -259,9 +256,7 @@ class BeamList(object):
 
         path = beam_model  # beam_model = path to beamfits
         uvb = UVBeam()
-        if use_shared_mem and (mpi is not None):
-            if mpi.world_comm is None:
-                mpi.start_mpi()
+        if use_shared_mem and (mpi.world_comm is not None):
             if mpi.rank == 0:
                 uvb.read_beamfits(path)
                 uvb.peak_normalize()
