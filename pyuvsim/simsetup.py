@@ -341,7 +341,32 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         if catalog.endswith("txt"):
             catalog = pyradiosky.read_text_catalog(catalog, return_table=True)
         elif catalog.endswith('vot'):
-            catalog = pyradiosky.read_votable_catalog(catalog, return_table=True)
+            if 'gleam' in catalog:
+                catalog = pyradiosky.skymodel.read_gleam_catalog(catalog, return_table=True)
+            else:
+                vo_params = {}
+                if "table_name" not in source_params:
+                    raise ValueError(f"No VO table name specified for {catalog}.")
+                vo_params["table_name"] = source_params["table_name"]
+                if "id_column" not in source_params:
+                    raise ValueError(f"No ID column name specified for {catalog}.")
+                vo_params["id_column"] = source_params["id_column"]
+                if "flux_columns" not in source_params:
+                    raise ValueError(f"No Flux column names specified for {catalog}.")
+                vo_params["flux_columns"] = source_params["flux_columns"]
+                if "ra_column" not in source_params:
+                    warnings.warn(f"No RA column name specified for {catalog}, using default.")
+                else:
+                    vo_params["ra_column"] = source_params["ra_column"]
+                if "dec_column" not in source_params:
+                    warnings.warn(f"No Dec column name specified for {catalog}, using default.")
+                else:
+                    vo_params["dec_column"] = source_params["dec_column"]
+
+                vo_params["reference_frequency"] = None
+                catalog = pyradiosky.read_votable_catalog(
+                    catalog, **vo_params, return_table=True
+                )
         elif catalog.endswith('hdf5'):
             hpmap, inds, freqs = pyradiosky.read_healpix_hdf5(catalog)
             sky = pyradiosky.healpix_to_sky(hpmap, inds, freqs)

@@ -134,6 +134,89 @@ def test_catalog_from_params():
     catalog_str = pyradiosky.array_to_skymodel(catalog_str)
     assert np.all(catalog_str == catalog_uv)
 
+
+def test_vot_catalog():
+    vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
+    vot_catalog = pyradiosky.array_to_skymodel(
+        pyuvsim.simsetup.initialize_catalog_from_params(vot_param_filename)[0]
+    )
+
+    txt_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
+    txt_catalog = pyradiosky.array_to_skymodel(
+        pyuvsim.simsetup.initialize_catalog_from_params(txt_param_filename)[0]
+    )
+
+    assert vot_catalog == txt_catalog
+
+
+@pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
+def test_gleam_catalog():
+    gleam_param_filename = os.path.join(
+        SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml'
+    )
+    gleam_catalog = pyradiosky.array_to_skymodel(
+        pyuvsim.simsetup.initialize_catalog_from_params(gleam_param_filename)[0]
+    )
+
+    # flux cuts applied
+    assert gleam_catalog.Ncomponents == 23
+
+    # no cuts
+    with open(gleam_param_filename, 'r') as pfile:
+        param_dict = yaml.safe_load(pfile)
+    param_dict['config_path'] = os.path.dirname(gleam_param_filename)
+    param_dict["sources"].pop("min_flux")
+    param_dict["sources"].pop("max_flux")
+
+    gleam_catalog = pyradiosky.array_to_skymodel(
+        pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+    )
+    assert gleam_catalog.Ncomponents == 50
+
+
+@pytest.mark.parametrize(
+    ("key_pop", "message"),
+    [("ra_column", "No RA column name specified"),
+     ("dec_column", "No Dec column name specified")])
+def test_vot_catalog_warns(key_pop, message):
+    vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
+
+    vot_catalog = pyradiosky.array_to_skymodel(
+        pyuvsim.simsetup.initialize_catalog_from_params(vot_param_filename)[0]
+    )
+
+    with open(vot_param_filename, 'r') as pfile:
+        param_dict = yaml.safe_load(pfile)
+    param_dict['config_path'] = os.path.dirname(vot_param_filename)
+    param_dict["sources"].pop(key_pop)
+
+    with pytest.warns(UserWarning, match=message):
+        vot_catalog2 = pyradiosky.array_to_skymodel(
+            pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+        )
+
+    assert vot_catalog == vot_catalog2
+
+
+@pytest.mark.parametrize(
+    ("key_pop", "message"),
+    [("table_name", "No VO table name specified"),
+     ("id_column", "No ID column name specified"),
+     ("flux_columns", "No Flux column names specified")])
+def test_vot_catalog_error(key_pop, message):
+    vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
+
+    with open(vot_param_filename, 'r') as pfile:
+        param_dict = yaml.safe_load(pfile)
+    param_dict['config_path'] = os.path.dirname(vot_param_filename)
+    param_dict["sources"].pop(key_pop)
+
+    with pytest.raises(ValueError, match=message):
+        pyradiosky.array_to_skymodel(
+            pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+        )
+
+
 # parametrize will loop over all the give values
 @pytest.mark.parametrize("config_num", [0, 2])
 def test_param_reader(config_num):
