@@ -171,7 +171,7 @@ class UVEngine(object):
         # a source.
 
         if self.update_local_coherency:
-            self.local_coherency = sources.coherency_calc(self.task.telescope.location)
+            self.local_coherency = sources.coherency_calc()
 
         coherency = self.local_coherency[:, :, self.task.freq_i, :]
 
@@ -184,7 +184,6 @@ class UVEngine(object):
     def make_visibility(self):
         """ Visibility contribution from a set of source components """
         assert (isinstance(self.task.freq, Quantity))
-
         srcs = self.task.sources
         time = self.task.time
         location = self.task.telescope.location
@@ -413,7 +412,15 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     # Estimating required memory to decide how to split source array.
 
     Nsrcs_total = len(catalog)
-    Nsrcfreqs = np.atleast_1d(catalog['frequency'][0]).size
+    fieldnames = catalog.dtype.names
+    if "frequency" in fieldnames or "subband_frequency" in fieldnames:
+        if "frequency" in fieldnames:
+            src_freq_array = np.atleast_1d(catalog["frequency"])
+        else:
+            src_freq_array = np.atleast_1d(catalog["subband_frequency"])
+        Nsrcfreqs = src_freq_array[0].size
+    else:
+        Nsrcfreqs = 1
     mem_avail = (simutils.get_avail_memory()
                  - mpi.get_max_node_rss(return_per_node=True) * 2**30)
 

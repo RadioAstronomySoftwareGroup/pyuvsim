@@ -63,6 +63,7 @@ def test_run_uvsim():
     os.remove(beamfile)
 
 
+@pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
 def test_run_paramfile_uvsim():
     # Test vot and txt catalogs for parameter simulation
 
@@ -102,6 +103,7 @@ def test_run_paramfile_uvsim():
     assert uv_new_vot == uv_ref
 
 
+@pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
 def test_run_paramdict_uvsim():
     # Running a simulation from parameter dictionary.
 

@@ -8,13 +8,14 @@ import os
 import shutil
 import warnings
 
-import astropy.units as units
 import numpy as np
 import yaml
 
-from pyuvdata import utils as uvutils, UVData
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy.time import Time
+import astropy.units as units
+from pyuvdata import utils as uvutils, UVData
+import pyradiosky
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from .analyticbeam import AnalyticBeam
@@ -24,7 +25,6 @@ try:
 except ImportError:
     def get_rank():
         return 0
-import pyradiosky
 from .utils import check_file_exists_and_increment
 
 
@@ -135,7 +135,6 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     if array_location is None:
         array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                        height=1073.)
-    freq_array = np.array([150e6]) * units.Hz
 
     if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text',
                            'random']:
@@ -247,7 +246,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     names = np.array(['src' + str(si) for si in range(Nsrcs)])
     stokes = np.zeros((4, 1, Nsrcs))
     stokes[0, :] = fluxes
-    catalog = pyradiosky.SkyModel(names, ra, dec, stokes, freq_array, 'flat')
+    catalog = pyradiosky.SkyModel(names, ra, dec, stokes, 'flat')
     if return_table:
         return pyradiosky.skymodel_to_array(catalog), mock_keywords
     if get_rank() == 0 and save:

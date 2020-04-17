@@ -111,7 +111,7 @@ def test_visibility_source_below_horizon_radec():
                             obstime=time, frame='icrs', location=array_location)
 
     source = pyradiosky.SkyModel('src_down', source_coord.ra, source_coord.dec,
-                                 np.array([1.0, 0, 0, 0]).reshape(4, 1), [1e8], 'flat')
+                                 np.array([1.0, 0, 0, 0]).reshape(4, 1), 'flat')
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)

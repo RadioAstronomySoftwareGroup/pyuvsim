@@ -51,7 +51,7 @@ def test_mock_catalog_zenith_source():
     ra = icrs_coord.ra
     dec = icrs_coord.dec
 
-    test_source = pyradiosky.SkyModel('src0', ra, dec, [1, 0, 0, 0], [1e8], 'flat')
+    test_source = pyradiosky.SkyModel('src0', ra, dec, [1, 0, 0, 0], 'flat')
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
@@ -75,7 +75,7 @@ def test_mock_catalog_off_zenith_source():
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    test_source = pyradiosky.SkyModel('src0', ra, dec, [1.0, 0, 0, 0], [1e8], 'flat')
+    test_source = pyradiosky.SkyModel('src0', ra, dec, [1.0, 0, 0, 0], 'flat')
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith',
                                                      alt=src_alt.deg)
@@ -86,26 +86,29 @@ def test_mock_catalog_off_zenith_source():
 def test_catalog_from_params():
     # Pass in parameter dictionary as dict
     hera_uv = UVData()
-    with pytest.warns(UserWarning) as telwarn:
+    with pytest.warns(
+        UserWarning,
+        match='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.'
+    ):
         hera_uv.read_uvfits(triangle_uvfits_file)
-    assert str(telwarn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml '
-                                                 'is not in known_telescopes.')
 
     source_dict = {}
     with pytest.raises(KeyError, match='No catalog defined.'):
         pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
 
-    arrloc = '{:.5f},{:.5f},{:.5f}'.format(*hera_uv.telescope_location_lat_lon_alt_degrees)
+    arrloc = '{:.7f},{:.7f},{:.7f}'.format(*hera_uv.telescope_location_lat_lon_alt_degrees)
     source_dict = {
         'catalog': 'mock',
         'mock_arrangement': 'zenith',
         'Nsrcs': 5,
         'time': hera_uv.time_array[0]
     }
-    with pytest.warns(UserWarning) as warn:
+    with pytest.warns(
+        UserWarning,
+        match="No array_location specified. Defaulting to the HERA site."
+    ):
         pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
-    assert str(warn.pop().message).startswith("No array_location specified. "
-                                              "Defaulting to the HERA site.")
+
     catalog_uv, srclistname = pyuvsim.simsetup.initialize_catalog_from_params(
         {'sources': source_dict}, hera_uv
     )
@@ -120,12 +123,13 @@ def test_catalog_from_params():
     with pytest.raises(ValueError, match="input_uv must be supplied if using mock catalog"):
         pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
 
-    with pytest.warns(UserWarning) as warn:
+    with pytest.warns(
+        UserWarning,
+        match="Warning: No julian date given for mock catalog. Defaulting to first time step."
+    ):
         catalog_str, srclistname2 = pyuvsim.simsetup.initialize_catalog_from_params(
             {'sources': source_dict}, hera_uv
         )
-    assert str(warn.pop().message).startswith("Warning: No julian date given for mock catalog. "
-                                              "Defaulting to first time step.")
 
     catalog_str = pyradiosky.array_to_skymodel(catalog_str)
     assert np.all(catalog_str == catalog_uv)
