@@ -154,9 +154,10 @@ def test_gleam_catalog():
     gleam_param_filename = os.path.join(
         SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml'
     )
-    gleam_catalog = pyradiosky.array_to_skymodel(
-        pyuvsim.simsetup.initialize_catalog_from_params(gleam_param_filename)[0]
-    )
+    with pytest.warns(UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."):
+        gleam_catalog = pyradiosky.array_to_skymodel(
+            pyuvsim.simsetup.initialize_catalog_from_params(gleam_param_filename)[0]
+        )
 
     # flux cuts applied
     assert gleam_catalog.Ncomponents == 23
@@ -171,6 +172,27 @@ def test_gleam_catalog():
     gleam_catalog = pyradiosky.array_to_skymodel(
         pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
     )
+    assert gleam_catalog.Ncomponents == 50
+
+
+@pytest.mark.parametrize(
+    "spectral_type",
+    ["flat", "subband", "spectral_index"])
+def test_gleam_catalog_spectral_type(spectral_type):
+    gleam_param_filename = os.path.join(
+        SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml'
+    )
+    with open(gleam_param_filename, 'r') as pfile:
+        param_dict = yaml.safe_load(pfile)
+    param_dict['config_path'] = os.path.dirname(gleam_param_filename)
+    param_dict["sources"].pop("min_flux")
+    param_dict["sources"].pop("max_flux")
+    param_dict["sources"]["spectral_type"] = spectral_type
+
+    gleam_catalog = pyradiosky.array_to_skymodel(
+        pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+    )
+    assert gleam_catalog.spectral_type == spectral_type
     assert gleam_catalog.Ncomponents == 50
 
 

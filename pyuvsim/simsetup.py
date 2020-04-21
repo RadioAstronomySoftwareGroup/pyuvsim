@@ -342,7 +342,14 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
             catalog = pyradiosky.read_text_catalog(catalog, return_table=True)
         elif catalog.endswith('vot'):
             if 'gleam' in catalog:
-                catalog = pyradiosky.skymodel.read_gleam_catalog(catalog, return_table=True)
+                if "spectral_type" in source_params:
+                    spectral_type = source_params["spectral_type"]
+                else:
+                    warnings.warn("No spectral_type specified for GLEAM, using 'flat'.")
+                    spectral_type = "flat"
+                catalog = pyradiosky.skymodel.read_gleam_catalog(
+                    catalog, spectral_type=spectral_type, return_table=True
+                )
             else:
                 vo_params = {}
                 if "table_name" not in source_params:

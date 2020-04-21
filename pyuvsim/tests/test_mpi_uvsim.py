@@ -114,6 +114,20 @@ def test_run_paramdict_uvsim():
     pyuvsim.run_uvsim(params, return_uv=True)
 
 
+@pytest.mark.parametrize(
+    "spectral_type",
+    ["flat", "subband", "spectral_index"])
+def test_run_gleam_uvsim(spectral_type):
+    params = pyuvsim.simsetup._config_str_to_dict(
+        os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml')
+    )
+    params["sources"]["spectral_type"] = spectral_type
+    params["sources"].pop("min_flux")
+    params["sources"].pop("max_flux")
+
+    pyuvsim.run_uvsim(params, return_uv=True)
+
+
 def test_mpi_funcs():
     mpi.start_mpi()
     assert mpi.get_rank() == 0
