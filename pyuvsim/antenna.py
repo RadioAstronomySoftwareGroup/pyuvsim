@@ -82,17 +82,18 @@ class Antenna(object):
             spline_opts = array.beam_list.spline_interp_opts
 
         interp_kwargs = {'az_array' : source_az, 'za_array' : source_za,
-                         'freq_array' : freq, 'reuse_spline' : reuse_spline,
-                         'spline_opts' : spline_opts}
+                         'freq_array' : freq, 'reuse_spline' : reuse_spline}
 
-        # For backwards compatibility.
+        if spline_opts is not None:
+            interp_kwargs['spline_opts'] = spline_opts
+
         try:
             interp_data, interp_basis_vector = \
                 array.beam_list[self.beam_id].interp(**interp_kwargs)
-        except TypeError:
-            interp_kwargs.pop('spline_opts')
-            interp_data, interp_basis_vector = \
-                array.beam_list[self.beam_id].interp(**interp_kwargs)
+        except TypeError as err:   # pragma: nocover
+            raise TypeError(
+                "pyuvdata version >=2.0.1 required to use spline_interp_opts"
+            ) from err
 
         Ncomponents = source_za.shape[-1]
 
