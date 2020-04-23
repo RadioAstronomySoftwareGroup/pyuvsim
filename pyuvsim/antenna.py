@@ -38,8 +38,8 @@ class Antenna(object):
             Positions to evaluate in alt/az, where
             source_alt_az[0] gives list of alts
             soruce_alt_az[1] gives list of corresponding az
-        frequency : float
-            Frequency in Hz
+        frequency : float or Quantity
+            Frequency. Assumed to be Hz if float.
         reuse_spline : bool
             Option to keep and reuse interpolation splines in UVBeam.
         interpolation_function: str
@@ -66,7 +66,10 @@ class Antenna(object):
             source_alt_az[0], source_alt_az[1]
         )
 
-        freq = np.array([frequency.to('Hz').value])
+        if isinstance(frequency, units.Quantity):
+            freq = np.array([frequency.to('Hz').value])
+        else:
+            freq = np.array([frequency])
 
         if array.beam_list[self.beam_id].data_normalization != 'peak':
             array.beam_list[self.beam_id].peak_normalize()
