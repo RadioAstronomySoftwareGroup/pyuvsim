@@ -20,6 +20,7 @@ def test_get_beam_jones():
     with open(telescope_config_name, 'r') as yf:
         telconfig = yaml.safe_load(yf)
     telconfig['spline_interp_opts'] = {'kx' : 1, 'ky' : 1}
+
     beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(1), telconfig)
     beam_list.set_obj_mode()
     beam_list.append(beam0)
@@ -43,8 +44,9 @@ def test_get_beam_jones():
 
     vers = pyuvdata.__version__.split('.')
     version = (float(vers[0]), float(vers[1]), float(vers[2]))
-    if version[0] >= 2 and version[2] >= 1:
-        assert True
-    else:
+    if version[0] < 2 or (version[0] >= 2 and version[2] < 1):
         with pytest.raises(TypeError, match='pyuvdata version >=2.0.1'):
             antenna.get_beam_jones(array, altaz, 150e6)
+    else:
+        array.beam_list.spline_interp_opts = None
+        antenna.get_beam_jones(array, altaz, 150e6)
