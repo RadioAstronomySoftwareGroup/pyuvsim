@@ -1,6 +1,7 @@
 
 import os
 import copy
+from astropy.coordinates import EarthLocation
 
 from pyuvdata import UVBeam
 import pytest
@@ -149,3 +150,27 @@ def test_no_overwrite(beam_objs):
     beamlist.append(uvb)
     assert uvb.freq_interp_kind == 'quintic'
     assert beamlist.uvb_params['freq_interp_kind'] == 'cubic'
+
+
+def test_beamlist_errors(beam_objs):
+    newbeams = copy.deepcopy(beam_objs)
+    beamlist = pyuvsim.BeamList(newbeams)
+
+    # Try to make a BeamList with a mixture of strings and objects.
+    newlist = copy.deepcopy(beamlist._obj_beam_list)
+    newlist[2] = beamlist._obj_to_str(newlist[2])
+    with pytest.raises(ValueError, match='Invalid beam list:'):
+        pyuvsim.BeamList(newlist)
+
+    # Try to append an invalid beam path while in object mode.
+    beam_path = 'invalid_file.uvbeam'
+    with pytest.raises(ValueError, match='Invalid file path'):
+        beamlist.append(beam_path)
+
+    # Compare Telescopes with beamlists of different lengths
+    del newbeams[0]
+    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
+                                   height=1073.)
+    tel0 = pyuvsim.Telescope('tel0', array_location, newbeams)
+    tel1 = pyuvsim.Telescope('tel1', array_location, beam_objs)
+    assert tel0 != tel1

@@ -214,7 +214,10 @@ class BeamList(object):
 
             self._str_beam_list[ind] = self._obj_to_str(value)
         else:
-            value = self._str_to_obj(value)
+            try:
+                value = self._str_to_obj(value)
+            except FileNotFoundError as err:
+                raise ValueError(f"Invalid file path: {value}") from err
             self._obj_beam_list[ind] = value
             self._scrape_uvb_params(self._obj_beam_list, strict=False)
 
