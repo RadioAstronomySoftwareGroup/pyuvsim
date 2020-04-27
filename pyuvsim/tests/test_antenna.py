@@ -3,6 +3,8 @@ import numpy as np
 import os
 import yaml
 from astropy.coordinates import EarthLocation
+import pytest
+import pyuvdata
 
 import pyuvsim
 import pyuvsim.tests as simtest
@@ -39,4 +41,10 @@ def test_get_beam_jones():
     altaz[:, 0] = alts.flatten()
     altaz[:, 1] = azs.flatten()
 
-    antenna.get_beam_jones(array, altaz, 150e6)
+    vers = pyuvdata.__version__.split('.')
+    version = (float(vers[0]), float(vers[1]), float(vers[2]))
+    if version[0] >= 2 and version[2] >= 1:
+        assert True
+    else:
+        with pytest.raises(TypeError, match='pyuvdata version >=2.0.1'):
+            antenna.get_beam_jones(array, altaz, 150e6)
