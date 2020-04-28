@@ -7,6 +7,11 @@ freq:
   channel_width: 1000000.0
 sources:
   catalog: '../single_source.vot'
+  table_name: single
+  id_column: source_id
+  ra_column: RAJ2000
+  dec_column: DEJ2000
+  flux_columns: Si
 telescope:
   array_layout: 'triangle_bl_layout.csv'
   telescope_config_name: '28m_triangle_10time_10chan.yaml'

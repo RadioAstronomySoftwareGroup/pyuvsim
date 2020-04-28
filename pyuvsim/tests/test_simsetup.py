@@ -51,7 +51,7 @@ def test_mock_catalog_zenith_source():
     ra = icrs_coord.ra
     dec = icrs_coord.dec
 
-    test_source = pyradiosky.SkyModel('src0', ra, dec, [1, 0, 0, 0], [1e8], 'flat')
+    test_source = pyradiosky.SkyModel('src0', ra, dec, [1, 0, 0, 0], 'flat')
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
@@ -75,7 +75,7 @@ def test_mock_catalog_off_zenith_source():
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    test_source = pyradiosky.SkyModel('src0', ra, dec, [1.0, 0, 0, 0], [1e8], 'flat')
+    test_source = pyradiosky.SkyModel('src0', ra, dec, [1.0, 0, 0, 0], 'flat')
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith',
                                                      alt=src_alt.deg)
@@ -86,26 +86,29 @@ def test_mock_catalog_off_zenith_source():
 def test_catalog_from_params():
     # Pass in parameter dictionary as dict
     hera_uv = UVData()
-    with pytest.warns(UserWarning) as telwarn:
+    with pytest.warns(
+        UserWarning,
+        match='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.'
+    ):
         hera_uv.read_uvfits(triangle_uvfits_file)
-    assert str(telwarn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml '
-                                                 'is not in known_telescopes.')
 
     source_dict = {}
     with pytest.raises(KeyError, match='No catalog defined.'):
         pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
 
-    arrloc = '{:.5f},{:.5f},{:.5f}'.format(*hera_uv.telescope_location_lat_lon_alt_degrees)
+    arrloc = '{:.7f},{:.7f},{:.7f}'.format(*hera_uv.telescope_location_lat_lon_alt_degrees)
     source_dict = {
         'catalog': 'mock',
         'mock_arrangement': 'zenith',
         'Nsrcs': 5,
         'time': hera_uv.time_array[0]
     }
-    with pytest.warns(UserWarning) as warn:
+    with pytest.warns(
+        UserWarning,
+        match="No array_location specified. Defaulting to the HERA site."
+    ):
         pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
-    assert str(warn.pop().message).startswith("No array_location specified. "
-                                              "Defaulting to the HERA site.")
+
     catalog_uv, srclistname = pyuvsim.simsetup.initialize_catalog_from_params(
         {'sources': source_dict}, hera_uv
     )
@@ -120,15 +123,121 @@ def test_catalog_from_params():
     with pytest.raises(ValueError, match="input_uv must be supplied if using mock catalog"):
         pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
 
-    with pytest.warns(UserWarning) as warn:
+    with pytest.warns(
+        UserWarning,
+        match="Warning: No julian date given for mock catalog. Defaulting to first time step."
+    ):
         catalog_str, srclistname2 = pyuvsim.simsetup.initialize_catalog_from_params(
             {'sources': source_dict}, hera_uv
         )
-    assert str(warn.pop().message).startswith("Warning: No julian date given for mock catalog. "
-                                              "Defaulting to first time step.")
 
     catalog_str = pyradiosky.array_to_skymodel(catalog_str)
     assert np.all(catalog_str == catalog_uv)
+
+
+def test_vot_catalog():
+    vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
+    vot_catalog = pyradiosky.array_to_skymodel(
+        pyuvsim.simsetup.initialize_catalog_from_params(vot_param_filename)[0]
+    )
+
+    txt_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
+    txt_catalog = pyradiosky.array_to_skymodel(
+        pyuvsim.simsetup.initialize_catalog_from_params(txt_param_filename)[0]
+    )
+
+    assert vot_catalog == txt_catalog
+
+
+@pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
+def test_gleam_catalog():
+    gleam_param_filename = os.path.join(
+        SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml'
+    )
+    with pytest.warns(UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."):
+        gleam_catalog = pyradiosky.array_to_skymodel(
+            pyuvsim.simsetup.initialize_catalog_from_params(gleam_param_filename)[0]
+        )
+
+    # flux cuts applied
+    assert gleam_catalog.Ncomponents == 23
+
+    # no cuts
+    with open(gleam_param_filename, 'r') as pfile:
+        param_dict = yaml.safe_load(pfile)
+    param_dict['config_path'] = os.path.dirname(gleam_param_filename)
+    param_dict["sources"].pop("min_flux")
+    param_dict["sources"].pop("max_flux")
+
+    gleam_catalog = pyradiosky.array_to_skymodel(
+        pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+    )
+    assert gleam_catalog.Ncomponents == 50
+
+
+@pytest.mark.parametrize(
+    "spectral_type",
+    ["flat", "subband", "spectral_index"])
+def test_gleam_catalog_spectral_type(spectral_type):
+    gleam_param_filename = os.path.join(
+        SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml'
+    )
+    with open(gleam_param_filename, 'r') as pfile:
+        param_dict = yaml.safe_load(pfile)
+    param_dict['config_path'] = os.path.dirname(gleam_param_filename)
+    param_dict["sources"].pop("min_flux")
+    param_dict["sources"].pop("max_flux")
+    param_dict["sources"]["spectral_type"] = spectral_type
+
+    gleam_catalog = pyradiosky.array_to_skymodel(
+        pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+    )
+    assert gleam_catalog.spectral_type == spectral_type
+    assert gleam_catalog.Ncomponents == 50
+
+
+@pytest.mark.parametrize(
+    ("key_pop", "message"),
+    [("ra_column", "No RA column name specified"),
+     ("dec_column", "No Dec column name specified")])
+def test_vot_catalog_warns(key_pop, message):
+    vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
+
+    vot_catalog = pyradiosky.array_to_skymodel(
+        pyuvsim.simsetup.initialize_catalog_from_params(vot_param_filename)[0]
+    )
+
+    with open(vot_param_filename, 'r') as pfile:
+        param_dict = yaml.safe_load(pfile)
+    param_dict['config_path'] = os.path.dirname(vot_param_filename)
+    param_dict["sources"].pop(key_pop)
+
+    with pytest.warns(UserWarning, match=message):
+        vot_catalog2 = pyradiosky.array_to_skymodel(
+            pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+        )
+
+    assert vot_catalog == vot_catalog2
+
+
+@pytest.mark.parametrize(
+    ("key_pop", "message"),
+    [("table_name", "No VO table name specified"),
+     ("id_column", "No ID column name specified"),
+     ("flux_columns", "No Flux column names specified")])
+def test_vot_catalog_error(key_pop, message):
+    vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
+
+    with open(vot_param_filename, 'r') as pfile:
+        param_dict = yaml.safe_load(pfile)
+    param_dict['config_path'] = os.path.dirname(vot_param_filename)
+    param_dict["sources"].pop(key_pop)
+
+    with pytest.raises(ValueError, match=message):
+        pyradiosky.array_to_skymodel(
+            pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+        )
+
 
 # parametrize will loop over all the give values
 @pytest.mark.parametrize("config_num", [0, 2])

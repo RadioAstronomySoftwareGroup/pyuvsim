@@ -63,6 +63,7 @@ def test_run_uvsim():
     os.remove(beamfile)
 
 
+@pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
 def test_run_paramfile_uvsim():
     # Test vot and txt catalogs for parameter simulation
 
@@ -102,12 +103,27 @@ def test_run_paramfile_uvsim():
     assert uv_new_vot == uv_ref
 
 
+@pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
 def test_run_paramdict_uvsim():
     # Running a simulation from parameter dictionary.
 
     params = pyuvsim.simsetup._config_str_to_dict(
         os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
     )
+
+    pyuvsim.run_uvsim(params, return_uv=True)
+
+
+@pytest.mark.parametrize(
+    "spectral_type",
+    ["flat", "subband", "spectral_index"])
+def test_run_gleam_uvsim(spectral_type):
+    params = pyuvsim.simsetup._config_str_to_dict(
+        os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml')
+    )
+    params["sources"]["spectral_type"] = spectral_type
+    params["sources"].pop("min_flux")
+    params["sources"].pop("max_flux")
 
     pyuvsim.run_uvsim(params, return_uv=True)
 

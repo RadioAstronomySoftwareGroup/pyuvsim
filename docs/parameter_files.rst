@@ -34,6 +34,12 @@ Passed into ``run_param_pyuvsim.py``
       bandwidth: 800000.0
     sources:
       catalog: '../pyuvsim/data/gleam_50srcs.vot'   # Path to catalog file (txt, vot, hdf5, etc.) readable with pyradiosky.
+      spectral_type: flat # If using the GLEAM catalog, specify the spectral type (flat, subband or spectral_index). Defaults to flat.
+      table_name: single  # Required for non-GLEAM VO table files
+      id_column: name  # Required for non-GLEAM VO table files
+      flux_columns: Si  # Required for non-GLEAM VO table files
+      ra_column: RAJ2000  # Recommended for non-GLEAM VO table files
+      dec_column: DEJ2000  # Recommended for non-GLEAM VO table files
       catalog: 'mock'       # Alternatively, use 'mock' to use a builtin catalog).
       mock_arrangement: 'zenith'    # If using the mock catalog, specify which one. Additional mock keywords are specified here.
     telescope:
@@ -177,7 +183,7 @@ Sources
     An example catalog file:
 
     .. literalinclude:: ../pyuvsim/data/mock_catalog_heratext_2458098.27471265.txt
-        :end-before: 3
+        :lines: 1-5
 
     The columns are:
 
@@ -186,6 +192,17 @@ Sources
         * ``DEC_J2000`` : Declination of source at J2000 epoch, in decimal degrees.
         * ``FLUX``: Source stokes I brightness in Janskies.  (Currently only point sources are supported).
         * ``Frequency``: A reference frequency for the given flux. This will be used for spectral modeling.
+
+    If the catalog is a GLEAM VO table file, optionally specify the ``spectral_type``
+    as one of: ``flat``, ``subband`` or ``spectral_index``. If not specified it defaults to ``flat``.
+
+    If the catalog is a different VO table file, several other keywords are required or recommended:
+      * ``table_name`` : The name of the table to use from the file (required).
+      * ``id_column`` : The name of the column to use for the source IDs (required).
+      * ``flux_columns`` : One or a list of columns to use for the source fluxes
+       (a list for fluxes at multiple frequencies) (required).
+      * ``ra_column`` : The name of the column to use for the source RAs (recommended, defaults to ``RAJ2000``).
+      * ``dec_column`` : The name of the column to use for the source Decs (recommended, defaults to ``DEJ2000``).
 
     Alternatively, you can specify a ``mock`` and provide the ``mock_arrangement`` keyword to specify which mock catalog to generate. Available options are shown in the ``create_mock_catalog`` docstring:
 

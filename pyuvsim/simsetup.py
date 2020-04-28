@@ -8,13 +8,14 @@ import os
 import shutil
 import warnings
 
-import astropy.units as units
 import numpy as np
 import yaml
 
-from pyuvdata import utils as uvutils, UVData
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from astropy.time import Time
+import astropy.units as units
+from pyuvdata import utils as uvutils, UVData
+import pyradiosky
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from .analyticbeam import AnalyticBeam
@@ -24,7 +25,6 @@ try:
 except ImportError:
     def get_rank():
         return 0
-import pyradiosky
 from .utils import check_file_exists_and_increment
 
 
@@ -135,7 +135,6 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     if array_location is None:
         array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                        height=1073.)
-    freq_array = np.array([150e6]) * units.Hz
 
     if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text',
                            'random']:
@@ -247,7 +246,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     names = np.array(['src' + str(si) for si in range(Nsrcs)])
     stokes = np.zeros((4, 1, Nsrcs))
     stokes[0, :] = fluxes
-    catalog = pyradiosky.SkyModel(names, ra, dec, stokes, freq_array, 'flat')
+    catalog = pyradiosky.SkyModel(names, ra, dec, stokes, 'flat')
     if return_table:
         return pyradiosky.skymodel_to_array(catalog), mock_keywords
     if get_rank() == 0 and save:
@@ -342,7 +341,39 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         if catalog.endswith("txt"):
             catalog = pyradiosky.read_text_catalog(catalog, return_table=True)
         elif catalog.endswith('vot'):
-            catalog = pyradiosky.read_votable_catalog(catalog, return_table=True)
+            if 'gleam' in catalog:
+                if "spectral_type" in source_params:
+                    spectral_type = source_params["spectral_type"]
+                else:
+                    warnings.warn("No spectral_type specified for GLEAM, using 'flat'.")
+                    spectral_type = "flat"
+                catalog = pyradiosky.skymodel.read_gleam_catalog(
+                    catalog, spectral_type=spectral_type, return_table=True
+                )
+            else:
+                vo_params = {}
+                if "table_name" not in source_params:
+                    raise ValueError(f"No VO table name specified for {catalog}.")
+                vo_params["table_name"] = source_params["table_name"]
+                if "id_column" not in source_params:
+                    raise ValueError(f"No ID column name specified for {catalog}.")
+                vo_params["id_column"] = source_params["id_column"]
+                if "flux_columns" not in source_params:
+                    raise ValueError(f"No Flux column names specified for {catalog}.")
+                vo_params["flux_columns"] = source_params["flux_columns"]
+                if "ra_column" not in source_params:
+                    warnings.warn(f"No RA column name specified for {catalog}, using default.")
+                else:
+                    vo_params["ra_column"] = source_params["ra_column"]
+                if "dec_column" not in source_params:
+                    warnings.warn(f"No Dec column name specified for {catalog}, using default.")
+                else:
+                    vo_params["dec_column"] = source_params["dec_column"]
+
+                vo_params["reference_frequency"] = None
+                catalog = pyradiosky.read_votable_catalog(
+                    catalog, **vo_params, return_table=True
+                )
         elif catalog.endswith('hdf5'):
             hpmap, inds, freqs = pyradiosky.read_healpix_hdf5(catalog)
             sky = pyradiosky.healpix_to_sky(hpmap, inds, freqs)
