@@ -8,5 +8,9 @@ beam_paths:
       sigma: 0.03
   3: airy
 diameter: 12
+spline_interp_opts:
+        kx: 4
+        ky: 4
+freq_interp_kind: 'cubic'
 telescope_location: (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
 telescope_name: BLLITE

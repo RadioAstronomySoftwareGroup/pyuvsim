@@ -4,9 +4,10 @@
 
 import numpy as np
 import warnings
-from pyuvdata import UVBeam
+from pyuvdata import UVBeam, parameter
 
 from .analyticbeam import AnalyticBeam
+from . import mpi
 
 
 class Telescope(object):
@@ -105,7 +106,7 @@ class BeamList(object):
 
         self.uvb_params = {'freq_interp_kind': 'cubic',
                            'interpolation_function': 'az_za_simple'}
-
+        self.spline_interp_opts = None
         self._str_beam_list = []
         self._obj_beam_list = []
         if beam_list is not None:
@@ -213,7 +214,10 @@ class BeamList(object):
 
             self._str_beam_list[ind] = self._obj_to_str(value)
         else:
-            value = self._str_to_obj(value)
+            try:
+                value = self._str_to_obj(value)
+            except FileNotFoundError as err:
+                raise ValueError(f"Invalid file path: {value}") from err
             self._obj_beam_list[ind] = value
             self._scrape_uvb_params(self._obj_beam_list, strict=False)
 
@@ -237,7 +241,7 @@ class BeamList(object):
                 self._obj_beam_list.pop()
             raise err
 
-    def _str_to_obj(self, beam_model):
+    def _str_to_obj(self, beam_model, use_shared_mem=False):
         # Convert beam strings to objects.
         if isinstance(beam_model, (AnalyticBeam, UVBeam)):
             return beam_model
@@ -255,8 +259,20 @@ class BeamList(object):
 
         path = beam_model  # beam_model = path to beamfits
         uvb = UVBeam()
-
-        uvb.read_beamfits(path)
+        if use_shared_mem and (mpi.world_comm is not None):
+            if mpi.rank == 0:
+                uvb.read_beamfits(path)
+                uvb.peak_normalize()
+            for key, attr in uvb.__dict__.items():
+                if not isinstance(attr, parameter.UVParameter):
+                    continue
+                if key == '_data_array':
+                    uvb.__dict__[key].value = mpi.shared_mem_bcast(attr.value, root=0)
+                else:
+                    uvb.__dict__[key].value = mpi.world_comm.bcast(attr.value, root=0)
+            mpi.world_comm.Barrier()
+        else:
+            uvb.read_beamfits(path)
         for key, val in self.uvb_params.items():
             setattr(uvb, key, val)
         uvb.extra_keywords['beam_path'] = path
@@ -318,7 +334,7 @@ class BeamList(object):
         self._obj_beam_list = []
         self.string_mode = True
 
-    def set_obj_mode(self):
+    def set_obj_mode(self, use_shared_mem=False):
         """
         Initialize AnalyticBeam and UVBeam objects from string representations.
 
@@ -331,7 +347,8 @@ class BeamList(object):
             Sets to False
         """
         if not self._str_beam_list == []:
-            self._obj_beam_list = [self._str_to_obj(bstr) for bstr in self._str_beam_list]
+            self._obj_beam_list = [self._str_to_obj(bstr, use_shared_mem=use_shared_mem)
+                                   for bstr in self._str_beam_list]
         self._set_params_on_uvbeams(self._obj_beam_list)
         self._str_beam_list = []
         self.string_mode = False

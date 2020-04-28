@@ -389,6 +389,8 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
 
 def _construct_beam_list(beam_ids, telconfig):
     beam_list = BeamList([])
+    if 'spline_interp_opts' in telconfig.keys():
+        beam_list.spline_interp_opts = telconfig['spline_interp_opts']
     for beamID in beam_ids:
         beam_model = telconfig['beam_paths'][beamID]
 

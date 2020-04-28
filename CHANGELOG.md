@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- Option to pass along interpolating spline order to UVBeam from teleconfig file.
 - Scripts for running / verifying reference simulations.
 - Benchmarking tools.
 

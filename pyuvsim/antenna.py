@@ -6,6 +6,7 @@ import astropy.units as units
 import numpy as np
 
 from . import utils as simutils
+from .telescope import BeamList
 
 
 class Antenna(object):
@@ -37,8 +38,8 @@ class Antenna(object):
             Positions to evaluate in alt/az, where
             source_alt_az[0] gives list of alts
             soruce_alt_az[1] gives list of corresponding az
-        frequency : float
-            Frequency in Hz
+        frequency : float or Quantity
+            Frequency. Assumed to be Hz if float.
         reuse_spline : bool
             Option to keep and reuse interpolation splines in UVBeam.
         interpolation_function: str
@@ -65,7 +66,10 @@ class Antenna(object):
             source_alt_az[0], source_alt_az[1]
         )
 
-        freq = np.array([frequency.to('Hz').value])
+        if isinstance(frequency, units.Quantity):
+            freq = np.array([frequency.to('Hz').value])
+        else:
+            freq = np.array([frequency])
 
         if array.beam_list[self.beam_id].data_normalization != 'peak':
             array.beam_list[self.beam_id].peak_normalize()
@@ -73,13 +77,27 @@ class Antenna(object):
         if freq_interp_kind is not None:
             array.beam_list[self.beam_id].freq_interp_kind = freq_interp_kind
 
-        array.beam_list[self.beam_id].interpolation_function = interpolation_function
+        if interpolation_function is not None:
+            array.beam_list[self.beam_id].interpolation_function = interpolation_function
 
-        interp_data, interp_basis_vector = \
-            array.beam_list[self.beam_id].interp(az_array=source_az,
-                                                 za_array=source_za,
-                                                 freq_array=freq,
-                                                 reuse_spline=reuse_spline)
+        spline_opts = None
+        if isinstance(array.beam_list, BeamList):
+            spline_opts = array.beam_list.spline_interp_opts
+
+        interp_kwargs = {'az_array' : source_az, 'za_array' : source_za,
+                         'freq_array' : freq, 'reuse_spline' : reuse_spline}
+
+        if spline_opts is not None:
+            interp_kwargs['spline_opts'] = spline_opts
+
+        try:
+            interp_data, interp_basis_vector = \
+                array.beam_list[self.beam_id].interp(**interp_kwargs)
+        except TypeError as err:   # pragma: nocover
+            raise TypeError(
+                "pyuvdata version >=2.0.1 required to use spline_interp_opts"
+            ) from err
+
         Ncomponents = source_za.shape[-1]
 
         # interp_data has shape:

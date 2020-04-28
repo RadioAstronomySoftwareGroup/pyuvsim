@@ -956,3 +956,13 @@ def test_direct_fname():
     os.remove("28m_triangle_10time_10chan.yaml")
     os.remove("param_100times_1.5days_triangle.yaml")
     os.remove("triangle_bl_layout.csv")
+
+
+def test_beamopts_init():
+    # Check that spline_interp_opts is passed along correctly to BeamList
+    telescope_config_name = os.path.join(SIM_DATA_PATH, 'mwa128_config.yaml')
+    with open(telescope_config_name, 'r') as yf:
+        telconfig = yaml.safe_load(yf)
+    telconfig['spline_interp_opts'] = {'kx' : 2, 'ky' : 2}
+    beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(1), telconfig)
+    assert beam_list.spline_interp_opts is not None
