@@ -8,6 +8,7 @@ import os
 
 import astropy.constants as const
 import numpy as np
+from numpy.lib import recfunctions
 import pyuvdata.utils as uvutils
 from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
@@ -742,12 +743,21 @@ def test_quantity_reuse():
         time, arrangement='long-line', Nsrcs=30, return_table=True
     )
 
-    # Temporary switch until PR #54 on pyradiosky is merged.
-    pol_in_rec = hasattr(pyradiosky.SkyModel, 'above_horizon')
-
-    if pol_in_rec:
-        # Give one source polarization
+    # Give one source polarization
+    if 'flux_density' in sources.dtype.names:
+        # For backwards compatibility until PR 60 is merged in pyradiosky.
         sources['flux_density'][15] = [0.3, 0.1, 2.0, 0.0]
+    else:
+        Qcomp = np.zeros(30)
+        Ucomp = np.zeros(30)
+        Vcomp = np.zeros(30)
+        Qcomp[15] = 0.1
+        Ucomp[15] = 2.0
+        Vcomp[15] = 0.0
+        sources['I'][15] = 0.3
+        sources = recfunctions.append_fields(
+            sources, ['Q', 'V', 'U'], [Qcomp, Ucomp, Vcomp]
+        )
 
     beam_list.set_obj_mode()
     taskiter = pyuvsim.uvdata_to_task_iter(
@@ -793,7 +803,4 @@ def test_quantity_reuse():
             assert apcoh_changed and jones_changed
         if time != prev_time:
             # Note -- local_coherency will only change if the sources are polarized.
-            if pol_in_rec:
-                assert srcpos_changed and locoh_changed
-            else:
-                assert srcpos_changed
+            assert srcpos_changed and locoh_changed
