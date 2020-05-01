@@ -804,3 +804,15 @@ def test_quantity_reuse():
         if time != prev_time:
             # Note -- local_coherency will only change if the sources are polarized.
             assert srcpos_changed and locoh_changed
+
+
+def test_overflow_check():
+    # Ensure error before running sim for too many tasks.
+
+    task_limit = 22118400
+    # This number of tasks is known to produce an overflow error
+    # on bcast/gather operations in MPI.
+    # This test just makes sure that the right error is raised
+    # by the checker function for this value.
+    with pytest.raises(ValueError, match="Too many tasks"):
+        pyuvsim.uvsim._check_ntasks_valid(task_limit)

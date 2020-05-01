@@ -12,6 +12,9 @@
 - Only do beam eval when time, freq, or beam type changes.
 - The definition of the Airy beam now uses the exact value of c, not 3e8.
 
+### Fixed
+- Error early if the task list is too long for gather
+
 ## [1.1.2] - 2020-2-14
 
 ### Added
