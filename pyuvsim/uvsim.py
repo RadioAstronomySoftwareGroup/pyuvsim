@@ -377,7 +377,12 @@ def _check_ntasks_valid(Ntasks_tot):
 
     size = (Ntasks_tot + 1) * delta_size
     if size >= INT_MAX_BYTES:
-        raise ValueError(f"Too many tasks for MPI to gather successfully: {Ntasks_tot}")
+        raise ValueError(
+            f"Too many tasks for MPI to gather successfully: {Ntasks_tot}\n"
+            "\t Consider splitting your simulation into multiple smaller jobs "
+            "and joining them together with UVData.\n"
+            "\t This error will go away when issue #289 is closed."
+        )
 
 
 def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
