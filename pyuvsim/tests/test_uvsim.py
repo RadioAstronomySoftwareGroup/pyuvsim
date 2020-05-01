@@ -803,7 +803,4 @@ def test_quantity_reuse():
             assert apcoh_changed and jones_changed
         if time != prev_time:
             # Note -- local_coherency will only change if the sources are polarized.
-            if pol_in_rec:
-                assert srcpos_changed and locoh_changed
-            else:
-                assert srcpos_changed
+            assert srcpos_changed and locoh_changed
