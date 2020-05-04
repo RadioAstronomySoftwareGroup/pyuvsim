@@ -31,6 +31,52 @@ EW_uvfits_10time10chan = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfi
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
 
 
+@pytest.fixture
+def uvobj_beams_srcs():
+    # A uvdata object, beam list, beam dict, and source array.
+    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
+    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
+    param_dict['select'] = {'redundant_threshold': 0.1}
+    uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+
+    # Add more beams to the list.
+    # Don't use the uniform beam (need to see coherency change with positions).
+    ref_freq, alpha = 100e6, -0.5
+    beam_list[0] = pyuvsim.AnalyticBeam('airy', diameter=13.0)
+    beam_list.append(pyuvsim.AnalyticBeam('airy', diameter=14.6))
+    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.03))
+    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.03,
+                     ref_freq=ref_freq, spectral_index=alpha))
+
+    # Assign the last few antennas to use these other beams.
+    beam_dict['ANT36'] = 1
+    beam_dict['ANT35'] = 2
+    beam_dict['ANT34'] = 3
+
+    time = Time(uv_obj.time_array[0], format='jd', scale='utc')
+    sources, kwds = pyuvsim.create_mock_catalog(
+        time, arrangement='long-line', Nsrcs=30, return_table=True
+    )
+
+    # Give one source polarization
+    if 'flux_density' in sources.dtype.names:
+        # For backwards compatibility until PR 60 is merged in pyradiosky.
+        sources['flux_density'][15] = [0.3, 0.1, 2.0, 0.0]
+    else:
+        Qcomp = np.zeros(30)
+        Ucomp = np.zeros(30)
+        Vcomp = np.zeros(30)
+        Qcomp[15] = 0.1
+        Ucomp[15] = 2.0
+        Vcomp[15] = 0.0
+        sources['I'][15] = 0.3
+        sources = recfunctions.append_fields(
+            sources, ['Q', 'V', 'U'], [Qcomp, Ucomp, Vcomp]
+        )
+
+    return uv_obj, beam_list, beam_dict, sources
+
+
 def test_visibility_single_zenith_source():
     """Test single zenith source."""
 
@@ -714,52 +760,16 @@ def test_get_beam_jones():
             and np.all(jones1 == jones0))
 
 
-def test_quantity_reuse():
+def test_quantity_reuse(uvobj_beams_srcs):
     # Check that the right quantities on the UVEngine are changed when
     # the time/frequency/antenna pair change.
-    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
-    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    param_dict['select'] = {'redundant_threshold': 0.1}
-    uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
 
-    # Add more beams to the list.
-    # Don't use the uniform beam (need to see coherency change with positions).
-    ref_freq, alpha = 100e6, -0.5
-    beam_list[0] = pyuvsim.AnalyticBeam('airy', diameter=13.0)
-    beam_list.append(pyuvsim.AnalyticBeam('airy', diameter=14.6))
-    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.03))
-    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.03,
-                     ref_freq=ref_freq, spectral_index=alpha))
+    uv_obj, beam_list, beam_dict, sources = uvobj_beams_srcs
 
-    # Assign the last few antennas to use these other beams.
-    beam_dict['ANT36'] = 1
-    beam_dict['ANT35'] = 2
-    beam_dict['ANT34'] = 3
+    beam_list.set_obj_mode()
 
     Ntasks = uv_obj.Nblts * uv_obj.Nfreqs
 
-    time = Time(uv_obj.time_array[0], format='jd', scale='utc')
-    sources, kwds = pyuvsim.create_mock_catalog(
-        time, arrangement='long-line', Nsrcs=30, return_table=True
-    )
-
-    # Give one source polarization
-    if 'flux_density' in sources.dtype.names:
-        # For backwards compatibility until PR 60 is merged in pyradiosky.
-        sources['flux_density'][15] = [0.3, 0.1, 2.0, 0.0]
-    else:
-        Qcomp = np.zeros(30)
-        Ucomp = np.zeros(30)
-        Vcomp = np.zeros(30)
-        Qcomp[15] = 0.1
-        Ucomp[15] = 2.0
-        Vcomp[15] = 0.0
-        sources['I'][15] = 0.3
-        sources = recfunctions.append_fields(
-            sources, ['Q', 'V', 'U'], [Qcomp, Ucomp, Vcomp]
-        )
-
-    beam_list.set_obj_mode()
     taskiter = pyuvsim.uvdata_to_task_iter(
         np.arange(Ntasks), uv_obj, sources, beam_list, beam_dict
     )
@@ -804,6 +814,44 @@ def test_quantity_reuse():
         if time != prev_time:
             # Note -- local_coherency will only change if the sources are polarized.
             assert srcpos_changed and locoh_changed
+
+
+def test_update_flags(uvobj_beams_srcs):
+    # Ensure that the right update flags are set when certain
+    # task attributes change.
+
+    uv_obj, beam_list, beam_dict, sources = uvobj_beams_srcs
+
+    Nsky_parts = 3  #
+
+    Ntasks = uv_obj.Nblts * uv_obj.Nfreqs
+
+    taskiter = pyuvsim.uvdata_to_task_iter(
+        np.arange(Ntasks), uv_obj, sources, beam_list, beam_dict, Nsky_parts=Nsky_parts
+    )
+
+    time, freq, beam_pair, src_chunk = [None] * 4
+    engine = pyuvsim.UVEngine()
+    for task in taskiter:
+        engine.set_task(task)
+        baseline = task.baseline
+        task_beam_pair = (baseline.antenna1.beam_id, baseline.antenna2.beam_id)
+        time_changed = task.time != time
+        freq_changed = task.freq != freq
+        antpair_changed = task_beam_pair != beam_pair
+        src_changed = src_chunk is not task.sources
+
+        if time_changed or src_changed:
+            assert (engine.update_positions
+                    and engine.update_local_coherency
+                    and engine.update_beams)
+        if antpair_changed or freq_changed:
+            assert engine.update_beams
+
+        time = task.time
+        freq = task.freq
+        beam_pair = task_beam_pair
+        src_chunk = task.sources
 
 
 def test_overflow_check():
