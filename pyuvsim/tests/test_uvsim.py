@@ -822,36 +822,52 @@ def test_update_flags(uvobj_beams_srcs):
 
     uv_obj, beam_list, beam_dict, sources = uvobj_beams_srcs
 
-    Nsky_parts = 3  #
-
+    Nsky_parts = 6
     Ntasks = uv_obj.Nblts * uv_obj.Nfreqs
 
+    # Simulate the chunk of tasks covered on one rank.
+    rank = 5
+    Npus = 20
+    task_inds, _ = pyuvsim.utils.iter_array_split(rank, Ntasks, Npus)
+
     taskiter = pyuvsim.uvdata_to_task_iter(
-        np.arange(Ntasks), uv_obj, sources, beam_list, beam_dict, Nsky_parts=Nsky_parts
+        task_inds, uv_obj, sources, beam_list, beam_dict, Nsky_parts=Nsky_parts
     )
 
     time, freq, beam_pair, src_chunk = [None] * 4
     engine = pyuvsim.UVEngine()
+
+    axes_covered = [False] * 4
     for task in taskiter:
         engine.set_task(task)
         baseline = task.baseline
         task_beam_pair = (baseline.antenna1.beam_id, baseline.antenna2.beam_id)
-        time_changed = task.time != time
+        time_changed = task.time.jd != time
         freq_changed = task.freq != freq
         antpair_changed = task_beam_pair != beam_pair
         src_changed = src_chunk is not task.sources
 
         if time_changed or src_changed:
+            axes_covered[0] = axes_covered[0] or time_changed
+            axes_covered[1] = axes_covered[1] or src_changed
+
             assert (engine.update_positions
                     and engine.update_local_coherency
                     and engine.update_beams)
+
         if antpair_changed or freq_changed:
+            axes_covered[2] = axes_covered[2] or antpair_changed
+            axes_covered[3] = axes_covered[3] or freq_changed
             assert engine.update_beams
 
-        time = task.time
+        time = task.time.jd
         freq = task.freq
         beam_pair = task_beam_pair
         src_chunk = task.sources
+
+    # This is a test of the test itself, making sure that
+    # each value changed at some point in the task iterator.
+    assert all(axes_covered)
 
 
 def test_overflow_check():
