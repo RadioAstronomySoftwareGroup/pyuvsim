@@ -1,11 +1,11 @@
 beam_paths:
   0: hera.uvbeam
   1:
-    - type: airy
-      diameter: 16
+    type: airy
+    diameter: 16
   2:
-    - type: gaussian
-      sigma: 0.03
+    type: gaussian
+    sigma: 0.03
   3: airy
 diameter: 12
 spline_interp_opts:

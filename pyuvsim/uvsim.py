@@ -91,6 +91,7 @@ class UVEngine(object):
         self.update_positions = update_positions
         self.update_beams = update_beams
 
+        self.sources = None
         self.current_time = None
         self.current_freq = None
         self.current_beam_pair = None
@@ -106,11 +107,14 @@ class UVEngine(object):
         self.task = task
 
         # These flags control whether quantities can be re-used from the last task:
-        #   Update local coherency for all frequencies when time changes.
-        #   Update source positions when time changes.
-        #   Update saved beam jones matrices when time, frequency, or beam pair changes.
+        #   Update local coherency for all frequencies when time or sources changes.
+        #   Update source positions when time or sources changes.
+        #   Update saved beam jones matrices when time, sources, frequency, or beam pair changes.
 
-        if not self.current_time == task.time.jd:
+        baseline = self.task.baseline
+        beam_pair = (baseline.antenna1.beam_id, baseline.antenna2.beam_id)
+
+        if (not self.current_time == task.time.jd) or (self.sources is not task.sources):
             self.update_positions = True
             self.update_local_coherency = True
             self.update_beams = True
@@ -123,13 +127,13 @@ class UVEngine(object):
         if not self.current_freq == task.freq.to('Hz').value:
             self.update_beams = True
 
-        self.current_time = task.time.jd
-        self.current_freq = task.freq.to("Hz").value
-        baseline = self.task.baseline
-        beam_pair = (baseline.antenna1.beam_id, baseline.antenna2.beam_id)
         if not self.current_beam_pair == beam_pair:
             self.current_beam_pair = beam_pair
             self.update_beams = True
+
+        self.current_time = task.time.jd
+        self.current_freq = task.freq.to("Hz").value
+        self.sources = task.sources
 
     def apply_beam(self):
         """ Set apparent coherency from jones matrices and source coherency. """
@@ -141,6 +145,7 @@ class UVEngine(object):
 
         sources = self.task.sources
         baseline = self.task.baseline
+
         if not hasattr(sources, 'above_horizon'):
             warnings.warn("SkyModel class lacks horizon cut on position and coherency calculations."
                           " This will slow evaluation considerably. Please update your pyradiosky"
@@ -150,6 +155,9 @@ class UVEngine(object):
 
         if sources.alt_az is None:
             sources.update_positions(self.task.time, self.task.telescope.location)
+
+        if self.update_local_coherency:
+            self.local_coherency = sources.coherency_calc()
 
         self.beam1_jones = baseline.antenna1.get_beam_jones(
             self.task.telescope, sources.alt_az[..., sources.above_horizon],
@@ -170,9 +178,6 @@ class UVEngine(object):
 
         # Apparent coherency gives the direction and polarization dependent baseline response to
         # a source.
-
-        if self.update_local_coherency:
-            self.local_coherency = sources.coherency_calc()
 
         coherency = self.local_coherency[:, :, self.task.freq_i, :]
 
@@ -279,7 +284,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
                     for s in range(Nsky_parts)]
     else:
         src_iter = [slice(None)]
-
     # Build the antenna list.
     antenna_names = input_uv.antenna_names
     antennas = []
@@ -470,7 +474,6 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
 
     Nsky_parts = np.ceil(skymodel_mem_footprint / float(skymodel_mem_max))
     Nsky_parts = max(Nsky_parts, 1)
-
     if Nsky_parts > Nsrcs_total:
         raise ValueError("Insufficient memory for simulation.")
 

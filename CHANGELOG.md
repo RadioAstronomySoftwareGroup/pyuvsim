@@ -13,6 +13,7 @@
 - The definition of the Airy beam now uses the exact value of c, not 3e8.
 
 ### Fixed
+- Ensure that source positions, coherency matrices, and Jones matrices are updated at the right times.
 - Error early if the task list is too long for gather
 
 ## [1.1.2] - 2020-2-14
