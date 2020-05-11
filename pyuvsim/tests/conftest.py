@@ -8,7 +8,6 @@ import shutil
 import warnings
 
 import pytest
-import urllib
 from astropy.time import Time
 from astropy.utils import iers
 
@@ -22,13 +21,16 @@ def setup_and_teardown_package():
     if not os.path.exists(testdir):
         os.mkdir(testdir)
 
-    # try to download the iers table. If it fails, turn off auto downloading for the tests
-    # and turn it back on in teardown_package (done by extending auto_max_age)
+    # Do a calculation that requires a current IERS table. This will trigger
+    # automatic downloading of the IERS table if needed, including trying the
+    # mirror site in python 3 (but won't redownload if a current one exists).
+    # If there's not a current IERS table and it can't be downloaded, turn off
+    # auto downloading for the tests and turn it back on once all tests are
+    # completed (done by extending auto_max_age).
     try:
-        iers.IERS_A.open(iers.IERS_A_URL)
         t1 = Time.now()
         t1.ut1
-    except urllib.error.URLError:
+    except (Exception):
         iers.conf.auto_max_age = None
 
     # yield to allow tests to run
