@@ -6,7 +6,6 @@ import numpy as np
 import sys
 import yaml
 import warnings
-import pickle
 from astropy.coordinates import EarthLocation
 import astropy.units as units
 from astropy.time import Time
@@ -356,31 +355,14 @@ def serial_gather(uvtask_list, uv_out):
 def _check_ntasks_valid(Ntasks_tot):
     """Check that the size of the task array won't overflow the gather."""
 
-    class _spoofed_skymodel:
-        spectral_type = 'flat'
-    Ntasks_test = 35
-    tasks = [UVTask(_spoofed_skymodel(), None, None, None, None, None)
-             for _ in range(Ntasks_test)]
+    # Maximum value that can be stored in a C-type 32 bit int, used by MPI.
+    INT_MAX_BYTES = 2**32 // 8
 
-    # Spoof values. This is all that's left on the UVTask when gathering.
-    for task in tasks:
-        task.visibility_vector = np.ones(4).astype(complex)
-        task.uvdata_index = (10, 0, 50)
-        del task.time
-        del task.freq
-        del task.freq_i
-        del task.sources
-        del task.baseline
-        del task.telescope
+    # Empirically fit to several large task lists, as will be gathered
+    # after the simulation task loop.
+    tot_mem = 210.002 * Ntasks_tot - 456.3849   # Bytes
 
-    # MPI can handle an array of at most 2**31 bits
-    INT_MAX_BYTES = 2**31 // 8
-
-    # Need to know the change in total serialized list size from adding a new task.
-    delta_size = (len(pickle.dumps(tasks)) - len(pickle.dumps(tasks[:-1])))
-
-    size = (Ntasks_tot + 1) * delta_size
-    if size >= INT_MAX_BYTES:
+    if tot_mem >= INT_MAX_BYTES:
         raise ValueError(
             f"Too many tasks for MPI to gather successfully: {Ntasks_tot}\n"
             "\t Consider splitting your simulation into multiple smaller jobs "
@@ -442,6 +424,9 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     Nfreqs = input_uv.Nfreqs
     Nsrcs = len(catalog)
 
+    if mpi.rank == 0:
+        _check_ntasks_valid(Ntimes * Nfreqs * Nbls)
+
     task_inds, src_inds, Ntasks_local, Nsrcs_local = _make_task_inds(
         Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus
     )
@@ -478,8 +463,6 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
         raise ValueError("Insufficient memory for simulation.")
 
     Ntasks_tot = Ntimes * Nbls * Nfreqs * Nsky_parts
-
-    _check_ntasks_valid(Ntasks_tot)
 
     local_task_iter = uvdata_to_task_iter(
         task_inds, input_uv, catalog[src_inds], beam_list, beam_dict, Nsky_parts=Nsky_parts

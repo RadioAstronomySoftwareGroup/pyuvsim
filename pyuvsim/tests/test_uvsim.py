@@ -873,10 +873,14 @@ def test_update_flags(uvobj_beams_srcs):
 def test_overflow_check():
     # Ensure error before running sim for too many tasks.
 
-    task_limit = 22118400
+    # This is a large number of tasks that has been run successfully.
+    should_pass = 2004992
+    pyuvsim.uvsim._check_ntasks_valid(should_pass)
+
     # This number of tasks is known to produce an overflow error
     # on bcast/gather operations in MPI.
     # This test just makes sure that the right error is raised
     # by the checker function for this value.
+    should_fail = 22118400
     with pytest.raises(ValueError, match="Too many tasks"):
-        pyuvsim.uvsim._check_ntasks_valid(task_limit)
+        pyuvsim.uvsim._check_ntasks_valid(should_fail)
