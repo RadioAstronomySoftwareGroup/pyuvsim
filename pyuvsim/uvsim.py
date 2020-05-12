@@ -310,7 +310,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
     for src_i in src_iter:
         sky = pyradiosky.array_to_skymodel(catalog[src_i])
-        if sky.spectral_type == 'values':
+        if sky.spectral_type == 'full':
             assert np.allclose(sky.freq_array, input_uv.freq_array)
         for task_index in task_ids:
             # Shape indicates slowest to fastest index.
@@ -342,9 +342,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
 
 
 def serial_gather(uvtask_list, uv_out):
-    """
-        Loop over uvtask list, acquire visibilities and add to uvdata object.
-    """
+    """Loop over uvtask list, acquire visibilities and add to uvdata object."""
     for task in uvtask_list:
         blt_ind, spw_ind, freq_ind = task.uvdata_index
         uv_out.data_array[blt_ind, spw_ind, freq_ind, :] += task.visibility_vector
@@ -355,14 +353,11 @@ def serial_gather(uvtask_list, uv_out):
 def _check_ntasks_valid(Ntasks_tot):
     """Check that the size of the task array won't overflow the gather."""
 
-    # Maximum value that can be stored in a C-type 32 bit int, used by MPI.
-    INT_MAX_BYTES = 2**32 // 8
+    # Found experimentally, this is the limit on the number of tasks
+    # that can be gathered with MPI.
+    MAX_NTASKS_GATHER = 10226018
 
-    # Empirically fit to several large task lists, as will be gathered
-    # after the simulation task loop.
-    tot_mem = 210.002 * Ntasks_tot - 456.3849   # Bytes
-
-    if tot_mem >= INT_MAX_BYTES:
+    if Ntasks_tot >= MAX_NTASKS_GATHER:
         raise ValueError(
             f"Too many tasks for MPI to gather successfully: {Ntasks_tot}\n"
             "\t Consider splitting your simulation into multiple smaller jobs "
