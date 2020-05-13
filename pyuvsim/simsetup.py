@@ -490,6 +490,7 @@ def parse_telescope_params(tele_params, config_path=''):
         * `telescope_config_file`: Path to configuration yaml file
         * `antenna_location_file`: Path to csv layout file
         * `telescope_name`: observatory name
+        * `world`: Either "earth" or "moon".
     beam_list : :class:`pyuvsim.BeamList`
         This is a BeamList object in string mode.
         The strings provide either paths to beamfits files or the specifications to make
@@ -514,12 +515,7 @@ def parse_telescope_params(tele_params, config_path=''):
         with open(telescope_config_name, 'r') as yf:
             telconfig = yaml.safe_load(yf)
         telescope_location_latlonalt = ast.literal_eval(telconfig['telescope_location'])
-        telescope_location = list(telescope_location_latlonalt)
-        telescope_location[0] *= np.pi / 180.
-        telescope_location[1] *= np.pi / 180.  # Convert to radians
-        tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
-        telescope_name = telconfig['telescope_name']
-
+        world = telconfig.pop('world', None)
     else:
         # if not provided, get bare-minumum keys from tele_params
         if 'telescope_location' not in tele_params:
@@ -535,11 +531,13 @@ def parse_telescope_params(tele_params, config_path=''):
         telescope_location_latlonalt = tele_params['telescope_location']
         if isinstance(telescope_location_latlonalt, (str, np.str)):
             telescope_location_latlonalt = ast.literal_eval(telescope_location_latlonalt)
-        telescope_location = list(telescope_location_latlonalt)
-        telescope_location[0] *= np.pi / 180.
-        telescope_location[1] *= np.pi / 180.  # Convert to radians
-        telescope_name = tele_params['telescope_name']
-        tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
+        world = tele_params.pop('world', None)
+
+    telescope_location = list(telescope_location_latlonalt)
+    telescope_location[0] *= np.pi / 180.
+    telescope_location[1] *= np.pi / 180.  # Convert to radians
+    tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
+    telescope_name = tele_params['telescope_name']
 
     # get array layout
     if 'array_layout' not in tele_params:
@@ -579,6 +577,8 @@ def parse_telescope_params(tele_params, config_path=''):
     return_dict['antenna_positions'] = (
         uvutils.ECEF_from_ENU(antpos_enu, *telescope_location)
         - tele_params['telescope_location'])
+    if world is not None:
+        return_dict['world'] = world
 
     return_dict['array_layout'] = layout_csv
     return_dict['telescope_location'] = tuple(tele_params['telescope_location'])
@@ -923,7 +923,7 @@ def initialize_uvdata_from_params(obs_params):
     extra_keywords = {}
     if 'obs_param_file' in param_dict:
         extra_keywords['obs_param_file'] = param_dict['obs_param_file']
-        for key in ['telescope_config_name', 'array_layout']:
+        for key in ['telescope_config_name', 'array_layout', 'world']:
             if key in tele_dict:
                 val = tele_dict[key]
                 if isinstance(val, str):

@@ -24,6 +24,21 @@ from .antenna import Antenna
 from .baseline import Baseline
 from .telescope import Telescope
 
+
+try:
+    from lunarsky import MoonLocation
+
+    hasmoon = True
+except ImportError:
+
+    hasmoon = False
+
+    class MoonLocation:
+        pass
+
+    class LunarTopo:
+        pass
+
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim',
            'serial_gather']
 
@@ -303,9 +318,15 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     time_ax, freq_ax, bl_ax = range(3)
 
     tloc = [np.float64(x) for x in input_uv.telescope_location]
-    telescope = Telescope(input_uv.telescope_name,
-                          EarthLocation.from_geocentric(*tloc, unit='m'),
-                          beam_list)
+
+    world = input_uv.extra_keywords.get('world', 'earth')
+    if world.lower() == 'earth':
+        location = EarthLocation.from_geocentric(*tloc, unit='m')
+    elif world.lower() == 'moon':
+        if not hasmoon:
+            raise ValueError("Need lunarsky module to simulate an array on the Moon.")
+        location = MoonLocation.from_selenocentric(*tloc, unit='m')
+    telescope = Telescope(input_uv.telescope_name, location, beam_list)
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
     for src_i in src_iter:
