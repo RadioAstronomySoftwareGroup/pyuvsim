@@ -1,0 +1,19 @@
+filing:
+  outdir: './results_data/'   #Output file directory
+  outfile_name: 'ref_2.2_uvbeam_gleam' # Alternatively, give the full name
+  output_format: 'uvh5'  # Format for output. Default is uvfits, but miriad and uvh5 are also supported.
+freq:
+  Nfreqs: 128    # Number of frequencies
+  channel_width: 80000.0    # Frequency channel width
+  start_freq: 100000000.0    # Start and end frequencies (Hz)
+sources:
+  catalog: 'catalog_files/gleam.vot'       #Choice of catalog file name (or specify 'mock' to use a builtin catalog).
+  min_flux: 0.05 # > 0.05 Jy
+telescope:
+  array_layout: 'telescope_config/mwa_nocore_layout.csv'    # Antenna layout csv file
+  telescope_config_name: 'telescope_config/HERA_uvbeam.yaml'  # Telescope metadata file.
+time:
+  Ntimes: 1        # Number of times.
+  integration_time: 60 # Time step size  (seconds)
+  start_time: 2458116.24485307    # Start and end times (Julian date)
+
