@@ -1,0 +1,18 @@
+filing:
+  outdir: '.'
+  outfile_name: 'sim_results.uvfits'
+freq:
+  Nfreqs: 10
+  bandwidth: 800000.0
+  start_freq: 100000000.0
+sources:
+  catalog: 'mock'
+  mock_arrangement: 'zenith'
+telescope:
+  array_layout: 'layout_hex37_14.6m.csv'
+  telescope_config_name: '../tranquility_config.yaml'
+time:
+  Ntimes: 10
+  duration_days: 0.0012731478148148147
+  integration_time: 11.0
+  start_time: 2457458.1738949567
