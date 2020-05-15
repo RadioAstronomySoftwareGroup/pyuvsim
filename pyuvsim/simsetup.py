@@ -966,7 +966,8 @@ def initialize_uvdata_from_params(obs_params):
                 val = tele_dict[key]
                 if isinstance(val, str):
                     extra_keywords[key] = val
-    extra_keywords['world'] = tele_params.get('world', 'earth')
+    if "world" in tele_params:
+        extra_keywords['world'] = tele_params.get('world')
     uvparam_dict['extra_keywords'] = extra_keywords
 
     # Parse frequency structure
