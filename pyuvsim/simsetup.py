@@ -11,8 +11,7 @@ import warnings
 import numpy as np
 import yaml
 
-from astropy.coordinates import Angle, SkyCoord, EarthLocation
-from astropy.time import Time
+from astropy.coordinates import Angle, EarthLocation
 import astropy.units as units
 from pyuvdata import utils as uvutils, UVData
 import pyradiosky
@@ -20,6 +19,7 @@ import pyradiosky
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from .analyticbeam import AnalyticBeam
 from .telescope import BeamList
+from .astropy_interface import SkyCoord, MoonLocation, Time
 try:
     from .mpi import get_rank
 except ImportError:
@@ -92,6 +92,26 @@ def _config_str_to_dict(config_str):
     return param_dict
 
 
+def _set_lsts_on_uvdata(uv_obj):
+
+    # If the telescope location is a MoonLocation,
+    # then uv_obj.extra_keywords['world'] == 'moon'.
+    world = uv_obj.extra_keywords.get('world', 'earth')
+
+    if world == 'earth':
+        uv_obj.set_lsts_from_time_array()
+    elif world == 'moon':
+        if not 'hasmoon':
+            raise ValueError("Cannot construct lsts for MoonLocation without lunarsky module")
+        un_jds, inv = np.unique(uv_obj.time_array, return_inverse=True)
+        loc = MoonLocation(*uv_obj.telescope_location, unit='m')
+        times = Time(un_jds, format='jd', scale='utc', location=loc)
+        uv_obj.lst_array = times.sidereal_time('apparent').rad[inv]
+    else:
+        raise ValueError(f"Invalid world {world}.")
+    return uv_obj
+
+
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
                         alt=None, save=False, min_alt=None, rseed=None, return_table=False):
     """
@@ -100,35 +120,47 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     SkyModel are defined in an AltAz frame at the given time, then returned in
     ICRS ra/dec coordinates.
 
-    Args:
-        time : float or astropy Time object
-            Julian date
-        arrangement : (str)
-            Point source pattern (default = 1 source at zenith). Accepted arrangements:
+    Parameters
+    ----------
+    time: float or astropy Time object
+        Julian date
+    arrangement: str
+        Point source pattern (default = 1 source at zenith).
+        Accepted arrangements:
+        * `triangle`:  Three point sources forming a triangle around the zenith
+        * `cross`: An asymmetric cross
+        * `zenith`: Some number of sources placed at the zenith.
+        * `off-zenith`:  A single source off zenith
+        * `long-line`:  Horizon to horizon line of point sources
+        * `hera_text`:  Spell out HERA around the zenith
+        * `random`:  Randomly distributed point sources near zenith
+    Nsrcs: int
+        Number of sources to make (used for zenith, off-zenith, long-line, and random arrangements).
+    array_location: `astropy.coordinates.EarthLocation`
+        Location of observer. Source positions are defined with respect to a particular zenith.
+        Can also be a `lunarsky.MoonLocation` object to make catalogs for observers on the Moon.
+        Default = HERA site
+    alt: float
+        For off-zenith and triangle arrangements, altitude to place sources.
+        In degrees.
+    min_alt: float
+        For random and long-line arrangements, minimum altitude at which to place sources.
+        In degrees.
+    save: bool
+        Save mock catalog as npz file.
+    rseed: int
+        If using the random configuration, pass in a RandomState seed.
+    return_table: bool
+        If True, return a recarray of catalog data.
+        (See pyradiosky documentation for details).
 
-            * `triangle`:  Three point sources forming a triangle around the zenith
-            * `cross`: An asymmetric cross
-            * `zenith`: Some number of sources placed at the zenith.
-            * `off-zenith`:  A single source off zenith
-            * `long-line`:  Horizon to horizon line of point sources
-            * `hera_text`:  Spell out HERA around the zenith
-            * `random`:  Randomly distributed point sources near zenith
-
-        Nsrcs (int):  Number of sources to put at zenith
-        array_location (EarthLocation object): [Default = HERA site]
-        alt (float): For off-zenith and triangle arrangements, altitude to place sources. (deg)
-        min_alt (float):
-            For random and long-line arrangements, minimum altitude at which to place sources. (deg)
-        save (bool): Save mock catalog as npz file.
-        rseed (int): If using the random configuration, pass in a RandomState seed.
-
-    Returns:
-        catalog : :class:`pyuvsim.SkyModel`
-            Or a recarray of source parameters if `return_table` is True)
-        mock_kwds : dict
-           The keywords defining this source catalog
+    Returns
+    -------
+    class:`pyradiosky.SkyModel` or `~numpy.recarray`
+        The catalog, as either a SkyModel or a recarray (if `return_table` is True)
+    dict
+        A dictionary of keywords used to define the catalog.
     """
-
     if not isinstance(time, Time):
         time = Time(time, scale='utc', format='jd')
 
@@ -237,8 +269,14 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
     catalog = []
 
+    if isinstance(array_location, MoonLocation):
+        localframe = 'lunartopo'
+        mock_keywords['world'] = 'moon'
+    else:
+        localframe = 'altaz'
+        mock_keywords['world'] = 'earth'
     source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
-                            obstime=time, frame='altaz', location=array_location)
+                            obstime=time, frame=localframe, location=array_location)
     icrs_coord = source_coord.transform_to('icrs')
 
     ra = icrs_coord.ra
@@ -516,6 +554,7 @@ def parse_telescope_params(tele_params, config_path=''):
             telconfig = yaml.safe_load(yf)
         telescope_location_latlonalt = ast.literal_eval(telconfig['telescope_location'])
         world = telconfig.pop('world', None)
+        tele_params['telescope_name'] = telconfig['telescope_name']
     else:
         # if not provided, get bare-minumum keys from tele_params
         if 'telescope_location' not in tele_params:
@@ -568,7 +607,6 @@ def parse_telescope_params(tele_params, config_path=''):
     return_dict = {}
     beam_list = BeamList([])
     beam_dict = {}
-
     return_dict['Nants_data'] = antnames.size
     return_dict['Nants_telescope'] = antnames.size
     return_dict['antenna_names'] = np.array(antnames.tolist())
@@ -923,12 +961,12 @@ def initialize_uvdata_from_params(obs_params):
     extra_keywords = {}
     if 'obs_param_file' in param_dict:
         extra_keywords['obs_param_file'] = param_dict['obs_param_file']
-        for key in ['telescope_config_name', 'array_layout', 'world']:
+        for key in ['telescope_config_name', 'array_layout']:
             if key in tele_dict:
                 val = tele_dict[key]
                 if isinstance(val, str):
                     extra_keywords[key] = val
-
+    extra_keywords['world'] = tele_params.get('world', 'earth')
     uvparam_dict['extra_keywords'] = extra_keywords
 
     # Parse frequency structure
@@ -990,8 +1028,9 @@ def initialize_uvdata_from_params(obs_params):
     uv_obj.ant_1_array, uv_obj.ant_2_array = uv_obj.baseline_to_antnums(uv_obj.baseline_array)
 
     # add other required metadata to allow select to work without errors
-    # these will all be overwritten in uvsim.init_uvdata_out, so it's ok to hardcode them here
-    uv_obj.set_lsts_from_time_array()
+    # these will all be overwritten in uvsim.complete_uvdata, so it's ok to hardcode them here
+
+    _set_lsts_on_uvdata(uv_obj)
     uv_obj.set_uvws_from_antenna_positions()
     uv_obj.history = ''
 
@@ -1378,12 +1417,12 @@ def _complete_uvdata(uv_in, inplace=False):
     else:
         uv_obj = uv_in
 
-    uv_obj.set_drift()
+    uv_obj._set_drift()
     uv_obj.vis_units = 'Jy'
 
     uv_obj.instrument = uv_obj.telescope_name
     if uv_obj.lst_array is None:
-        uv_obj.set_lsts_from_time_array()
+        _set_lsts_on_uvdata(uv_obj)
     uv_obj.spw_array = np.array([0])
     if uv_obj.Nfreqs == 1:
         uv_obj.channel_width = 1.  # Hz
