@@ -25,6 +25,7 @@ from pyuvdata.data import DATA_PATH
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
 from pyuvsim import mpi
+from pyuvsim.astropy_interface import Time
 import pyuvsim.tests as simtest
 import pyradiosky
 
@@ -74,7 +75,7 @@ def test_run_uvsim():
     mock_keywords = {"Nsrcs": 3}
 
     with pytest.raises(TypeError, match='input_uv must be UVData object'):
-        pyuvsim.run_uvdata_uvsim('not_uvdata', beam_list)
+        pyuvsim.run_uvdata_uvsim('not_uvdata', beam_list, quiet=True)
 
     mpi.start_mpi()
     catalog, mock_kwds = pyuvsim.simsetup.create_mock_catalog(
@@ -271,3 +272,26 @@ def test_big_bcast_gather_loop(fake_tasks):
     gathered = mpi.big_gather(mpi.world_comm, broadcast, root=0, MAX_BYTES=27)
 
     assert broadcast == gathered[0]
+
+
+@pytest.mark.skipif('not pyuvsim.astropy_interface.hasmoon')
+def test_sim_on_moon():
+    from pyuvsim.astropy_interface import MoonLocation
+    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_tranquility_hex.yaml')
+    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
+    param_dict['select'] = {'redundant_threshold': 0.1}
+    uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv_obj.select(times=uv_obj.time_array[0])
+    tranquility_base = MoonLocation.from_selenocentric(*uv_obj.telescope_location, 'meter')
+
+    time = Time(uv_obj.time_array[0], format='jd', scale='utc')
+    sources, kwds = pyuvsim.create_mock_catalog(
+        time, array_location=tranquility_base, arrangement='zenith', Nsrcs=30, return_table=True
+    )
+    print(uv_obj.extra_keywords['world'])
+    # Run simulation.
+    uv_out = pyuvsim.uvsim.run_uvdata_uvsim(
+        uv_obj, beam_list, beam_dict, catalog=sources, quiet=True
+    )
+    assert np.allclose(uv_out.data_array[:, 0, :, 0], 0.5)
+    assert uv_out.extra_keywords['world'] == 'moon'

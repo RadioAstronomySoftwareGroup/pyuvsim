@@ -7,7 +7,6 @@ import os
 import numpy as np
 from astropy import units
 from astropy.coordinates import Angle, EarthLocation
-from astropy.time import Time
 import pytest
 from pyuvdata import UVData
 from scipy.special import j1
@@ -15,6 +14,7 @@ from scipy.special import j1
 import pyuvsim
 import pyuvsim.utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+from pyuvsim.astropy_interface import Time
 
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 
