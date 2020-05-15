@@ -8,7 +8,6 @@ import yaml
 import warnings
 from astropy.coordinates import EarthLocation
 import astropy.units as units
-from astropy.time import Time
 from astropy.units import Quantity
 from astropy.constants import c as speed_of_light
 from pyuvdata import UVData
@@ -24,20 +23,8 @@ from .antenna import Antenna
 from .baseline import Baseline
 from .telescope import Telescope
 
+from .astropy_interface import MoonLocation, hasmoon, Time
 
-try:
-    from lunarsky import MoonLocation
-
-    hasmoon = True
-except ImportError:
-
-    hasmoon = False
-
-    class MoonLocation:
-        pass
-
-    class LunarTopo:
-        pass
 
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim',
            'serial_gather']
@@ -320,12 +307,15 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     tloc = [np.float64(x) for x in input_uv.telescope_location]
 
     world = input_uv.extra_keywords.get('world', 'earth')
+
     if world.lower() == 'earth':
         location = EarthLocation.from_geocentric(*tloc, unit='m')
     elif world.lower() == 'moon':
         if not hasmoon:
             raise ValueError("Need lunarsky module to simulate an array on the Moon.")
         location = MoonLocation.from_selenocentric(*tloc, unit='m')
+    else:
+        raise ValueError("If world keyword is set, it must be either 'moon' or 'earth'.")
     telescope = Telescope(input_uv.telescope_name, location, beam_list)
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
@@ -395,7 +385,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
 
     Parameters
     ----------
-    input_uv: UVData object
+    input_uv: `:class:~pyuvdata.UVData` instance
         Provides baseline/time/frequency information.
     beam_list: list
         A list of UVBeam and/or AnalyticBeam identifier strings.
@@ -436,6 +426,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
         print('Nsrcs:', len(catalog))
         sys.stdout.flush()
         uv_container = simsetup._complete_uvdata(input_uv, inplace=False)
+        if 'world' in input_uv.extra_keywords:
+            uv_container.extra_keywords['world'] = input_uv.extra_keywords['world']
 
     Nbls = input_uv.Nbls
     Ntimes = input_uv.Ntimes
