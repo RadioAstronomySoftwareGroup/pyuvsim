@@ -19,6 +19,9 @@ Using MPI
         # Running with 50 MPI processing units
         > mpirun -n 50 python run_param_pyuvsim obsparam_filename.yaml   # This will run a parameter file job with 10 processing units.
 
+
+Further speedup is achieved through ``numpy``'s internal threading. How effective this is depends on the linear algebra library that ``numpy`` is compiled on, which can be checked with ``numpy.show_config()``.
+
 Enabling Profiling
 ^^^^^^^^^^^^^^^^^^
 
