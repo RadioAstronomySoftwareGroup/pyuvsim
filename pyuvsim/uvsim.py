@@ -311,7 +311,9 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     for src_i in src_iter:
         sky = pyradiosky.array_to_skymodel(catalog[src_i])
         if sky.spectral_type == 'full':
-            assert np.allclose(sky.freq_array, input_uv.freq_array)
+            if not np.allclose(sky.freq_array, freq_array):
+                raise ValueError("SkyModel spectral type is 'full', and "
+                                 "its frequencies do not match simulation frequencies.")
         for task_index in task_ids:
             # Shape indicates slowest to fastest index.
             if not isinstance(task_index, tuple):

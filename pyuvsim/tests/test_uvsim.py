@@ -11,7 +11,7 @@ import numpy as np
 from numpy.lib import recfunctions
 import pyuvdata.utils as uvutils
 from astropy import units
-from astropy.coordinates import Angle, SkyCoord, EarthLocation
+from astropy.coordinates import Angle, SkyCoord, EarthLocation, Longitude, Latitude
 from astropy.time import Time
 import pytest
 from pyuvdata import UVData
@@ -884,3 +884,56 @@ def test_overflow_check():
     should_fail = 22118400
     with pytest.raises(ValueError, match="Too many tasks"):
         pyuvsim.uvsim._check_ntasks_valid(should_fail)
+
+
+def test_fullfreq_check(uvobj_beams_srcs):
+    # Check that the task iter will error if 'spectral_type' is 'full'
+    # and the frequencies on the catalog do not match the simulation's.
+
+    uv_obj, beam_list, beam_dict, sources = uvobj_beams_srcs
+    beam_list.set_obj_mode()
+
+    Nsrcs = 30
+
+    freqs0 = np.linspace(100, 130, uv_obj.Nfreqs) * 1e6 * units.Hz
+    freqs1 = uv_obj.freq_array[0, :] * units.Hz
+
+    stokes = np.zeros((4, uv_obj.Nfreqs, Nsrcs))
+
+    ra = Longitude(np.linspace(0, 2 * np.pi, Nsrcs), 'rad')
+    dec = Latitude(np.linspace(-np.pi / 2, np.pi / 3, Nsrcs), 'rad')
+
+    sky0 = pyradiosky.SkyModel(
+        name=np.arange(Nsrcs).astype(str),
+        ra=ra,
+        dec=dec,
+        stokes=stokes,
+        spectral_type='full',
+        freq_array=freqs0
+    )
+
+    sky1 = pyradiosky.SkyModel(
+        name=np.arange(Nsrcs).astype(str),
+        ra=ra,
+        dec=dec,
+        stokes=stokes,
+        spectral_type='full',
+        freq_array=freqs1
+    )
+
+    Ntasks = uv_obj.Nblts * uv_obj.Nfreqs
+
+    sky0 = pyradiosky.skymodel_to_array(sky0)
+    sky1 = pyradiosky.skymodel_to_array(sky1)
+
+    taskiter0 = pyuvsim.uvdata_to_task_iter(
+        np.arange(Ntasks), uv_obj, sky0, beam_list, beam_dict
+    )
+    taskiter1 = pyuvsim.uvdata_to_task_iter(
+        np.arange(Ntasks), uv_obj, sky1, beam_list, beam_dict
+    )
+
+    with pytest.raises(ValueError, match="SkyModel spectral type"):
+        next(taskiter0)
+
+    next(taskiter1)
