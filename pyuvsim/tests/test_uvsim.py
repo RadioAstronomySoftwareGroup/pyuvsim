@@ -899,6 +899,7 @@ def test_fullfreq_check(uvobj_beams_srcs):
     freqs1 = uv_obj.freq_array[0, :] * units.Hz
 
     stokes = np.zeros((4, uv_obj.Nfreqs, Nsrcs))
+    stokes[0, :, :] = 1.0
 
     ra = Longitude(np.linspace(0, 2 * np.pi, Nsrcs), 'rad')
     dec = Latitude(np.linspace(-np.pi / 2, np.pi / 3, Nsrcs), 'rad')
