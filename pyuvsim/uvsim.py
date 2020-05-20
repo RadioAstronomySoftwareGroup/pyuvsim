@@ -535,8 +535,9 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
 
     # gather all the finished local tasks into a list of list of len NPUs
     # gather is a blocking communication, have to wait for all PUs
-    full_tasklist = comm.gather(summed_local_task_list, root=0)
+    full_tasklist = mpi.big_gather(summed_local_task_list, root=0)
     localtasks_count = comm.gather(Ntasks_local, root=0)
+
     # Concatenate the list of lists into a flat list of tasks
     if rank == 0:
         localtasks_count = np.sum(localtasks_count)
