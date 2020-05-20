@@ -6,6 +6,8 @@ import sys
 from array import array
 from threading import Thread
 import resource
+import atexit
+from pickle import loads, dumps
 
 import mpi4py
 import numpy as np
@@ -18,6 +20,9 @@ Npus = 1
 world_comm = None
 node_comm = None
 rank_comm = None
+
+# Maximum size of objects that can be handled by a single MPI operation.
+INT_MAX = 2**32 - 1
 
 
 def set_mpi_excepthook(mpi_comm):
@@ -47,6 +52,7 @@ def start_mpi(block_nonroot_stdout=True):
     if not MPI.Is_initialized():
         # Enable threading for the Counter class
         MPI.Init_thread(MPI.THREAD_MULTIPLE)
+        atexit.register(MPI.Finalize)
     world_comm = MPI.COMM_WORLD
     node_comm = world_comm.Split_type(MPI.COMM_TYPE_SHARED)
     rank_comm = world_comm.Split(color=node_comm.rank)
@@ -110,6 +116,97 @@ def shared_mem_bcast(arr, root=0):
     return sh_arr
 
 
+def big_gather(comm, objs, root=0, return_split_info=False):
+    """
+    Gather operation that can exceed the MPI limit of ~4 GiB.
+
+    MPI stores the total size of data to be gathered in a 32 bit integer,
+    so that Gather operations which will gather more than 2**32 bytes will fail.
+
+    This function replicates the behavior of mpi4py's `gather` method, while
+    avoiding this size limit. The lowercase `gather` function first pickles
+    Python objects before using the vectorized Gatherv. In this function,
+    the pickled data are gathered in stages such that each step is smaller
+    than the hard limit.
+
+    Parameters
+    ----------
+    comm: mpi4py.MPI.Intracomm
+        MPI communicator to use.
+    objs: objects
+        Data to gather from all processes.
+    root: int
+        Rank of process to receive the data.
+    return_split_info: bool
+        On root process, also a return a dictionary describing
+        how the data were split.
+
+    Returns
+    -------
+    list of objects:
+        Length Npus list, such that the n'th entry is the data gathered from
+        the n'th process.
+        This is only filled on the root process. Other processes get None.
+    dict:
+        If return_split_info, the root process also gets a dictionary containing:
+        - ranges: A list of tuples, giving the start and end byte of each chunk.
+        - MAX_BYTES: The size limit that was used.
+    """
+
+    # The limit is on the integer describing the number of bytes gathered.
+    MAX_BYTES = INT_MAX
+    sbuf = dumps(objs)
+    bytesize = len(sbuf)
+
+    # Sizes of send buffers to be sent from each rank.
+    counts = np.array(comm.allgather(bytesize))
+    totsize = sum(counts)
+
+    rbuf = None
+    displ = None
+    if comm.rank == 0:
+        rbuf = np.empty(sum(counts), dtype=bytes)
+        displ = np.array([sum(counts[1:p]) for p in range(comm.size)])
+
+    # Position in the output buffer for the current send buffer.
+    start_loc = sum(counts[:comm.rank])
+
+    # Ranges of output bytes for each chunk.
+    start = 0
+    end = 0
+    ranges = []
+    while end < totsize:
+        end = min(start + MAX_BYTES, totsize)
+        ranges.append((start, end))
+        start += MAX_BYTES + 1
+
+    for start, end in ranges:
+        # start/end indices of the local data to send, for this chunk.
+        start_ind = min(max((start - start_loc), 0), bytesize)
+        end_ind = min(max((end - start_loc), 0), bytesize)
+        cur_sbuf = sbuf[start_ind:end_ind + 1]
+        cur_counts = np.array(comm.gather(len(cur_sbuf), root=0))
+        if len(cur_sbuf) > 0:
+            loc_disp = max(start, start_loc)
+        else:
+            loc_disp = 0
+        cur_displ = comm.gather(loc_disp, root=0)
+        comm.Gatherv(sendbuf=cur_sbuf, recvbuf=(rbuf, cur_counts, cur_displ, MPI.BYTE), root=0)
+
+    per_proc = None
+    if comm.rank == 0:
+        per_proc = [loads(rbuf[displ[ii]:displ[ii] + counts[ii]]) for ii in range(comm.size)]
+    
+    split_info_dict = None
+    if comm.rank == 0:
+        split_info_dict = {'MAX_BYTES': MAX_BYTES, 'ranges': ranges}
+    
+    if return_split_info:
+        return per_proc, split_info_dict
+
+    return per_proc
+
+import time
 class Counter(object):
     """
     A basic parallelized counter class.
