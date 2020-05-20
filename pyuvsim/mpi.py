@@ -4,7 +4,8 @@
 
 import sys
 from array import array
-from threading import Thread
+from array import array as _array
+import struct as _struct
 import resource
 import atexit
 from pickle import loads, dumps
@@ -339,80 +340,50 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
     return per_proc
 
 
-class Counter(object):
+class Counter:
     """
     A basic parallelized counter class.
 
-    Adapted from the mpi4py nxtval-threads.py demo.
-    https://github.com/mpi4py/mpi4py/blob/master/demo/nxtval/nxtval-threads.py
+    Adapted from the mpi4py nxtval-mpi3.py demo.
+    https://github.com/mpi4py/mpi4py/blob/master/demo/nxtval/nxtval-mpi3.py
     """
 
     def __init__(self, comm=None, count_rank=0):
-        """
-        Create a new counter, and initialize to 0.
-        """
-        # duplicate communicator
         self.count_rank = count_rank
         if comm is None:
             comm = world_comm
-        assert not comm.Is_inter()
-        self.comm = comm.Dup()
-        # start counter thread
-        self.thread = None
-        rank = self.comm.Get_rank()
-        if rank == self.count_rank:
-            self.thread = Thread(target=self._counter_thread)
-            self.thread.daemon = True
-            self.thread.start()
-
-    def _counter_thread(self):
-        incr = array('i', [0])
-        ival = array('i', [0])
-        status = MPI.Status()
-        while True:  # server loop
-            self.comm.Recv([incr, MPI.INT],
-                           MPI.ANY_SOURCE, MPI.ANY_TAG,
-                           status)
-            if status.Get_tag() == 1:
-                return
-            self.comm.Send([ival, MPI.INT],
-                           status.Get_source(), self.count_rank)
-            ival[0] += incr[0]
+        rank = comm.Get_rank()
+        itemsize = MPI.INT.Get_size()
+        if rank == count_rank:
+            n = 1
+        else:
+            n = 0
+        self.win = MPI.Win.Allocate(n*itemsize, itemsize,
+                                    MPI.INFO_NULL, comm)
+        if rank == 0:
+            mem = self.win.tomemory()
+            mem[:] = _struct.pack('i', 0)
 
     def free(self):
-        self.comm.Barrier()
-        # stop counter thread
-        rank = self.comm.Get_rank()
-        if rank == self.count_rank:
-            self.comm.Send([None, MPI.INT], self.count_rank, 1)
-            self.thread.join()
-        self.comm.Free()
+        self.win.Free()
 
-    def next(self):
-        """
-        Increment counter.
-
-        Returns:
-            next value (integer)
-        """
-        incr = array('i', [1])
-        ival = array('i', [0])
-        self.comm.Send([incr, MPI.INT], self.count_rank, 0)
-        self.comm.Recv([ival, MPI.INT], self.count_rank, 0)
-        nxtval = ival[0]
-        return nxtval
+    def next(self, increment=1):
+        incr = _array('i', [increment])
+        nval = _array('i', [0])
+        self.win.Lock(0)
+        self.win.Get_accumulate([incr, 1, MPI.INT],
+                                [nval, 1, MPI.INT],
+                                0, op=MPI.SUM)
+        self.win.Unlock(0)
+        return nval[0]
 
     def current_value(self):
-        """
-        Returns:
-            current value of counter (integer)
-        """
-        incr = array('i', [0])
-        ival = array('i', [0])
-        self.comm.Send([incr, MPI.INT], self.count_rank, 0)
-        self.comm.Recv([ival, MPI.INT], self.count_rank, 0)
-        val = ival[0]
-        return val
+        self.win.Lock(0)
+        nval = _array('i', [0])
+        self.win.Get([nval, 1, MPI.INT], 0)
+        self.win.Unlock(0)
+        cval = world_comm.allreduce(nval[0], op=MPI.MAX)
+        return cval
 
 
 def get_max_node_rss(return_per_node=False):
