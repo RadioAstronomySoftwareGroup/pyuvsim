@@ -3,7 +3,6 @@
 # Licensed under the 3-clause BSD License
 
 import sys
-from array import array
 from array import array as _array
 import struct as _struct
 import resource
@@ -355,10 +354,10 @@ class Counter:
         rank = comm.Get_rank()
         itemsize = MPI.INT.Get_size()
         if rank == count_rank:
-            n = 1
+            nint = 1
         else:
-            n = 0
-        self.win = MPI.Win.Allocate(n*itemsize, itemsize,
+            nint = 0
+        self.win = MPI.Win.Allocate(nint * itemsize, itemsize,
                                     MPI.INFO_NULL, comm)
         if rank == 0:
             mem = self.win.tomemory()
