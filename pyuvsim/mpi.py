@@ -86,7 +86,7 @@ def shared_mem_bcast(arr, root=0):
     if node_comm.rank == root:
         # Data cannot be shared across nodes.
         # Need to broadcast to the root PU on each node.
-        arr = rank_comm.bcast(arr, root=root)
+        arr = big_bcast(rank_comm, arr, root=root)
         Nitems = arr.size
         shape = arr.shape
         itemsize = sys.getsizeof(arr.flatten()[0])
@@ -116,7 +116,78 @@ def shared_mem_bcast(arr, root=0):
     return sh_arr
 
 
-def big_gather(comm, objs, root=0, return_split_info=False):
+def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
+    """
+    Broadcast operation that can exceed the MPI limit of ~4 GiB.
+
+    See documentation on :meth:`big_gather` for details.
+
+    Parameters
+    ----------
+    comm: mpi4py.MPI.Intracomm
+        MPI communicator to use.
+    objs: objects
+        Data to gather from all processes.
+    root: int
+        Rank of process to receive the data.
+    return_split_info: bool
+        On root process, also a return a dictionary describing
+        how the data were split.
+    MAX_BYTES: int
+        Maximum bytes per chunk.
+        Defaults to the INT_MAX of 32 bit integers. Used for testing.
+
+    Returns
+    -------
+    list of objects:
+        Length Npus list, such that the n'th entry is the data gathered from
+        the n'th process.
+        This is only filled on the root process. Other processes get None.
+    dict:
+        If return_split_info, the root process also gets a dictionary containing:
+        - ranges: A list of tuples, giving the start and end byte of each chunk.
+        - MAX_BYTES: The size limit that was used.
+
+    Notes
+    -----
+    Running this on MPI.COMM_WORLD means that every process gets a full copy of
+    `objs`. This is mainly used in pyuvsim to send large data once to each node, to be
+    put in shared memory.
+    """
+    bytesize = None
+    if comm.rank == root:
+        buf = dumps(objs)
+        bytesize = len(buf)
+
+    # Sizes of send buffers to be sent from each rank.
+    bytesize = comm.bcast(bytesize, root=root)
+    if comm.rank != root:
+        buf = np.empty(bytesize, dtype=bytes)
+
+    # Ranges of output bytes for each chunk.
+    start = 0
+    end = 0
+    ranges = []
+    while end < bytesize:
+        end = min(start + MAX_BYTES, bytesize)
+        ranges.append((start, end))
+        start += MAX_BYTES + 1
+
+    for start, end in ranges:
+        comm.Bcast(buf[start:end + 1], root=root)
+
+    result = loads(buf)
+
+    if comm.rank == root:
+        split_info_dict = {'MAX_BYTES': MAX_BYTES, 'ranges': ranges}
+
+    if return_split_info:
+        return result, split_info_dict
+
+    return result
+
+
+def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
     """
     Gather operation that can exceed the MPI limit of ~4 GiB.
 
@@ -140,6 +211,9 @@ def big_gather(comm, objs, root=0, return_split_info=False):
     return_split_info: bool
         On root process, also a return a dictionary describing
         how the data were split.
+    MAX_BYTES: int
+        Maximum bytes per chunk.
+        Defaults to the INT_MAX of 32 bit integers. Used for testing.
 
     Returns
     -------
@@ -154,7 +228,6 @@ def big_gather(comm, objs, root=0, return_split_info=False):
     """
 
     # The limit is on the integer describing the number of bytes gathered.
-    MAX_BYTES = INT_MAX
     sbuf = dumps(objs)
     bytesize = len(sbuf)
 
@@ -185,28 +258,28 @@ def big_gather(comm, objs, root=0, return_split_info=False):
         start_ind = min(max((start - start_loc), 0), bytesize)
         end_ind = min(max((end - start_loc), 0), bytesize)
         cur_sbuf = sbuf[start_ind:end_ind + 1]
-        cur_counts = np.array(comm.gather(len(cur_sbuf), root=0))
+        cur_counts = np.array(comm.gather(len(cur_sbuf), root=root))
         if len(cur_sbuf) > 0:
             loc_disp = max(start, start_loc)
         else:
             loc_disp = 0
         cur_displ = comm.gather(loc_disp, root=0)
-        comm.Gatherv(sendbuf=cur_sbuf, recvbuf=(rbuf, cur_counts, cur_displ, MPI.BYTE), root=0)
+        comm.Gatherv(sendbuf=cur_sbuf, recvbuf=(rbuf, cur_counts, cur_displ, MPI.BYTE), root=root)
 
     per_proc = None
-    if comm.rank == 0:
+    if comm.rank == root:
         per_proc = [loads(rbuf[displ[ii]:displ[ii] + counts[ii]]) for ii in range(comm.size)]
-    
+
     split_info_dict = None
-    if comm.rank == 0:
+    if comm.rank == root:
         split_info_dict = {'MAX_BYTES': MAX_BYTES, 'ranges': ranges}
-    
+
     if return_split_info:
         return per_proc, split_info_dict
 
     return per_proc
 
-import time
+
 class Counter(object):
     """
     A basic parallelized counter class.

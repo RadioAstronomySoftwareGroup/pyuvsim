@@ -15,6 +15,8 @@ pytest.importorskip('mpi4py')  # noqa
 import mpi4py
 mpi4py.rc.initialize = False  # noqa
 from mpi4py import MPI
+from astropy.time import Time
+from astropy import units
 
 from pyuvdata import UVData
 from pyuvdata.data import DATA_PATH
@@ -23,6 +25,8 @@ from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
 from pyuvsim import mpi
 import pyuvsim.tests as simtest
+import pyradiosky
+
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, 'NicCSTbeams', f) for f in cst_files]
@@ -34,6 +38,22 @@ param_filenames = [
 ]  # Five different test configs
 singlesource_vot = os.path.join(SIM_DATA_PATH, 'single_source.vot')
 singlesource_txt = os.path.join(SIM_DATA_PATH, 'single_source.txt')
+
+
+@pytest.fixture
+def fake_tasks():
+    sky = pyradiosky.SkyModel()
+    n_tasks = 30
+    t0 = Time.now()
+    freq = 50 * units.Hz
+    objs = [pyuvsim.UVTask(sky, t0, freq, None, None, freq_i=ii) for ii in range(n_tasks)]
+    for ti, task in enumerate(objs):
+        task.visibility_vector = np.random.uniform(0, 3) + np.random.uniform(0, 3) * 1j
+        task.uvdata_index = (ti, 0, 0)
+        task.sources = 1     # Replace with something easier to compare later.
+        objs[ti] = task
+
+    return objs
 
 
 def test_mpi_version():
@@ -189,3 +209,61 @@ def test_mpi_counter():
         count.next()
     assert count.current_value() == N
     count.free()
+
+
+@pytest.mark.parametrize('MAX_BYTES', [mpi.INT_MAX, 100])
+def test_big_gather(MAX_BYTES, fake_tasks):
+    mpi.start_mpi()
+
+    objs = fake_tasks
+    n_tasks = len(objs)
+    result, split_info = mpi.big_gather(
+        mpi.world_comm, objs, root=0, return_split_info=True, MAX_BYTES=MAX_BYTES
+    )
+    assert all(objs[ii].freq_i == ii for ii in range(n_tasks))
+    assert all(result[0][ii].freq == objs[ii].freq for ii in range(n_tasks))
+    assert all(result[0][ii].time == objs[ii].time for ii in range(n_tasks))
+
+    # Compare with normal gather:
+    result2 = mpi.world_comm.gather(objs, root=0)
+
+    assert result2 == result
+
+    assert split_info['MAX_BYTES'] == MAX_BYTES
+    if MAX_BYTES < 200:
+        assert len(split_info['ranges']) > 1
+
+
+@pytest.mark.parametrize('MAX_BYTES', [mpi.INT_MAX, 100])
+def test_big_bcast(MAX_BYTES, fake_tasks):
+    mpi.start_mpi()
+
+    objs = fake_tasks
+    n_tasks = len(objs)
+
+    result, split_info = mpi.big_bcast(
+        mpi.world_comm, objs, root=0, return_split_info=True, MAX_BYTES=MAX_BYTES
+    )
+    assert all(objs[ii].freq_i == ii for ii in range(n_tasks))
+    assert all(result[ii].freq == objs[ii].freq for ii in range(n_tasks))
+    assert all(result[ii].time == objs[ii].time for ii in range(n_tasks))
+
+    # Compare with normal gather:
+    result2 = mpi.world_comm.bcast(objs, root=0)
+
+    assert result2 == result
+
+    assert split_info['MAX_BYTES'] == MAX_BYTES
+    if MAX_BYTES < 200:
+        assert len(split_info['ranges']) > 1
+
+
+def test_big_bcast_gather_loop(fake_tasks):
+    mpi.start_mpi()
+
+    objs = fake_tasks
+
+    broadcast = mpi.big_bcast(mpi.world_comm, objs, root=0, MAX_BYTES=35)
+    gathered = mpi.big_gather(mpi.world_comm, broadcast, root=0, MAX_BYTES=27)
+
+    assert broadcast == gathered[0]
