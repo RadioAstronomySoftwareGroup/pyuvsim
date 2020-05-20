@@ -18,6 +18,7 @@
 - The definition of the Airy beam now uses the exact value of c, not 3e8.
 
 ### Fixed
+- Switched to using a remote-memory-access based counter class. Appears to have fixed bug in the Counter test.
 - Ensure that source positions, coherency matrices, and Jones matrices are updated at the right times.
 - Error early if the task list is too long for gather
 
