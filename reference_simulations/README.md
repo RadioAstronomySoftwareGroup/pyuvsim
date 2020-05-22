@@ -2,14 +2,16 @@
 
 ``pyuvsim`` reference simulations are intended as a reference point for comparison
 with existing simulators. As the capability of `pyuvsim` has improved, our
-reference simulations have grown in complexity. Each set is detailed in its own
+reference simulations have grown in complexity. Each generation is detailed in its own
 folder and replaces the previous set as the validation standard for new `pyuvsim`
-versions.
+versions. There are currently two generations, in *first_reference_simulations* and
+*second_reference_simulations*.
 
 For convenience, several scripts are provided to help run the reference simulations and
 compare their results to a standard set (hosted on a publicly-accessible Google drive).
 At this time, these scripts are designed for a cluster managed by Simple Linux Utility Resource
 Manager (SLURM).
+
 
  - run_ref_sims.sh
         To run all of the reference simulations, run:
