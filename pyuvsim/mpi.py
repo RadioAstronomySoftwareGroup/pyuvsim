@@ -21,8 +21,9 @@ world_comm = None
 node_comm = None
 rank_comm = None
 
-# Maximum size of objects that can be handled by a single MPI operation.
-INT_MAX = 2**32 - 1
+
+# Split serialized objects into chunks of 2 GiB
+INT_MAX = 2**31 - 1
 
 
 def set_mpi_excepthook(mpi_comm):
@@ -174,7 +175,7 @@ def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
         start += MAX_BYTES + 1
 
     for start, end in ranges:
-        comm.Bcast(buf[start:end + 1], root=root)
+        comm.Bcast([buf[start:end + 1], MPI.BYTE], root=root)
 
     result = loads(buf)
 
@@ -239,35 +240,40 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
     displ = None
     if comm.rank == 0:
         rbuf = np.empty(sum(counts), dtype=bytes)
-        displ = np.array([sum(counts[1:p]) for p in range(comm.size)])
+        displ = np.array([sum(counts[:p]) for p in range(comm.size + 1)])
 
     # Position in the output buffer for the current send buffer.
     start_loc = sum(counts[:comm.rank])
 
-    # Ranges of output bytes for each chunk.
     start = 0
     end = 0
     ranges = []
     while end < totsize:
         end = min(start + MAX_BYTES, totsize)
         ranges.append((start, end))
-        start += MAX_BYTES + 1
-
+        start += MAX_BYTES
     for start, end in ranges:
         # start/end indices of the local data to send, for this chunk.
         start_ind = min(max((start - start_loc), 0), bytesize)
         end_ind = min(max((end - start_loc), 0), bytesize)
-        cur_sbuf = sbuf[start_ind:end_ind + 1]
+        cur_sbuf = sbuf[start_ind:end_ind]
         cur_counts = np.array(comm.gather(len(cur_sbuf), root=root))
         if len(cur_sbuf) > 0:
-            loc_disp = max(start, start_loc)
+            loc_disp = max(start_loc - start, 0)
         else:
             loc_disp = 0
-        cur_displ = comm.gather(loc_disp, root=0)
-        comm.Gatherv(sendbuf=cur_sbuf, recvbuf=(rbuf, cur_counts, cur_displ, MPI.BYTE), root=root)
+        cur_displ = comm.gather(loc_disp, root=0)       # Displacements into current chunk.
+
+        cur_rbuf = np.empty(end - start, dtype=bytes)   # Buffer to receive current chunk.
+        comm.Gatherv(sendbuf=(cur_sbuf, MPI.BYTE), recvbuf=(
+            cur_rbuf, cur_counts, cur_displ, MPI.BYTE), root=root
+        )
+        if comm.rank == 0:
+            rbuf[start:end] = cur_rbuf[:]
 
     per_proc = None
     if comm.rank == root:
+        per_proc = []
         per_proc = [loads(rbuf[displ[ii]:displ[ii] + counts[ii]]) for ii in range(comm.size)]
 
     split_info_dict = None
