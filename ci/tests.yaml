@@ -19,4 +19,4 @@ dependencies:
   - setuptools_scm
   - pip:
     - pyradiosky
-    - git+https://github.com/aelanman/lunarsky.git
+    - lunarsky
