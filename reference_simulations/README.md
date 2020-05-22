@@ -4,8 +4,7 @@
 with existing simulators. As the capability of `pyuvsim` has improved, our
 reference simulations have grown in complexity. Each generation is detailed in its own
 folder and replaces the previous set as the validation standard for new `pyuvsim`
-versions. There are currently two generations, in *first_reference_simulations* and
-*second_reference_simulations*.
+versions.
 
 For convenience, several scripts are provided to help run the reference simulations and
 compare their results to a standard set (hosted on a publicly-accessible Google drive).

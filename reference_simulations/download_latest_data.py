@@ -22,7 +22,7 @@ args = parser.parse_args()
 if args.generation not in [1, 2]:
     raise ValueError(f"Invalid generation: {args.generation}")
 
-version = f"v{args.generation}"
+version = f"gen{args.generation}"
 
 target_dir = os.path.join('latest_ref_data', version)
 

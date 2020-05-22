@@ -11,7 +11,7 @@ try:
 except ImportError as e:
     raise ImportError("astroquery module required to use the download_gleam script") from e
 
-catalog_dir = "first_reference_simulations/catalog_files/"
+catalog_dir = "first_generation/catalog_files/"
 name = "gleam.vot"
 
 opath = os.path.join(catalog_dir, name)
