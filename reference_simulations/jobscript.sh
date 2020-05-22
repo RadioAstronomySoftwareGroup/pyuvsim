@@ -3,7 +3,7 @@
 #SBATCH -J pyuvsim
 #SBATCH --mem=100G
 #SBATCH -t 29:00:00
-#SBATCH -n 40
+#SBATCH -n 50
 #SBATCH --cpus-per-task=2
 
 echo JOBID ${SLURM_ARRAY_JOB_ID}

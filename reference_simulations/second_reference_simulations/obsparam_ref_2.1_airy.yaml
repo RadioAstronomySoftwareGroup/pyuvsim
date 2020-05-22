@@ -1,17 +1,17 @@
 filing:
-  outdir: './results_data/'   #Output file directory
-  outfile_name: 'ref_2.1_airy' # Alternatively, give the full name
-  output_format: 'uvh5'  # Format for output. Default is uvfits, but miriad and uvh5 are also supported.
+  outdir: './results_data/'
+  outfile_name: 'ref_2.1_airy'
+  output_format: 'uvh5'
 freq:
-  Nfreqs: 128    # Number of frequencies
-  channel_width: 80000.0    # Frequency channel width
-  start_freq: 100000000.0    # Start and end frequencies (Hz)
+  Nfreqs: 128
+  channel_width: 80000.0
+  start_freq: 100000000.0
 sources:
-  catalog: 'catalog_files/gleam.vot'       #Choice of catalog file name (or specify 'mock' to use a builtin catalog).
+  catalog: 'catalog_files/gleam.vot'
 telescope:
-  array_layout: 'telescope_config/mwa_nocore_layout.csv'    # Antenna layout csv file
-  telescope_config_name: 'telescope_config/mwa88_nocore_config_airy.yaml'  # Telescope metadata file.
+  array_layout: 'telescope_config/mwa_nocore_layout.csv'
+  telescope_config_name: 'telescope_config/mwa88_nocore_config_airy.yaml'
 time:
-  Ntimes: 60        # Number of times.
-  integration_time: 60 # Time step size  (seconds)
-  start_time: 2458116.24485307    # Start and end times (Julian date)
+  Ntimes: 60
+  integration_time: 60
+  start_time: 2458116.24485307

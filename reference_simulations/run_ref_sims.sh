@@ -1,9 +1,24 @@
 #!/bin/bash
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2020 Radio Astronomy Software Group
+# Licensed under the 3-clause BSD License
 
 # Run reference simulations and save slurmIDs
 
+Help(){
+    echo "Usage: "
+    echo "   ./run_ref_sims.sh path/to/obsparam1 path/to/obsparam2 ..."
+    echo "Files must be either in first_reference_simulations or second_reference_simulations."
+}
+
 obsparam_files=( "$@" )
 nfiles="$#"
+
+if [ $nfiles -eq 0 ]
+then
+        Help
+        exit
+fi
 
 v1files=()
 v2files=()
@@ -58,7 +73,7 @@ then
     mkdir -p $fulldir"/slurm_out"
     ln -sf $sourcedir/telescope_config $fulldir/telescope_config
     ln -sf $sourcedir/catalog_files $fulldir/catalog_files
-    for fn in "${v1files[@]}"
+    for fn in "${v2files[@]}"
     do
             cp 'second_reference_simulations/'$fn $fulldir"/"$(basename $fn)
     done
