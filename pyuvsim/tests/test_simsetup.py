@@ -9,7 +9,6 @@ import shutil
 import numpy as np
 import pytest
 import yaml
-import warnings
 from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
 from pyuvdata import UVBeam, UVData
@@ -1002,6 +1001,9 @@ def test_moon_lsts():
     assert new_obj.check()
 
 
+@pytest.mark.filterwarnings("ignore:The _ra parameters are not")
+@pytest.mark.filterwarnings("ignore:The _dec parameters are not")
+@pytest.mark.filterwarnings("ignore:Future equality does not pass")
 def test_mock_catalog_moon():
     # A mock catalog made with a MoonLocation.
     pytest.importorskip('lunarsky')
@@ -1018,6 +1020,4 @@ def test_mock_catalog_moon():
     assert ekwds['world'] == 'earth'
 
     # Simple check that the given lat/lon were interpreted differently in each call.
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        assert mmock != emock
+    assert mmock != emock
