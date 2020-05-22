@@ -17,6 +17,7 @@ mpi4py.rc.initialize = False  # noqa
 from mpi4py import MPI
 from astropy.time import Time
 from astropy import units
+from astropy.coordinates import Latitude, Longitude
 
 from pyuvdata import UVData
 from pyuvdata.data import DATA_PATH
@@ -42,7 +43,10 @@ singlesource_txt = os.path.join(SIM_DATA_PATH, 'single_source.txt')
 
 @pytest.fixture
 def fake_tasks():
-    sky = pyradiosky.SkyModel()
+    sky = pyradiosky.SkyModel(
+        'src', Longitude('10d'), Latitude('5d'), [1, 0, 0, 0], 'spectral_index',
+        reference_frequency=np.array([100e6]) * units.Hz, spectral_index=np.array([-0.74])
+    )
     n_tasks = 30
     t0 = Time.now()
     freq = 50 * units.Hz
@@ -244,7 +248,7 @@ def test_big_bcast(MAX_BYTES, fake_tasks):
     result, split_info = mpi.big_bcast(
         mpi.world_comm, objs, root=0, return_split_info=True, MAX_BYTES=MAX_BYTES
     )
-    assert all(objs[ii].freq_i == ii for ii in range(n_tasks))
+    assert all(result[ii].freq_i == ii for ii in range(n_tasks))
     assert all(result[ii].freq == objs[ii].freq for ii in range(n_tasks))
     assert all(result[ii].time == objs[ii].time for ii in range(n_tasks))
 
