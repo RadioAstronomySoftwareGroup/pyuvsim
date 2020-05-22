@@ -421,9 +421,6 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
     Nfreqs = input_uv.Nfreqs
     Nsrcs = len(catalog)
 
-    if mpi.rank == 0:
-        _check_ntasks_valid(Ntimes * Nfreqs * Nbls)
-
     task_inds, src_inds, Ntasks_local, Nsrcs_local = _make_task_inds(
         Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus
     )
@@ -535,7 +532,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
 
     # gather all the finished local tasks into a list of list of len NPUs
     # gather is a blocking communication, have to wait for all PUs
-    full_tasklist = mpi.big_gather(summed_local_task_list, root=0)
+    full_tasklist = mpi.big_gather(comm, summed_local_task_list, root=0)
     localtasks_count = comm.gather(Ntasks_local, root=0)
 
     # Concatenate the list of lists into a flat list of tasks
