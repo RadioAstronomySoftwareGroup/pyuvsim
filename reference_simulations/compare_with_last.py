@@ -24,7 +24,7 @@ parser.add_argument('-g', '--generation', type=int, help="Generation of referenc
 
 args = parser.parse_args()
 
-ref_set_path = os.path.join('latest_ref_data', f"v{args.generation}")
+ref_set_path = os.path.join('latest_ref_data', f"gen{args.generation}")
 
 new_file_paths = args.paths
 old_file_paths = glob.glob(os.path.join(ref_set_path, '*.uvh5'))
