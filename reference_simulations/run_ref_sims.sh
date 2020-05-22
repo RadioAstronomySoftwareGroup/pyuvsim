@@ -58,7 +58,7 @@ then
     mkdir -p $fulldir"/slurm_out"
     ln -sf $sourcedir/telescope_config $fulldir/telescope_config
     ln -sf $sourcedir/catalog_files $fulldir/catalog_files
-    for fn in "${v2files[@]}"
+    for fn in "${v1files[@]}"
     do
             cp 'second_reference_simulations/'$fn $fulldir"/"$(basename $fn)
     done
