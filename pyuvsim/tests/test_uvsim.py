@@ -12,7 +12,6 @@ from numpy.lib import recfunctions
 import pyuvdata.utils as uvutils
 from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, Longitude, Latitude
-from astropy.time import Time
 import pytest
 from pyuvdata import UVData
 from pyuvdata.data import DATA_PATH
