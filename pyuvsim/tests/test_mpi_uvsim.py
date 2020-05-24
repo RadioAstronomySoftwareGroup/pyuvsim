@@ -15,7 +15,6 @@ pytest.importorskip('mpi4py')  # noqa
 import mpi4py
 mpi4py.rc.initialize = False  # noqa
 from mpi4py import MPI
-from astropy.time import Time
 from astropy import units
 from astropy.coordinates import Latitude, Longitude
 
