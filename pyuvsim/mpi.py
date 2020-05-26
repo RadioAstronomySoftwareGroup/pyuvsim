@@ -172,10 +172,10 @@ def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
     while end < bytesize:
         end = min(start + MAX_BYTES, bytesize)
         ranges.append((start, end))
-        start += MAX_BYTES + 1
+        start += MAX_BYTES
 
     for start, end in ranges:
-        comm.Bcast([buf[start:end + 1], MPI.BYTE], root=root)
+        comm.Bcast([buf[start:end], MPI.BYTE], root=root)
 
     result = loads(buf)
 
