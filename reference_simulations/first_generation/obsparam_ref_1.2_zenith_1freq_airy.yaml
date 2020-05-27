@@ -1,9 +1,9 @@
 filing:
   outdir: "results_data/"
-  outfile_name: 'ref_1.2_zenith_10freqs_airy'
+  outfile_name: 'ref_1.2_zenith_1freq_airy'
   output_format: 'uvh5'
 freq:
-  Nfreqs: 10
+  Nfreqs: 1
   channel_width: 1000000.0
   start_freq: 100000000.0
 sources:
