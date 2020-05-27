@@ -1,16 +1,16 @@
 filing:
   outdir: "results_data/"
-  outfile_name: 'ref_1.2_zenith_10freqs_airy'
+  outfile_name: 'ref_1.2_zenith_1freq_uniform'
   output_format: 'uvh5'
 freq:
-  Nfreqs: 10
+  Nfreqs: 1
   channel_width: 1000000.0
   start_freq: 100000000.0
 sources:
   catalog: "catalog_files/two_distant_points_2458178.5.txt"
 telescope:
   array_layout: telescope_config/baseline_lite.csv
-  telescope_config_name: telescope_config/bl_lite_airy.yaml
+  telescope_config_name: telescope_config/bl_lite_uniform.yaml
 time:
   Ntimes: 1440
   integration_time: 60.0
