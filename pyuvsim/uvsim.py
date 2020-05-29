@@ -3,12 +3,10 @@
 # Licensed under the 3-clause BSD License
 
 import numpy as np
-import sys
 import yaml
 import warnings
 from astropy.coordinates import EarthLocation
 import astropy.units as units
-from astropy.time import Time
 from astropy.units import Quantity
 from astropy.constants import c as speed_of_light
 from pyuvdata import UVData
@@ -23,6 +21,9 @@ from . import utils as simutils
 from .antenna import Antenna
 from .baseline import Baseline
 from .telescope import Telescope
+
+from .astropy_interface import MoonLocation, hasmoon, Time
+
 
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim',
            'serial_gather']
@@ -303,9 +304,18 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     time_ax, freq_ax, bl_ax = range(3)
 
     tloc = [np.float64(x) for x in input_uv.telescope_location]
-    telescope = Telescope(input_uv.telescope_name,
-                          EarthLocation.from_geocentric(*tloc, unit='m'),
-                          beam_list)
+
+    world = input_uv.extra_keywords.get('world', 'earth')
+
+    if world.lower() == 'earth':
+        location = EarthLocation.from_geocentric(*tloc, unit='m')
+    elif world.lower() == 'moon':
+        if not hasmoon:
+            raise ValueError("Need lunarsky module to simulate an array on the Moon.")
+        location = MoonLocation.from_selenocentric(*tloc, unit='m')
+    else:
+        raise ValueError("If world keyword is set, it must be either 'moon' or 'earth'.")
+    telescope = Telescope(input_uv.telescope_name, location, beam_list)
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
     for src_i in src_iter:
@@ -368,13 +378,13 @@ def _check_ntasks_valid(Ntasks_tot):
         )
 
 
-def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
+def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=False):
     """
     Run uvsim from UVData object.
 
     Parameters
     ----------
-    input_uv: UVData object
+    input_uv: `:class:~pyuvdata.UVData` instance
         Provides baseline/time/frequency information.
     beam_list: list
         A list of UVBeam and/or AnalyticBeam identifier strings.
@@ -384,6 +394,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
         beam in the `beam_list`.
     catalog: np.ndarray in shared memory
         Immutable source parameters
+    quiet: bool
+        Do not print anything.
 
     Returns
     -------
@@ -408,13 +420,15 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
 
     # The root node will initialize our simulation
     # Read input file and make uvtask list
+    if rank == 0 and not quiet:
+        print('Nbls:', input_uv.Nbls, flush=True)
+        print('Ntimes:', input_uv.Ntimes, flush=True)
+        print('Nfreqs:', input_uv.Nfreqs, flush=True)
+        print('Nsrcs:', len(catalog), flush=True)
     if rank == 0:
-        print('Nbls:', input_uv.Nbls)
-        print('Ntimes:', input_uv.Ntimes)
-        print('Nfreqs:', input_uv.Nfreqs)
-        print('Nsrcs:', len(catalog))
-        sys.stdout.flush()
         uv_container = simsetup._complete_uvdata(input_uv, inplace=False)
+        if 'world' in input_uv.extra_keywords:
+            uv_container.extra_keywords['world'] = input_uv.extra_keywords['world']
 
     Nbls = input_uv.Nbls
     Ntimes = input_uv.Ntimes
@@ -464,9 +478,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
 
     summed_task_dict = {}
     Ntasks_tot = comm.reduce(Ntasks_tot, op=mpi.MPI.MAX, root=0)
-    if rank == 0:
-        print("Tasks: ", Ntasks_tot)
-        sys.stdout.flush()
+    if rank == 0 and not quiet:
+        print("Tasks: ", Ntasks_tot, flush=True)
         pbar = simutils.progsteps(maxval=Ntasks_tot)
 
     engine = UVEngine()
@@ -481,16 +494,16 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
             summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
 
         count.next()
-        if rank == 0:
+        if rank == 0 and not quiet:
             pbar.update(count.current_value())
 
     comm.Barrier()
     count.free()
-    if rank == 0:
+    if rank == 0 and not quiet:
         pbar.finish()
 
-    if rank == 0:
-        print("Calculations Complete.")
+    if rank == 0 and not quiet:
+        print("Calculations Complete.", flush=True)
 
     # If profiling is active, save meta data:
     from .profiling import prof     # noqa
@@ -544,16 +557,24 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None):
         return uvdata_out
 
 
-def run_uvsim(params, return_uv=False):
+def run_uvsim(params, return_uv=False, quiet=False):
     """
     Run a simulation off of an obsparam yaml file.
 
-    Args:
-        params (string): Path to a parameter yaml file.
-        return_uv (bool): If true, do not write results to file (default False) and return uv_out
+    Parameters
+    ----------
+    params: str
+        Path to a parameter yaml file.
+    return_uv: bool
+        If true, do not write results to file and return uv_out. (Default False)
+    quiet: bool
+        If True, do not print anything to stdout. (Default False)
 
-    Returns:
-        uv_out (UVData): Finished simulation results. (if return_uv is True)
+    Returns
+    -------
+    uv_out: `pyuvdata.UVData`
+        Finished simulation results.
+        Returned only if return_uv is True.
     """
     if mpi is None:
         raise ImportError("You need mpi4py to use the uvsim module. "
@@ -579,7 +600,9 @@ def run_uvsim(params, return_uv=False):
     beam_dict = comm.bcast(beam_dict, root=0)
     catalog = mpi.shared_mem_bcast(catalog, root=0)
 
-    uv_out = run_uvdata_uvsim(input_uv, beam_list, beam_dict=beam_dict, catalog=catalog)
+    uv_out = run_uvdata_uvsim(
+        input_uv, beam_list, beam_dict=beam_dict, catalog=catalog, quiet=quiet
+    )
 
     if rank == 0:
         if isinstance(params, str):

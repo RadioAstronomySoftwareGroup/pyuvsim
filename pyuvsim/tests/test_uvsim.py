@@ -12,7 +12,6 @@ from numpy.lib import recfunctions
 import pyuvdata.utils as uvutils
 from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, Longitude, Latitude
-from astropy.time import Time
 import pytest
 from pyuvdata import UVData
 from pyuvdata.data import DATA_PATH
@@ -22,6 +21,7 @@ import pyuvsim
 import pyuvsim.tests as simtest
 import pyuvsim.utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+from pyuvsim.astropy_interface import Time
 
 cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
 beam_files = [os.path.join(DATA_PATH, 'NicCSTbeams', f) for f in cst_files]
@@ -938,3 +938,20 @@ def test_fullfreq_check(uvobj_beams_srcs):
         next(taskiter0)
 
     next(taskiter1)
+
+
+@pytest.mark.skipif('pyuvsim.astropy_interface.hasmoon')
+def test_moonloc_error(uvobj_beams_srcs):
+    # Break if the uvobj indicates that the sim is on the Moon, but lunarsky is not available.
+
+    uv_obj, beam_list, beam_dict, sources = uvobj_beams_srcs
+
+    uv_obj.extra_keywords['world'] = 'moon'
+
+    with pytest.raises(ValueError, match='Need lunarsky module to simulate'):
+        next(pyuvsim.uvsim.uvdata_to_task_iter(range(5), uv_obj, sources, beam_list, beam_dict))
+
+    uv_obj.extra_keywords['world'] = 'gallifrey'
+
+    with pytest.raises(ValueError, match="If world keyword is set, it must "):
+        next(pyuvsim.uvsim.uvdata_to_task_iter(range(5), uv_obj, sources, beam_list, beam_dict))

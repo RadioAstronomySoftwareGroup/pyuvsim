@@ -39,9 +39,10 @@ setup_args = {
     'keywords': 'radio astronomy interferometry',
     'extras_require': {
         'sim': ['mpi4py>=3.0.0', 'psutil'],
-        'all': ['mpi4py>=3.0.0', 'psutil', 'line_profiler'],
+        'all': ['mpi4py>=3.0.0', 'psutil', 'line_profiler', 'lunarsky'],
+        'moon': ['mpi4py>=3.0.0', 'psutil', 'lunarsky'],
         'dev': ['mpi4py>=3.0.0', 'psutil', 'line_profiler', 'pypandoc',
-                'pytest', 'pytest-cov', 'sphinx', 'pre-commit']
+                'pytest', 'pytest-cov', 'sphinx', 'pre-commit', 'lunarsky']
     }
 }
 

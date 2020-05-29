@@ -67,6 +67,7 @@ Optional:
 * mpi4py>=3.0.0
 * psutil
 * line_profiler
+* lunarsky
 
 ### Developer Installation
 If you are developing `pyuvsim`, you will need to download and install the

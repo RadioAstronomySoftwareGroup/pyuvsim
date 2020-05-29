@@ -183,6 +183,16 @@ Telescope Configuration
 	    :width: 600
 	    :alt: Graphical depiction of the example antenna layout.
 
+Telescopes on the Moon
+~~~~~~~~~~~~~~~~~~~~~~
+   If the ``lunarsky`` module is installed, the ``telescope_location`` can be interpreted as the
+   lon/lat/alt of an observatory on the Moon, defined in the "Mean Earth/ Mean Rotation"
+   frame (see documentation on ``lunarsky``). Setting the keyword ``world: moon`` in the telescope_config
+   file enables this:
+
+   .. literalinclude:: example_configs/tranquility_config.yaml
+
+
 Sources
 ^^^^^^^
     Specify the path to a text catalog file via ``catalog``. The path can be given as an absolute path or relative to the location of the obsparam. This catalog should be readable with `pyradiosky`.

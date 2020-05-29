@@ -11,13 +11,14 @@ import pytest
 import yaml
 from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation
-from astropy.time import Time
 from pyuvdata import UVBeam, UVData
 import pyradiosky
 
 import pyuvsim
 import pyuvsim.tests as simtest
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+
+from pyuvsim.astropy_interface import Time
 
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 
@@ -966,3 +967,57 @@ def test_beamopts_init():
     telconfig['spline_interp_opts'] = {'kx' : 2, 'ky' : 2}
     beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(1), telconfig)
     assert beam_list.spline_interp_opts is not None
+
+
+def test_moon_lsts():
+    # Check that setting lsts for a Moon simulation works as expected.
+    pytest.importorskip('lunarsky')
+
+    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_tranquility_hex.yaml')
+    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
+    uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    assert 'world' in uv_obj.extra_keywords.keys()
+    assert uv_obj.extra_keywords['world'] == 'moon'
+
+    # Check ordering on lsts -- unique lsts should correspond with unique times.
+    lsts, lst_inds = np.unique(uv_obj.lst_array, return_inverse=True)
+    times, time_inds = np.unique(uv_obj.time_array, return_inverse=True)
+    assert np.all(lst_inds == time_inds)
+
+    # Confirm that the change in LST makes sense for a lunar month.
+    dlst = np.degrees(lsts[1] - lsts[0]) / 15 * 3600  # Hours per step.
+    tstep_per_lunar_month = 28 * 24 * 3600 / uv_obj.integration_time[0]
+    sec_per_tstep = 24 * 3600 / tstep_per_lunar_month
+
+    assert np.isclose(dlst, sec_per_tstep, rtol=1e-2)
+
+    # Unset the lst array and confirm that the call from _complete_uvdata returns the same.
+    backup_lst_array = uv_obj.lst_array.copy()
+    uv_obj.lst_array = None
+
+    new_obj = pyuvsim.simsetup._complete_uvdata(uv_obj)
+
+    assert np.allclose(new_obj.lst_array, backup_lst_array)
+    assert new_obj.check()
+
+
+@pytest.mark.filterwarnings("ignore:The _ra parameters are not")
+@pytest.mark.filterwarnings("ignore:The _dec parameters are not")
+@pytest.mark.filterwarnings("ignore:Future equality does not pass")
+def test_mock_catalog_moon():
+    # A mock catalog made with a MoonLocation.
+    pytest.importorskip('lunarsky')
+    import lunarsky
+    from pyuvsim.astropy_interface import Time
+
+    time = Time.now()
+    loc = lunarsky.MoonLocation.from_selenodetic(24.433333333, 0.687500000)
+    mmock, mkwds = pyuvsim.simsetup.create_mock_catalog(time, 'hera_text', array_location=loc)
+    eloc = EarthLocation.from_geodetic(24.433, 0.6875)
+    emock, ekwds = pyuvsim.simsetup.create_mock_catalog(time, 'hera_text', array_location=eloc)
+
+    assert mkwds['world'] == 'moon'
+    assert ekwds['world'] == 'earth'
+
+    # Simple check that the given lat/lon were interpreted differently in each call.
+    assert mmock != emock

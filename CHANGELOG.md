@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- quiet keyword for run_uvsim, to suppress stdout printing.
+- Support for Moon-based observing -- keyword "world: moon" in telescope config.
 - Option to pass along interpolating spline order to UVBeam from teleconfig file.
 - Scripts for running / verifying reference simulations.
 - Benchmarking tools.

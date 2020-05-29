@@ -66,8 +66,7 @@ class progsteps:
                 print(("{:0.2f}% completed. {}  elapsed. "
                        + "{} remaining. \n").format(
                     frac_done * 100., str(timedelta(seconds=dt)),
-                    str(timedelta(seconds=self.remain))))
-                sys.stdout.flush()
+                    str(timedelta(seconds=self.remain))), flush=True)
 
     def finish(self):
         self.update(self.maxval)
@@ -217,7 +216,7 @@ def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_fo
     if noclobber:
         outfile_name = check_file_exists_and_increment(outfile_name)
 
-    print('Outfile path: ', outfile_name)
+    print('Outfile path: ', outfile_name, flush=True)
     if not dryrun:
         if out_format == 'uvfits':
             uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
