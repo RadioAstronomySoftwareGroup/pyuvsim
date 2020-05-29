@@ -30,6 +30,10 @@ Manager (SLURM).
         Given the paths to the latest output files (uvh5), this will compare the data in those files
         to the corresponding files in `latest_ref_data`.
 
+ - get_gleam.py
+        A script to download the GLEAM extragalactic source catalog from Vizier, using `astroquery`,
+        and save it to a VOTable file. GLEAM, treated as flat-spectrum, is used for several reference simulations.
+
 
 More information about how to run the simulations may be found at
 [ReadTheDocs](https://pyuvsim.readthedocs.io/en/latest/usage.html).
