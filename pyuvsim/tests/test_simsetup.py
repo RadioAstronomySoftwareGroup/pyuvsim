@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 import yaml
 from astropy import units
-from astropy.coordinates import Angle, SkyCoord, EarthLocation
+from astropy.coordinates import Angle, SkyCoord, EarthLocation, Latitude, Longitude
 from pyuvdata import UVBeam, UVData
 import pyradiosky
 
@@ -1016,3 +1016,53 @@ def test_mock_catalog_moon():
 
     # Simple check that the given lat/lon were interpreted differently in each call.
     assert mmock != emock
+
+
+def test_skymodeldata():
+    # Test that SkyModelData class can properly recreate a SkyModel and subselect.
+
+    # Mock catalog with a couple sources polarized.
+    Nsrcs = 30
+    Nfreqs = 10
+    freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
+
+    pol_inds = range(12, 15)
+    stokes = np.zeros((4, Nfreqs, Nsrcs))
+    stokes[0, :, :] = 1.0
+
+    stokes[1, :, pol_inds] = 0.2
+    stokes[2, :, pol_inds] = 1.2
+    stokes[3, :, pol_inds] = 0.3
+
+    ra = Longitude(np.linspace(0, 2 * np.pi, Nsrcs), 'rad')
+    dec = Latitude(np.linspace(-np.pi / 2, np.pi / 3, Nsrcs), 'rad')
+
+    sky = pyradiosky.SkyModel(
+        name=np.arange(Nsrcs).astype(str),
+        ra=ra,
+        dec=dec,
+        stokes=stokes,
+        spectral_type='full',
+        freq_array=freqs
+    )
+
+    smd = pyuvsim.simsetup.SkyModelData(sky)
+
+    assert (smd.ra == sky.ra.deg).all()
+    assert (smd.dec == sky.dec.deg).all()
+    assert (smd.stokes_I == sky.stokes[0]).all()
+    assert (smd.stokes_Q == sky.stokes[..., smd.polarized][1]).all()
+    assert (smd.stokes_U == sky.stokes[..., smd.polarized][2]).all()
+    assert (smd.stokes_V == sky.stokes[..., smd.polarized][3]).all()
+
+    sky1 = smd.get_skymodel()
+
+    assert sky1 == sky
+
+    # Now try with subselection:
+    sky1_sub = smd.get_skymodel(range(8, 13))
+
+    assert sky1.check()
+    assert sky1_sub.check()
+    assert sky1_sub.Ncomponents == 5
+    assert sky1_sub._n_polarized == 1

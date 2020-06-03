@@ -345,9 +345,10 @@ class SkyModelData:
 
             self.polarized = sky_in._polarized
             if sky_in._n_polarized > 0:
-                self.stokes_Q = sky_in.stokes[1, :, sky_in._polarized]
-                self.stokes_U = sky_in.stokes[2, :, sky_in._polarized]
-                self.stokes_V = sky_in.stokes[3, :, sky_in._polarized]
+                Q, U, V = sky_in.stokes[1:, :, sky_in._polarized]
+                self.stokes_Q = Q
+                self.stokes_U = U
+                self.stokes_V = V
 
             if sky_in._freq_array.required:
                 self.freq_array = sky_in.freq_array.to("Hz").value
@@ -444,7 +445,6 @@ class SkyModelData:
             )
             sel_in_pol = [ii for ii, pi in enumerate(self.polarized) if pi in comp_sel]
             if len(sel_in_pol) > 0:
-                # For some reason, the index array on stokes_use causes the axes to flip...
                 stokes_use[1, :, pol_in_sel] = self.stokes_Q[:, sel_in_pol].T
                 stokes_use[2, :, pol_in_sel] = self.stokes_U[:, sel_in_pol].T
                 stokes_use[3, :, pol_in_sel] = self.stokes_V[:, sel_in_pol].T
