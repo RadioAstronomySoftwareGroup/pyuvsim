@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- quantity_shared_bcast function to allow objects derived from astropy.units.Quantity to use shared memory broadcasting.
+- SkyModelData class to replace recarray conversion in pyradiosky.
 - quiet keyword for run_uvsim, to suppress stdout printing.
 - Support for Moon-based observing -- keyword "world: moon" in telescope config.
 - Option to pass along interpolating spline order to UVBeam from teleconfig file.
