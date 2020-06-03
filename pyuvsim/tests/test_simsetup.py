@@ -113,7 +113,7 @@ def test_catalog_from_params():
     catalog_uv, srclistname = pyuvsim.simsetup.initialize_catalog_from_params(
         {'sources': source_dict}, hera_uv
     )
-    catalog_uv = pyradiosky.array_to_skymodel(catalog_uv)
+    catalog_uv = catalog_uv.get_skymodel()
     source_dict['array_location'] = arrloc
     del source_dict['time']
 
@@ -132,33 +132,32 @@ def test_catalog_from_params():
             {'sources': source_dict}, hera_uv
         )
 
-    catalog_str = pyradiosky.array_to_skymodel(catalog_str)
+    catalog_str = catalog_str.get_skymodel()
     assert np.all(catalog_str == catalog_uv)
 
 
 def test_vot_catalog():
     vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
-    vot_catalog = pyradiosky.array_to_skymodel(
+    vot_catalog = (
         pyuvsim.simsetup.initialize_catalog_from_params(vot_param_filename)[0]
-    )
+    ).get_skymodel()
 
     txt_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
-    txt_catalog = pyradiosky.array_to_skymodel(
+    txt_catalog = (
         pyuvsim.simsetup.initialize_catalog_from_params(txt_param_filename)[0]
-    )
+    ).get_skymodel()
 
     assert vot_catalog == txt_catalog
 
 
-@pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
 def test_gleam_catalog():
     gleam_param_filename = os.path.join(
         SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml'
     )
     with pytest.warns(UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."):
-        gleam_catalog = pyradiosky.array_to_skymodel(
+        gleam_catalog = (
             pyuvsim.simsetup.initialize_catalog_from_params(gleam_param_filename)[0]
-        )
+        ).get_skymodel()
 
     # flux cuts applied
     assert gleam_catalog.Ncomponents == 23
@@ -170,9 +169,9 @@ def test_gleam_catalog():
     param_dict["sources"].pop("min_flux")
     param_dict["sources"].pop("max_flux")
 
-    gleam_catalog = pyradiosky.array_to_skymodel(
+    gleam_catalog = (
         pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
-    )
+    ).get_skymodel()
     assert gleam_catalog.Ncomponents == 50
 
 
@@ -190,9 +189,7 @@ def test_gleam_catalog_spectral_type(spectral_type):
     param_dict["sources"].pop("max_flux")
     param_dict["sources"]["spectral_type"] = spectral_type
 
-    gleam_catalog = pyradiosky.array_to_skymodel(
-        pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
-    )
+    gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
     assert gleam_catalog.spectral_type == spectral_type
     assert gleam_catalog.Ncomponents == 50
 
@@ -204,9 +201,9 @@ def test_gleam_catalog_spectral_type(spectral_type):
 def test_vot_catalog_warns(key_pop, message):
     vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
 
-    vot_catalog = pyradiosky.array_to_skymodel(
+    vot_catalog = (
         pyuvsim.simsetup.initialize_catalog_from_params(vot_param_filename)[0]
-    )
+    ).get_skymodel()
 
     with open(vot_param_filename, 'r') as pfile:
         param_dict = yaml.safe_load(pfile)
@@ -214,9 +211,9 @@ def test_vot_catalog_warns(key_pop, message):
     param_dict["sources"].pop(key_pop)
 
     with pytest.warns(UserWarning, match=message):
-        vot_catalog2 = pyradiosky.array_to_skymodel(
+        vot_catalog2 = (
             pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
-        )
+        ).get_skymodel()
 
     assert vot_catalog == vot_catalog2
 
@@ -235,9 +232,7 @@ def test_vot_catalog_error(key_pop, message):
     param_dict["sources"].pop(key_pop)
 
     with pytest.raises(ValueError, match=message):
-        pyradiosky.array_to_skymodel(
-            pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
-        )
+        pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
 
 
 # parametrize will loop over all the give values
@@ -258,7 +253,7 @@ def test_param_reader(config_num):
         hera_uv.select(bls=[(0, 1), (1, 2)])
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_table=True)
+    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_data=True)
 
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)

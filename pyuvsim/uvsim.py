@@ -10,7 +10,6 @@ import astropy.units as units
 from astropy.units import Quantity
 from astropy.constants import c as speed_of_light
 from pyuvdata import UVData
-import pyradiosky
 
 try:
     from . import mpi
@@ -21,6 +20,7 @@ from . import utils as simutils
 from .antenna import Antenna
 from .baseline import Baseline
 from .telescope import Telescope
+from .simsetup import SkyModelData
 
 from .astropy_interface import MoonLocation, hasmoon, Time
 
@@ -240,7 +240,7 @@ def _make_task_inds(Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus):
         Ntasks_local = Nbltf
     else:
         task_inds, Ntasks_local = simutils.iter_array_split(rank, Nbltf, Npus)
-        src_inds = slice(None)
+        src_inds = range(Nsrcs)
         Nsrcs_local = Nsrcs
 
     return task_inds, src_inds, Ntasks_local, Nsrcs_local
@@ -256,8 +256,8 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         Task indices in the full flattened meshgrid of parameters.
     input_uv: :class:~`pyuvdata.UVData`
         UVData object to be filled with data.
-    catalog: recarray
-        Array of source components that can be converted to a :class:~`pyradiosky.SkyModel`.
+    catalog: :class:~`simsetup.SkyModelData`
+        Source components.
     beam_list: :class:~`pyuvsim.BeamList
         BeamList carrying beam model (in object mode).
     beam_dict: dict
@@ -273,17 +273,17 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         raise TypeError("input_uv must be UVData object")
 
     #   Skymodel will now be passed in as a catalog array.
-    if not isinstance(catalog, np.ndarray):
+    if not isinstance(catalog, SkyModelData):
         raise TypeError("catalog must be a record array")
 
     # Splitting the catalog for memory's sake.
-    Nsrcs_total = len(catalog)
+    Nsrcs_total = catalog.Ncomponents
     if Nsky_parts > 1:
         Nsky_parts = int(Nsky_parts)
         src_iter = [simutils.iter_array_split(s, Nsrcs_total, Nsky_parts)[0]
                     for s in range(Nsky_parts)]
     else:
-        src_iter = [slice(None)]
+        src_iter = [range(Nsrcs_total)]
     # Build the antenna list.
     antenna_names = input_uv.antenna_names
     antennas = []
@@ -319,7 +319,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
     for src_i in src_iter:
-        sky = pyradiosky.array_to_skymodel(catalog[src_i])
+        sky = catalog.get_skymodel(src_i)
         if sky.spectral_type == 'full':
             if not np.allclose(sky.freq_array, freq_array):
                 raise ValueError("SkyModel spectral type is 'full', and "
@@ -392,8 +392,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         {`antenna_name` : `beam_id`}, where `beam_id` is an index in the beam_list.
         This is used to assign beams to antennas. Default: All antennas get the 0th
         beam in the `beam_list`.
-    catalog: np.ndarray in shared memory
-        Immutable source parameters
+    catalog: :class:~`simsetup.SkyModelData`
+        Immutable source parameters.
     quiet: bool
         Do not print anything.
 
@@ -424,7 +424,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         print('Nbls:', input_uv.Nbls, flush=True)
         print('Ntimes:', input_uv.Ntimes, flush=True)
         print('Nfreqs:', input_uv.Nfreqs, flush=True)
-        print('Nsrcs:', len(catalog), flush=True)
+        print('Nsrcs:', catalog.Ncomponents, flush=True)
     if rank == 0:
         uv_container = simsetup._complete_uvdata(input_uv, inplace=False)
         if 'world' in input_uv.extra_keywords:
@@ -433,7 +433,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     Nbls = input_uv.Nbls
     Ntimes = input_uv.Ntimes
     Nfreqs = input_uv.Nfreqs
-    Nsrcs = len(catalog)
+    Nsrcs = catalog.Ncomponents
 
     task_inds, src_inds, Ntasks_local, Nsrcs_local = _make_task_inds(
         Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus
@@ -443,23 +443,12 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     beam_list.set_obj_mode(use_shared_mem=True)
 
     # Estimating required memory to decide how to split source array.
-
-    Nsrcs_total = len(catalog)
-    fieldnames = catalog.dtype.names
-    if "frequency" in fieldnames or "subband_frequency" in fieldnames:
-        if "frequency" in fieldnames:
-            src_freq_array = np.atleast_1d(catalog["frequency"])
-        else:
-            src_freq_array = np.atleast_1d(catalog["subband_frequency"])
-        Nsrcfreqs = src_freq_array[0].size
-    else:
-        Nsrcfreqs = 1
     mem_avail = (simutils.get_avail_memory()
                  - mpi.get_max_node_rss(return_per_node=True) * 2**30)
 
     Npus_node = mpi.node_comm.Get_size()
     skymodel_mem_footprint = (
-        simutils.estimate_skymodel_memory_usage(Nsrcs_total, Nsrcfreqs) * Npus_node
+        simutils.estimate_skymodel_memory_usage(Nsrcs, catalog.Nfreqs) * Npus_node
     )
 
     # Allow up to 50% of available memory for SkyModel data.
@@ -467,7 +456,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
 
     Nsky_parts = np.ceil(skymodel_mem_footprint / float(skymodel_mem_max))
     Nsky_parts = max(Nsky_parts, 1)
-    if Nsky_parts > Nsrcs_total:
+    if Nsky_parts > Nsrcs:
         raise ValueError("Insufficient memory for simulation.")
 
     Ntasks_tot = Ntimes * Nbls * Nfreqs * Nsky_parts
@@ -589,19 +578,19 @@ def run_uvsim(params, return_uv=False, quiet=False):
     input_uv = UVData()
     beam_list = None
     beam_dict = None
-    catalog = None
+    skydata = SkyModelData()
 
     if rank == 0:
         input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(params)
-        catalog, source_list_name = simsetup.initialize_catalog_from_params(params, input_uv)
+        skydata, source_list_name = simsetup.initialize_catalog_from_params(params, input_uv)
 
     input_uv = comm.bcast(input_uv, root=0)
     beam_list = comm.bcast(beam_list, root=0)
     beam_dict = comm.bcast(beam_dict, root=0)
-    catalog = mpi.shared_mem_bcast(catalog, root=0)
+    skydata.share()
 
     uv_out = run_uvdata_uvsim(
-        input_uv, beam_list, beam_dict=beam_dict, catalog=catalog, quiet=quiet
+        input_uv, beam_list, beam_dict=beam_dict, catalog=skydata, quiet=quiet
     )
 
     if rank == 0:

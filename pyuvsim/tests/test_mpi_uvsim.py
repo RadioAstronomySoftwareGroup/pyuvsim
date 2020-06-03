@@ -78,7 +78,7 @@ def test_run_uvsim():
 
     mpi.start_mpi()
     catalog, mock_kwds = pyuvsim.simsetup.create_mock_catalog(
-        hera_uv.time_array[0], return_table=True, **mock_keywords
+        hera_uv.time_array[0], return_data=True, **mock_keywords
     )
     uv_out = pyuvsim.run_uvdata_uvsim(hera_uv, beam_list, catalog=catalog)
     rank = mpi.get_rank()
@@ -285,7 +285,7 @@ def test_sim_on_moon():
 
     time = Time(uv_obj.time_array[0], format='jd', scale='utc')
     sources, kwds = pyuvsim.create_mock_catalog(
-        time, array_location=tranquility_base, arrangement='zenith', Nsrcs=30, return_table=True
+        time, array_location=tranquility_base, arrangement='zenith', Nsrcs=30, return_data=True
     )
     print(uv_obj.extra_keywords['world'])
     # Run simulation.
@@ -294,3 +294,18 @@ def test_sim_on_moon():
     )
     assert np.allclose(uv_out.data_array[:, 0, :, 0], 0.5)
     assert uv_out.extra_keywords['world'] == 'moon'
+
+
+def test_sharedmem_bcast_with_quantities():
+    # Use mpi.quantity_shared_bcast and check returned objects.
+
+    mpi.start_mpi()
+    lats = Latitude(np.linspace(-np.pi / 2, np.pi / 2, 10), 'rad')
+    freqs = np.linspace(100e6, 130e6, 15) * units.Hz
+    lat_return = mpi.quantity_shared_bcast(lats)
+    freq_return = mpi.quantity_shared_bcast(freqs)
+
+    assert np.all(lat_return == lats)
+    assert np.all(freq_return == freqs)
+
+    assert np.all(freq_return.to("MHz") == freqs.to("MHz"))
