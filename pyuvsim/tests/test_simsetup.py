@@ -1018,9 +1018,8 @@ def test_mock_catalog_moon():
     assert mmock != emock
 
 
-def test_skymodeldata():
-    # Test that SkyModelData class can properly recreate a SkyModel and subselect.
-
+@pytest.fixture
+def cat_with_some_pols():
     # Mock catalog with a couple sources polarized.
     Nsrcs = 30
     Nfreqs = 10
@@ -1046,6 +1045,12 @@ def test_skymodeldata():
         freq_array=freqs
     )
 
+    return sky
+
+
+def test_skymodeldata(cat_with_some_pols):
+    # Test that SkyModelData class can properly recreate a SkyModel and subselect.
+    sky = cat_with_some_pols
     smd = pyuvsim.simsetup.SkyModelData(sky)
 
     assert (smd.ra == sky.ra.deg).all()
@@ -1055,6 +1060,7 @@ def test_skymodeldata():
     assert (smd.stokes_U == sky.stokes[..., smd.polarized][2]).all()
     assert (smd.stokes_V == sky.stokes[..., smd.polarized][3]).all()
 
+    # Make skymodel from SkyModelData.
     sky1 = smd.get_skymodel()
 
     assert sky1 == sky
@@ -1066,3 +1072,33 @@ def test_skymodeldata():
     assert sky1_sub.check()
     assert sky1_sub.Ncomponents == 5
     assert sky1_sub._n_polarized == 1
+
+
+@pytest.mark.parametrize('inds', [range(30), range(5), range(9, 14)])
+def test_skymodeldata_pol_select(inds, cat_with_some_pols):
+    # When running SkyModelData.subselect, confirm that the
+    # polarization array and Q, U, V are properly selected.
+
+    smd = pyuvsim.simsetup.SkyModelData(cat_with_some_pols)
+    sub_smd = smd.subselect(inds)
+
+    test_q = np.zeros((smd.Nfreqs, smd.Ncomponents))
+    temp = np.zeros((sub_smd.Nfreqs, sub_smd.Ncomponents))
+    temp[..., sub_smd.polarized] = sub_smd.stokes_Q
+    test_q[..., inds] = temp[()]
+
+    full_q = np.zeros_like(test_q)
+    full_q[..., smd.polarized] = smd.stokes_Q
+
+    assert np.all(full_q[..., inds] == test_q[..., inds])
+
+
+@pytest.mark.parametrize('inds', [range(30), range(5)])
+def test_skymodel_attr_bases(inds, cat_with_some_pols):
+    # Check that downselecting doesn't copy length Ncompnent arrays.
+
+    smd = pyuvsim.simsetup.SkyModelData(cat_with_some_pols)
+    smd_copy = smd.subselect(inds)
+    assert smd_copy.ra.base is smd.ra.base
+    assert smd_copy.dec.base is smd.dec.base
+    assert smd_copy.stokes_I.base is smd.stokes_I.base

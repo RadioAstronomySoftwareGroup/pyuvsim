@@ -329,8 +329,8 @@ class SkyModelData:
     spectral_index = None
     polarized = None
 
-    ncomp_attrs = ['stokes_I', 'stokes_Q', 'stokes_U', 'stokes_V',
-                   'ra', 'dec', 'reference_frequency', 'spectral_index', 'name']
+    put_in_shared = ['stokes_I', 'stokes_Q', 'stokes_U', 'stokes_V', 'polarized',
+                     'ra', 'dec', 'reference_frequency', 'spectral_index', 'name']
 
     def __init__(self, sky_in=None):
         # Collect relevant attributes.
@@ -343,8 +343,8 @@ class SkyModelData:
             self.Nfreqs = sky_in.Nfreqs
             self.stokes_I = sky_in.stokes[0, ...]
 
-            self.polarized = sky_in._polarized
             if sky_in._n_polarized > 0:
+                self.polarized = sky_in._polarized
                 Q, U, V = sky_in.stokes[1:, :, sky_in._polarized]
                 self.stokes_Q = Q
                 self.stokes_U = U
@@ -357,13 +357,15 @@ class SkyModelData:
             if sky_in._spectral_index.required:
                 self.spectral_index = sky_in.spectral_index
 
-    def __getitem__(self, inds):
+    def subselect(self, inds):
         """
-        Subselect, returning a new SkyModelData object
+        Subselect, returning a new SkyModelData object.
+
+        To avoid copying data, the indices must be a range object.
 
         Parameters
         ----------
-        inds: slice or index array
+        inds: range or index array
             Indices to select along the component axis.
 
         Returns
@@ -373,15 +375,30 @@ class SkyModelData:
         """
         new_sky = SkyModelData()
 
-        for key, value in self.__dict__.items():
-            if value is None:
-                continue
-            if key in self.ncomp_attrs:
-                setattr(new_sky, key, value[..., inds])
-            else:
-                setattr(new_sky, key, value)
+        new_sky.Ncomponents = len(inds)
+        new_sky.name = self.name[inds]
+        if isinstance(inds, range):
+            new_sky.stokes_I = self.stokes_I[:, slice(inds.start, inds.stop, inds.step)]
+        else:
+            new_sky.stokes_I = self.stokes_I[:, inds]
+        new_sky.ra = self.ra[inds]
+        new_sky.dec = self.dec[inds]
+        new_sky.Nfreqs = self.Nfreqs
+        new_sky.spectral_type = self.spectral_type
 
-        new_sky.Ncomponents = new_sky.name.size
+        if self.reference_frequency is not None:
+            new_sky.reference_frequency = self.reference_frequency[inds]
+        if self.spectral_index is not None:
+            new_sky.spectral_index = self.spectral_index[inds]
+        if self.freq_array is not None:
+            new_sky.freq_array = self.freq_array
+
+        if self.polarized is not None:
+            sub_inds = np.in1d(self.polarized, inds)
+            new_sky.stokes_Q = self.stokes_Q[..., sub_inds]
+            new_sky.stokes_U = self.stokes_U[..., sub_inds]
+            new_sky.stokes_V = self.stokes_V[..., sub_inds]
+            new_sky.polarized = np.where(np.in1d(inds, self.polarized))[0]
 
         return new_sky
 
@@ -407,7 +424,7 @@ class SkyModelData:
 
         for key in isset:
             attr = getattr(self, key)
-            if key in self.ncomp_attrs:
+            if key in self.put_in_shared:
                 val = mpi.shared_mem_bcast(attr, root=root)
             else:
                 val = mpi.world_comm.bcast(attr, root=root)
@@ -436,7 +453,7 @@ class SkyModelData:
 
         stokes_use[0, ...] = self.stokes_I[:, comp_sel]
 
-        if self.polarized.size > 0:
+        if self.polarized is not None:
             # Overcomplicated indexing to get the indices of polarized components
             # in the sub-selected array (pol_in_sel) and indices of selected
             # components in the list of polarized sources (sel_in_pol)

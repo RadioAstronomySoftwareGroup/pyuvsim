@@ -625,7 +625,7 @@ def test_task_coverage():
             task_inds, src_inds, Ntasks_local, Nsrcs_local = pyuvsim.uvsim._make_task_inds(
                 Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus
             )
-            src_inds = range(Nsrcs)[src_inds]   # Turn slice into iterator
+            src_inds = np.arange(Nsrcs)[src_inds]   # Turn slice into iterator
             tasks = itertools.product(task_inds, src_inds)
             tasks_all.append(tasks)
         tasks_all = itertools.chain(*tasks_all)

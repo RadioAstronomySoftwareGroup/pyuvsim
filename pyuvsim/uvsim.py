@@ -462,7 +462,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     Ntasks_tot = Ntimes * Nbls * Nfreqs * Nsky_parts
 
     local_task_iter = uvdata_to_task_iter(
-        task_inds, input_uv, catalog[src_inds], beam_list, beam_dict, Nsky_parts=Nsky_parts
+        task_inds, input_uv, catalog.subselect(src_inds),
+        beam_list, beam_dict, Nsky_parts=Nsky_parts
     )
 
     summed_task_dict = {}
