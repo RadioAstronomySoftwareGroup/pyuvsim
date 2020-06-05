@@ -314,8 +314,9 @@ class SkyModelData:
         A valid SkyModel object.
     """
 
-    spectral_type = None
     Ncomponents = None
+    component_type = None
+    spectral_type = None
     ra = None
     dec = None
     name = None
@@ -328,14 +329,19 @@ class SkyModelData:
     reference_frequency = None
     spectral_index = None
     polarized = None
+    nside = None
+    hpx_inds = None
 
     put_in_shared = ['stokes_I', 'stokes_Q', 'stokes_U', 'stokes_V', 'polarized',
-                     'ra', 'dec', 'reference_frequency', 'spectral_index', 'name']
+                     'ra', 'dec', 'reference_frequency', 'spectral_index', 'hpx_inds']
 
     def __init__(self, sky_in=None):
         # Collect relevant attributes.
         if sky_in is not None:
             self.name = sky_in.name
+            self.nside = sky_in.nside
+            self.hpx_inds = sky_in.hpx_inds
+            self.component_type = sky_in.component_type
             self.spectral_type = sky_in.spectral_type
             self.Ncomponents = sky_in.Ncomponents
             self.ra = sky_in.ra.deg
@@ -379,7 +385,10 @@ class SkyModelData:
         new_sky = SkyModelData()
 
         new_sky.Ncomponents = len(inds)
-        new_sky.name = self.name[inds]
+        new_sky.nside = self.nside
+        new_sky.component_type = self.component_type
+        if self.name is not None:
+            new_sky.name = self.name[inds]
         if isinstance(inds, range):
             new_sky.stokes_I = self.stokes_I[:, slice(inds.start, inds.stop, inds.step)]
         else:
@@ -395,6 +404,8 @@ class SkyModelData:
             new_sky.spectral_index = self.spectral_index[inds]
         if self.freq_array is not None:
             new_sky.freq_array = self.freq_array
+        if self.hpx_inds is not None:
+            new_sky.hpx_inds = self.hpx_inds[inds]
 
         if self.polarized is not None:
             sub_inds = np.in1d(self.polarized, inds)
@@ -433,6 +444,8 @@ class SkyModelData:
             if val is not None:
                 setattr(self, key, val)
 
+        mpi.world_comm.Barrier()
+
     def get_skymodel(self, inds=None):
         """
         Initialize SkyModel from current settings.
@@ -464,9 +477,13 @@ class SkyModelData:
         if self.spectral_type == 'spectral_index':
             other['reference_frequency'] = self.reference_frequency * units.Hz
             other['spectral_index'] = self.spectral_index
-
+        if self.component_type == 'healpix':
+            other['nside'] = self.nside
+            other['hpx_inds'] = self.hpx_inds
+        else:
+            other['name'] = self.name
         return pyradiosky.SkyModel(
-            name=self.name, ra=ra_use, dec=dec_use, stokes=stokes_use,
+            ra=ra_use, dec=dec_use, stokes=stokes_use,
             spectral_type=self.spectral_type, **other
         )
 
