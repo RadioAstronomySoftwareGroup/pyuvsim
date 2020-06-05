@@ -562,7 +562,7 @@ def test_local_task_gen():
         next(uv_iter0)
     uv_iter1 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv,
                                            'not_skydata', beam_list, beam_dict)
-    with pytest.raises(TypeError, match='catalog must be a record array'):
+    with pytest.raises(TypeError, match='catalog must be a SkyModelData'):
         next(uv_iter1)
 
     # Copy sources and beams so we don't accidentally reuse quantities.
