@@ -415,14 +415,13 @@ class SkyModelData:
                               "Install it by running pip install pyuvsim[sim] "
                               "or pip install pyuvsim[all] if you also want the "
                               "line_profiler installed.")
-        mpi.start_mpi(False)
+        mpi.start_mpi()
         self.Ncomponents = mpi.world_comm.bcast(self.Ncomponents, root=root)
 
         # Get list of attributes that are set.
         isset = None
         if mpi.rank == root:
             isset = [key for key, value in self.__dict__.items() if value is not None]
-
         isset = mpi.world_comm.bcast(isset, root=root)
 
         for key in isset:

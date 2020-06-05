@@ -99,8 +99,8 @@ def shared_mem_bcast(arr, root=0):
     if node_comm.rank == root:
         # Data cannot be shared between nodes.
         # Need to broadcast to the root process on each node.
-        dtype = arr.dtype
         arr = big_bcast(rank_comm, arr, root=root)
+        dtype = arr.dtype
         Nitems = arr.size
         shape = arr.shape
         itemsize = sys.getsizeof(arr.flatten()[0])

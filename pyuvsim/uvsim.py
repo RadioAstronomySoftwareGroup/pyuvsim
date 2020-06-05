@@ -588,7 +588,7 @@ def run_uvsim(params, return_uv=False, quiet=False):
     input_uv = comm.bcast(input_uv, root=0)
     beam_list = comm.bcast(beam_list, root=0)
     beam_dict = comm.bcast(beam_dict, root=0)
-    skydata.share()
+    skydata.share(root=0)
 
     uv_out = run_uvdata_uvsim(
         input_uv, beam_list, beam_dict=beam_dict, catalog=skydata, quiet=quiet
