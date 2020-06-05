@@ -158,8 +158,8 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
     Returns
     -------
-    class:`pyradiosky.SkyModel` or `~numpy.recarray`
-        The catalog, as either a SkyModel or a recarray (if `return_table` is True)
+    class:`pyradiosky.SkyModel` or class:`SkyModelData`
+        The catalog, as either a SkyModel or a SkyModelData (if `return_data` is True)
     dict
         A dictionary of keywords used to define the catalog.
     """
@@ -361,8 +361,6 @@ class SkyModelData:
         """
         Subselect, returning a new SkyModelData object.
 
-        To avoid copying data, the indices must be a range object.
-
         Parameters
         ----------
         inds: range or index array
@@ -372,6 +370,11 @@ class SkyModelData:
         -------
         SkyModelData
             A new SkyModelData with Ncomp axes downselected.
+
+        Notes
+        -----
+        If inds is a range object, this method will avoid copying data in numpy arrays,
+        such that the returned SkyModelData object carries views into the current object's arrays.
         """
         new_sky = SkyModelData()
 
@@ -431,50 +434,40 @@ class SkyModelData:
             if val is not None:
                 setattr(self, key, val)
 
-    def get_skymodel(self, comp_sel=None):
+    def get_skymodel(self, inds=None):
         """
         Initialize SkyModel from current settings.
 
         Parameters
         ----------
-        comp_sel: iterable
-            Usually a range object, this is to allow subselecting available source components.
+        inds: range or index array
+            Indices to select along the component axis.
         """
-        if comp_sel is None:
-            comp_sel = range(self.Ncomponents)
 
-        name_use = self.name[comp_sel]
+        if inds is not None:
+            obj = self.subselect(inds)
+            return obj.get_skymodel()
 
-        Ncomp_use = len(name_use)
+        ra_use = Longitude(self.ra, unit='deg')
+        dec_use = Latitude(self.dec, unit='deg')
+        stokes_use = np.zeros((4, self.Nfreqs, self.Ncomponents), dtype=float)
 
-        ra_use = Longitude(self.ra[comp_sel], unit='deg')
-        dec_use = Latitude(self.dec[comp_sel], unit='deg')
-        stokes_use = np.zeros((4, self.Nfreqs, Ncomp_use), dtype=float)
-
-        stokes_use[0, ...] = self.stokes_I[:, comp_sel]
+        stokes_use[0, ...] = self.stokes_I
 
         if self.polarized is not None:
-            # Overcomplicated indexing to get the indices of polarized components
-            # in the sub-selected array (pol_in_sel) and indices of selected
-            # components in the list of polarized sources (sel_in_pol)
-            pol_in_sel = np.in1d(
-                np.arange(self.Ncomponents)[comp_sel], self.polarized
-            )
-            sel_in_pol = [ii for ii, pi in enumerate(self.polarized) if pi in comp_sel]
-            if len(sel_in_pol) > 0:
-                stokes_use[1, :, pol_in_sel] = self.stokes_Q[:, sel_in_pol].T
-                stokes_use[2, :, pol_in_sel] = self.stokes_U[:, sel_in_pol].T
-                stokes_use[3, :, pol_in_sel] = self.stokes_V[:, sel_in_pol].T
+            stokes_use[1, :, self.polarized] = self.stokes_Q.T
+            stokes_use[2, :, self.polarized] = self.stokes_U.T
+            stokes_use[3, :, self.polarized] = self.stokes_V.T
 
         other = {}
         if self.spectral_type in ['full', 'subband']:
             other['freq_array'] = self.freq_array * units.Hz
         if self.spectral_type == 'spectral_index':
-            other['reference_frequency'] = self.reference_frequency[comp_sel] * units.Hz
-            other['spectral_index'] = self.spectral_index[comp_sel]
+            other['reference_frequency'] = self.reference_frequency * units.Hz
+            other['spectral_index'] = self.spectral_index
 
         return pyradiosky.SkyModel(
-            name=name_use, ra=ra_use, dec=dec_use, stokes=stokes_use,
+            name=self.name, ra=ra_use, dec=dec_use, stokes=stokes_use,
             spectral_type=self.spectral_type, **other
         )
 

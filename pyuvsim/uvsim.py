@@ -270,11 +270,11 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
 
     # The task_ids refer to tasks on the flattened meshgrid.
     if not isinstance(input_uv, UVData):
-        raise TypeError("input_uv must be UVData object")
+        raise TypeError("input_uv must be UVData object.")
 
     #   Skymodel will now be passed in as a catalog array.
     if not isinstance(catalog, SkyModelData):
-        raise TypeError("catalog must be a record array")
+        raise TypeError("catalog must be a SkyModelData object.")
 
     # Splitting the catalog for memory's sake.
     Nsrcs_total = catalog.Ncomponents
