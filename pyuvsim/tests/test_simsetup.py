@@ -13,6 +13,7 @@ from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, Latitude, Longitude
 from pyuvdata import UVBeam, UVData
 import pyradiosky
+from pyradiosky.data import DATA_PATH as SKY_DATA_PATH
 
 import pyuvsim
 import pyuvsim.tests as simtest
@@ -1048,17 +1049,25 @@ def cat_with_some_pols():
     return sky
 
 
-def test_skymodeldata(cat_with_some_pols):
+@pytest.mark.parametrize('component_type', ['point', 'healpix'])
+def test_skymodeldata(component_type, cat_with_some_pols):
     # Test that SkyModelData class can properly recreate a SkyModel and subselect.
-    sky = cat_with_some_pols
+    if component_type == 'point':
+        sky = cat_with_some_pols
+    else:
+        path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
+        sky = pyradiosky.SkyModel()
+        sky.read_healpix_hdf5(path)
     smd = pyuvsim.simsetup.SkyModelData(sky)
 
     assert (smd.ra == sky.ra.deg).all()
     assert (smd.dec == sky.dec.deg).all()
     assert (smd.stokes_I == sky.stokes[0]).all()
-    assert (smd.stokes_Q == sky.stokes[..., smd.polarized][1]).all()
-    assert (smd.stokes_U == sky.stokes[..., smd.polarized][2]).all()
-    assert (smd.stokes_V == sky.stokes[..., smd.polarized][3]).all()
+
+    if smd.polarized is not None:
+        assert (smd.stokes_Q == sky.stokes[..., smd.polarized][1]).all()
+        assert (smd.stokes_U == sky.stokes[..., smd.polarized][2]).all()
+        assert (smd.stokes_V == sky.stokes[..., smd.polarized][3]).all()
 
     # Make skymodel from SkyModelData.
     sky1 = smd.get_skymodel()
@@ -1071,7 +1080,8 @@ def test_skymodeldata(cat_with_some_pols):
     assert sky1.check()
     assert sky1_sub.check()
     assert sky1_sub.Ncomponents == 5
-    assert sky1_sub._n_polarized == 1
+    if smd.polarized is not None:
+        assert sky1_sub._n_polarized == 1
 
 
 @pytest.mark.parametrize('inds', [range(30), range(5), range(9, 14)])
@@ -1094,7 +1104,7 @@ def test_skymodeldata_pol_select(inds, cat_with_some_pols):
 
 
 @pytest.mark.parametrize('inds', [range(30), range(5)])
-def test_skymodel_attr_bases(inds, cat_with_some_pols):
+def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
     # Check that downselecting doesn't copy length Ncompnent arrays.
 
     smd = pyuvsim.simsetup.SkyModelData(cat_with_some_pols)
