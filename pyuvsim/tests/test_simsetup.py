@@ -1049,6 +1049,20 @@ def cat_with_some_pols():
     return sky
 
 
+@pytest.mark.skipif("units.Quantity not in pyradiosky.SkyModel()._stokes.expected_type")
+def test_skymodeldata_with_quantity_stokes(cat_with_some_pols):
+    # Support for upcoming pyradiosky change setting SkyModel.stokes
+    # to an astropy Quantity.
+    sky = cat_with_some_pols
+    sky.stokes *= units.Jy
+
+    smd = pyuvsim.simsetup.SkyModelData(sky)
+    assert np.all(sky.stokes.to('Jy').value[0] == smd.stokes_I)
+
+    sky2 = smd.get_skymodel()
+    assert sky2 == sky
+
+
 @pytest.mark.parametrize('component_type', ['point', 'healpix'])
 def test_skymodeldata(component_type, cat_with_some_pols):
     # Test that SkyModelData class can properly recreate a SkyModel and subselect.

@@ -347,11 +347,15 @@ class SkyModelData:
             self.ra = sky_in.ra.deg
             self.dec = sky_in.dec.deg
             self.Nfreqs = sky_in.Nfreqs
-            self.stokes_I = sky_in.stokes[0, ...]
+            stokes_in = sky_in.stokes
+
+            if isinstance(stokes_in, units.Quantity):
+                stokes_in = stokes_in.to('Jy').value
+            self.stokes_I = stokes_in[0, ...]
 
             if sky_in._n_polarized > 0:
                 self.polarized = sky_in._polarized
-                Q, U, V = sky_in.stokes[1:, :, sky_in._polarized]
+                Q, U, V = stokes_in[1:, :, sky_in._polarized]
                 self.stokes_Q = Q
                 self.stokes_U = U
                 self.stokes_V = V
@@ -470,6 +474,9 @@ class SkyModelData:
             stokes_use[1, :, self.polarized] = self.stokes_Q.T
             stokes_use[2, :, self.polarized] = self.stokes_U.T
             stokes_use[3, :, self.polarized] = self.stokes_V.T
+
+        if units.Quantity in pyradiosky.SkyModel()._stokes.expected_type:
+            stokes_use *= units.Jy
 
         other = {}
         if self.spectral_type in ['full', 'subband']:
