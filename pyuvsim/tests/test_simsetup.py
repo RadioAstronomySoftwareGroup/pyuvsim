@@ -1055,6 +1055,7 @@ def test_skymodeldata(component_type, cat_with_some_pols):
     if component_type == 'point':
         sky = cat_with_some_pols
     else:
+        pytest.importorskip('astropy-healpix')
         path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
         sky = pyradiosky.SkyModel()
         sky.read_healpix_hdf5(path)
