@@ -409,6 +409,7 @@ class SkyModelData:
         if self.freq_array is not None:
             new_sky.freq_array = self.freq_array
         if self.hpx_inds is not None:
+            print("hello", flush=True)
             new_sky.hpx_inds = self.hpx_inds[inds]
 
         if self.polarized is not None:

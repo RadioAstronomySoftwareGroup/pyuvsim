@@ -1051,7 +1051,6 @@ def cat_with_some_pols():
     return sky
 
 
-@pytest.mark.skipif("units.Quantity not in pyradiosky.SkyModel()._stokes.expected_type")
 def test_skymodeldata_with_quantity_stokes(cat_with_some_pols):
     # Support for upcoming pyradiosky change setting SkyModel.stokes
     # to an astropy Quantity.
@@ -1062,6 +1061,8 @@ def test_skymodeldata_with_quantity_stokes(cat_with_some_pols):
     assert np.all(sky.stokes.to('Jy').value[0] == smd.stokes_I)
 
     sky2 = smd.get_skymodel()
+    if units.Quantity not in pyradiosky.SkyModel()._stokes.expected_type:
+        sky.stokes = sky.stokes.to("Jy").value
     assert sky2 == sky
 
 
@@ -1071,7 +1072,7 @@ def test_skymodeldata(component_type, cat_with_some_pols):
     if component_type == 'point':
         sky = cat_with_some_pols
     else:
-        pytest.importorskip('astropy-healpix')
+        pytest.importorskip('astropy_healpix')
         path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
         sky = pyradiosky.SkyModel()
         sky.read_healpix_hdf5(path)
