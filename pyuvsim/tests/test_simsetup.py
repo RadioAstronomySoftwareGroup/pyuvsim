@@ -170,9 +170,10 @@ def test_gleam_catalog():
     param_dict["sources"].pop("min_flux")
     param_dict["sources"].pop("max_flux")
 
-    gleam_catalog = (
-        pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
-    ).get_skymodel()
+    with pytest.warns(UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."):
+        gleam_catalog = (
+            pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+        ).get_skymodel()
     assert gleam_catalog.Ncomponents == 50
 
 
@@ -843,8 +844,9 @@ def test_mock_catalogs():
     with pytest.raises(KeyError, match="Invalid mock catalog arrangement: invalid_catalog_name"):
         pyuvsim.create_mock_catalog(time, 'invalid_catalog_name')
 
+    radec_catalog = pyradiosky.SkyModel()
     for arr in arrangements:
-        radec_catalog = pyradiosky.read_text_catalog(
+        radec_catalog.read_text_catalog(
             os.path.join(SIM_DATA_PATH, 'test_catalogs', text_catalogs[arr])
         )
         assert np.all(radec_catalog == cats[arr])

@@ -579,10 +579,11 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         source_list_name = 'mock_' + "_".join(mock_keyvals)
     elif isinstance(catalog, str):
         source_list_name = os.path.basename(catalog)
+        sky = pyradiosky.SkyModel()
         if not os.path.isfile(catalog):
             catalog = os.path.join(param_dict['config_path'], catalog)
         if catalog.endswith("txt"):
-            sky = pyradiosky.read_text_catalog(catalog)
+            sky.read_text_catalog(catalog)
         elif catalog.endswith('vot'):
             if 'gleam' in catalog:
                 if "spectral_type" in source_params:
@@ -590,7 +591,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
                 else:
                     warnings.warn("No spectral_type specified for GLEAM, using 'flat'.")
                     spectral_type = "flat"
-                sky = pyradiosky.skymodel.read_gleam_catalog(
+                sky.read_gleam_catalog(
                     catalog, spectral_type=spectral_type
                 )
             else:
@@ -606,20 +607,19 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
                 vo_params["flux_columns"] = source_params["flux_columns"]
                 if "ra_column" not in source_params:
                     warnings.warn(f"No RA column name specified for {catalog}, using default.")
+                    vo_params["ra_column"] = "RAJ2000"
                 else:
                     vo_params["ra_column"] = source_params["ra_column"]
                 if "dec_column" not in source_params:
                     warnings.warn(f"No Dec column name specified for {catalog}, using default.")
+                    vo_params["dec_column"] = "DEJ2000"
                 else:
                     vo_params["dec_column"] = source_params["dec_column"]
 
                 vo_params["reference_frequency"] = None
-                sky = pyradiosky.read_votable_catalog(
-                    catalog, **vo_params
-                )
+                sky.read_votable_catalog(catalog, **vo_params)
         elif catalog.endswith('hdf5'):
-            hpmap, inds, freqs = pyradiosky.read_healpix_hdf5(catalog)
-            sky = pyradiosky.healpix_to_sky(hpmap, inds, freqs)
+            sky.read_healpix_hdf5(catalog)
 
     # Do source selections, if any.
     if input_uv is not None:
