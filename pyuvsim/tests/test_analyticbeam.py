@@ -201,7 +201,7 @@ def test_gaussbeam_values():
     altitudes = task.sources.alt_az[0]  # In radians.
     # All four components should be identical
     if isinstance(engine.apparent_coherency, units.Quantity):
-        coherency_use = engine.apparent_coherency.value
+        coherency_use = engine.apparent_coherency.to("Jy").value
     else:
         coherency_use = engine.apparent_coherency
 
