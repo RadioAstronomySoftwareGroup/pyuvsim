@@ -5,6 +5,9 @@ conda:
     file: ci/rtd_env.yml
 python:
   version: 3.7
+  setup_py_install: true
   install:
     - method: pip
       path: .
+    - method: setuptools
+      path: package
