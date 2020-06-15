@@ -21,11 +21,8 @@ EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 c_ms = pyuvsim.analyticbeam.c_ms
 
 
-def test_uniform_beam():
-    beam = pyuvsim.AnalyticBeam('uniform')
-    beam.peak_normalize()
-    beam.interpolation_function = 'az_za_simple'
-
+@pytest.fixture
+def heratext_posfreq():
     time = Time('2018-03-01 00:00:00', scale='utc')
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
@@ -33,43 +30,41 @@ def test_uniform_beam():
         time, 'hera_text', array_location=array_location
     )
 
-    nsrcs = sources.Ncomponents
-
     sources.update_positions(time, array_location)
     za_vals = np.pi / 2. - sources.alt_az[1]  # rad
     az_vals = sources.alt_az[1]
-    freq_vals = [10**8]
 
-    n_freqs = 1
+    freq_vals = np.array([10**8])
+
+    return az_vals, za_vals, freq_vals
+
+
+def test_uniform_beam(heratext_posfreq):
+    beam = pyuvsim.AnalyticBeam('uniform')
+    beam.peak_normalize()
+    beam.interpolation_function = 'az_za_simple'
+
+    az_vals, za_vals, freqs = heratext_posfreq
+
+    nsrcs = az_vals.size
+    n_freqs = freqs.size
+
     interpolated_beam, interp_basis_vector = beam.interp(
-        az_array=az_vals, za_array=za_vals, freq_array=np.array(freq_vals)
+        az_array=az_vals, za_array=za_vals, freq_array=freqs
     )
     expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=np.float)
     expected_data[1, 0, 0, :, :] = 1
     expected_data[0, 0, 1, :, :] = 1
-    # expected_data[1, 0, 1, :, :] = 1
-    # expected_data[0, 0, 0, :, :] = 1
     assert np.allclose(interpolated_beam, expected_data)
 
 
-def test_airy_beam_values():
+def test_airy_beam_values(heratext_posfreq):
     diameter_m = 14.
     beam = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
 
-    time = Time('2018-03-01 00:00:00', scale='utc')
-    array_location = EarthLocation(
-        lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.
-    )
-    sources, mock_keywords = pyuvsim.create_mock_catalog(
-        time, 'hera_text', array_location=array_location
-    )
-
-    sources.update_positions(time, array_location)
-    za_vals = np.pi / 2. - sources.alt_az[1]  # rad
-    az_vals = sources.alt_az[1]
-    freq_vals = np.array([10**8])
+    az_vals, za_vals, freq_vals = heratext_posfreq
 
     interpolated_beam, interp_basis_vector = beam.interp(
         az_array=az_vals, za_array=za_vals, freq_array=freq_vals
@@ -90,6 +85,7 @@ def test_airy_beam_values():
 
 
 def test_uv_beam_widths():
+    # Check that the width of the Airy disk beam in UV space corresponds with the dish diameter.
     diameter_m = 25.0
     beam = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)
     beam.peak_normalize()
@@ -125,28 +121,16 @@ def test_uv_beam_widths():
         assert np.isclose(diameter_m / lams[i], kern_radius, rtol=0.5)
 
 
-def test_achromatic_gaussian_beam():
+def test_achromatic_gaussian_beam(heratext_posfreq):
     sigma_rad = Angle('5d').to_value('rad')
     beam = pyuvsim.AnalyticBeam('gaussian', sigma=sigma_rad)
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
 
-    time = Time('2018-03-01 00:00:00', scale='utc')
-    array_location = EarthLocation(
-        lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.
-    )
-    sources, mock_keywords = pyuvsim.create_mock_catalog(
-        time, 'hera_text', array_location=array_location
-    )
+    az_vals, za_vals, freq_vals = heratext_posfreq
+    nsrcs = az_vals.size
+    n_freqs = freq_vals.size
 
-    nsrcs = sources.Ncomponents
-
-    sources.update_positions(time, array_location)
-    za_vals = np.pi / 2. - sources.alt_az[1]  # rad
-    az_vals = sources.alt_az[1]
-    freq_vals = [10**8]
-
-    n_freqs = 1
     interpolated_beam, interp_basis_vector = beam.interp(
         az_array=np.array(az_vals), za_array=np.array(za_vals), freq_array=np.array(freq_vals)
     )
@@ -166,8 +150,7 @@ def test_achromatic_gaussian_beam():
 def test_gaussbeam_values():
     """
     Make the long-line point sources up to 10 degrees from zenith.
-    Obtain visibilities
-    Confirm that the values match the expected beam values at those zenith angles.
+    Confirm that the coherencies match the expected beam values at those zenith angles.
     """
     sigma = 0.05
     hera_uv = UVData()
@@ -212,7 +195,6 @@ def test_gaussbeam_values():
     )
 
     # Confirm the coherency values (ie., brightnesses) match the beam values.
-
     beam_values = np.exp(-(zenith_angles) ** 2 / (2 * beam.sigma ** 2))
     assert np.all(beam_values ** 2 == coherencies)
 
@@ -252,6 +234,7 @@ def test_chromatic_gaussian():
 
 
 def test_power_analytic_beam():
+    # Check that power beam evaluation matches electric field amp**2 for analytic beams.
     freqs = np.arange(120e6, 160e6, 4e6)
     Npix = 1000
     diam = 14.0
@@ -309,6 +292,8 @@ def test_beamerrs():
 
 
 def test_diameter_to_sigma():
+    # The integrals of an Airy power beam and a Gaussian power beam, within
+    # the first Airy null, should be close if the Gaussian width is set to the Airy width.
     diameter_m = 25.0
     abm = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)
     gbm = pyuvsim.AnalyticBeam('gaussian', diameter=diameter_m)
