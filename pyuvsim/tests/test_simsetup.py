@@ -178,6 +178,7 @@ def test_gleam_catalog():
 
 
 def test_healpix_catalog():
+    pytest.importorskip('astropy_healpix')
     path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
     sky = pyradiosky.SkyModel()
     sky.read_healpix_hdf5(path)
