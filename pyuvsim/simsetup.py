@@ -331,6 +331,7 @@ class SkyModelData:
     polarized = None
     nside = None
     hpx_inds = None
+    flux_unit = None
 
     put_in_shared = ['stokes_I', 'stokes_Q', 'stokes_U', 'stokes_V', 'polarized',
                      'ra', 'dec', 'reference_frequency', 'spectral_index', 'hpx_inds']
@@ -350,7 +351,13 @@ class SkyModelData:
             stokes_in = sky_in.stokes
 
             if isinstance(stokes_in, units.Quantity):
-                stokes_in = stokes_in.to('Jy').value
+                if stokes_in.unit.is_equivalent("Jy"):
+                    stokes_in = stokes_in.to("Jy").value
+                    self.flux_unit = "Jy"
+                elif stokes_in.unit.is_equivalent("K"):
+                    stokes_in = stokes_in.to("K").value
+                    self.flux_unit = "K"
+
             self.stokes_I = stokes_in[0, ...]
 
             if sky_in._n_polarized > 0:
@@ -409,7 +416,6 @@ class SkyModelData:
         if self.freq_array is not None:
             new_sky.freq_array = self.freq_array
         if self.hpx_inds is not None:
-            print("hello", flush=True)
             new_sky.hpx_inds = self.hpx_inds[inds]
 
         if self.polarized is not None:
@@ -476,8 +482,8 @@ class SkyModelData:
             stokes_use[2, :, self.polarized] = self.stokes_U.T
             stokes_use[3, :, self.polarized] = self.stokes_V.T
 
-        if units.Quantity in pyradiosky.SkyModel()._stokes.expected_type:
-            stokes_use *= units.Jy
+        if self.flux_unit is not None:
+            stokes_use *= units.Unit(self.flux_unit)
 
         other = {}
         if self.spectral_type in ['full', 'subband']:

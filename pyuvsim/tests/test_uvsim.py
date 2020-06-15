@@ -923,7 +923,7 @@ def test_fullfreq_check(uvobj_beams_srcs):
         np.arange(Ntasks), uv_obj, sky1, beam_list, beam_dict
     )
 
-    with pytest.raises(ValueError, match="SkyModel spectral type"):
+    with pytest.raises(ValueError, match="Some requested frequencies are not present"):
         next(taskiter0)
 
     next(taskiter1)

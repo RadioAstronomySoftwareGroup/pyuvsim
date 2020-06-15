@@ -320,7 +320,11 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
     for src_i in src_iter:
         sky = catalog.get_skymodel(src_i)
-        if sky.spectral_type == 'full':
+        if sky.component_type == 'healpix' and hasattr(sky, 'healpix_to_point'):
+            sky.healpix_to_point()
+        if sky.spectral_type != 'flat' and hasattr(sky, 'at_frequencies'):
+            sky.at_frequencies(freq_array[0])
+        elif sky.spectral_type == 'full':
             if not np.allclose(sky.freq_array, freq_array):
                 raise ValueError("SkyModel spectral type is 'full', and "
                                  "its frequencies do not match simulation frequencies.")

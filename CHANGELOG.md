@@ -12,6 +12,7 @@
 - Benchmarking tools.
 
 ### Changed
+- Use `at_frequencies` method to enable support for all pyradiosky spectral types.
 - Only do coherency calculation when the time changes
 - Only do beam eval when time, freq, or beam type changes.
 - The definition of the Airy beam now uses the exact value of c, not 3e8.

@@ -1055,13 +1055,14 @@ def test_skymodeldata_with_quantity_stokes(cat_with_some_pols):
     # Support for upcoming pyradiosky change setting SkyModel.stokes
     # to an astropy Quantity.
     sky = cat_with_some_pols
-    sky.stokes *= units.Jy
+    if not isinstance(sky.stokes, units.Quantity):
+        sky.stokes *= units.Jy
 
     smd = pyuvsim.simsetup.SkyModelData(sky)
     assert np.all(sky.stokes.to('Jy').value[0] == smd.stokes_I)
 
     sky2 = smd.get_skymodel()
-    if units.Quantity not in pyradiosky.SkyModel()._stokes.expected_type:
+    if units.Quantity != pyradiosky.SkyModel()._stokes.expected_type:
         sky.stokes = sky.stokes.to("Jy").value
     assert sky2 == sky
 
@@ -1080,6 +1081,14 @@ def test_skymodeldata(component_type, cat_with_some_pols):
 
     assert (smd.ra == sky.ra.deg).all()
     assert (smd.dec == sky.dec.deg).all()
+
+    if isinstance(sky.stokes, units.Quantity):
+        smd.stokes_I *= units.Unit(smd.flux_unit)
+        if smd.polarized is not None:
+            smd.stokes_Q *= units.Unit(smd.flux_unit)
+            smd.stokes_U *= units.Unit(smd.flux_unit)
+            smd.stokes_V *= units.Unit(smd.flux_unit)
+
     assert (smd.stokes_I == sky.stokes[0]).all()
 
     if smd.polarized is not None:
