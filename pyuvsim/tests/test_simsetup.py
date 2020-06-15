@@ -675,7 +675,7 @@ def test_uvdata_keyword_init(case):
         assert base_kwargs['start_time'] == uvd.time_array[0]
         assert base_kwargs['Ntimes'] == uvd.Ntimes
         assert base_kwargs['Nfreqs'] == uvd.Nfreqs
-        assert base_kwargs['polarizations'] == uvd.get_pols()
+        assert base_kwargs['polarization_array'] == uvd.get_pols()
         assert not np.any(uvd.ant_1_array == uvd.ant_2_array)
 
     elif case == 1:
@@ -696,7 +696,7 @@ def test_uvdata_keyword_init(case):
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
 
         assert uvd.Nbls == 1
-        assert uvd.get_pols() == new_kwargs['polarizations']
+        assert uvd.get_pols() == new_kwargs['polarization_array']
     elif case == 3:
         # check time and freq array definitions supersede other parameters
         fa = np.linspace(100, 200, 11) * 1e6
@@ -967,13 +967,34 @@ def test_direct_fname():
     os.remove("triangle_bl_layout.csv")
 
 
-def test_beamopts_init():
-    # Check that spline_interp_opts is passed along correctly to BeamList
-    telescope_config_name = os.path.join(SIM_DATA_PATH, 'mwa128_config.yaml')
+def test_beamlist_init():
+    telescope_config_name = os.path.join(SIM_DATA_PATH, 'bl_lite_mixed.yaml')
     with open(telescope_config_name, 'r') as yf:
         telconfig = yaml.safe_load(yf)
+
+    # The path for beam 0 is invalid, and it's not needed for this test.
+    del telconfig['beam_paths'][0]
+    beam_ids = np.arange(1, 4)
+
+    bad_conf_0 = copy.deepcopy(telconfig)
+    bad_conf_0['beam_paths'][1] = 1.35
+    with pytest.raises(ValueError, match="Beam model is not properly specified"):
+        pyuvsim.simsetup._construct_beam_list(beam_ids, bad_conf_0)
+
+    bad_conf_1 = copy.deepcopy(telconfig)
+    del bad_conf_1['beam_paths'][1]['type']
+
+    with pytest.raises(ValueError, match="Beam model must have a"):
+        pyuvsim.simsetup._construct_beam_list(beam_ids, bad_conf_1)
+
+    bad_conf_2 = copy.deepcopy(telconfig)
+    bad_conf_2['beam_paths'][1]['type'] = 'unsupported_type'
+    with pytest.raises(ValueError, match="Undefined beam model type"):
+        pyuvsim.simsetup._construct_beam_list(beam_ids, bad_conf_2)
+
+    # Check that spline_interp_opts is passed along correctly to BeamList
     telconfig['spline_interp_opts'] = {'kx' : 2, 'ky' : 2}
-    beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(1), telconfig)
+    beam_list = pyuvsim.simsetup._construct_beam_list(beam_ids, telconfig)
     assert beam_list.spline_interp_opts is not None
 
 
