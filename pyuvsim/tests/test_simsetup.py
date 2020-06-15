@@ -177,6 +177,17 @@ def test_gleam_catalog():
     assert gleam_catalog.Ncomponents == 50
 
 
+def test_healpix_catalog():
+    path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
+    sky = pyradiosky.SkyModel()
+    sky.read_healpix_hdf5(path)
+
+    params = {'sources': {'catalog': path}}
+    hpx_skymodeldata = pyuvsim.simsetup.initialize_catalog_from_params(params)[0]
+    hpx_sky = hpx_skymodeldata.get_skymodel()
+    assert hpx_sky == sky
+
+
 @pytest.mark.parametrize(
     "spectral_type",
     ["flat", "subband", "spectral_index"])
@@ -237,7 +248,6 @@ def test_vot_catalog_error(key_pop, message):
         pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
 
 
-# parametrize will loop over all the give values
 @pytest.mark.parametrize("config_num", [0, 2])
 def test_param_reader(config_num):
     pytest.importorskip('mpi4py')
@@ -636,7 +646,7 @@ def test_param_select_redundant():
 
 
 @pytest.mark.parametrize('case', np.arange(6))
-def check_uvdata_keyword_init(case):
+def test_uvdata_keyword_init(case):
     base_kwargs = {
         "antenna_layout_filepath": os.path.join(SIM_DATA_PATH,
                                                 "test_config/triangle_bl_layout.csv"),
@@ -1111,7 +1121,7 @@ def test_skymodeldata(component_type, cat_with_some_pols):
         assert sky1_sub._n_polarized == 1
 
 
-@pytest.mark.parametrize('inds', [range(30), range(5), range(9, 14)])
+@pytest.mark.parametrize('inds', [range(30), range(5), np.arange(9, 14)])
 def test_skymodeldata_pol_select(inds, cat_with_some_pols):
     # When running SkyModelData.subselect, confirm that the
     # polarization array and Q, U, V are properly selected.
@@ -1132,7 +1142,7 @@ def test_skymodeldata_pol_select(inds, cat_with_some_pols):
 
 @pytest.mark.parametrize('inds', [range(30), range(5)])
 def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
-    # Check that downselecting doesn't copy length Ncompnent arrays.
+    # Check that downselecting doesn't copy length-Ncomponent arrays.
 
     smd = pyuvsim.simsetup.SkyModelData(cat_with_some_pols)
     smd_copy = smd.subselect(inds)
