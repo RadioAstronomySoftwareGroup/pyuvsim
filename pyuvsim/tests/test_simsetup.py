@@ -1083,19 +1083,20 @@ def cat_with_some_pols():
     return sky
 
 
-def test_skymodeldata_with_quantity_stokes(cat_with_some_pols):
+@pytest.mark.parametrize('unit', ['Jy', 'K'])
+def test_skymodeldata_with_quantity_stokes(unit, cat_with_some_pols):
     # Support for upcoming pyradiosky change setting SkyModel.stokes
     # to an astropy Quantity.
     sky = cat_with_some_pols
     if not isinstance(sky.stokes, units.Quantity):
-        sky.stokes *= units.Jy
+        sky.stokes *= units.Unit(unit)
 
     smd = pyuvsim.simsetup.SkyModelData(sky)
-    assert np.all(sky.stokes.to('Jy').value[0] == smd.stokes_I)
+    assert np.all(sky.stokes.to(unit).value[0] == smd.stokes_I)
 
     sky2 = smd.get_skymodel()
     if units.Quantity != pyradiosky.SkyModel()._stokes.expected_type:
-        sky.stokes = sky.stokes.to("Jy").value
+        sky.stokes = sky.stokes.to(unit).value
     assert sky2 == sky
 
 

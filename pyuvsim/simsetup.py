@@ -433,7 +433,7 @@ class SkyModelData:
         All attributes are put in shared memory.
         """
         if mpi is None:
-            raise ImportError("You need mpi4py to use the this method. "
+            raise ImportError("You need mpi4py to use this method. "
                               "Install it by running pip install pyuvsim[sim] "
                               "or pip install pyuvsim[all] if you also want the "
                               "line_profiler installed.")
