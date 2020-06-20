@@ -37,12 +37,10 @@ manytimes_config = os.path.join(
 gleam_param_file = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml')
 
 
-def test_mock_catalog_zenith_source():
+def test_mock_catalog_zenith_source(hera_loc):
     time = Time(2457458.65410, scale='utc', format='jd')
 
-    array_location = EarthLocation(
-        lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.
-    )
+    array_location = hera_loc
 
     source_coord = SkyCoord(
         alt=Angle(90 * units.deg), az=Angle(0 * units.deg),
@@ -60,15 +58,13 @@ def test_mock_catalog_zenith_source():
     assert cat == test_source
 
 
-def test_mock_catalog_off_zenith_source():
+def test_mock_catalog_off_zenith_source(hera_loc):
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
 
     time = Time(2457458.65410, scale='utc', format='jd')
 
-    array_location = EarthLocation(
-        lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.
-    )
+    array_location = hera_loc
 
     source_coord = SkyCoord(
         alt=src_alt, az=src_az, obstime=time, frame='altaz', location=array_location

@@ -12,7 +12,7 @@ import pyuvdata.utils as uvutils
 from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, Longitude, Latitude
 import pytest
-from pyuvdata import UVData
+from pyuvdata import UVData, UVBeam
 from pyuvdata.data import DATA_PATH
 import pyradiosky
 
@@ -22,12 +22,36 @@ import pyuvsim.utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.astropy_interface import Time
 
-cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
-beam_files = [os.path.join(DATA_PATH, 'NicCSTbeams', f) for f in cst_files]
-hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 EW_uvfits_10time10chan = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfits')
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
+herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
+
+
+def multi_beams():
+    beam0 = UVBeam()
+    beam0.read_beamfits(herabeam_default)
+    beam0.freq_interp_kind = 'cubic'
+    beam0.interpolation_function = 'az_za_simple' 
+    beam1 = pyuvsim.AnalyticBeam('uniform')
+    beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
+    beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.6)
+    beam_list = pyuvsim.BeamList([beam0, beam1, beam2, beam3])
+
+    return beam_list
+
+
+@pytest.fixture(scope='module')
+def triangle_pos():
+    hera_uv = UVData()
+    hera_uv.read_uvfits(longbl_uvfits_file,
+                        ant_str='cross')  # consists of a right triangle of baselines with w term
+    hera_uv.unphase_to_drift(use_ant_pos=True)
+
+    enu = hera_uv.get_ENU_antpos()[0]
+    uvw = hera_uv.uvw_array[:hera_uv.Nbls]
+
+    return enu, uvw
 
 
 @pytest.fixture
@@ -65,7 +89,7 @@ def uvobj_beams_srcs():
     return uv_obj, beam_list, beam_dict, sources
 
 
-def test_visibility_single_zenith_source(cst_beam):
+def test_visibility_single_zenith_source(cst_beam, hera_loc):
     """Test single zenith source."""
 
     beam0 = cst_beam
@@ -76,8 +100,7 @@ def test_visibility_single_zenith_source(cst_beam):
     time = Time('2018-03-01 00:00:00', scale='utc')
 
     array_location = hera_loc
-#    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
-#                                   height=1073.)
+
     time.location = array_location
 
     freq = (150e6 * units.Hz)
@@ -101,11 +124,10 @@ def test_visibility_single_zenith_source(cst_beam):
         assert np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3)
 
 
-def test_visibility_source_below_horizon(cst_beam):
+def test_visibility_source_below_horizon(cst_beam, hera_loc):
     time = Time('2018-03-01 00:00:00', scale='utc')
 
-    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
-                                   height=1073.)
+    array_location = hera_loc
     time.location = array_location
 
     freq = (150e6 * units.Hz)
@@ -133,13 +155,12 @@ def test_visibility_source_below_horizon(cst_beam):
     assert np.allclose(visibility, np.array([0, 0, 0, 0]))
 
 
-def test_visibility_source_below_horizon_radec(cst_beam):
+def test_visibility_source_below_horizon_radec(cst_beam, hera_loc):
     # redo with RA/Dec defined source
     time = Time(2458098.27471265, format='jd')
 
-    array_location = EarthLocation(
-        lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.
-    )
+    array_location = hera_loc
+
     time.location = array_location
     freq = (150e6 * units.Hz)
 
@@ -168,68 +189,61 @@ def test_visibility_source_below_horizon_radec(cst_beam):
     assert np.allclose(visibility, np.array([0, 0, 0, 0]))
 
 
-def test_visibility_single_zenith_source_uvdata(cst_beam):
-    """Test single zenith source using test uvdata file."""
-    hera_uv = UVData()
-    hera_uv.read_uvfits(EW_uvfits_file)
+#def test_visibility_single_zenith_source_uvdata(cst_beam):
+#    """Test single zenith source using test uvdata file."""
+#    hera_uv = UVData()
+#    hera_uv.read_uvfits(EW_uvfits_file)
+#
+#    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+#    array_location = EarthLocation.from_geocentric(
+#        *hera_uv.telescope_location, unit='m'
+#    )
+#    freq = (150e6 * units.Hz)
+#
+#    # get antennas positions into ENU
+#    antpos = hera_uv.antenna_positions[0:2, :] + hera_uv.telescope_location
+#    lat, lon, alt = hera_uv.telescope_location_lat_lon_alt
+#    antpos = uvutils.ENU_from_ECEF(antpos, lat, lon, alt)
+#
+#    antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
+#    antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
+#
+#    # setup the things that don't come from pyuvdata:
+#    # make a source at zenith
+#    time.location = array_location
+#    source, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
+#
+#    beam = cst_beam
+#    beam_list = pyuvsim.BeamList([beam])
+#
+#    baseline = pyuvsim.Baseline(antenna1, antenna2)
+#    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+#    task = pyuvsim.UVTask(source, time, freq, baseline, array)
+#    engine = pyuvsim.UVEngine(task)
+#
+#    visibility = engine.make_visibility()
+#
+#    assert np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3)
 
-    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    array_location = EarthLocation.from_geocentric(
-        *hera_uv.telescope_location, unit='m'
-    )
-    freq = hera_uv.freq_array[0, 0] * units.Hz
 
-    # get antennas positions into ENU
-    antpos = hera_uv.antenna_positions[0:2, :] + hera_uv.telescope_location
-    lat, lon, alt = hera_uv.telescope_location_lat_lon_alt
-    antpos = uvutils.ENU_from_ECEF(antpos, lat, lon, alt)
-
-    antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
-    antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
-
-    # setup the things that don't come from pyuvdata:
-    # make a source at zenith
-    time.location = array_location
-    source, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
-
-    beam = cst_beam
-    beam_list = pyuvsim.BeamList([beam])
-
-    baseline = pyuvsim.Baseline(antenna1, antenna2)
-    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
-    task = pyuvsim.UVTask(source, time, freq, baseline, array)
-    engine = pyuvsim.UVEngine(task)
-
-    visibility = engine.make_visibility()
-
-    assert np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3)
-
-
-def test_redundant_baselines(cst_beam):
+def test_redundant_baselines(cst_beam, hera_loc):
     """Check that two perfectly redundant baselines are truly redundant. """
 
-    hera_uv = UVData()
-    hera_uv.read_uvfits(EW_uvfits_file, ant_str='cross')
-    hera_uv.unphase_to_drift()
-
+    time = Time(2458098.27471265, format='jd')
+    array_location = hera_loc
+    time.location = array_location
+    freq = (150e6 * units.Hz)
     src_alt = Angle('85.0d')
 
-    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    array_location = EarthLocation.from_geocentric(
-        *hera_uv.telescope_location, unit='m'
-    )
-    freq = hera_uv.freq_array[0, 0] * units.Hz
-
-    # get antennas positions into ENU
-    antpos, _ = hera_uv.get_ENU_antpos()
+    # Set up antenna positions in ENU:
+    antpos = np.array([[0, 0, 0], [28, 0, 0]], dtype=float)
 
     en_shift = [5., 5., 0]
-    antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
-    antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
-    antenna3 = pyuvsim.Antenna('ant3', 3, np.array(antpos[0, :]) + en_shift, 0)
-    antenna4 = pyuvsim.Antenna('ant4', 4, np.array(antpos[1, :]) + en_shift, 0)
+    antenna1 = pyuvsim.Antenna('ant1', 1, antpos[0, :], 0)
+    antenna2 = pyuvsim.Antenna('ant2', 2, antpos[1, :], 0)
+    antenna3 = pyuvsim.Antenna('ant3', 3, antpos[0, :] + en_shift, 0)
+    antenna4 = pyuvsim.Antenna('ant4', 4, antpos[1, :] + en_shift, 0)
 
-    # setup the things that don't come from pyuvdata:
     # make a source off zenith
     time.location = array_location
     source, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
@@ -254,11 +268,13 @@ def test_redundant_baselines(cst_beam):
     assert np.allclose(visibility1, visibility2)
 
 
-def test_single_offzenith_source_uvfits(cst_beam):
-    """Test single off-zenith source using test uvdata file."""
-    hera_uv = UVData()
-    hera_uv.read_uvfits(EW_uvfits_file, ant_str='cross')
-    hera_uv.unphase_to_drift()
+def test_single_offzenith_source_uvfits(cst_beam, hera_loc):
+    """Test single off-zenith source."""
+
+    time = Time(2458098.27471265, format='jd')
+    array_location = hera_loc
+    time.location = array_location
+    freq = (150e6 * units.Hz)
 
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
@@ -268,14 +284,7 @@ def test_single_offzenith_source_uvfits(cst_beam):
     src_m = np.cos(src_az.rad) * np.sin(src_za.rad)
     src_n = np.cos(src_za.rad)
 
-    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    array_location = EarthLocation.from_geocentric(
-        *hera_uv.telescope_location, unit='m'
-    )
-    freq = hera_uv.freq_array[0, 0] * units.Hz
-
-    # get antennas positions into ENU
-    antpos, _ = hera_uv.get_ENU_antpos()
+    antpos = np.array([[0, 0, 0], [28, 0, 0]], dtype=float)
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
@@ -307,7 +316,7 @@ def test_single_offzenith_source_uvfits(cst_beam):
     visibility = engine.make_visibility()
 
     # analytically calculate visibility
-    beam.peak_normalize()
+    beam = cst_beam.copy()
     beam.interpolation_function = 'az_za_simple'
     beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_alt.rad, src_az.rad)
     beam_za2, beam_az2 = simutils.altaz_to_zenithangle_azimuth(src_alt_az[0], src_alt_az[1])
@@ -327,8 +336,9 @@ def test_single_offzenith_source_uvfits(cst_beam):
 
     beam_jones = antenna1.get_beam_jones(array, src_alt_az, freq)
     assert np.allclose(beam_jones, jones)
-
-    uvw_wavelength_array = hera_uv.uvw_array * units.m / const.c * freq.to('1/s')
+    
+    uvw_array = units.Quantity([[28., 0., 0.]], unit='m')
+    uvw_wavelength_array = uvw_array / const.c * freq.to('1/s')
     # Remove source axis from jones matrix
     jones = jones.squeeze()
     vis_analytic = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(
@@ -342,19 +352,19 @@ def test_single_offzenith_source_uvfits(cst_beam):
         [vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[0, 1], vis_analytic[1, 0]]
     )
 
-    assert np.allclose(baseline.uvw.to_value('m'), hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4)
+    assert np.allclose(baseline.uvw.to_value('m'), uvw_array.value, atol=1e-4)
     assert np.allclose(visibility, vis_analytic, atol=1e-4)
 
 
-def test_offzenith_source_multibl_uvfits():
+@pytest.mark.parametrize('beam', multi_beams())
+def test_offzenith_source_multibl_uvfits(beam, hera_loc, triangle_pos):
     """Test single off-zenith source using test uvdata file.
         Calculate visibilities for a baseline triangle.
     """
-    hera_uv = UVData()
-    hera_uv.read_uvfits(longbl_uvfits_file,
-                        ant_str='cross')  # consists of a right triangle of baselines with w term
-    hera_uv.unphase_to_drift(use_ant_pos=True)
 
+    #!!! NOTE -- Failing with UVBeam!
+    enu_antpos, uvw_array = triangle_pos
+    time = Time(2458098.27471265, format='jd')
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
     src_za = Angle('90.0d') - src_alt
@@ -363,17 +373,13 @@ def test_offzenith_source_multibl_uvfits():
     src_m = np.cos(src_az.rad) * np.sin(src_za.rad)
     src_n = np.cos(src_za.rad)
 
-    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    array_location = EarthLocation.from_geocentric(
-        *hera_uv.telescope_location, unit='m'
-    )
-    freq = hera_uv.freq_array[0, 0] * units.Hz
+    array_location = hera_loc
+    freq = (123e6 * units.Hz)
 
     # get antennas positions into ENU
-    antpos, ants = hera_uv.get_ENU_antpos()
-    antenna1 = pyuvsim.Antenna('ant1', ants[0], np.array(antpos[0, :]), 0)
-    antenna2 = pyuvsim.Antenna('ant2', ants[1], np.array(antpos[1, :]), 0)
-    antenna3 = pyuvsim.Antenna('ant3', ants[2], np.array(antpos[2, :]), 0)
+    antenna1 = pyuvsim.Antenna('ant1', 0, np.array(enu_antpos[0, :]), 0)
+    antenna2 = pyuvsim.Antenna('ant2', 1, np.array(enu_antpos[1, :]), 0)
+    antenna3 = pyuvsim.Antenna('ant3', 2, np.array(enu_antpos[2, :]), 0)
 
     # setup the things that don't come from pyuvdata:
     # make a source off zenith
@@ -381,9 +387,7 @@ def test_offzenith_source_multibl_uvfits():
     # create_mock_catalog uses azimuth of 90
     source, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
 
-    beam = pyuvsim.AnalyticBeam('uniform')
-
-    beam_list = [beam]
+    beam_list = pyuvsim.BeamList([beam])
 
     baselines = [pyuvsim.Baseline(antenna2, antenna1),
                  pyuvsim.Baseline(antenna3, antenna1),
@@ -412,7 +416,7 @@ def test_offzenith_source_multibl_uvfits():
     jones[1, 0] = interpolated_beam[1, 0, 1, 0, 0]
     jones[0, 1] = interpolated_beam[0, 0, 0, 0, 0]
 
-    uvw_wavelength_array = hera_uv.uvw_array[0:hera_uv.Nbls] * units.m / const.c * freq.to('1/s')
+    uvw_wavelength_array = uvw_array * units.m / const.c * freq.to('1/s')
 
     visibilities_analytic = []
     for u, v, w in uvw_wavelength_array:
@@ -421,7 +425,7 @@ def test_offzenith_source_multibl_uvfits():
         visibilities_analytic.append(np.array([vis[0, 0], vis[1, 1], vis[1, 0], vis[0, 1]]))
 
     # the file used different phasing code than the test uses -- increase the tolerance
-    assert np.allclose(uvws, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4)
+    assert np.allclose(uvws, uvw_array, atol=1e-4)
 
     # the file used different phasing code than the test uses -- increase the tolerance
     assert np.allclose(visibilities, visibilities_analytic, atol=1e-4)

@@ -11,15 +11,17 @@ import pytest
 from astropy.time import Time
 from astropy.utils import iers
 from astropy.coordinates import EarthLocation
-from pyuvdata import UVData
+from pyuvdata import UVData, UVBeam
+from pyuvdata.data import DATA_PATH
 
-from pyuvsim.data import DATA_PATH
+import pyuvsim
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 
 @pytest.fixture(autouse=True, scope="session")
 def setup_and_teardown_package():
     """Make data/test directory to put test output files in."""
-    testdir = os.path.join(DATA_PATH, 'temporary_test_data/')
+    testdir = os.path.join(SIM_DATA_PATH, 'temporary_test_data/')
     if not os.path.exists(testdir):
         os.mkdir(testdir)
 
@@ -67,9 +69,10 @@ def cst_beam():
         telescope_name='HERA', feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
         model_name='E-field pattern - Rigging height 4.9m', model_version='1.0'
     )
-
+    beam.peak_normalize()
     return beam
 
-@pytest.fixture(autouse=True, scope='session')
+
+@pytest.fixture(scope='session')
 def hera_loc():
     return EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)

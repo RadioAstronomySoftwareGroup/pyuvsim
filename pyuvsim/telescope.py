@@ -10,7 +10,7 @@ from .analyticbeam import AnalyticBeam
 from . import mpi
 
 
-class Telescope(object):
+class Telescope:
     """
     Container for data common to all antennas in the array.
 
@@ -183,6 +183,11 @@ class BeamList(object):
     def __len__(self):
         # Note that only one of these lists has nonzero length at a given time.
         return len(self._obj_beam_list) + len(self._str_beam_list)
+
+    def __iter__(self):
+        # Get the list as an iterable.
+        lst = self._str_beam_list if self.string_mode else self._obj_beam_list
+        return (be for be in lst)
 
     def __getitem__(self, ind):
         if self.string_mode:
