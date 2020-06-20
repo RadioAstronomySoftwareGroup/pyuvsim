@@ -10,6 +10,8 @@ import warnings
 import pytest
 from astropy.time import Time
 from astropy.utils import iers
+from astropy.coordinates import EarthLocation
+from pyuvdata import UVData
 
 from pyuvsim.data import DATA_PATH
 
@@ -50,3 +52,24 @@ def ignore_deprecation():
     warnings.filterwarnings('ignore', message='"initialize_catalog_from_params will not return'
                                               ' recarray by default in the future.',
                             category=PendingDeprecationWarning)
+
+@pytest.fixture(scope='session')
+def cst_beam():
+    beam = UVBeam()
+    beam.freq_interp_kind = 'linear'
+
+    freqs = [150e6, 123e6]
+
+    cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
+    beam_files = [os.path.join(DATA_PATH, 'NicCSTbeams', f) for f in cst_files]
+    beam.read_cst_beam(
+        beam_files, beam_type='efield', frequency=freqs,
+        telescope_name='HERA', feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+        model_name='E-field pattern - Rigging height 4.9m', model_version='1.0'
+    )
+
+    return beam
+
+@pytest.fixture(autouse=True, scope='session')
+def hera_loc():
+    return EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)

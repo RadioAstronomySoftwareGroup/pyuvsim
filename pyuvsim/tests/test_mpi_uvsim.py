@@ -64,10 +64,10 @@ def test_mpi_version():
     assert MPI.VERSION == 3
 
 
-def test_run_uvsim():
+def test_run_uvsim(cst_beam):
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
-    beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
+    beam = cst_beam
     beamfile = os.path.join(simtest.TESTDATA_PATH, "temp.uvbeam")
     beam.write_beamfits(beamfile)
     beam_list = pyuvsim.BeamList([beamfile])
