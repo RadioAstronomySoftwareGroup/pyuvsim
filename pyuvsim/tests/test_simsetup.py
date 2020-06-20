@@ -256,21 +256,16 @@ def test_vot_catalog_error(key_pop, message):
         pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
 
 
-@pytest.mark.parametrize("config_num", [0, 2])
-def test_param_reader(config_num):
+def test_param_reader():
     pytest.importorskip('mpi4py')
     # Reading in various configuration files
 
-    param_filename = param_filenames[config_num]
+    param_filename = os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml")
     hera_uv = UVData()
-    with pytest.warns(UserWarning) as warn:
+    with pytest.warns(UserWarning, match="Telescope 28m_triangle"):
         hera_uv.read_uvfits(triangle_uvfits_file)
-    assert str(warn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml '
-                                              'is not in known_telescopes.')
 
     hera_uv.telescope_name = 'HERA'
-    if config_num == 5:
-        hera_uv.select(bls=[(0, 1), (1, 2)])
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_data=True)
@@ -283,56 +278,51 @@ def test_param_reader(config_num):
     beam_list = pyuvsim.BeamList([beam0, beam1, beam2, beam3])
 
     beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2, 'ANT4': 3}
-    Ntasks = hera_uv.Nblts * hera_uv.Nfreqs
-    taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources,
-                                           beam_list, beam_dict=beam_dict)
-    expected_uvtask_list = list(taskiter)
 
-    # Check error conditions:
-    if config_num == 0:
-        params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
-        bak_params_bad = copy.deepcopy(params_bad)
+    # Error conditions:
+    params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
+    bak_params_bad = copy.deepcopy(params_bad)
 
-        # Missing config file info
-        params_bad['config_path'] = os.path.join(
-            SIM_DATA_PATH, 'nonexistent_directory', 'nonexistent_file'
-        )
-        with pytest.raises(ValueError, match="nonexistent_directory is not a directory"):
-            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+    # Missing config file info
+    params_bad['config_path'] = os.path.join(
+        SIM_DATA_PATH, 'nonexistent_directory', 'nonexistent_file'
+    )
+    with pytest.raises(ValueError, match="nonexistent_directory is not a directory"):
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
-        params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
-        params_bad['telescope']['array_layout'] = 'nonexistent_file'
-        with pytest.raises(ValueError, match="nonexistent_file from yaml does not exist"):
-            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+    params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
+    params_bad['telescope']['array_layout'] = 'nonexistent_file'
+    with pytest.raises(ValueError, match="nonexistent_file from yaml does not exist"):
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
-        params_bad['telescope']['telescope_config_name'] = 'nonexistent_file'
-        with pytest.raises(ValueError, match="telescope_config_name file from yaml does not exist"):
-            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+    params_bad['telescope']['telescope_config_name'] = 'nonexistent_file'
+    with pytest.raises(ValueError, match="telescope_config_name file from yaml does not exist"):
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
-        # Missing beam keywords
-        params_bad = copy.deepcopy(bak_params_bad)
+    # Missing beam keywords
+    params_bad = copy.deepcopy(bak_params_bad)
 
-        params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
+    params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
 
-        params_bad = copy.deepcopy(bak_params_bad)
-        params_bad['telescope']['telescope_config_name'] = os.path.join(
-            SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_gaussnoshape.yaml'
-        )
-        with pytest.raises(KeyError,
-                           match="Missing shape parameter for gaussian beam"):
-            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+    params_bad = copy.deepcopy(bak_params_bad)
+    params_bad['telescope']['telescope_config_name'] = os.path.join(
+        SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_gaussnoshape.yaml'
+    )
+    with pytest.raises(KeyError,
+                       match="Missing shape parameter for gaussian beam"):
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
-        params_bad['telescope']['telescope_config_name'] = os.path.join(
-            SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml'
-        )
-        with pytest.raises(KeyError, match="Missing diameter for airy beam."):
-            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+    params_bad['telescope']['telescope_config_name'] = os.path.join(
+        SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml'
+    )
+    with pytest.raises(KeyError, match="Missing diameter for airy beam."):
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
-        params_bad['telescope']['telescope_config_name'] = os.path.join(
-            SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml'
-        )
-        with pytest.raises(ValueError, match="Undefined beam model"):
-            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+    params_bad['telescope']['telescope_config_name'] = os.path.join(
+        SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml'
+    )
+    with pytest.raises(ValueError, match="Undefined beam model"):
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_filename)
@@ -343,25 +333,11 @@ def test_param_reader(config_num):
     expected_ofilepath = pyuvsim.utils.write_uvdata(
         uv_obj, param_dict, return_filename=True, dryrun=True
     )
-    ofilename = 'sim_results.uvfits'
-    if config_num == 1:
-        if os.path.isdir('tempdir'):
-            os.rmdir('tempdir')
-        ofilename = os.path.join('.', 'tempdir', ofilename)
-    else:
-        ofilename = os.path.join('.', ofilename)
-    assert ofilename == expected_ofilepath
+    assert './sim_results.uvfits' == expected_ofilepath
 
-    Ntasks = uv_obj.Nblts * uv_obj.Nfreqs
-    taskiter = pyuvsim.uvdata_to_task_iter(
-        range(Ntasks), hera_uv, sources, beam_list, beam_dict=beam_dict
-    )
-    uvtask_list = list(taskiter)
-
-    # Tasks are not ordered in UVTask lists, so need to sort them.
-    uvtask_list = sorted(uvtask_list)
-    expected_uvtask_list = sorted(expected_uvtask_list)
-    assert uvtask_list == expected_uvtask_list
+    assert new_beam_dict == beam_dict
+    assert new_beam_list == beam_list
+    assert uv_obj == hera_uv
 
 
 def test_tele_parser():
