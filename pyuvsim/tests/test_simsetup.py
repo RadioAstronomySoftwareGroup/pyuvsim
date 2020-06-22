@@ -258,9 +258,9 @@ def test_param_reader():
 
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml")
     hera_uv = UVData()
-    with pytest.warns(UserWarning, match="Telescope 28m_triangle"):
-        hera_uv.read_uvfits(triangle_uvfits_file)
+    hera_uv.read_uvfits(triangle_uvfits_file)
 
+    hera_uv.unphase_to_drift()
     hera_uv.telescope_name = 'HERA'
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
@@ -268,10 +268,15 @@ def test_param_reader():
 
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
+    beam0.extra_keywords['beam_path'] = herabeam_default
     beam1 = pyuvsim.AnalyticBeam('uniform')
     beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
     beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.6)
     beam_list = pyuvsim.BeamList([beam0, beam1, beam2, beam3])
+
+    # To fill out other parameters in the UVBeam.
+    beam_list.set_str_mode()
+    beam_list.set_obj_mode()
 
     beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2, 'ANT4': 3}
 
@@ -324,12 +329,33 @@ def test_param_reader():
     uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_filename)
     new_beam_list.set_obj_mode()
 
+    pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
+
     with open(param_filename, 'r') as fhandle:
         param_dict = yaml.safe_load(fhandle)
     expected_ofilepath = pyuvsim.utils.write_uvdata(
         uv_obj, param_dict, return_filename=True, dryrun=True
     )
     assert './sim_results.uvfits' == expected_ofilepath
+
+    # Spoof attributes that won't match.
+    uv_obj.antenna_names = uv_obj.antenna_names.tolist()
+    uv_obj.antenna_diameters = hera_uv.antenna_diameters
+    uv_obj.history = hera_uv.history
+
+    uvfits_required_extra = [
+        "_antenna_positions",
+        "_gst0",
+        "_rdate",
+        "_earth_omega",
+        "_dut1",
+        "_timesys",
+    ]
+    for attr in uvfits_required_extra:
+        param = getattr(uv_obj, attr)
+        if param.value is None:
+            param.value = param.spoof_val
+            setattr(uv_obj, attr, param)
 
     assert new_beam_dict == beam_dict
     assert new_beam_list == beam_list

@@ -693,14 +693,19 @@ def _construct_beam_list(beam_ids, telconfig):
 
             # Default to None for diameter and sigma.
             # Values in the "beam_paths" override globally-defined options.
-            beam_opts = {'diameter': None, 'sigma': None}
-            for opt in beam_opts.keys():
-                val = telconfig.get(opt, None)
-                val = this_beam_opts.get(opt, val)
-                beam_opts[opt] = val
+            shape_opts = {'diameter': None, 'sigma': None}
 
-            diameter = beam_opts.pop('diameter')
-            sigma = beam_opts.pop('sigma')
+            # Issue -- a locally-defined sigma should override a global diameter
+
+            for opt in shape_opts.keys():
+                shape_opts[opt] = this_beam_opts.get(opt, None)
+
+            if all(v is None for v in shape_opts.values()):
+                for opt in shape_opts.keys():
+                    shape_opts[opt] = telconfig.get(opt, None)
+
+            diameter = shape_opts.pop('diameter')
+            sigma = shape_opts.pop('sigma')
 
             if beam_type == 'uniform':
                 beam_model = 'analytic_uniform'
@@ -795,7 +800,7 @@ def parse_telescope_params(tele_params, config_path=''):
             telescope_location_latlonalt = ast.literal_eval(telescope_location_latlonalt)
         world = tele_params.pop('world', None)
 
-    telescope_location = list(telescope_location_latlonalt)
+    telescope_location = np.array(telescope_location_latlonalt)
     telescope_location[0] *= np.pi / 180.
     telescope_location[1] *= np.pi / 180.  # Convert to radians
     tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
@@ -842,8 +847,8 @@ def parse_telescope_params(tele_params, config_path=''):
         return_dict['world'] = world
 
     return_dict['array_layout'] = layout_csv
-    return_dict['telescope_location'] = tuple(tele_params['telescope_location'])
-    return_dict['telescope_location_lat_lon_alt'] = tuple(telescope_location_latlonalt)
+    return_dict['telescope_location'] = np.asarray(tele_params['telescope_location'])
+    return_dict['telescope_location_lat_lon_alt'] = np.asarray(telescope_location_latlonalt)
     return_dict['telescope_name'] = telescope_name
 
     # if provided, parse sections related to beam files and types
@@ -1322,7 +1327,7 @@ def initialize_uvdata_from_keywords(
         in ENU coordinates [meters].
     antenna_names : list of str (optional)
         If unset, antenna names are assigned as "%s" % antnum.
-    telescope_location : len-3 tuple
+    telescope_location : array of float, shape (3,)
         Telescope location on Earth in LatLonAlt coordinates [deg, deg, meters]
     telescope_name : str
         Name of telescope
@@ -1435,7 +1440,7 @@ def initialize_uvdata_from_keywords(
         'antenna_nums': antenna_nums, 'no_autos': no_autos
     }
     tele_params = {
-        'telescope_location': repr(telescope_location),
+        'telescope_location': repr(tuple(telescope_location)),
         'telescope_name': telescope_name
     }
     layout_params = {
@@ -1548,7 +1553,7 @@ def uvdata_to_telescope_config(
     # Write the rest to a yaml file.
     yaml_dict = {
         "telescope_name": uvdata_in.telescope_name,
-        "telescope_location": repr(uvdata_in.telescope_location_lat_lon_alt_degrees),
+        "telescope_location": repr(tuple(uvdata_in.telescope_location_lat_lon_alt_degrees)),
         "Nants": uvdata_in.Nants_telescope,
         "beam_paths": {0: beam_filepath}
     }

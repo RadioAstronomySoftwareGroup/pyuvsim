@@ -226,6 +226,11 @@ class BeamList(object):
             self._obj_beam_list[ind] = value
             self._scrape_uvb_params(self._obj_beam_list, strict=False)
 
+    def __eq__(self, other):
+        if self.string_mode:
+            return self._str_beam_list == other._str_beam_list
+        return self._obj_beam_list == other._obj_beam_list
+
     def append(self, value):
         """
         Append to the beam list.
