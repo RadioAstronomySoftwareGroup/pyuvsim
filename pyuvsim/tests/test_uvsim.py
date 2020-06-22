@@ -190,43 +190,6 @@ def test_visibility_source_below_horizon_radec(cst_beam, hera_loc):
     assert np.allclose(visibility, np.array([0, 0, 0, 0]))
 
 
-#def test_visibility_single_zenith_source_uvdata(cst_beam):
-#    """Test single zenith source using test uvdata file."""
-#    hera_uv = UVData()
-#    hera_uv.read_uvfits(EW_uvfits_file)
-#
-#    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-#    array_location = EarthLocation.from_geocentric(
-#        *hera_uv.telescope_location, unit='m'
-#    )
-#    freq = (150e6 * units.Hz)
-#
-#    # get antennas positions into ENU
-#    antpos = hera_uv.antenna_positions[0:2, :] + hera_uv.telescope_location
-#    lat, lon, alt = hera_uv.telescope_location_lat_lon_alt
-#    antpos = uvutils.ENU_from_ECEF(antpos, lat, lon, alt)
-#
-#    antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
-#    antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
-#
-#    # setup the things that don't come from pyuvdata:
-#    # make a source at zenith
-#    time.location = array_location
-#    source, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
-#
-#    beam = cst_beam
-#    beam_list = pyuvsim.BeamList([beam])
-#
-#    baseline = pyuvsim.Baseline(antenna1, antenna2)
-#    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
-#    task = pyuvsim.UVTask(source, time, freq, baseline, array)
-#    engine = pyuvsim.UVEngine(task)
-#
-#    visibility = engine.make_visibility()
-#
-#    assert np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3)
-
-
 def test_redundant_baselines(cst_beam, hera_loc):
     """Check that two perfectly redundant baselines are truly redundant. """
 
