@@ -40,6 +40,7 @@ def multi_beams():
 
     return beam_list
 
+multi_beams = multi_beams()
 
 @pytest.fixture(scope='module')
 def triangle_pos():
@@ -268,13 +269,14 @@ def test_redundant_baselines(cst_beam, hera_loc):
     assert np.allclose(visibility1, visibility2)
 
 
-def test_single_offzenith_source_uvfits(cst_beam, hera_loc):
+@pytest.mark.parametrize('beam', multi_beams)
+def test_single_offzenith_source(beam, hera_loc):
     """Test single off-zenith source."""
 
     time = Time(2458098.27471265, format='jd')
     array_location = hera_loc
     time.location = array_location
-    freq = (150e6 * units.Hz)
+    freq = (123e6 * units.Hz)
 
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
@@ -305,7 +307,7 @@ def test_single_offzenith_source_uvfits(cst_beam, hera_loc):
     assert np.isclose(src_lmn[1], src_m)
     assert np.isclose(src_lmn[2], src_n)
 
-    beam_list = pyuvsim.BeamList([cst_beam])
+    beam_list = pyuvsim.BeamList([beam])
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
@@ -316,7 +318,6 @@ def test_single_offzenith_source_uvfits(cst_beam, hera_loc):
     visibility = engine.make_visibility()
 
     # analytically calculate visibility
-    beam = cst_beam.copy()
     beam.interpolation_function = 'az_za_simple'
     beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_alt.rad, src_az.rad)
     beam_za2, beam_az2 = simutils.altaz_to_zenithangle_azimuth(src_alt_az[0], src_alt_az[1])
@@ -352,17 +353,16 @@ def test_single_offzenith_source_uvfits(cst_beam, hera_loc):
         [vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[0, 1], vis_analytic[1, 0]]
     )
 
-    assert np.allclose(baseline.uvw.to_value('m'), uvw_array.value, atol=1e-4)
-    assert np.allclose(visibility, vis_analytic, atol=1e-4)
+    assert np.allclose(baseline.uvw.to_value('m'), uvw_array.value)
+    assert np.allclose(visibility, vis_analytic)
 
 
-@pytest.mark.parametrize('beam', multi_beams())
+@pytest.mark.parametrize('beam', multi_beams)
 def test_offzenith_source_multibl_uvfits(beam, hera_loc, triangle_pos):
     """Test single off-zenith source using test uvdata file.
         Calculate visibilities for a baseline triangle.
     """
 
-    #!!! NOTE -- Failing with UVBeam!
     enu_antpos, uvw_array = triangle_pos
     time = Time(2458098.27471265, format='jd')
     src_az = Angle('90.0d')
@@ -376,15 +376,12 @@ def test_offzenith_source_multibl_uvfits(beam, hera_loc, triangle_pos):
     array_location = hera_loc
     freq = (123e6 * units.Hz)
 
-    # get antennas positions into ENU
     antenna1 = pyuvsim.Antenna('ant1', 0, np.array(enu_antpos[0, :]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 1, np.array(enu_antpos[1, :]), 0)
     antenna3 = pyuvsim.Antenna('ant3', 2, np.array(enu_antpos[2, :]), 0)
 
-    # setup the things that don't come from pyuvdata:
     # make a source off zenith
     time.location = array_location
-    # create_mock_catalog uses azimuth of 90
     source, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
 
     beam_list = pyuvsim.BeamList([beam])
@@ -396,39 +393,36 @@ def test_offzenith_source_multibl_uvfits(beam, hera_loc, triangle_pos):
     tasks = [pyuvsim.UVTask(source, time, freq, bl, array) for bl in baselines]
     visibilities = []
     uvws = []
+    engine = pyuvsim.UVEngine()
     for t in tasks:
-        engine = pyuvsim.UVEngine(t)
+        engine.set_task(t)
         visibilities.append(engine.make_visibility())
         uvws.append(t.baseline.uvw)
-
     uvws = np.array(uvws)
-    # analytically calculate visibilities
 
+    # analytically calculate visibilities
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
     interpolated_beam, interp_basis_vector = beam.interp(
-        az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]),
+        az_array=np.array([0.0]), za_array=np.array([src_za.rad]),
         freq_array=np.array([freq.to_value('Hz')])
     )
-    jones = np.zeros((2, 2), dtype=np.complex64)
-    jones[0, 0] = interpolated_beam[1, 0, 0, 0, 0]
-    jones[1, 1] = interpolated_beam[0, 0, 1, 0, 0]
-    jones[1, 0] = interpolated_beam[1, 0, 1, 0, 0]
-    jones[0, 1] = interpolated_beam[0, 0, 0, 0, 0]
+    jones = np.zeros((2, 2, 1), dtype=np.complex64)
+    jones[0, 0] = interpolated_beam[1, 0, 0, 0, :]
+    jones[1, 1] = interpolated_beam[0, 0, 1, 0, :]
+    jones[1, 0] = interpolated_beam[1, 0, 1, 0, :]
+    jones[0, 1] = interpolated_beam[0, 0, 0, 0, :]
 
     uvw_wavelength_array = uvw_array * units.m / const.c * freq.to('1/s')
 
     visibilities_analytic = []
     for u, v, w in uvw_wavelength_array:
-        vis = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(
+        vis = 0.5 * np.dot(jones[..., 0], np.conj(jones[..., 0]).T) * np.exp(
             2j * np.pi * (u * src_l + v * src_m + w * src_n))
-        visibilities_analytic.append(np.array([vis[0, 0], vis[1, 1], vis[1, 0], vis[0, 1]]))
+        visibilities_analytic.append(np.array([vis[0, 0], vis[1, 1], vis[0, 1], vis[1, 0]]))
 
-    # the file used different phasing code than the test uses -- increase the tolerance
-    assert np.allclose(uvws, uvw_array, atol=1e-4)
-
-    # the file used different phasing code than the test uses -- increase the tolerance
-    assert np.allclose(visibilities, visibilities_analytic, atol=1e-4)
+    assert np.allclose(uvws, uvw_array)
+    assert np.allclose(visibilities, visibilities_analytic)
 
 
 def test_file_to_tasks(cst_beam):
