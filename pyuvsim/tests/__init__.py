@@ -5,8 +5,6 @@
 import os
 
 import numpy as np
-from pyuvdata import UVBeam
-from pyuvdata.data import DATA_PATH
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 

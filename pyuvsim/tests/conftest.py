@@ -11,10 +11,9 @@ import pytest
 from astropy.time import Time
 from astropy.utils import iers
 from astropy.coordinates import EarthLocation
-from pyuvdata import UVData, UVBeam
+from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
 
-import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 
@@ -54,6 +53,7 @@ def ignore_deprecation():
     warnings.filterwarnings('ignore', message='"initialize_catalog_from_params will not return'
                                               ' recarray by default in the future.',
                             category=PendingDeprecationWarning)
+
 
 @pytest.fixture(scope='session')
 def cst_beam():
