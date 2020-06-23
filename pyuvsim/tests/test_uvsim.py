@@ -13,11 +13,9 @@ from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, Longitude, Latitude
 import pytest
 from pyuvdata import UVData, UVBeam
-from pyuvdata.data import DATA_PATH
 import pyradiosky
 
 import pyuvsim
-import pyuvsim.tests as simtest
 import pyuvsim.utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.astropy_interface import Time
@@ -32,7 +30,7 @@ def multi_beams():
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
     beam0.freq_interp_kind = 'cubic'
-    beam0.interpolation_function = 'az_za_simple' 
+    beam0.interpolation_function = 'az_za_simple'
     beam1 = pyuvsim.AnalyticBeam('uniform')
     beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
     beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.6)
@@ -40,7 +38,9 @@ def multi_beams():
 
     return beam_list
 
+
 multi_beams = multi_beams()
+
 
 @pytest.fixture(scope='module')
 def triangle_pos():
@@ -176,7 +176,7 @@ def test_visibility_source_below_horizon_radec(cst_beam, hera_loc):
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
-    beam = cst_beam 
+    beam = cst_beam
 
     beam_list = pyuvsim.BeamList([beam])
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
@@ -211,7 +211,7 @@ def test_redundant_baselines(cst_beam, hera_loc):
     # make a source off zenith
     time.location = array_location
     source, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
- 
+
     beam_list = pyuvsim.BeamList([cst_beam])
 
     baseline1 = pyuvsim.Baseline(antenna1, antenna2)
@@ -300,7 +300,7 @@ def test_single_offzenith_source(beam, hera_loc):
 
     beam_jones = antenna1.get_beam_jones(array, src_alt_az, freq)
     assert np.allclose(beam_jones, jones)
-    
+
     uvw_array = units.Quantity([[28., 0., 0.]], unit='m')
     uvw_wavelength_array = uvw_array / const.c * freq.to('1/s')
     # Remove source axis from jones matrix
@@ -467,13 +467,13 @@ def test_file_to_tasks(cst_beam):
         assert task == exp_task
 
 
-def test_gather(cst_beam):
+def test_gather():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_data=True)
 
-    beam_list = pyuvsim.BeamList([cst_beam])
+    beam_list = pyuvsim.BeamList([multi_beams[1]])
 
     Nblts = hera_uv.Nblts
     Nfreqs = hera_uv.Nfreqs
@@ -494,7 +494,7 @@ def test_gather(cst_beam):
     assert np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3)
 
 
-def test_local_task_gen(cst_beam):
+def test_local_task_gen():
     # Confirm I get the same results looping over the task list as I do with the generator function.
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_10time10chan)
@@ -504,7 +504,7 @@ def test_local_task_gen(cst_beam):
         time, arrangement='random', Nsrcs=5, return_data=True
     )
 
-    beam_list = pyuvsim.BeamList([cst_beam])
+    beam_list = pyuvsim.BeamList([multi_beams[1]])
 
     Nblts = hera_uv.Nblts
     Nfreqs = hera_uv.Nfreqs
@@ -540,19 +540,6 @@ def test_local_task_gen(cst_beam):
         engine1 = pyuvsim.UVEngine(task1, reuse_spline=True)
         engine0.set_task(task0)
         assert np.allclose(engine1.make_visibility(), engine0.make_visibility())
-
-
-def test_pol_error():
-    # Check that running with a uvdata object without the proper polarizations will fail.
-    pytest.importorskip('mpi4py')
-
-    hera_uv = UVData()
-    hera_uv.read_uvfits(EW_uvfits_file)
-
-    hera_uv.select(polarizations=['xx'])
-
-    with pytest.raises(ValueError, match='input_uv must have XX,YY,XY,YX polarization'):
-        pyuvsim.run_uvdata_uvsim(hera_uv, ['beamlist'])
 
 
 def test_task_coverage():

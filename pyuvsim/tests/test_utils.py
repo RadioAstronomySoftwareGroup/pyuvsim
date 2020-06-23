@@ -127,10 +127,7 @@ def test_file_namer_extensions():
 def test_write_uvdata(save_format):
     """ Test function that defines filenames from parameter dict """
     uv = UVData()
-    with pytest.warns(UserWarning) as telwarn:
-        uv.read_uvfits(triangle_uvfits_file)
-    assert str(telwarn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml '
-                                                 'is not in known_telescopes.')
+    uv.read_uvfits(triangle_uvfits_file)
 
     ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
     filing_dict = {'outfile_name': ofname}
@@ -153,10 +150,7 @@ def test_write_uvdata(save_format):
 def test_write_error_with_no_format():
     """Test write_uvdata will error if no format is given."""
     uv = UVData()
-    with pytest.warns(UserWarning) as telwarn:
-        uv.read_uvfits(triangle_uvfits_file)
-    assert str(telwarn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml is '
-                                                 'not in known_telescopes.')
+    uv.read_uvfits(triangle_uvfits_file)
 
     ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
     filing_dict = {'outfile_name': ofname}
@@ -168,10 +162,7 @@ def test_write_error_with_no_format():
 def test_file_format_in_filing_dict():
     """Test file is written out when output_format is set in filing dict."""
     uv = UVData()
-    with pytest.warns(UserWarning) as telwarn:
-        uv.read_uvfits(triangle_uvfits_file)
-    assert str(telwarn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml is '
-                                                 'not in known_telescopes.')
+    uv.read_uvfits(triangle_uvfits_file)
 
     ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
     filing_dict = {'outfile_name': ofname}

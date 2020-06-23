@@ -84,11 +84,7 @@ def test_mock_catalog_off_zenith_source(hera_loc):
 def test_catalog_from_params():
     # Pass in parameter dictionary as dict
     hera_uv = UVData()
-    with pytest.warns(
-        UserWarning,
-        match='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.'
-    ):
-        hera_uv.read_uvfits(triangle_uvfits_file)
+    hera_uv.read_uvfits(triangle_uvfits_file)
 
     source_dict = {}
     with pytest.raises(KeyError, match='No catalog defined.'):

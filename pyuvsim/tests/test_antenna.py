@@ -2,16 +2,15 @@
 import numpy as np
 import os
 import yaml
-from astropy.coordinates import EarthLocation
+from astropy import units
 import pytest
 import pyuvdata
 
 import pyuvsim
-import pyuvsim.tests as simtest
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 
-def test_jones_set_spline(cst_beam):
+def test_jones_set_spline(cst_beam, hera_loc):
     # Run get_beam_jones with spline options.
     array_location = hera_loc
     beam0 = cst_beam.copy()
@@ -52,7 +51,7 @@ def test_jones_set_spline(cst_beam):
         antenna.get_beam_jones(array, altaz, 150e6)
 
 
-def test_jones_set_interp(cst_beam):
+def test_jones_set_interp(cst_beam, hera_loc):
     # check setting the interpolation method
 
     array_location = hera_loc
@@ -64,7 +63,7 @@ def test_jones_set_interp(cst_beam):
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 10, 0]), 0)
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
     source_altaz = np.array([[0.0], [np.pi / 4.]])
-    freq = 100e6 * units.Hz
+    freq = 123e6 * units.Hz
 
     with pytest.raises(ValueError, match='freq_interp_kind must be set'):
         antenna1.get_beam_jones(array, source_altaz, freq)
