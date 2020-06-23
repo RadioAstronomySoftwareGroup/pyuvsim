@@ -37,6 +37,7 @@ def beam_objs():
     return beams
 
 
+@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 def test_convert_loop(beam_objs):
     beams = beam_objs
     beams[0].freq_interp_kind = 'linear'
