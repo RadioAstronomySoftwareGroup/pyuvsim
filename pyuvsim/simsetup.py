@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 import yaml
 
-from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude
+from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, AltAz
 import astropy.units as units
 from pyuvdata import utils as uvutils, UVData
 import pyradiosky
@@ -19,7 +19,15 @@ import pyradiosky
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from .analyticbeam import AnalyticBeam
 from .telescope import BeamList
-from .astropy_interface import SkyCoord, MoonLocation, Time
+from .astropy_interface import SkyCoord, MoonLocation, Time, LunarTopo
+try:
+    import astropy_healpix
+except ImportError:
+    astropy_healpix = None
+try:
+    import analytic_diffuse
+except ImportError:
+    analytic_diffuse = None
 try:
     from . import mpi
     from .mpi import get_rank
@@ -116,7 +124,8 @@ def _set_lsts_on_uvdata(uv_obj):
 
 
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
-                        alt=None, save=False, min_alt=None, rseed=None, return_data=False):
+                        alt=None, save=False, min_alt=None, rseed=None, return_data=False,
+                        diffuse_model=None, diffuse_params=None, map_nside=None):
     """
     Create a mock catalog.
 
@@ -137,6 +146,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         * `long-line`:  Horizon to horizon line of point sources
         * `hera_text`:  Spell out HERA around the zenith
         * `random`:  Randomly distributed point sources near zenith
+        * `diffuse`: Choice of solved models in the analytic_diffuse module.
     Nsrcs: int
         Number of sources to make (used for zenith, off-zenith, long-line, and random arrangements).
     array_location: `astropy.coordinates.EarthLocation`
@@ -155,6 +165,14 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         If using the random configuration, pass in a RandomState seed.
     return_data: bool
         If True, return a SkyModelData object instead of SkyModel.
+    diffuse_model: str
+        If arrangement == 'diffuse', name of the diffuse model to generate.
+        See documentation in `analytic_diffuse.models` for details.
+    diffuse_params: dict
+        If arrangement == 'diffuse', extra parameters accepted by the chosen model.
+        See documentation in `analytic_diffuse.models` for details.
+    map_nside: int
+        If arrangement == 'diffuse', nside parameter for the healpix map to make.
 
     Returns
     -------
@@ -162,8 +180,12 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         The catalog, as either a SkyModel or a SkyModelData (if `return_data` is True)
     dict
         A dictionary of keywords used to define the catalog.
+
+    Notes
+    -----
+    Generating diffuse models requires the `analytic_diffuse` and `astropy_healpix` modules.
     """
-    if not isinstance(time, Time):
+    if isinstance(time, float):
         time = Time(time, scale='utc', format='jd')
 
     if array_location is None:
@@ -171,7 +193,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
                                        height=1073.)
 
     if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text',
-                           'random']:
+                           'random', 'diffuse']:
         raise KeyError("Invalid mock catalog arrangement: " + str(arrangement))
 
     mock_keywords = {
@@ -179,6 +201,13 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         'array_location': repr(
             (array_location.lat.deg, array_location.lon.deg, array_location.height.value))
     }
+
+    if isinstance(array_location, MoonLocation):
+        localframe = 'lunartopo'
+        mock_keywords['world'] = 'moon'
+    else:
+        localframe = 'altaz'
+        mock_keywords['world'] = 'earth'
 
     if arrangement == 'off-zenith':
         if alt is None:
@@ -269,28 +298,63 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         Nsrcs = alts.size
         fluxes = np.ones_like(alts)
 
-    catalog = []
+    if arrangement == 'diffuse':
+        if analytic_diffuse is None or astropy_healpix is None:
+            raise ValueError("analytic_diffuse and astropy_healpix "
+                             "modules are required to use diffuse mock catalog.")
+        if (diffuse_model is None):
+            raise ValueError("Diffuse arrangement selected, but diffuse model not chosen.")
+        if diffuse_params is None:
+            diffuse_params = {}
+        if map_nside is None:
+            warnings.warn("No nside chosen. Defaulting to 32")
+            map_nside = 32
 
-    if isinstance(array_location, MoonLocation):
-        localframe = 'lunartopo'
-        mock_keywords['world'] = 'moon'
-    else:
-        localframe = 'altaz'
-        mock_keywords['world'] = 'earth'
-    source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
-                            obstime=time, frame=localframe, location=array_location)
-    icrs_coord = source_coord.transform_to('icrs')
+        mock_keywords['diffuse_model'] = diffuse_model
+        mock_keywords['map_nside'] = map_nside
+        mock_keywords['diffuse_params'] = repr(diffuse_params)
 
-    ra = icrs_coord.ra
-    dec = icrs_coord.dec
-    names = np.array(['src' + str(si) for si in range(Nsrcs)])
-    stokes = np.zeros((4, 1, Nsrcs))
-    stokes[0, :] = fluxes
-    catalog = pyradiosky.SkyModel(names, ra, dec, stokes, 'flat')
+        modfunc = analytic_diffuse.get_model(diffuse_model)
+
+        # Make the map, calculate AltAz positions of pixels, evaluate the model.
+        npix = 12 * map_nside**2
+        pixinds = np.arange(npix)
+        if localframe == 'lunartopo':
+            frame = LunarTopo(location=array_location, obstime=time)
+        else:
+            frame = AltAz(location=array_location, obstime=time)
+        hpix = astropy_healpix.HEALPix(nside=map_nside, frame=frame)
+        source_coord = hpix.healpix_to_skycoord(pixinds)
+        icrs_coord = source_coord.transform_to('icrs')
+
+        fluxes = modfunc(source_coord.az.rad, source_coord.zen.rad, **diffuse_params)
+        stokes = np.zeros((4, 1, npix))
+        stokes[0, :] = fluxes
+        catalog = pyradiosky.SkyModel(
+            ra=icrs_coord.ra, dec=icrs_coord.dec, stokes=stokes,
+            nside=map_nside, hpx_inds=pixinds, spectral_type='flat'
+        )
+
+    if arrangement != 'diffuse':
+        source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
+                                obstime=time, frame=localframe, location=array_location)
+        icrs_coord = source_coord.transform_to('icrs')
+
+        names = np.array(['src' + str(si) for si in range(Nsrcs)])
+        stokes = np.zeros((4, 1, Nsrcs))
+        stokes[0, :] = fluxes
+        catalog = pyradiosky.SkyModel(
+            name=names, ra=icrs_coord.ra, dec=icrs_coord.dec, stokes=stokes, spectral_type='flat'
+        )
+
     if return_data:
         catalog = SkyModelData(catalog)
     if get_rank() == 0 and save:
-        np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs,
+        np.savez('mock_catalog_' + arrangement,
+                 ra=icrs_coord.ra.rad,
+                 dec=icrs_coord.dec.rad,
+                 alts=alts,
+                 azs=azs,
                  fluxes=fluxes)
 
     return catalog, mock_keywords
@@ -552,7 +616,8 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
             source_select_kwds[key] = float(source_params[key])
     if catalog == 'mock':
         mock_keywords = {'arrangement': source_params['mock_arrangement']}
-        extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'min_alt', 'array_location']
+        extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'min_alt',
+                           'array_location', 'diffuse_model', 'diffuse_params', 'map_nside']
         for k in extra_mock_kwds:
             if k in source_params.keys():
                 if k == 'array_location':

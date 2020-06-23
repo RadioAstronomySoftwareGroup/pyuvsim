@@ -81,6 +81,39 @@ def test_mock_catalog_off_zenith_source(hera_loc):
     assert cat == test_source
 
 
+def test_mock_diffuse_maps():
+    # TODO -- Also run for moonlocation
+    analytic_diffuse = pyuvsim.simsetup.analytic_diffuse
+    astropy_healpix = pyuvsim.simsetup.astropy_healpix
+    if (analytic_diffuse is not None) and (astropy_healpix is not None):
+
+        # Error cases:
+        with pytest.raises(ValueError, match="Diffuse arrangement selected"):
+            pyuvsim.simsetup.create_mock_catalog(Time.now(), arrangement='diffuse')
+
+        with pytest.warns(UserWarning, match="No nside chosen"):
+            pyuvsim.simsetup.create_mock_catalog(
+                Time.now(), arrangement='diffuse', diffuse_model='monopole'
+            )
+
+        monocat, kwds = pyuvsim.simsetup.create_mock_catalog(
+            Time.now(), arrangement='diffuse', diffuse_model='monopole', map_nside=128
+        )
+        assert np.isclose(np.mean(monocat.stokes[0]).value, 0.5, atol=1e-2)
+        assert monocat.nside == 128
+        gauss_a = 0.05
+        gausscat, kwds = pyuvsim.simsetup.create_mock_catalog(
+            Time.now(), arrangement='diffuse', diffuse_model='gauss', map_nside=128,
+            diffuse_params={'a': gauss_a}
+        )
+        pixar = 4 * np.pi / (12 * 128**2) * units.sr
+        gaussint = np.sum(gausscat.stokes[0] * pixar).value
+        assert np.isclose(gaussint, gauss_a**2, rtol=1e-1)
+    else:
+        with pytest.raises(ValueError, match="analytic_diffuse and astropy_healpix"):
+            pyuvsim.simsetup.create_mock_catalog(Time.now(), arrangement='diffuse')
+
+
 def test_catalog_from_params():
     # Pass in parameter dictionary as dict
     hera_uv = UVData()
