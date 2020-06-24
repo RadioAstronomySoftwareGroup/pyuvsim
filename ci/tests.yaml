@@ -19,6 +19,6 @@ dependencies:
   - scipy
   - setuptools_scm
   - pip:
-    - pyradiosky
+    - git+git://github.com/RadioAstronomySoftwareGroup/pyradiosky
     - lunarsky
     - git+git://github.com/aelanman/analytic_diffuse
