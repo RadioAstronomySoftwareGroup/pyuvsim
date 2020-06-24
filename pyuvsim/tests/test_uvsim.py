@@ -321,10 +321,8 @@ def test_single_offzenith_source(beam, hera_loc):
 
 
 @pytest.mark.parametrize('beam', multi_beams)
-def test_offzenith_source_multibl_uvfits(beam, hera_loc, triangle_pos):
-    """Test single off-zenith source using test uvdata file.
-        Calculate visibilities for a baseline triangle.
-    """
+def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
+    """Calculate visibilities for a baseline triangle of an off-zenith source."""
 
     enu_antpos, uvw_array = triangle_pos
     time = Time(2458098.27471265, format='jd')

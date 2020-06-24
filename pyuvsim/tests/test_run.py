@@ -6,9 +6,10 @@ import numpy as np
 import os
 import pytest
 import yaml
+from astropy import units
 
 from pyuvdata import UVData
-from pyradiosky.utils import jy_to_ksr
+from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
 
 import pyuvsim
 from pyuvsim.astropy_interface import Time
@@ -146,6 +147,53 @@ def test_run_gleam_uvsim(spectral_type):
     params["sources"].pop("max_flux")
 
     pyuvsim.run_uvsim(params, return_uv=True)
+
+
+@pytest.mark.parametrize(
+    "spectral_type",
+    ["subband", "spectral_index"])
+def test_zenith_spectral_sim(spectral_type):
+    # Make a power law source at zenith in three ways.
+    # Confirm that simulated visibilities match expectation.
+
+    testdir = os.path.join(SIM_DATA_PATH, 'temporary_test_data')
+    params = pyuvsim.simsetup._config_str_to_dict(
+        os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
+    )
+
+    alpha = -0.5
+    ref_freq = 111e6
+    Nfreqs = 20
+    freqs = np.linspace(110e6, 115e6, Nfreqs)
+    freq_params = pyuvsim.simsetup.freq_array_to_params(freqs)
+    freqs = pyuvsim.simsetup.parse_frequency_params(freq_params)['freq_array'][0, :]
+    freqs *= units.Hz
+    spectrum = (freqs.value / ref_freq)**alpha
+
+    source, kwds = pyuvsim.create_mock_catalog(Time.now(), arrangement='zenith', Nsrcs=1)
+    source.spectral_type = spectral_type
+    if spectral_type == 'spectral_index':
+        source.reference_frequency = np.array([ref_freq]) * units.Hz
+        source.spectral_index = np.array([alpha])
+    else:
+        source.Nfreqs = Nfreqs
+        source.freq_array = freqs
+        source.stokes = np.repeat(source.stokes, Nfreqs, axis=1)
+        source.stokes[0, :, 0] *= spectrum
+        source.coherency_radec = stokes_to_coherency(source.stokes)
+
+    catpath = os.path.join(testdir, 'spectral_test_catalog.txt')
+    source.write_text_catalog(catpath)
+    params['sources'] = {"catalog" : catpath}
+    params['filing']['outdir'] = testdir
+    params['freq'] = freq_params
+    params['time']['start_time'] = kwds['time']
+    params['select'] = {'antenna_nums' : [1, 2]}
+
+    uv_out = pyuvsim.run_uvsim(params, return_uv=True)
+
+    for ii in range(uv_out.Nbls):
+        assert np.allclose(uv_out.data_array[ii, 0, :, 0], spectrum / 2)
 
 
 def test_pol_error():
