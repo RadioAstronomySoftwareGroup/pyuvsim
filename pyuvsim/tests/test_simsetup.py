@@ -1087,7 +1087,7 @@ def test_mock_catalog_moon():
     assert mmock != emock
 
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def cat_with_some_pols():
     # Mock catalog with a couple sources polarized.
     Nsrcs = 30
@@ -1121,19 +1121,18 @@ def cat_with_some_pols():
 def test_skymodeldata_with_quantity_stokes(unit, cat_with_some_pols):
     # Support for upcoming pyradiosky change setting SkyModel.stokes
     # to an astropy Quantity.
-    if unit == 'K':
-        pytest.importorskip('astropy_healpix')
-        path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
-        sky = pyradiosky.SkyModel()
-        sky.read_healpix_hdf5(path)
-    else:
+    if unit == 'Jy':
         sky = cat_with_some_pols
-
+    else:
+        sky, _ = pyuvsim.simsetup.create_mock_catalog(
+            Time.now(), arrangement='diffuse', diffuse_model='monopole', map_nside=16
+        )
     if not isinstance(sky.stokes, units.Quantity):
         sky.stokes *= units.Unit(unit)
 
     smd = pyuvsim.simsetup.SkyModelData(sky)
     assert np.all(sky.stokes.to_value(unit)[0] == smd.stokes_I)
+    assert smd.flux_unit == unit
 
     sky2 = smd.get_skymodel()
     if units.Quantity != pyradiosky.SkyModel()._stokes.expected_type:

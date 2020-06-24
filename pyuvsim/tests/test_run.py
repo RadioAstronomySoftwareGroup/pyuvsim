@@ -8,15 +8,18 @@ import pytest
 import yaml
 
 from pyuvdata import UVData
+from pyradiosky.utils import jy_to_ksr
 
 import pyuvsim
 from pyuvsim.astropy_interface import Time
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+from pyuvsim.analyticbeam import c_ms
 
 
 @pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
 def test_run_paramfile_uvsim():
     # Test vot and txt catalogs for parameter simulation
+    # Compare to reference files.
 
     uv_ref = UVData()
     uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
@@ -52,6 +55,72 @@ def test_run_paramfile_uvsim():
     uv_new_vot.object_name = uv_ref.object_name
     assert uv_new_txt == uv_ref
     assert uv_new_vot == uv_ref
+
+
+@pytest.mark.parametrize('model', ['monopole', 'cosza', 'quaddome', 'monopole-nonflat'])
+def test_analytic_diffuse(model):
+    # Generate the given model and simulate for a few baselines.
+    # Import from analytic_diffuse  (consider moving to rasg_affiliates?)
+    pytest.importorskip('analytic_diffuse')
+    pytest.importorskip('astropy_healpix')
+    import analytic_diffuse
+
+    testdir = os.path.join(SIM_DATA_PATH, 'temporary_test_data')
+
+    modname = model
+    use_w = False
+    params = {}
+    if model == 'quaddome':
+        modname = 'polydome'
+        params['n'] = 2
+    elif model == 'monopole-nonflat':
+        modname = 'monopole'
+        use_w = True
+        params['order'] = 30    # Expansion order for the non-flat monopole solution.
+
+    # Making configuration files for this simulation.
+    template_path = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_diffuse_sky.yaml')
+    obspar_path = os.path.join(testdir, 'obsparam_diffuse_sky.yaml')
+    layout_path = os.path.join(testdir, 'threeant_layout.csv')
+    herauniform_path = os.path.join(testdir, 'hera_uniform.yaml')
+
+    teleconfig = {
+        'beam_paths': {0: 'uniform'},
+        'telescope_location': "(-30.72153, 21.42830, 1073.0)",
+        'telescope_name': 'HERA'
+    }
+    if not use_w:
+        antpos_enu = np.array([[0, 0, 0], [0, 3, 0], [5, 0, 0]], dtype=float)
+    else:
+        antpos_enu = np.array([[0, 0, 0], [0, 3, 0], [0, 3, 5]], dtype=float)
+
+    pyuvsim.simsetup._write_layout_csv(
+        layout_path, antpos_enu, np.arange(3).astype(str), np.arange(3)
+    )
+    with open(herauniform_path, 'w') as ofile:
+        yaml.dump(teleconfig, ofile, default_flow_style=False)
+
+    with open(template_path, 'r') as yfile:
+        obspar = yaml.safe_load(yfile)
+    obspar['telescope']['array_layout'] = layout_path
+    obspar['telescope']['telescope_config_name'] = herauniform_path
+    obspar['sources']['diffuse_model'] = modname
+    obspar['sources'].update(params)
+    obspar['filing']['outfile_name'] = 'diffuse_sim.uvh5'
+    obspar['filing']['output_format'] = 'uvh5'
+    obspar['filing']['outdir'] = testdir
+
+    with open(obspar_path, 'w') as ofile:
+        yaml.dump(obspar, ofile, default_flow_style=False)
+
+    uv_out = pyuvsim.run_uvsim(obspar_path, return_uv=True)
+    # Convert from Jy to K sr
+    dat = uv_out.data_array[:, 0, 0, 0] * jy_to_ksr(uv_out.freq_array[0, 0]).value
+    # Evaluate the solution and compare to visibilities.
+    soln = analytic_diffuse.get_solution(modname)
+    uvw_lam = uv_out.uvw_array * uv_out.freq_array[0, 0] / c_ms
+    ana = soln(uvw_lam, **params)
+    assert np.allclose(ana / 2, dat, atol=1e-2)
 
 
 @pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")

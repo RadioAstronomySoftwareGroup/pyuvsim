@@ -275,7 +275,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     #   Skymodel will now be passed in as a catalog array.
     if not isinstance(catalog, SkyModelData):
         raise TypeError("catalog must be a SkyModelData object.")
-
     # Splitting the catalog for memory's sake.
     Nsrcs_total = catalog.Ncomponents
     if Nsky_parts > 1:
@@ -320,6 +319,12 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
     for src_i in src_iter:
         sky = catalog.get_skymodel(src_i)
+        if (
+            sky.spectral_type == 'flat'
+            and sky.freq_array is None
+            and sky.reference_frequency is None
+        ):
+            sky.freq_array = freq_array[0]
         if sky.component_type == 'healpix' and hasattr(sky, 'healpix_to_point'):
             sky.healpix_to_point()
         if sky.spectral_type != 'flat' and hasattr(sky, 'at_frequencies'):
