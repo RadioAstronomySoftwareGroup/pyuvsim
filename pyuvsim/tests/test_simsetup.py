@@ -1124,6 +1124,7 @@ def test_skymodeldata_with_quantity_stokes(unit, cat_with_some_pols):
     if unit == 'Jy':
         sky = cat_with_some_pols
     else:
+        pytest.importorskip('analytic_diffuse')
         sky, _ = pyuvsim.simsetup.create_mock_catalog(
             Time.now(), arrangement='diffuse', diffuse_model='monopole', map_nside=16
         )

@@ -17,6 +17,9 @@ from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.analyticbeam import c_ms
 
 
+pytest.importorskip('mpi4py')  # noqa
+
+
 @pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
 def test_run_paramfile_uvsim():
     # Test vot and txt catalogs for parameter simulation
