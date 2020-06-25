@@ -14,6 +14,15 @@ from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
 
 
+def pytest_collection_modifyitems(session, config, items):
+    # Enforce that the profiler test is run last.
+
+    for ii, it in enumerate(items):
+        if 'profiler' in it.name:
+            break
+    items.append(items.pop(ii))     # Move to the end.
+
+
 @pytest.fixture(autouse=True, scope="session")
 def setup_and_teardown_package():
     # Do a calculation that requires a current IERS table. This will trigger
