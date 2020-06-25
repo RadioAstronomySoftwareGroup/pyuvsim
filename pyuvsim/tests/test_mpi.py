@@ -2,8 +2,6 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-import os
-
 import numpy as np
 import resource
 import time
@@ -17,32 +15,18 @@ from mpi4py import MPI
 from astropy import units
 from astropy.coordinates import Latitude, Longitude
 
-from pyuvdata.data import DATA_PATH
-
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 import pyuvsim
 from pyuvsim import mpi
 from pyuvsim.astropy_interface import Time
 import pyradiosky
 
 
-cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
-beam_files = [os.path.join(DATA_PATH, 'NicCSTbeams', f) for f in cst_files]
-hera_miriad_file = os.path.join(DATA_PATH, 'hera_testfile')
-EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
-param_filenames = [
-    os.path.join(SIM_DATA_PATH, 'test_config', 'param_10time_10chan_{}.yaml'.format(x))
-    for x in range(4)
-]  # Five different test configs
-singlesource_vot = os.path.join(SIM_DATA_PATH, 'single_source.vot')
-singlesource_txt = os.path.join(SIM_DATA_PATH, 'single_source.txt')
-
-
 @pytest.fixture
 def fake_tasks():
     sky = pyradiosky.SkyModel(
-        'src', Longitude('10d'), Latitude('5d'), [1, 0, 0, 0], 'spectral_index',
-        reference_frequency=np.array([100e6]) * units.Hz, spectral_index=np.array([-0.74])
+        'src', Longitude('10d'), Latitude('5d'), np.array([1, 0, 0, 0]) * units.Jy,
+        'spectral_index', reference_frequency=np.array([100e6]) * units.Hz,
+        spectral_index=np.array([-0.74])
     )
     n_tasks = 30
     t0 = Time.now()
@@ -111,8 +95,7 @@ def test_mem_usage():
     del arr
 
 
-@pytest.mark.skip
-def test_mpi_counter():
+def test_mpi_counter(x):
     # This test should be run in parallel to check likely bug sources.
     mpi.start_mpi()
 
