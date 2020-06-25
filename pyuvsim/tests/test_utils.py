@@ -3,13 +3,11 @@
 # Licensed under the 3-clause BSD License
 
 import os
-import shutil
 
 import numpy as np
 import pytest
 from pyuvdata import UVData
 
-import pyuvsim.tests as simtest
 from pyuvsim import utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
@@ -89,47 +87,32 @@ def test_altaz_za_az_errors():
         simutils.zenithangle_azimuth_to_altaz(0, [0, np.pi / 2])
 
 
-def test_file_namer():
+@pytest.mark.parametrize('ext', ['.ext', '.uvfits', '.uvh5', '.yaml', ''])
+def test_file_namer(tmpdir, ext):
     """
-    File name incrementer utility
+    File name incrementer utility, with extensions.
     """
     fnames = []
     for i in range(111):
-        fname = os.path.join(simtest.TESTDATA_PATH, 'file_' + str(i))
+        fname = str(tmpdir.join(f"file_{i}{ext}"))
         with open(fname, 'w') as f:
             f.write(' ')
         fnames.append(fname)
     existing_file = fnames[0]
-    new_filepath = simutils.check_file_exists_and_increment(existing_file)
-    for fn in fnames:
-        os.remove(fn)
-    assert new_filepath.endswith("_111")
-
-
-def test_file_namer_extensions():
-    """
-    File name incrementer with specified extension
-    """
-    os.mkdir(os.path.join(simtest.TESTDATA_PATH, 'tempfiles'))
-    fnames = []
-    for i in range(111):
-        fname = os.path.join(simtest.TESTDATA_PATH, 'tempfiles', 'file_' + str(i) + '.ext')
-        with open(fname, 'w') as f:
-            f.write(' ')
-        fnames.append(fname)
-    existing_file = fnames[0]
-    new_filepath = simutils.check_file_exists_and_increment(existing_file, 'ext')
-    shutil.rmtree(os.path.join(simtest.TESTDATA_PATH, 'tempfiles'))
-    assert new_filepath.endswith("_111.ext")
+    if ext == '.ext':
+        new_filepath = simutils.check_file_exists_and_increment(existing_file, 'ext')
+    else:
+        new_filepath = simutils.check_file_exists_and_increment(existing_file)
+    assert new_filepath.endswith(f"_111{ext}")
 
 
 @pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5'])
-def test_write_uvdata(save_format):
+def test_write_uvdata(save_format, tmpdir):
     """ Test function that defines filenames from parameter dict """
     uv = UVData()
     uv.read_uvfits(triangle_uvfits_file)
 
-    ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
+    ofname = str(tmpdir.join('test_file'))
     filing_dict = {'outfile_name': ofname}
     expected_ofname = simutils.write_uvdata(uv, filing_dict,
                                             return_filename=True,
@@ -138,33 +121,30 @@ def test_write_uvdata(save_format):
 
     if save_format == 'uvfits' or save_format is None:
         assert ofname + '.uvfits' == expected_ofname
-        os.remove(ofname + '.uvfits')
     elif save_format == 'uvh5':
         assert ofname + '.uvh5' == expected_ofname
-        os.remove(ofname + '.uvh5')
     else:
         assert ofname == expected_ofname
-        shutil.rmtree(ofname)
 
 
-def test_write_error_with_no_format():
+def test_write_error_with_no_format(tmpdir):
     """Test write_uvdata will error if no format is given."""
     uv = UVData()
     uv.read_uvfits(triangle_uvfits_file)
 
-    ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
+    ofname = str(tmpdir.join('test_file'))
     filing_dict = {'outfile_name': ofname}
     with pytest.raises(ValueError,
                        match='Invalid output format. Options are'):
         simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='')
 
 
-def test_file_format_in_filing_dict():
+def test_file_format_in_filing_dict(tmpdir):
     """Test file is written out when output_format is set in filing dict."""
     uv = UVData()
     uv.read_uvfits(triangle_uvfits_file)
 
-    ofname = os.path.join(simtest.TESTDATA_PATH, 'test_file')
+    ofname = str(tmpdir.join('test_file'))
     filing_dict = {'outfile_name': ofname}
     filing_dict['output_format'] = 'uvfits'
     expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True)

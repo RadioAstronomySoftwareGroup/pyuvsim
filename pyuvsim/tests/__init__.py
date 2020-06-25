@@ -2,14 +2,7 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-import os
-
 import numpy as np
-
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-
-TESTDATA_PATH = os.path.join(SIM_DATA_PATH, 'temporary_test_data/')
-
 
 # functions used by many tests
 

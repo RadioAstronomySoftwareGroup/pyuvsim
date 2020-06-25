@@ -62,14 +62,12 @@ def test_run_paramfile_uvsim():
 
 
 @pytest.mark.parametrize('model', ['monopole', 'cosza', 'quaddome', 'monopole-nonflat'])
-def test_analytic_diffuse(model):
+def test_analytic_diffuse(model, tmpdir):
     # Generate the given model and simulate for a few baselines.
     # Import from analytic_diffuse  (consider moving to rasg_affiliates?)
     pytest.importorskip('analytic_diffuse')
     pytest.importorskip('astropy_healpix')
     import analytic_diffuse
-
-    testdir = os.path.join(SIM_DATA_PATH, 'temporary_test_data')
 
     modname = model
     use_w = False
@@ -84,9 +82,9 @@ def test_analytic_diffuse(model):
 
     # Making configuration files for this simulation.
     template_path = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_diffuse_sky.yaml')
-    obspar_path = os.path.join(testdir, 'obsparam_diffuse_sky.yaml')
-    layout_path = os.path.join(testdir, 'threeant_layout.csv')
-    herauniform_path = os.path.join(testdir, 'hera_uniform.yaml')
+    obspar_path = str(tmpdir.join('obsparam_diffuse_sky.yaml'))
+    layout_path = str(tmpdir.join('threeant_layout.csv'))
+    herauniform_path = str(tmpdir.join('hera_uniform.yaml'))
 
     teleconfig = {
         'beam_paths': {0: 'uniform'},
@@ -112,7 +110,7 @@ def test_analytic_diffuse(model):
     obspar['sources'].update(params)
     obspar['filing']['outfile_name'] = 'diffuse_sim.uvh5'
     obspar['filing']['output_format'] = 'uvh5'
-    obspar['filing']['outdir'] = testdir
+    obspar['filing']['outdir'] = str(tmpdir)
 
     with open(obspar_path, 'w') as ofile:
         yaml.dump(obspar, ofile, default_flow_style=False)

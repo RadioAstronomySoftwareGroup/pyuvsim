@@ -51,7 +51,7 @@ def test_mock_catalog_zenith_source(hera_loc):
     ra = icrs_coord.ra
     dec = icrs_coord.dec
 
-    test_source = pyradiosky.SkyModel('src0', ra, dec, [1, 0, 0, 0], 'flat')
+    test_source = pyradiosky.SkyModel('src0', ra, dec, units.Quantity([1, 0, 0, 0], 'Jy'), 'flat')
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
@@ -73,7 +73,7 @@ def test_mock_catalog_off_zenith_source(hera_loc):
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    test_source = pyradiosky.SkyModel('src0', ra, dec, [1.0, 0, 0, 0], 'flat')
+    test_source = pyradiosky.SkyModel('src0', ra, dec, units.Quantity([1.0, 0, 0, 0], "Jy"), 'flat')
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith',
                                                      alt=src_alt.deg)
@@ -681,7 +681,7 @@ def test_param_select_redundant():
 
 
 @pytest.mark.parametrize('case', np.arange(6))
-def test_uvdata_keyword_init(case):
+def test_uvdata_keyword_init(case, tmpdir):
     base_kwargs = {
         "antenna_layout_filepath": os.path.join(SIM_DATA_PATH,
                                                 "test_config/triangle_bl_layout.csv"),
@@ -755,12 +755,12 @@ def test_uvdata_keyword_init(case):
         new_kwargs['output_layout_filename'] = layout_fname
         new_kwargs['output_yaml_filename'] = obsparam_fname
         new_kwargs['array_layout'] = antpos_d
-        new_kwargs['path_out'] = simtest.TESTDATA_PATH
+        new_kwargs['path_out'] = str(tmpdir)
         new_kwargs['write_files'] = True
 
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
-        layout_path = os.path.join(simtest.TESTDATA_PATH, layout_fname)
-        obsparam_path = os.path.join(simtest.TESTDATA_PATH, obsparam_fname)
+        layout_path = str(tmpdir.join(layout_fname))
+        obsparam_path = str(tmpdir.join(obsparam_fname))
         assert os.path.exists(layout_path)
         assert os.path.exists(obsparam_path)
 
@@ -908,12 +908,12 @@ def test_mock_catalogs():
     os.remove(fname)
 
 
-def test_keyword_param_loop():
+def test_keyword_param_loop(tmpdir):
     # Check that yaml/csv files made by intialize_uvdata_from_keywords will work
     # on their own.
     layout_fname = 'temp_layout_kwdloop.csv'
     obsparam_fname = 'temp_obsparam_kwdloop.yaml'
-    path_out = simtest.TESTDATA_PATH
+    path_out = str(tmpdir)
     antpos_enu = np.ones(30).reshape((10, 3))
     antnums = np.arange(10)
     antpos_d = dict(zip(antnums, antpos_enu))
@@ -934,7 +934,7 @@ def test_keyword_param_loop():
     assert uv2 == uvd
 
 
-def test_multi_analytic_beams():
+def test_multi_analytic_beams(tmpdir):
     # Test inline definitions of beam attributes.
     # eg. (in beam configuration file):
     #
@@ -942,8 +942,8 @@ def test_multi_analytic_beams():
     #   0 : airy, diameter=14
     #   1 : airy, diameter=20
     #   2 : gaussian, sigma=0.5
-    par_fname = os.path.join(simtest.TESTDATA_PATH, 'test_teleconfig.yaml')
-    layout_fname = os.path.join(simtest.TESTDATA_PATH, 'test_layout_5ant.csv')
+    par_fname = str(tmpdir.join('test_teleconfig.yaml'))
+    layout_fname = str(tmpdir.join('test_layout_5ant.csv'))
 
     telescope_location = (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
     telescope_name = 'SKA'
@@ -972,7 +972,7 @@ def test_multi_analytic_beams():
     param_dict = {'telescope_config_name': par_fname, 'array_layout': layout_fname}
 
     pdict, beam_list, beam_dict = pyuvsim.simsetup.parse_telescope_params(
-        param_dict, simtest.TESTDATA_PATH)
+        param_dict, str(tmpdir))
 
     for i, nm in enumerate(names):
         bid = beam_ids[i]
@@ -1109,7 +1109,7 @@ def cat_with_some_pols():
         name=np.arange(Nsrcs).astype(str),
         ra=ra,
         dec=dec,
-        stokes=stokes,
+        stokes=stokes * units.Jy,
         spectral_type='full',
         freq_array=freqs
     )

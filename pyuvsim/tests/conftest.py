@@ -4,7 +4,6 @@
 
 """Testing environment setup and teardown for pytest."""
 import os
-import shutil
 import warnings
 
 import pytest
@@ -14,16 +13,9 @@ from astropy.coordinates import EarthLocation
 from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
 
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-
 
 @pytest.fixture(autouse=True, scope="session")
 def setup_and_teardown_package():
-    """Make data/test directory to put test output files in."""
-    testdir = os.path.join(SIM_DATA_PATH, 'temporary_test_data/')
-    if not os.path.exists(testdir):
-        os.mkdir(testdir)
-
     # Do a calculation that requires a current IERS table. This will trigger
     # automatic downloading of the IERS table if needed, including trying the
     # mirror site in python 3 (but won't redownload if a current one exists).
@@ -40,10 +32,6 @@ def setup_and_teardown_package():
     yield
 
     iers.conf.auto_max_age = 30
-
-    # clean up the test directory after
-    if os.path.exists(testdir):
-        shutil.rmtree(testdir)
 
 
 @pytest.fixture(autouse=True)
