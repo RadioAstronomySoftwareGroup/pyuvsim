@@ -21,7 +21,12 @@ from pyuvsim.astropy_interface import Time
 import pyradiosky
 
 
-@pytest.fixture
+@pytest.fixture(scope='module', autouse=True)
+def start_mpi():
+    mpi.start_mpi()
+
+
+@pytest.fixture(scope='module')
 def fake_tasks():
     sky = pyradiosky.SkyModel(
         'src', Longitude('10d'), Latitude('5d'), np.array([1, 0, 0, 0]) * units.Jy,
@@ -46,16 +51,14 @@ def test_mpi_version():
 
 
 def test_mpi_funcs():
-    mpi.start_mpi()
-    assert mpi.get_rank() == 0
-    assert mpi.get_Npus() == 1
+    assert mpi.get_rank() == MPI.COMM_WORLD.rank
+    assert mpi.get_Npus() == MPI.COMM_WORLD.size
     assert isinstance(mpi.get_comm(), MPI.Intracomm)
     assert isinstance(mpi.get_comm(), MPI.Intracomm)
     assert isinstance(mpi.get_node_comm(), MPI.Intracomm)
 
 
 def test_shared_mem():
-    mpi.start_mpi()
     N = 200
     shape = (20, 10)
     A = np.arange(N, dtype=float).reshape(shape)
@@ -72,6 +75,7 @@ def test_shared_mem():
     pytest.raises(ValueError, sA.itemset, 0, 3.0)
 
 
+@pytest.mark.mpi_skip
 def test_mem_usage():
     # Check that the mpi-enabled memory check is consistent
     # with a local memory check.
@@ -79,60 +83,55 @@ def test_mem_usage():
     # Also check that making a variable of a given size
     # increases memory usage by the expected amount.
 
-    mpi.start_mpi()
-
     scale = 1.0
     if 'linux' in sys.platform:
         scale = 2**10
 
     memory_usage_GiB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 2**30
-    assert memory_usage_GiB == mpi.get_max_node_rss()
+    assert np.isclose(memory_usage_GiB, mpi.get_max_node_rss())
     incsize = 50 * 2**20    # 50 MiB
     arr = bytearray(incsize)
     time.sleep(1)
     change = mpi.get_max_node_rss() - memory_usage_GiB
-    assert np.isclose(change, incsize / 2**30, atol=5e-2)
     del arr
+    assert np.isclose(change, incsize / 2**30, atol=5e-2)
 
 
-def test_mpi_counter(x):
-    # This test should be run in parallel to check likely bug sources.
-    mpi.start_mpi()
-
+def test_mpi_counter():
     count = mpi.Counter()
     N = 20
     for i in range(N):
         count.next()
-    assert count.current_value() == N
+    assert count.current_value() == N * mpi.world_comm.size
     count.free()
 
 
 @pytest.mark.parametrize('MAX_BYTES', [mpi.INT_MAX, 100])
 def test_big_gather(MAX_BYTES, fake_tasks):
-    mpi.start_mpi()
 
     objs = fake_tasks
     n_tasks = len(objs)
     result, split_info = mpi.big_gather(
         mpi.world_comm, objs, root=0, return_split_info=True, MAX_BYTES=MAX_BYTES
     )
-    assert all(objs[ii].freq_i == ii for ii in range(n_tasks))
-    assert all(result[0][ii].freq == objs[ii].freq for ii in range(n_tasks))
-    assert all(result[0][ii].time == objs[ii].time for ii in range(n_tasks))
+    if mpi.rank == 0:
+        assert all(objs[ii].freq_i == ii for ii in range(n_tasks))
+        assert all(result[0][ii].freq == objs[ii].freq for ii in range(n_tasks))
+        assert all(result[0][ii].time == objs[ii].time for ii in range(n_tasks))
 
     # Compare with normal gather:
     result2 = mpi.world_comm.gather(objs, root=0)
 
-    assert result2 == result
+    if mpi.rank == 0:
+        assert result2 == result
 
-    assert split_info['MAX_BYTES'] == MAX_BYTES
-    if MAX_BYTES < 200:
-        assert len(split_info['ranges']) > 1
+        assert split_info['MAX_BYTES'] == MAX_BYTES
+        if MAX_BYTES < 200:
+            assert len(split_info['ranges']) > 1
 
 
 @pytest.mark.parametrize('MAX_BYTES', [mpi.INT_MAX, 100])
 def test_big_bcast(MAX_BYTES, fake_tasks):
-    mpi.start_mpi()
 
     objs = fake_tasks
     n_tasks = len(objs)
@@ -140,41 +139,61 @@ def test_big_bcast(MAX_BYTES, fake_tasks):
     result, split_info = mpi.big_bcast(
         mpi.world_comm, objs, root=0, return_split_info=True, MAX_BYTES=MAX_BYTES
     )
-    assert all(result[ii].freq_i == ii for ii in range(n_tasks))
-    assert all(result[ii].freq == objs[ii].freq for ii in range(n_tasks))
-    assert all(result[ii].time == objs[ii].time for ii in range(n_tasks))
+
+    if mpi.rank == 0:
+        assert all(result[ii].freq_i == ii for ii in range(n_tasks))
+        assert all(result[ii].freq == objs[ii].freq for ii in range(n_tasks))
+        assert all(result[ii].time == objs[ii].time for ii in range(n_tasks))
 
     # Compare with normal gather:
     result2 = mpi.world_comm.bcast(objs, root=0)
 
-    assert result2 == result
-
-    assert split_info['MAX_BYTES'] == MAX_BYTES
-    if MAX_BYTES < 200:
-        assert len(split_info['ranges']) > 1
+    if mpi.rank == 0:
+        assert result2 == result
+        assert split_info['MAX_BYTES'] == MAX_BYTES
+        if MAX_BYTES < 200:
+            assert len(split_info['ranges']) > 1
 
 
 def test_big_bcast_gather_loop(fake_tasks):
-    mpi.start_mpi()
 
     objs = fake_tasks
 
     broadcast = mpi.big_bcast(mpi.world_comm, objs, root=0, MAX_BYTES=35)
     gathered = mpi.big_gather(mpi.world_comm, broadcast, root=0, MAX_BYTES=27)
 
-    assert broadcast == gathered[0]
+    if mpi.rank == 0:
+        assert broadcast == gathered[0]
 
 
 def test_sharedmem_bcast_with_quantities():
     # Use mpi.quantity_shared_bcast and check returned objects.
 
-    mpi.start_mpi()
     lats = Latitude(np.linspace(-np.pi / 2, np.pi / 2, 10), 'rad')
     freqs = np.linspace(100e6, 130e6, 15) * units.Hz
     lat_return = mpi.quantity_shared_bcast(lats)
     freq_return = mpi.quantity_shared_bcast(freqs)
 
-    assert np.all(lat_return == lats)
-    assert np.all(freq_return == freqs)
+    if mpi.rank == 0:
+        assert np.all(lat_return == lats)
+        assert np.all(freq_return == freqs)
+        assert np.all(freq_return.to("MHz") == freqs.to("MHz"))
 
-    assert np.all(freq_return.to("MHz") == freqs.to("MHz"))
+
+def test_skymodeldata_share():
+    # Test the SkyModelData share method.
+    sky = pyradiosky.SkyModel(
+        'src', Longitude('10d'), Latitude('5d'), np.array([1, 0, 0, 0]) * units.Jy,
+        'spectral_index', reference_frequency=np.array([100e6]) * units.Hz,
+        spectral_index=np.array([-0.74])
+    )
+
+    smd = pyuvsim.simsetup.SkyModelData()
+    if mpi.rank == 0:
+        smd = pyuvsim.simsetup.SkyModelData(sky)
+
+    smd.share()  # Shares among processes.
+
+    sky2 = smd.get_skymodel()
+
+    assert sky2 == sky

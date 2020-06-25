@@ -51,7 +51,6 @@ def start_mpi(block_nonroot_stdout=True):
     """
     global world_comm, node_comm, rank_comm, rank, Npus
     if not MPI.Is_initialized():
-        # Enable threading for the Counter class
         MPI.Init_thread(MPI.THREAD_MULTIPLE)
         atexit.register(MPI.Finalize)
     world_comm = MPI.COMM_WORLD
@@ -233,8 +232,7 @@ def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
     else:
         result = loads(buf)
 
-    if comm.rank == root:
-        split_info_dict = {'MAX_BYTES': MAX_BYTES, 'ranges': ranges}
+    split_info_dict = {'MAX_BYTES': MAX_BYTES, 'ranges': ranges}
 
     if return_split_info:
         return result, split_info_dict
@@ -401,7 +399,6 @@ def get_max_node_rss(return_per_node=False):
 
     max_mem : float
         Maximum memory usage in GiB across the job.
-        Only returns to the zero-th rank on the world_comm.
     """
 
     # On linux, getrusage returns in kiB
@@ -415,7 +412,7 @@ def get_max_node_rss(return_per_node=False):
     if return_per_node:
         return node_mem_tot
 
-    max_mem = world_comm.reduce(node_mem_tot, op=MPI.MAX, root=0)
+    max_mem = world_comm.allreduce(node_mem_tot, op=MPI.MAX)
     return max_mem
 
 

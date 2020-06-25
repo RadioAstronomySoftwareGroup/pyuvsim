@@ -17,6 +17,8 @@ from pyuvdata.data import DATA_PATH
 def pytest_collection_modifyitems(session, config, items):
     # Enforce that the profiler test is run last.
 
+    if len(items) <= 1:
+        return
     for ii, it in enumerate(items):
         if 'profiler' in it.name:
             break
