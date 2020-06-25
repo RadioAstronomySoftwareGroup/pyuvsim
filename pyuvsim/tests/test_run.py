@@ -153,11 +153,10 @@ def test_run_gleam_uvsim(spectral_type):
 @pytest.mark.parametrize(
     "spectral_type",
     ["subband", "spectral_index"])
-def test_zenith_spectral_sim(spectral_type):
+def test_zenith_spectral_sim(spectral_type, tmpdir):
     # Make a power law source at zenith in three ways.
     # Confirm that simulated visibilities match expectation.
 
-    testdir = os.path.join(SIM_DATA_PATH, 'temporary_test_data')
     params = pyuvsim.simsetup._config_str_to_dict(
         os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
     )
@@ -183,10 +182,10 @@ def test_zenith_spectral_sim(spectral_type):
         source.stokes[0, :, 0] *= spectrum
         source.coherency_radec = stokes_to_coherency(source.stokes)
 
-    catpath = os.path.join(testdir, 'spectral_test_catalog.txt')
+    catpath = str(tmpdir.join('spectral_test_catalog.txt'))
     source.write_text_catalog(catpath)
     params['sources'] = {"catalog" : catpath}
-    params['filing']['outdir'] = testdir
+    params['filing']['outdir'] = str(tmpdir)
     params['freq'] = freq_params
     params['time']['start_time'] = kwds['time']
     params['select'] = {'antenna_nums' : [1, 2]}
