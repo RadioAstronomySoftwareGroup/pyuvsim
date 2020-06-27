@@ -14,7 +14,6 @@ dependencies:
   - psutil
   - pytest
   - pytest-cov
-  - pytest-mpi
   - pyuvdata
   - pyyaml>=5.1
   - scipy
