@@ -50,7 +50,6 @@ def test_mpi_version():
     assert MPI.VERSION == 3
 
 
-@pytest.mark.parallel
 def test_mpi_funcs():
     assert mpi.get_rank() == MPI.COMM_WORLD.rank
     assert mpi.get_Npus() == MPI.COMM_WORLD.size
@@ -130,7 +129,6 @@ def test_big_gather(MAX_BYTES, fake_tasks):
             assert len(split_info['ranges']) > 1
 
 
-@pytest.mark.parallel
 @pytest.mark.parametrize('MAX_BYTES', [mpi.INT_MAX, 100])
 def test_big_bcast(MAX_BYTES, fake_tasks):
 
@@ -156,7 +154,6 @@ def test_big_bcast(MAX_BYTES, fake_tasks):
             assert len(split_info['ranges']) > 1
 
 
-@pytest.mark.parallel
 def test_big_bcast_gather_loop(fake_tasks):
 
     objs = fake_tasks
@@ -168,7 +165,6 @@ def test_big_bcast_gather_loop(fake_tasks):
         assert broadcast == gathered[0]
 
 
-@pytest.mark.parallel
 def test_sharedmem_bcast_with_quantities():
     # Use mpi.quantity_shared_bcast and check returned objects.
 
@@ -183,7 +179,6 @@ def test_sharedmem_bcast_with_quantities():
         assert np.all(freq_return.to("MHz") == freqs.to("MHz"))
 
 
-@pytest.mark.parallel
 def test_skymodeldata_share():
     # Test the SkyModelData share method.
     sky = pyradiosky.SkyModel(
