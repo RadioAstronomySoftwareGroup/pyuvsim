@@ -5,6 +5,7 @@
 """Testing environment setup and teardown for pytest."""
 import os
 import warnings
+from subprocess import check_call
 
 import pytest
 from astropy.time import Time
@@ -25,6 +26,46 @@ def pytest_collection_modifyitems(session, config, items):
         if 'profiler' in it.name:
             break
     items.append(items.pop(ii))     # Move to the end.
+
+
+def pytest_configure(config):
+    """Register an additional marker."""
+    config.addinivalue_line(
+        "markers",
+        "parallel(n): mark test to run in n parallel mpi processes."
+    )
+
+
+def pytest_runtest_call(item):
+    # If a test is to be run in parallel, spawn a subprocess that runs it in parallel.
+    # Avoids the bug that comes up when a test fails in an inconsistent mpi state.
+
+    parmark = item.get_closest_marker("parallel")
+    if parmark is None:
+        return
+    nproc = 1
+    if len(parmark.args) == 1:
+        try:
+            nproc = int(parmark.args[0])
+        except ValueError:
+            raise ValueError(f"Invalid number of processes: {parmark.args[0]}")
+
+    issubproc = os.environ.get('TEST_IN_PARALLEL', 0)
+    try:
+        issubproc = bool(int(issubproc))
+    except ValueError:
+        pass
+
+    call = ['mpirun', '--host', 'localhost:10', '-n', str(nproc),
+            "python", "-m", "pytest", "{:s}::{:s}".format(str(item.fspath), str(item.name))]
+    call.extend(["--tb=no", '-q', '--runxfail', '-s'])
+    if not issubproc:
+        try:
+            envcopy = os.environ.copy()
+            envcopy['TEST_IN_PARALLEL'] = '1'
+            check_call(call, env=envcopy, timeout=15)
+        except Exception as err:
+            raise err
 
 
 @pytest.fixture(autouse=True, scope="session")
