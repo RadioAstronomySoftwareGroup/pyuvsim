@@ -97,8 +97,9 @@ def test_mem_usage():
     assert np.isclose(change, incsize / 2**30, atol=5e-2)
 
 
-@pytest.mark.parallel(6)
+@pytest.mark.parallel(4)
 def test_mpi_counter():
+    # Warning -- This test has been flaky in the past.
     mpi.start_mpi()
     count = mpi.Counter()
     N = 20

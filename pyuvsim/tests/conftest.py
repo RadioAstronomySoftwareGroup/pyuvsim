@@ -5,7 +5,7 @@
 """Testing environment setup and teardown for pytest."""
 import os
 import warnings
-from subprocess import check_call
+from subprocess import check_output, CalledProcessError, TimeoutExpired
 
 import pytest
 from astropy.time import Time
@@ -25,7 +25,7 @@ def pytest_collection_modifyitems(session, config, items):
     for ii, it in enumerate(items):
         if 'profiler' in it.name:
             break
-    items.append(items.pop(ii))     # Move to the end.
+    items.append(items.pop(ii))     # Move profiler tests to the end.
 
 
 def pytest_configure(config):
@@ -34,6 +34,20 @@ def pytest_configure(config):
         "markers",
         "parallel(n): mark test to run in n parallel mpi processes."
     )
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_exception_interact(node, call, report):
+    issubproc = os.environ.get('TEST_IN_PARALLEL', 0)
+    try:
+        issubproc = bool(int(issubproc))
+    except ValueError:
+        pass
+    if issubproc:
+        from pyuvsim import mpi     # noqa
+        if report.failed:
+            mpi.world_comm.Abort(1)
+    yield
 
 
 def pytest_runtest_call(item):
@@ -63,9 +77,13 @@ def pytest_runtest_call(item):
         try:
             envcopy = os.environ.copy()
             envcopy['TEST_IN_PARALLEL'] = '1'
-            check_call(call, env=envcopy, timeout=15)
-        except Exception as err:
-            raise err
+            check_output(call, env=envcopy, timeout=70)
+        except (TimeoutExpired, CalledProcessError) as err:
+            message = "Parallelized test {item.name} failed"
+            if isinstance(err, TimeoutExpired):
+                message += " due to timeout"
+            message += "."
+            raise AssertionError(message)
 
 
 @pytest.fixture(autouse=True, scope="session")
