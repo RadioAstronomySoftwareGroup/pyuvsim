@@ -360,6 +360,8 @@ class Counter:
             mem = self.win.tomemory()
             mem[:] = _struct.pack('i', 0)
 
+        self.win.Fence()
+
     def free(self):
         self.win.Free()
 
