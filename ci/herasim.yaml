@@ -1,0 +1,29 @@
+name: herasim
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - aipy>=3.0
+  - astropy>=4.0
+  - astropy-healpix
+  - attrs
+  # - basemap
+  - click
+  - h5py
+  # - healpy
+  # - numba
+  - numpy>=1.15
+  - pip
+  - psutil
+  - pytest
+  - pytest-cov
+  - pyuvdata
+  - pyyaml>=5.1
+  - scipy
+  - setuptools_scm
+  - pip:
+    - cached-property
+    - pyradiosky
+    - git+https://github.com/HERA-Team/uvtools.git
+    - git+https://github.com/rasg-affiliates/healvis
+    - git+https://github.com/HERA-Team/hera_cal.git
