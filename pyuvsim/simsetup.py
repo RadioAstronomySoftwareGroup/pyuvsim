@@ -502,7 +502,7 @@ class SkyModelData:
         )
 
 
-def initialize_catalog_from_params(obs_params, input_uv=None):
+def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=True):
     """
     Make catalog from parameter file specifications.
 
@@ -514,10 +514,13 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
         Either an obsparam file name or a dictionary of parameters.
     input_uv: :class:~`pyuvdata.UVData`
         Used to set location for mock catalogs and for horizon cuts.
+    return_recarray: bool
+        Return a recarray instead of a :class:~`pyuvsim.simsetup.SkyModelData` instance.
+        Default is True.
 
     Returns
     -------
-    skydata: :class:~`pyuvsim.simsetup.SkyModelData`
+    skydata: numpy.recarray or :class:~`pyuvsim.simsetup.SkyModelData`
         Source catalog filled with data.
     source_list_name: str
             Catalog identifier for metadata.
@@ -635,7 +638,12 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
     sky.source_cuts(**source_select_kwds)
 
     # Make SkyModelData to share it.
-    skydata = SkyModelData(sky)
+    if return_recarray:
+        warnings.warn("initialize_catalog_from_params will not "
+                      "return recarray by default in the future.", PendingDeprecationWarning)
+        skydata = sky.to_recarray()
+    else:
+        skydata = SkyModelData(sky)
 
     return skydata, source_list_name
 

@@ -47,3 +47,6 @@ def setup_and_teardown_package():
 def ignore_deprecation():
     warnings.filterwarnings('ignore', message='Achromatic gaussian beams will not be supported',
                             category=PendingDeprecationWarning)
+    warnings.filterwarnings('ignore', message='"initialize_catalog_from_params will not return'
+                                              ' recarray by default in the future.',
+                            category=PendingDeprecationWarning)

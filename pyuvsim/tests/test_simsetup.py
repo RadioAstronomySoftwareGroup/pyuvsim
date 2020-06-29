@@ -112,7 +112,7 @@ def test_catalog_from_params():
         pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
 
     catalog_uv, srclistname = pyuvsim.simsetup.initialize_catalog_from_params(
-        {'sources': source_dict}, hera_uv
+        {'sources': source_dict}, hera_uv, return_recarray=False
     )
     catalog_uv = catalog_uv.get_skymodel()
     source_dict['array_location'] = arrloc
@@ -130,7 +130,7 @@ def test_catalog_from_params():
         match="Warning: No julian date given for mock catalog. Defaulting to first time step."
     ):
         catalog_str, srclistname2 = pyuvsim.simsetup.initialize_catalog_from_params(
-            {'sources': source_dict}, hera_uv
+            {'sources': source_dict}, hera_uv, return_recarray=False
         )
 
     catalog_str = catalog_str.get_skymodel()
@@ -140,12 +140,16 @@ def test_catalog_from_params():
 def test_vot_catalog():
     vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
     vot_catalog = (
-        pyuvsim.simsetup.initialize_catalog_from_params(vot_param_filename)[0]
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            vot_param_filename, return_recarray=False
+        )[0]
     ).get_skymodel()
 
     txt_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
     txt_catalog = (
-        pyuvsim.simsetup.initialize_catalog_from_params(txt_param_filename)[0]
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            txt_param_filename, return_recarray=False
+        )[0]
     ).get_skymodel()
 
     assert vot_catalog == txt_catalog
@@ -157,7 +161,9 @@ def test_gleam_catalog():
     )
     with pytest.warns(UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."):
         gleam_catalog = (
-            pyuvsim.simsetup.initialize_catalog_from_params(gleam_param_filename)[0]
+            pyuvsim.simsetup.initialize_catalog_from_params(
+                gleam_param_filename, return_recarray=False
+            )[0]
         ).get_skymodel()
 
     # flux cuts applied
@@ -172,7 +178,7 @@ def test_gleam_catalog():
 
     with pytest.warns(UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."):
         gleam_catalog = (
-            pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+            pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
         ).get_skymodel()
     assert gleam_catalog.Ncomponents == 50
 
@@ -184,7 +190,9 @@ def test_healpix_catalog():
     sky.read_healpix_hdf5(path)
 
     params = {'sources': {'catalog': path}}
-    hpx_skymodeldata = pyuvsim.simsetup.initialize_catalog_from_params(params)[0]
+    hpx_skymodeldata = pyuvsim.simsetup.initialize_catalog_from_params(
+        params, return_recarray=False
+    )[0]
     hpx_sky = hpx_skymodeldata.get_skymodel()
     assert hpx_sky == sky
 
@@ -203,7 +211,9 @@ def test_gleam_catalog_spectral_type(spectral_type):
     param_dict["sources"].pop("max_flux")
     param_dict["sources"]["spectral_type"] = spectral_type
 
-    gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+    gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+        param_dict, return_recarray=False
+    )[0]
     assert gleam_catalog.spectral_type == spectral_type
     assert gleam_catalog.Ncomponents == 50
 
@@ -216,7 +226,9 @@ def test_vot_catalog_warns(key_pop, message):
     vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
 
     vot_catalog = (
-        pyuvsim.simsetup.initialize_catalog_from_params(vot_param_filename)[0]
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            vot_param_filename, return_recarray=False
+        )[0]
     ).get_skymodel()
 
     with open(vot_param_filename, 'r') as pfile:
@@ -226,7 +238,7 @@ def test_vot_catalog_warns(key_pop, message):
 
     with pytest.warns(UserWarning, match=message):
         vot_catalog2 = (
-            pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+            pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
         ).get_skymodel()
 
     assert vot_catalog == vot_catalog2
@@ -246,7 +258,7 @@ def test_vot_catalog_error(key_pop, message):
     param_dict["sources"].pop(key_pop)
 
     with pytest.raises(ValueError, match=message):
-        pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+        pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
 
 
 @pytest.mark.parametrize("config_num", [0, 2])

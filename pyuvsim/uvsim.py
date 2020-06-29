@@ -587,7 +587,9 @@ def run_uvsim(params, return_uv=False, quiet=False):
 
     if rank == 0:
         input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(params)
-        skydata, source_list_name = simsetup.initialize_catalog_from_params(params, input_uv)
+        skydata, source_list_name = simsetup.initialize_catalog_from_params(
+            params, input_uv, return_recarray=False
+        )
 
     input_uv = comm.bcast(input_uv, root=0)
     beam_list = comm.bcast(beam_list, root=0)
