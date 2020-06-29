@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- Diffuse models in mock catalogs, via the analytic_diffuse module.
 - quantity_shared_bcast function to allow objects derived from astropy.units.Quantity to use shared memory broadcasting.
 - SkyModelData class to replace recarray conversion in pyradiosky.
 - quiet keyword for run_uvsim, to suppress stdout printing.
@@ -12,15 +13,22 @@
 - Benchmarking tools.
 
 ### Changed
+- Switch to a new definition for the Counter class, without threading.
+- Cleaned up unit tests
 - Use `at_frequencies` method to enable support for all pyradiosky spectral types.
 - Only do coherency calculation when the time changes
 - Only do beam eval when time, freq, or beam type changes.
 - The definition of the Airy beam now uses the exact value of c, not 3e8.
 
 ### Fixed
+- Keep a UVBeam with more than two frequencies for tests, so the (default) cubic interpolation works.
+- Use pytest hooks to ensure the profiler tests run last.
 - Switched to using a remote-memory-access based counter class. Appears to have fixed bug in the Counter test.
 - Ensure that source positions, coherency matrices, and Jones matrices are updated at the right times.
-- Error early if the task list is too long for gather
+- Error early if the task list is too long for gather.
+
+### Deprecated
+- Support for pyradiosky versions <0.0.3.
 
 ## [1.1.2] - 2020-2-14
 
