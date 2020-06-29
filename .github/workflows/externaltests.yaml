@@ -34,5 +34,6 @@ jobs:
           cd ../
           git clone https://github.com/HERA-Team/hera_sim.git
           cd hera_sim
+          pip install --no-deps .
           mkdir test-reports
           python -m pytest hera_sim --junitxml=test-reports/xunit.xml
