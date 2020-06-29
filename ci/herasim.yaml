@@ -9,8 +9,10 @@ dependencies:
   - attrs
   # - basemap
   - click
+  - future
   - h5py
   # - healpy
+  - nose
   # - numba
   - numpy>=1.15
   - pip
