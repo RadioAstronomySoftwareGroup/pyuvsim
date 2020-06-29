@@ -515,12 +515,12 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
     input_uv: :class:~`pyuvdata.UVData`
         Used to set location for mock catalogs and for horizon cuts.
     return_recarray: bool
-        Return a recarray instead of a :class:~`pyuvsim.simsetup.SkyModelData` instance.
+        Return a recarray instead of a :class:~`pyradiosky.SkyModel` instance.
         Default is True.
 
     Returns
     -------
-    skydata: numpy.recarray or :class:~`pyuvsim.simsetup.SkyModelData`
+    skydata: numpy.recarray or :class:~`pyradiosky.SkyModel`
         Source catalog filled with data.
     source_list_name: str
             Catalog identifier for metadata.
@@ -641,11 +641,9 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
     if return_recarray:
         warnings.warn("initialize_catalog_from_params will not "
                       "return recarray by default in the future.", PendingDeprecationWarning)
-        skydata = sky.to_recarray()
-    else:
-        skydata = SkyModelData(sky)
+        sky = sky.to_recarray()
 
-    return skydata, source_list_name
+    return sky, source_list_name
 
 
 def _construct_beam_list(beam_ids, telconfig):

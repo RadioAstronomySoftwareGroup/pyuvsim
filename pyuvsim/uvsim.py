@@ -590,6 +590,7 @@ def run_uvsim(params, return_uv=False, quiet=False):
         skydata, source_list_name = simsetup.initialize_catalog_from_params(
             params, input_uv, return_recarray=False
         )
+        skydata = simsetup.SkyModelData(skydata)
 
     input_uv = comm.bcast(input_uv, root=0)
     beam_list = comm.bcast(beam_list, root=0)
