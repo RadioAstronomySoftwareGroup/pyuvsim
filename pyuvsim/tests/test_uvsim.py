@@ -318,7 +318,7 @@ def test_single_offzenith_source_uvfits():
 
     interpolated_beam, interp_basis_vector = beam.interp(
         az_array=np.array([beam_az]), za_array=np.array([beam_za]),
-        freq_array=np.array([freq.to('Hz').value]))
+        freq_array=np.array([freq.to_value('Hz')]))
 
     jones = np.zeros((2, 2, 1), dtype=np.complex64)
     jones[0, 0] = interpolated_beam[1, 0, 0, 0, 0]
@@ -343,7 +343,7 @@ def test_single_offzenith_source_uvfits():
         [vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[0, 1], vis_analytic[1, 0]]
     )
 
-    assert np.allclose(baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4)
+    assert np.allclose(baseline.uvw.to_value('m'), hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4)
     assert np.allclose(visibility, vis_analytic, atol=1e-4)
 
 
@@ -405,7 +405,7 @@ def test_offzenith_source_multibl_uvfits():
     beam.interpolation_function = 'az_za_simple'
     interpolated_beam, interp_basis_vector = beam.interp(
         az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]),
-        freq_array=np.array([freq.to('Hz').value])
+        freq_array=np.array([freq.to_value('Hz')])
     )
     jones = np.zeros((2, 2), dtype=np.complex64)
     jones[0, 0] = interpolated_beam[1, 0, 0, 0, 0]
@@ -793,7 +793,7 @@ def test_quantity_reuse(uvobj_beams_srcs):
         locoh_changed = not allclose_or_none(engine.local_coherency, prev_local_coherency)
         srcpos_changed = not allclose_or_none(sky.alt_az, prev_source_pos)
 
-        freq = task.freq.to("Hz").value
+        freq = task.freq.to_value("Hz")
         time = task.time.jd
         beampair = (task.baseline.antenna1.beam_id, task.baseline.antenna2.beam_id)
 

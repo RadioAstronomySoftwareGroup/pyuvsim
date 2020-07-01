@@ -126,7 +126,7 @@ def test_uv_beam_widths():
 
 
 def test_achromatic_gaussian_beam():
-    sigma_rad = Angle('5d').to('rad').value
+    sigma_rad = Angle('5d').to_value('rad')
     beam = pyuvsim.AnalyticBeam('gaussian', sigma=sigma_rad)
     beam.peak_normalize()
     beam.interpolation_function = 'az_za_simple'
@@ -201,7 +201,7 @@ def test_gaussbeam_values():
     altitudes = task.sources.alt_az[0]  # In radians.
     # All four components should be identical
     if isinstance(engine.apparent_coherency, units.Quantity):
-        coherency_use = engine.apparent_coherency.to("Jy").value
+        coherency_use = engine.apparent_coherency.to_value("Jy")
     else:
         coherency_use = engine.apparent_coherency
 

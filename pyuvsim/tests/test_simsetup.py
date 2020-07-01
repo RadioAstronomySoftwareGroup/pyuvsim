@@ -1099,11 +1099,11 @@ def test_skymodeldata_with_quantity_stokes(cat_with_some_pols):
         sky.stokes *= units.Unit(unit)
 
     smd = pyuvsim.simsetup.SkyModelData(sky)
-    assert np.all(sky.stokes.to(unit).value[0] == smd.stokes_I)
+    assert np.all(sky.stokes.to_value(unit)[0] == smd.stokes_I)
 
     sky2 = smd.get_skymodel()
     if units.Quantity != pyradiosky.SkyModel()._stokes.expected_type:
-        sky.stokes = sky.stokes.to(unit).value
+        sky.stokes = sky.stokes.to_value(unit)
     assert sky2 == sky
 
 
