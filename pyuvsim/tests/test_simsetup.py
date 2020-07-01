@@ -1090,11 +1090,18 @@ def cat_with_some_pols():
     return sky
 
 
-def test_skymodeldata_with_quantity_stokes(cat_with_some_pols):
+@pytest.mark.parametrize('unit', ['Jy', 'K'])
+def test_skymodeldata_with_quantity_stokes(unit, cat_with_some_pols):
     # Support for upcoming pyradiosky change setting SkyModel.stokes
     # to an astropy Quantity.
-    sky = cat_with_some_pols
-    unit = 'Jy'
+    if unit == 'K':
+        pytest.importorskip('astropy_healpix')
+        path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
+        sky = pyradiosky.SkyModel()
+        sky.read_healpix_hdf5(path)
+    else:
+        sky = cat_with_some_pols
+
     if not isinstance(sky.stokes, units.Quantity):
         sky.stokes *= units.Unit(unit)
 
@@ -1117,6 +1124,7 @@ def test_skymodeldata(component_type, cat_with_some_pols):
         path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
         sky = pyradiosky.SkyModel()
         sky.read_healpix_hdf5(path)
+
     smd = pyuvsim.simsetup.SkyModelData(sky)
 
     assert (smd.ra == sky.ra.deg).all()
