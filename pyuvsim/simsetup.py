@@ -639,8 +639,9 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
 
     # Make SkyModelData to share it.
     if return_recarray:
-        warnings.warn("initialize_catalog_from_params will not "
-                      "return recarray by default in the future.", PendingDeprecationWarning)
+        warnings.warn("initialize_catalog_from_params will return a SkyModel instance, not "
+                      "a recarray, by default in the future. Set keyword "
+                      "`return_recarray=True` to ensure recarray is returned.", PendingDeprecationWarning)
         sky = sky.to_recarray()
 
     return sky, source_list_name
