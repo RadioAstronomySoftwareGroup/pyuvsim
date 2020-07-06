@@ -10,9 +10,10 @@ import numpy as np
 import pytest
 import yaml
 from astropy import units
-from astropy.coordinates import Angle, SkyCoord, EarthLocation
+from astropy.coordinates import Angle, SkyCoord, EarthLocation, Latitude, Longitude
 from pyuvdata import UVBeam, UVData
 import pyradiosky
+from pyradiosky.data import DATA_PATH as SKY_DATA_PATH
 
 import pyuvsim
 import pyuvsim.tests as simtest
@@ -111,9 +112,8 @@ def test_catalog_from_params():
         pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
 
     catalog_uv, srclistname = pyuvsim.simsetup.initialize_catalog_from_params(
-        {'sources': source_dict}, hera_uv
+        {'sources': source_dict}, hera_uv, return_recarray=False
     )
-    catalog_uv = pyradiosky.array_to_skymodel(catalog_uv)
     source_dict['array_location'] = arrloc
     del source_dict['time']
 
@@ -129,35 +129,38 @@ def test_catalog_from_params():
         match="Warning: No julian date given for mock catalog. Defaulting to first time step."
     ):
         catalog_str, srclistname2 = pyuvsim.simsetup.initialize_catalog_from_params(
-            {'sources': source_dict}, hera_uv
+            {'sources': source_dict}, hera_uv, return_recarray=False
         )
-
-    catalog_str = pyradiosky.array_to_skymodel(catalog_str)
     assert np.all(catalog_str == catalog_uv)
 
 
 def test_vot_catalog():
     vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
-    vot_catalog = pyradiosky.array_to_skymodel(
-        pyuvsim.simsetup.initialize_catalog_from_params(vot_param_filename)[0]
+    vot_catalog = (
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            vot_param_filename, return_recarray=False
+        )[0]
     )
 
     txt_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
-    txt_catalog = pyradiosky.array_to_skymodel(
-        pyuvsim.simsetup.initialize_catalog_from_params(txt_param_filename)[0]
+    txt_catalog = (
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            txt_param_filename, return_recarray=False
+        )[0]
     )
 
     assert vot_catalog == txt_catalog
 
 
-@pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
 def test_gleam_catalog():
     gleam_param_filename = os.path.join(
         SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml'
     )
     with pytest.warns(UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."):
-        gleam_catalog = pyradiosky.array_to_skymodel(
-            pyuvsim.simsetup.initialize_catalog_from_params(gleam_param_filename)[0]
+        gleam_catalog = (
+            pyuvsim.simsetup.initialize_catalog_from_params(
+                gleam_param_filename, return_recarray=False
+            )[0]
         )
 
     # flux cuts applied
@@ -170,10 +173,24 @@ def test_gleam_catalog():
     param_dict["sources"].pop("min_flux")
     param_dict["sources"].pop("max_flux")
 
-    gleam_catalog = pyradiosky.array_to_skymodel(
-        pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
-    )
+    with pytest.warns(UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."):
+        gleam_catalog = (
+            pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
+        )
     assert gleam_catalog.Ncomponents == 50
+
+
+def test_healpix_catalog():
+    pytest.importorskip('astropy_healpix')
+    path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
+    sky = pyradiosky.SkyModel()
+    sky.read_healpix_hdf5(path)
+
+    params = {'sources': {'catalog': path}}
+    hpx_sky = pyuvsim.simsetup.initialize_catalog_from_params(
+        params, return_recarray=False
+    )[0]
+    assert hpx_sky == sky
 
 
 @pytest.mark.parametrize(
@@ -190,9 +207,9 @@ def test_gleam_catalog_spectral_type(spectral_type):
     param_dict["sources"].pop("max_flux")
     param_dict["sources"]["spectral_type"] = spectral_type
 
-    gleam_catalog = pyradiosky.array_to_skymodel(
-        pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
-    )
+    gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+        param_dict, return_recarray=False
+    )[0]
     assert gleam_catalog.spectral_type == spectral_type
     assert gleam_catalog.Ncomponents == 50
 
@@ -204,18 +221,19 @@ def test_gleam_catalog_spectral_type(spectral_type):
 def test_vot_catalog_warns(key_pop, message):
     vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
 
-    vot_catalog = pyradiosky.array_to_skymodel(
-        pyuvsim.simsetup.initialize_catalog_from_params(vot_param_filename)[0]
+    vot_catalog = (
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            vot_param_filename, return_recarray=False
+        )[0]
     )
-
     with open(vot_param_filename, 'r') as pfile:
         param_dict = yaml.safe_load(pfile)
     param_dict['config_path'] = os.path.dirname(vot_param_filename)
     param_dict["sources"].pop(key_pop)
 
     with pytest.warns(UserWarning, match=message):
-        vot_catalog2 = pyradiosky.array_to_skymodel(
-            pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
+        vot_catalog2 = (
+            pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
         )
 
     assert vot_catalog == vot_catalog2
@@ -235,12 +253,9 @@ def test_vot_catalog_error(key_pop, message):
     param_dict["sources"].pop(key_pop)
 
     with pytest.raises(ValueError, match=message):
-        pyradiosky.array_to_skymodel(
-            pyuvsim.simsetup.initialize_catalog_from_params(param_dict)[0]
-        )
+        pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
 
 
-# parametrize will loop over all the give values
 @pytest.mark.parametrize("config_num", [0, 2])
 def test_param_reader(config_num):
     pytest.importorskip('mpi4py')
@@ -258,7 +273,7 @@ def test_param_reader(config_num):
         hera_uv.select(bls=[(0, 1), (1, 2)])
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_table=True)
+    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_data=True)
 
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
@@ -639,7 +654,7 @@ def test_param_select_redundant():
 
 
 @pytest.mark.parametrize('case', np.arange(6))
-def check_uvdata_keyword_init(case):
+def test_uvdata_keyword_init(case):
     base_kwargs = {
         "antenna_layout_filepath": os.path.join(SIM_DATA_PATH,
                                                 "test_config/triangle_bl_layout.csv"),
@@ -668,7 +683,7 @@ def check_uvdata_keyword_init(case):
         assert base_kwargs['start_time'] == uvd.time_array[0]
         assert base_kwargs['Ntimes'] == uvd.Ntimes
         assert base_kwargs['Nfreqs'] == uvd.Nfreqs
-        assert base_kwargs['polarizations'] == uvd.get_pols()
+        assert base_kwargs['polarization_array'] == uvd.get_pols()
         assert not np.any(uvd.ant_1_array == uvd.ant_2_array)
 
     elif case == 1:
@@ -689,7 +704,7 @@ def check_uvdata_keyword_init(case):
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
 
         assert uvd.Nbls == 1
-        assert uvd.get_pols() == new_kwargs['polarizations']
+        assert uvd.get_pols() == new_kwargs['polarization_array']
     elif case == 3:
         # check time and freq array definitions supersede other parameters
         fa = np.linspace(100, 200, 11) * 1e6
@@ -847,8 +862,9 @@ def test_mock_catalogs():
     with pytest.raises(KeyError, match="Invalid mock catalog arrangement: invalid_catalog_name"):
         pyuvsim.create_mock_catalog(time, 'invalid_catalog_name')
 
+    radec_catalog = pyradiosky.SkyModel()
     for arr in arrangements:
-        radec_catalog = pyradiosky.read_text_catalog(
+        radec_catalog.read_text_catalog(
             os.path.join(SIM_DATA_PATH, 'test_catalogs', text_catalogs[arr])
         )
         assert np.all(radec_catalog == cats[arr])
@@ -959,13 +975,34 @@ def test_direct_fname():
     os.remove("triangle_bl_layout.csv")
 
 
-def test_beamopts_init():
-    # Check that spline_interp_opts is passed along correctly to BeamList
-    telescope_config_name = os.path.join(SIM_DATA_PATH, 'mwa128_config.yaml')
+def test_beamlist_init():
+    telescope_config_name = os.path.join(SIM_DATA_PATH, 'bl_lite_mixed.yaml')
     with open(telescope_config_name, 'r') as yf:
         telconfig = yaml.safe_load(yf)
+
+    # The path for beam 0 is invalid, and it's not needed for this test.
+    del telconfig['beam_paths'][0]
+    beam_ids = np.arange(1, 4)
+
+    bad_conf_0 = copy.deepcopy(telconfig)
+    bad_conf_0['beam_paths'][1] = 1.35
+    with pytest.raises(ValueError, match="Beam model is not properly specified"):
+        pyuvsim.simsetup._construct_beam_list(beam_ids, bad_conf_0)
+
+    bad_conf_1 = copy.deepcopy(telconfig)
+    del bad_conf_1['beam_paths'][1]['type']
+
+    with pytest.raises(ValueError, match="Beam model must have a"):
+        pyuvsim.simsetup._construct_beam_list(beam_ids, bad_conf_1)
+
+    bad_conf_2 = copy.deepcopy(telconfig)
+    bad_conf_2['beam_paths'][1]['type'] = 'unsupported_type'
+    with pytest.raises(ValueError, match="Undefined beam model type"):
+        pyuvsim.simsetup._construct_beam_list(beam_ids, bad_conf_2)
+
+    # Check that spline_interp_opts is passed along correctly to BeamList
     telconfig['spline_interp_opts'] = {'kx' : 2, 'ky' : 2}
-    beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(1), telconfig)
+    beam_list = pyuvsim.simsetup._construct_beam_list(beam_ids, telconfig)
     assert beam_list.spline_interp_opts is not None
 
 
@@ -1021,3 +1058,132 @@ def test_mock_catalog_moon():
 
     # Simple check that the given lat/lon were interpreted differently in each call.
     assert mmock != emock
+
+
+@pytest.fixture
+def cat_with_some_pols():
+    # Mock catalog with a couple sources polarized.
+    Nsrcs = 30
+    Nfreqs = 10
+    freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
+
+    pol_inds = range(12, 15)
+    stokes = np.zeros((4, Nfreqs, Nsrcs))
+    stokes[0, :, :] = 1.0
+
+    stokes[1, :, pol_inds] = 0.2
+    stokes[2, :, pol_inds] = 1.2
+    stokes[3, :, pol_inds] = 0.3
+
+    ra = Longitude(np.linspace(0, 2 * np.pi, Nsrcs), 'rad')
+    dec = Latitude(np.linspace(-np.pi / 2, np.pi / 3, Nsrcs), 'rad')
+
+    sky = pyradiosky.SkyModel(
+        name=np.arange(Nsrcs).astype(str),
+        ra=ra,
+        dec=dec,
+        stokes=stokes,
+        spectral_type='full',
+        freq_array=freqs
+    )
+
+    return sky
+
+
+@pytest.mark.parametrize('unit', ['Jy', 'K'])
+def test_skymodeldata_with_quantity_stokes(unit, cat_with_some_pols):
+    # Support for upcoming pyradiosky change setting SkyModel.stokes
+    # to an astropy Quantity.
+    if unit == 'K':
+        pytest.importorskip('astropy_healpix')
+        path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
+        sky = pyradiosky.SkyModel()
+        sky.read_healpix_hdf5(path)
+    else:
+        sky = cat_with_some_pols
+
+    if not isinstance(sky.stokes, units.Quantity):
+        sky.stokes *= units.Unit(unit)
+
+    smd = pyuvsim.simsetup.SkyModelData(sky)
+    assert np.all(sky.stokes.to_value(unit)[0] == smd.stokes_I)
+
+    sky2 = smd.get_skymodel()
+    if units.Quantity != pyradiosky.SkyModel()._stokes.expected_type:
+        sky.stokes = sky.stokes.to_value(unit)
+    assert sky2 == sky
+
+
+@pytest.mark.parametrize('component_type', ['point', 'healpix'])
+def test_skymodeldata(component_type, cat_with_some_pols):
+    # Test that SkyModelData class can properly recreate a SkyModel and subselect.
+    if component_type == 'point':
+        sky = cat_with_some_pols
+    else:
+        pytest.importorskip('astropy_healpix')
+        path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
+        sky = pyradiosky.SkyModel()
+        sky.read_healpix_hdf5(path)
+
+    smd = pyuvsim.simsetup.SkyModelData(sky)
+
+    assert (smd.ra == sky.ra.deg).all()
+    assert (smd.dec == sky.dec.deg).all()
+
+    if isinstance(sky.stokes, units.Quantity):
+        smd.stokes_I *= units.Unit(smd.flux_unit)
+        if smd.polarized is not None:
+            smd.stokes_Q *= units.Unit(smd.flux_unit)
+            smd.stokes_U *= units.Unit(smd.flux_unit)
+            smd.stokes_V *= units.Unit(smd.flux_unit)
+
+    assert (smd.stokes_I == sky.stokes[0]).all()
+
+    if smd.polarized is not None:
+        assert (smd.stokes_Q == sky.stokes[..., smd.polarized][1]).all()
+        assert (smd.stokes_U == sky.stokes[..., smd.polarized][2]).all()
+        assert (smd.stokes_V == sky.stokes[..., smd.polarized][3]).all()
+
+    # Make skymodel from SkyModelData.
+    sky1 = smd.get_skymodel()
+
+    assert sky1 == sky
+
+    # Now try with subselection:
+    sky1_sub = smd.get_skymodel(range(8, 13))
+
+    assert sky1.check()
+    assert sky1_sub.check()
+    assert sky1_sub.Ncomponents == 5
+    if smd.polarized is not None:
+        assert sky1_sub._n_polarized == 1
+
+
+@pytest.mark.parametrize('inds', [range(30), range(5), np.arange(9, 14)])
+def test_skymodeldata_pol_select(inds, cat_with_some_pols):
+    # When running SkyModelData.subselect, confirm that the
+    # polarization array and Q, U, V are properly selected.
+
+    smd = pyuvsim.simsetup.SkyModelData(cat_with_some_pols)
+    sub_smd = smd.subselect(inds)
+
+    test_q = np.zeros((smd.Nfreqs, smd.Ncomponents))
+    temp = np.zeros((sub_smd.Nfreqs, sub_smd.Ncomponents))
+    temp[..., sub_smd.polarized] = sub_smd.stokes_Q
+    test_q[..., inds] = temp[()]
+
+    full_q = np.zeros_like(test_q)
+    full_q[..., smd.polarized] = smd.stokes_Q
+
+    assert np.all(full_q[..., inds] == test_q[..., inds])
+
+
+@pytest.mark.parametrize('inds', [range(30), range(5)])
+def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
+    # Check that downselecting doesn't copy length-Ncomponent arrays.
+
+    smd = pyuvsim.simsetup.SkyModelData(cat_with_some_pols)
+    smd_copy = smd.subselect(inds)
+    assert smd_copy.ra.base is smd.ra.base
+    assert smd_copy.dec.base is smd.dec.base
+    assert smd_copy.stokes_I.base is smd.stokes_I.base

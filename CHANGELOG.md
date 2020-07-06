@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- quantity_shared_bcast function to allow objects derived from astropy.units.Quantity to use shared memory broadcasting.
+- SkyModelData class to replace recarray conversion in pyradiosky.
 - quiet keyword for run_uvsim, to suppress stdout printing.
 - Support for Moon-based observing -- keyword "world: moon" in telescope config.
 - Option to pass along interpolating spline order to UVBeam from teleconfig file.
@@ -10,6 +12,7 @@
 - Benchmarking tools.
 
 ### Changed
+- Use `at_frequencies` method to enable support for all pyradiosky spectral types.
 - Only do coherency calculation when the time changes
 - Only do beam eval when time, freq, or beam type changes.
 - The definition of the Airy beam now uses the exact value of c, not 3e8.

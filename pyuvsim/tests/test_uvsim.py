@@ -8,7 +8,6 @@ import os
 
 import astropy.constants as const
 import numpy as np
-from numpy.lib import recfunctions
 import pyuvdata.utils as uvutils
 from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, Longitude, Latitude
@@ -55,24 +54,13 @@ def uvobj_beams_srcs():
 
     time = Time(uv_obj.time_array[0], format='jd', scale='utc')
     sources, kwds = pyuvsim.create_mock_catalog(
-        time, arrangement='long-line', Nsrcs=30, return_table=True
+        time, arrangement='long-line', Nsrcs=30, return_data=True
     )
 
-    # Give one source polarization
-    if 'flux_density' in sources.dtype.names:
-        # For backwards compatibility until PR 60 is merged in pyradiosky.
-        sources['flux_density'][15] = [0.3, 0.1, 2.0, 0.0]
-    else:
-        Qcomp = np.zeros(30)
-        Ucomp = np.zeros(30)
-        Vcomp = np.zeros(30)
-        Qcomp[15] = 0.1
-        Ucomp[15] = 2.0
-        Vcomp[15] = 0.0
-        sources['I'][15] = 0.3
-        sources = recfunctions.append_fields(
-            sources, ['Q', 'V', 'U'], [Qcomp, Ucomp, Vcomp]
-        )
+    sources.polarized = np.array([15, 16, 17])  # 15 -- 17th sources have polarization.
+    sources.stokes_Q = np.array([0.1] * 3)[None, :]
+    sources.stokes_U = np.array([2.0] * 3)[None, :]
+    sources.stokes_V = np.array([0.0] * 3)[None, :]
 
     return uv_obj, beam_list, beam_dict, sources
 
@@ -330,7 +318,7 @@ def test_single_offzenith_source_uvfits():
 
     interpolated_beam, interp_basis_vector = beam.interp(
         az_array=np.array([beam_az]), za_array=np.array([beam_za]),
-        freq_array=np.array([freq.to('Hz').value]))
+        freq_array=np.array([freq.to_value('Hz')]))
 
     jones = np.zeros((2, 2, 1), dtype=np.complex64)
     jones[0, 0] = interpolated_beam[1, 0, 0, 0, 0]
@@ -355,7 +343,7 @@ def test_single_offzenith_source_uvfits():
         [vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[0, 1], vis_analytic[1, 0]]
     )
 
-    assert np.allclose(baseline.uvw.to('m').value, hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4)
+    assert np.allclose(baseline.uvw.to_value('m'), hera_uv.uvw_array[0:hera_uv.Nbls], atol=1e-4)
     assert np.allclose(visibility, vis_analytic, atol=1e-4)
 
 
@@ -417,7 +405,7 @@ def test_offzenith_source_multibl_uvfits():
     beam.interpolation_function = 'az_za_simple'
     interpolated_beam, interp_basis_vector = beam.interp(
         az_array=np.array([src_az.rad]), za_array=np.array([src_za.rad]),
-        freq_array=np.array([freq.to('Hz').value])
+        freq_array=np.array([freq.to_value('Hz')])
     )
     jones = np.zeros((2, 2), dtype=np.complex64)
     jones[0, 0] = interpolated_beam[1, 0, 0, 0, 0]
@@ -444,7 +432,7 @@ def test_file_to_tasks():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', Nsrcs=5, return_table=True)
+    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', Nsrcs=5, return_data=True)
 
     beam = simtest.make_cst_beams()
     beam_list = pyuvsim.BeamList([beam])
@@ -505,7 +493,8 @@ def test_file_to_tasks():
         index = np.where(hera_uv.antenna_numbers == antnum)[0][0]
         antennas2.append(antennas[index])
 
-    sources = pyradiosky.array_to_skymodel(sources)
+    sources = sources.get_skymodel()
+
     for idx, antenna1 in enumerate(antennas1):
         antenna2 = antennas2[idx]
         baseline = pyuvsim.Baseline(antenna1, antenna2)
@@ -523,7 +512,7 @@ def test_gather():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_table=True)
+    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_data=True)
 
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
     beam_list = pyuvsim.BeamList([beam])
@@ -554,7 +543,7 @@ def test_local_task_gen():
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, kwds = pyuvsim.create_mock_catalog(
-        time, arrangement='random', Nsrcs=5, return_table=True
+        time, arrangement='random', Nsrcs=5, return_data=True
     )
 
     beam = simtest.make_cst_beams(freqs=[100e6, 123e6])
@@ -572,8 +561,8 @@ def test_local_task_gen():
     with pytest.raises(TypeError, match='input_uv must be UVData object'):
         next(uv_iter0)
     uv_iter1 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv,
-                                           'not_ndarray', beam_list, beam_dict)
-    with pytest.raises(TypeError, match='catalog must be a record array'):
+                                           'not_skydata', beam_list, beam_dict)
+    with pytest.raises(TypeError, match='catalog must be a SkyModelData'):
         next(uv_iter1)
 
     # Copy sources and beams so we don't accidentally reuse quantities.
@@ -636,7 +625,7 @@ def test_task_coverage():
             task_inds, src_inds, Ntasks_local, Nsrcs_local = pyuvsim.uvsim._make_task_inds(
                 Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus
             )
-            src_inds = range(Nsrcs)[src_inds]   # Turn slice into iterator
+            src_inds = np.arange(Nsrcs)[src_inds]   # Turn slice into iterator
             tasks = itertools.product(task_inds, src_inds)
             tasks_all.append(tasks)
         tasks_all = itertools.chain(*tasks_all)
@@ -683,7 +672,7 @@ def test_source_splitting():
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, kwds = pyuvsim.create_mock_catalog(
-        time, arrangement='random', Nsrcs=30, return_table=True
+        time, arrangement='random', Nsrcs=30, return_data=True
     )
 
     # Spoof environmental parameters.
@@ -699,11 +688,11 @@ def test_source_splitting():
 
     Nblts = hera_uv.Nblts
     Nfreqs = hera_uv.Nfreqs
-    Nsrcs = len(sources)
+    Nsrcs = sources.Ncomponents
     Ntasks = Nblts * Nfreqs
     beam_dict = None
 
-    skymodel = pyradiosky.array_to_skymodel(sources)
+    skymodel = sources.get_skymodel()
     skymodel_mem_footprint = (
         simutils.estimate_skymodel_memory_usage(
             skymodel.Ncomponents, skymodel.Nfreqs)
@@ -804,7 +793,7 @@ def test_quantity_reuse(uvobj_beams_srcs):
         locoh_changed = not allclose_or_none(engine.local_coherency, prev_local_coherency)
         srcpos_changed = not allclose_or_none(sky.alt_az, prev_source_pos)
 
-        freq = task.freq.to("Hz").value
+        freq = task.freq.to_value("Hz")
         time = task.time.jd
         beampair = (task.baseline.antenna1.beam_id, task.baseline.antenna2.beam_id)
 
@@ -924,8 +913,8 @@ def test_fullfreq_check(uvobj_beams_srcs):
 
     Ntasks = uv_obj.Nblts * uv_obj.Nfreqs
 
-    sky0 = pyradiosky.skymodel_to_array(sky0)
-    sky1 = pyradiosky.skymodel_to_array(sky1)
+    sky0 = pyuvsim.simsetup.SkyModelData(sky0)
+    sky1 = pyuvsim.simsetup.SkyModelData(sky1)
 
     taskiter0 = pyuvsim.uvdata_to_task_iter(
         np.arange(Ntasks), uv_obj, sky0, beam_list, beam_dict
@@ -934,7 +923,7 @@ def test_fullfreq_check(uvobj_beams_srcs):
         np.arange(Ntasks), uv_obj, sky1, beam_list, beam_dict
     )
 
-    with pytest.raises(ValueError, match="SkyModel spectral type"):
+    with pytest.raises(ValueError, match="Some requested frequencies are not present"):
         next(taskiter0)
 
     next(taskiter1)

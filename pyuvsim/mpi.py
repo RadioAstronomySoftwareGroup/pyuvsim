@@ -76,8 +76,20 @@ def shared_mem_bcast(arr, root=0):
 
     Must be called from all PUs, but only the root process
     should pass in an array. Every other process should pass in None.
-    """
 
+    Parameters
+    ----------
+
+    arr: ndarray
+        Data to be shared.
+    root: int
+        Root rank on COMM_WORLD, from which data will be broadcast.
+
+    Notes
+    -----
+    Data will be duplicated once per node, but will be shared among
+    processes on each node.
+    """
     nbytes = 0
     itemsize = 0
     dtype = None
@@ -85,13 +97,13 @@ def shared_mem_bcast(arr, root=0):
     shape = tuple()  # noqa
 
     if node_comm.rank == root:
-        # Data cannot be shared across nodes.
-        # Need to broadcast to the root PU on each node.
+        # Data cannot be shared between nodes.
+        # Need to broadcast to the root process on each node.
         arr = big_bcast(rank_comm, arr, root=root)
+        dtype = arr.dtype
         Nitems = arr.size
         shape = arr.shape
         itemsize = sys.getsizeof(arr.flatten()[0])
-        dtype = arr.dtype
         nbytes = itemsize * Nitems
 
     itemsize = node_comm.bcast(itemsize, root=root)
@@ -111,10 +123,35 @@ def shared_mem_bcast(arr, root=0):
         # Now fill the window on each node with the data.
         sh_arr[:] = arr[()]
 
-    sh_arr.flags['WRITEABLE'] = False  # Do not want ranks overwriting the data.
+    # Access is not synchronized, so no process
+    # should be allowed to overwrite.
+    sh_arr.flags['WRITEABLE'] = False
 
     world_comm.Barrier()
     return sh_arr
+
+
+def quantity_shared_bcast(obj, root=0):
+    """
+    Broadcast to shared memory for classes derived from astropy.units.Quantity.
+
+    The value array will be in shared memory, but the handle to it on each process
+    will be a Quantity, Angle, Latitude, Longitude, etc.
+    """
+
+    unit = None
+    sclass = None
+    value = None
+    if world_comm.rank == root:
+        sclass = obj.__class__
+        unit = obj.unit
+        value = obj.value
+
+    value = shared_mem_bcast(value, root=root)
+    sclass = world_comm.bcast(sclass, root=root)
+    unit = world_comm.bcast(unit, root=root)
+
+    return sclass(value, copy=False, unit=unit)
 
 
 def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
@@ -133,7 +170,7 @@ def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
         Rank of process to receive the data.
     return_split_info: bool
         On root process, also a return a dictionary describing
-        how the data were split.
+        how the data were split. Used for testing.
     MAX_BYTES: int
         Maximum bytes per chunk.
         Defaults to the INT_MAX of 32 bit integers. Used for testing.
@@ -152,39 +189,55 @@ def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
     Notes
     -----
     Running this on MPI.COMM_WORLD means that every process gets a full copy of
-    `objs`. This is mainly used in pyuvsim to send large data once to each node, to be
-    put in shared memory.
+    `objs`, potentially using up available memory. This function is currently used
+    to send large data once to each node, to be put in shared memory.
     """
-    bytesize = None
+    bufsize = None
+    nopickle = False
+    shape = None
+    dtype = None
     if comm.rank == root:
-        buf = dumps(objs)
-        bytesize = len(buf)
+        if isinstance(objs, np.ndarray):
+            shape = objs.shape
+            dtype = objs.dtype
+            buf = objs.tobytes()
+            nopickle = True
+        else:
+            buf = dumps(objs)
+        bufsize = len(buf)
 
     # Sizes of send buffers to be sent from each rank.
-    bytesize = comm.bcast(bytesize, root=root)
+    bufsize = comm.bcast(bufsize, root=root)
+    nopickle = comm.bcast(nopickle, root=root)
+    if nopickle:
+        shape = comm.bcast(shape, root=root)
+        dtype = comm.bcast(dtype, root=root)
+
     if comm.rank != root:
-        buf = np.empty(bytesize, dtype=bytes)
+        buf = np.empty(bufsize, dtype=bytes)
 
     # Ranges of output bytes for each chunk.
     start = 0
     end = 0
     ranges = []
-    while end < bytesize:
-        end = min(start + MAX_BYTES, bytesize)
+    while end < bufsize:
+        end = min(start + MAX_BYTES, bufsize)
         ranges.append((start, end))
         start += MAX_BYTES
 
     for start, end in ranges:
         comm.Bcast([buf[start:end], MPI.BYTE], root=root)
-
-    result = loads(buf)
+    if nopickle:
+        result = np.frombuffer(buf, dtype=dtype)
+        result = result.reshape(shape)
+    else:
+        result = loads(buf)
 
     if comm.rank == root:
         split_info_dict = {'MAX_BYTES': MAX_BYTES, 'ranges': ranges}
 
     if return_split_info:
         return result, split_info_dict
-
     return result
 
 
@@ -219,7 +272,7 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
     Returns
     -------
     list of objects:
-        Length Npus list, such that the n'th entry is the data gathered from
+        Length Npus, such that the n'th entry is the data gathered from
         the n'th process.
         This is only filled on the root process. Other processes get None.
     dict:

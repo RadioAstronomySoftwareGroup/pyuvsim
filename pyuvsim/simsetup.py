@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 import yaml
 
-from astropy.coordinates import Angle, EarthLocation
+from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude
 import astropy.units as units
 from pyuvdata import utils as uvutils, UVData
 import pyradiosky
@@ -21,10 +21,13 @@ from .analyticbeam import AnalyticBeam
 from .telescope import BeamList
 from .astropy_interface import SkyCoord, MoonLocation, Time
 try:
+    from . import mpi
     from .mpi import get_rank
 except ImportError:
     def get_rank():
         return 0
+
+    mpi = None
 from .utils import check_file_exists_and_increment
 
 
@@ -113,7 +116,7 @@ def _set_lsts_on_uvdata(uv_obj):
 
 
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
-                        alt=None, save=False, min_alt=None, rseed=None, return_table=False):
+                        alt=None, save=False, min_alt=None, rseed=None, return_data=False):
     """
     Create a mock catalog.
 
@@ -150,14 +153,13 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         Save mock catalog as npz file.
     rseed: int
         If using the random configuration, pass in a RandomState seed.
-    return_table: bool
-        If True, return a recarray of catalog data.
-        (See pyradiosky documentation for details).
+    return_data: bool
+        If True, return a SkyModelData object instead of SkyModel.
 
     Returns
     -------
-    class:`pyradiosky.SkyModel` or `~numpy.recarray`
-        The catalog, as either a SkyModel or a recarray (if `return_table` is True)
+    class:`pyradiosky.SkyModel` or class:`SkyModelData`
+        The catalog, as either a SkyModel or a SkyModelData (if `return_data` is True)
     dict
         A dictionary of keywords used to define the catalog.
     """
@@ -285,8 +287,8 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     stokes = np.zeros((4, 1, Nsrcs))
     stokes[0, :] = fluxes
     catalog = pyradiosky.SkyModel(names, ra, dec, stokes, 'flat')
-    if return_table:
-        return pyradiosky.skymodel_to_array(catalog), mock_keywords
+    if return_data:
+        catalog = SkyModelData(catalog)
     if get_rank() == 0 and save:
         np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs,
                  fluxes=fluxes)
@@ -294,20 +296,233 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     return catalog, mock_keywords
 
 
-def initialize_catalog_from_params(obs_params, input_uv=None):
+class SkyModelData:
+    """
+    Carries immutable SkyModel data in simple ndarrays.
+
+    This is to facilitate sharing SkyModel objects in MPI, without
+    excessive copying and memory bloat.
+
+    When used with MPI, this can be initialized simultaneously on all
+    processes such that sky_in is provided only on the root process.
+    The data can then be shared across all processes by running the `share`
+    method.
+
+    Parameters
+    ----------
+    sky_in: :class:~`pyradiosky.SkyModel`
+        A valid SkyModel object.
+    """
+
+    Ncomponents = None
+    component_type = None
+    spectral_type = None
+    ra = None
+    dec = None
+    name = None
+    Nfreqs = None
+    stokes_I = None
+    stokes_Q = None
+    stokes_U = None
+    stokes_V = None
+    freq_array = None
+    reference_frequency = None
+    spectral_index = None
+    polarized = None
+    nside = None
+    hpx_inds = None
+    flux_unit = None
+
+    put_in_shared = ['stokes_I', 'stokes_Q', 'stokes_U', 'stokes_V', 'polarized',
+                     'ra', 'dec', 'reference_frequency', 'spectral_index', 'hpx_inds']
+
+    def __init__(self, sky_in=None):
+        # Collect relevant attributes.
+        if sky_in is not None:
+            self.name = sky_in.name
+            self.nside = sky_in.nside
+            self.hpx_inds = sky_in.hpx_inds
+            self.component_type = sky_in.component_type
+            self.spectral_type = sky_in.spectral_type
+            self.Ncomponents = sky_in.Ncomponents
+            self.ra = sky_in.ra.deg
+            self.dec = sky_in.dec.deg
+            self.Nfreqs = sky_in.Nfreqs
+            stokes_in = sky_in.stokes
+
+            if isinstance(stokes_in, units.Quantity):
+                if stokes_in.unit.is_equivalent("Jy"):
+                    stokes_in = stokes_in.to_value("Jy")
+                    self.flux_unit = "Jy"
+                elif stokes_in.unit.is_equivalent("K"):
+                    stokes_in = stokes_in.to_value("K")
+                    self.flux_unit = "K"
+
+            self.stokes_I = stokes_in[0, ...]
+
+            if sky_in._n_polarized > 0:
+                self.polarized = sky_in._polarized
+                Q, U, V = stokes_in[1:, :, sky_in._polarized]
+                self.stokes_Q = Q
+                self.stokes_U = U
+                self.stokes_V = V
+
+            if sky_in._freq_array.required:
+                self.freq_array = sky_in.freq_array.to("Hz").value
+            if sky_in._reference_frequency.required:
+                self.reference_frequency = sky_in.reference_frequency.to("Hz").value
+            if sky_in._spectral_index.required:
+                self.spectral_index = sky_in.spectral_index
+
+    def subselect(self, inds):
+        """
+        Subselect, returning a new SkyModelData object.
+
+        Parameters
+        ----------
+        inds: range or index array
+            Indices to select along the component axis.
+
+        Returns
+        -------
+        SkyModelData
+            A new SkyModelData with Ncomp axes downselected.
+
+        Notes
+        -----
+        If inds is a range object, this method will avoid copying data in numpy arrays,
+        such that the returned SkyModelData object carries views into the current object's arrays.
+        """
+        new_sky = SkyModelData()
+
+        new_sky.Ncomponents = len(inds)
+        new_sky.nside = self.nside
+        new_sky.component_type = self.component_type
+        if self.name is not None:
+            new_sky.name = self.name[inds]
+        if isinstance(inds, range):
+            new_sky.stokes_I = self.stokes_I[:, slice(inds.start, inds.stop, inds.step)]
+        else:
+            new_sky.stokes_I = self.stokes_I[:, inds]
+        new_sky.ra = self.ra[inds]
+        new_sky.dec = self.dec[inds]
+        new_sky.Nfreqs = self.Nfreqs
+        new_sky.spectral_type = self.spectral_type
+
+        if self.reference_frequency is not None:
+            new_sky.reference_frequency = self.reference_frequency[inds]
+        if self.spectral_index is not None:
+            new_sky.spectral_index = self.spectral_index[inds]
+        if self.freq_array is not None:
+            new_sky.freq_array = self.freq_array
+        if self.hpx_inds is not None:
+            new_sky.hpx_inds = self.hpx_inds[inds]
+
+        if self.polarized is not None:
+            sub_inds = np.in1d(self.polarized, inds)
+            new_sky.stokes_Q = self.stokes_Q[..., sub_inds]
+            new_sky.stokes_U = self.stokes_U[..., sub_inds]
+            new_sky.stokes_V = self.stokes_V[..., sub_inds]
+            new_sky.polarized = np.where(np.in1d(inds, self.polarized))[0]
+
+        return new_sky
+
+    def share(self, root=0):
+        """
+        Share across MPI processes. (requires mpi4py to use).
+        All attributes are put in shared memory.
+        """
+        if mpi is None:
+            raise ImportError("You need mpi4py to use this method. "
+                              "Install it by running pip install pyuvsim[sim] "
+                              "or pip install pyuvsim[all] if you also want the "
+                              "line_profiler installed.")
+        mpi.start_mpi()
+        self.Ncomponents = mpi.world_comm.bcast(self.Ncomponents, root=root)
+
+        # Get list of attributes that are set.
+        isset = None
+        if mpi.rank == root:
+            isset = [key for key, value in self.__dict__.items() if value is not None]
+        isset = mpi.world_comm.bcast(isset, root=root)
+
+        for key in isset:
+            attr = getattr(self, key)
+            if key in self.put_in_shared:
+                val = mpi.shared_mem_bcast(attr, root=root)
+            else:
+                val = mpi.world_comm.bcast(attr, root=root)
+            if val is not None:
+                setattr(self, key, val)
+
+        mpi.world_comm.Barrier()
+
+    def get_skymodel(self, inds=None):
+        """
+        Initialize SkyModel from current settings.
+
+        Parameters
+        ----------
+        inds: range or index array
+            Indices to select along the component axis.
+        """
+
+        if inds is not None:
+            obj = self.subselect(inds)
+            return obj.get_skymodel()
+
+        ra_use = Longitude(self.ra, unit='deg')
+        dec_use = Latitude(self.dec, unit='deg')
+        stokes_use = np.zeros((4, self.Nfreqs, self.Ncomponents), dtype=float)
+
+        stokes_use[0, ...] = self.stokes_I
+
+        if self.polarized is not None:
+            stokes_use[1, :, self.polarized] = self.stokes_Q.T
+            stokes_use[2, :, self.polarized] = self.stokes_U.T
+            stokes_use[3, :, self.polarized] = self.stokes_V.T
+
+        if self.flux_unit is not None:
+            stokes_use *= units.Unit(self.flux_unit)
+
+        other = {}
+        if self.spectral_type in ['full', 'subband']:
+            other['freq_array'] = self.freq_array * units.Hz
+        if self.spectral_type == 'spectral_index':
+            other['reference_frequency'] = self.reference_frequency * units.Hz
+            other['spectral_index'] = self.spectral_index
+        if self.component_type == 'healpix':
+            other['nside'] = self.nside
+            other['hpx_inds'] = self.hpx_inds
+        else:
+            other['name'] = self.name
+        return pyradiosky.SkyModel(
+            ra=ra_use, dec=dec_use, stokes=stokes_use,
+            spectral_type=self.spectral_type, **other
+        )
+
+
+def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=True):
     """
     Make catalog from parameter file specifications.
 
     Default behavior is to do coarse horizon cuts.
 
-    Args:
-        obs_params: Either an obsparam file name or a dictionary of parameters.
-        input_uv: (UVData object) Needed to know location and time for mock catalog
-                  and for horizon cuts
-    Returns:
-        recarray
-            Source catalog
-        source_list_name : str
+    Parameters
+    ----------
+    obs_params: str or dict
+        Either an obsparam file name or a dictionary of parameters.
+    input_uv: :class:~`pyuvdata.UVData`
+        Used to set location for mock catalogs and for horizon cuts.
+    return_recarray: bool
+        Return a recarray instead of a :class:~`pyradiosky.SkyModel` instance.
+        Default is True.
+
+    Returns
+    -------
+    skydata: numpy.recarray or :class:~`pyradiosky.SkyModel`
+        Source catalog filled with data.
+    source_list_name: str
             Catalog identifier for metadata.
     """
     if input_uv is not None and not isinstance(input_uv, UVData):
@@ -369,15 +584,16 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
 
         time = mock_keywords.pop('time')
 
-        catalog, mock_keywords = create_mock_catalog(time, return_table=True, **mock_keywords)
+        sky, mock_keywords = create_mock_catalog(time, **mock_keywords)
         mock_keyvals = [str(key) + str(val) for key, val in mock_keywords.items()]
         source_list_name = 'mock_' + "_".join(mock_keyvals)
     elif isinstance(catalog, str):
         source_list_name = os.path.basename(catalog)
+        sky = pyradiosky.SkyModel()
         if not os.path.isfile(catalog):
             catalog = os.path.join(param_dict['config_path'], catalog)
         if catalog.endswith("txt"):
-            catalog = pyradiosky.read_text_catalog(catalog, return_table=True)
+            sky.read_text_catalog(catalog)
         elif catalog.endswith('vot'):
             if 'gleam' in catalog:
                 if "spectral_type" in source_params:
@@ -385,8 +601,8 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
                 else:
                     warnings.warn("No spectral_type specified for GLEAM, using 'flat'.")
                     spectral_type = "flat"
-                catalog = pyradiosky.skymodel.read_gleam_catalog(
-                    catalog, spectral_type=spectral_type, return_table=True
+                sky.read_gleam_catalog(
+                    catalog, spectral_type=spectral_type
                 )
             else:
                 vo_params = {}
@@ -401,28 +617,35 @@ def initialize_catalog_from_params(obs_params, input_uv=None):
                 vo_params["flux_columns"] = source_params["flux_columns"]
                 if "ra_column" not in source_params:
                     warnings.warn(f"No RA column name specified for {catalog}, using default.")
+                    vo_params["ra_column"] = "RAJ2000"
                 else:
                     vo_params["ra_column"] = source_params["ra_column"]
                 if "dec_column" not in source_params:
                     warnings.warn(f"No Dec column name specified for {catalog}, using default.")
+                    vo_params["dec_column"] = "DEJ2000"
                 else:
                     vo_params["dec_column"] = source_params["dec_column"]
 
                 vo_params["reference_frequency"] = None
-                catalog = pyradiosky.read_votable_catalog(
-                    catalog, **vo_params, return_table=True
-                )
+                sky.read_votable_catalog(catalog, **vo_params)
         elif catalog.endswith('hdf5'):
-            hpmap, inds, freqs = pyradiosky.read_healpix_hdf5(catalog)
-            sky = pyradiosky.healpix_to_sky(hpmap, inds, freqs)
-            catalog = pyradiosky.skymodel_to_array(sky)
+            sky.read_healpix_hdf5(catalog)
 
     # Do source selections, if any.
     if input_uv is not None:
         source_select_kwds['latitude_deg'] = input_uv.telescope_location_lat_lon_alt_degrees[0]
-    catalog = pyradiosky.source_cuts(catalog, **source_select_kwds)
 
-    return np.asarray(catalog), source_list_name
+    sky.source_cuts(**source_select_kwds)
+
+    # Make SkyModelData to share it.
+    if return_recarray:
+        warnings.warn("initialize_catalog_from_params will return a SkyModel instance, not "
+                      "a recarray, by default in the future. Set keyword "
+                      "`return_recarray=True` to ensure recarray is returned.",
+                      PendingDeprecationWarning)
+        sky = sky.to_recarray()
+
+    return sky, source_list_name
 
 
 def _construct_beam_list(beam_ids, telconfig):

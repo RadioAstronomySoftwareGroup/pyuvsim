@@ -10,6 +10,7 @@ dependencies:
   - mpi4py>=3.0.0
   - numpy>=1.15
   - pip
+  - astropy-healpix
   - psutil
   - pytest
   - pytest-cov

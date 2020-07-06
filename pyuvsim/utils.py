@@ -282,11 +282,10 @@ def estimate_skymodel_memory_usage(Ncomponents, Nfreqs):
 
     This aims to anticipate the full memory required to handle a SkyModel
     class in simulation, accounting for its attributes as well as
-    data generated while used.
+    intermediate data generated.
 
     Parameters
     ----------
-
     Ncomponents : int
         Number of source components.
     Nfreqs : int
