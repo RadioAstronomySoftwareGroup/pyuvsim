@@ -207,7 +207,7 @@ def test_pol_error():
 
 
 def test_input_uv_error():
-    with pytest.raises(TypeError, match="input_uv must be a UVData object"):
+    with pytest.raises(TypeError, match="input_uv must be UVData object"):
         pyuvsim.run_uvdata_uvsim(None, None)
 
 

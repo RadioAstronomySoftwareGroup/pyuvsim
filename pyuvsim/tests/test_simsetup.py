@@ -1248,9 +1248,9 @@ def test_set_lsts_errors():
 
     uv0.extra_keywords['world'] = 'moon'
     if not pyuvsim.astropy_interface.hasmoon:
-        with pytest.assert_raises(ValueError, match="Cannot construct lsts for MoonLocation"):
+        with pytest.raises(ValueError, match="Cannot construct lsts for MoonLocation"):
             pyuvsim.simsetup._set_lsts_on_uvdata(uv0)
 
     uv0.extra_keywords['world'] = 'tatooine'
-    with pytest.assert_raises(ValueError, match="Invalid world tatooine."):
+    with pytest.raises(ValueError, match="Invalid world tatooine."):
         pyuvsim.simsetup._set_lsts_on_uvdata(uv0)
