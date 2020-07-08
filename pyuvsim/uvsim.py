@@ -357,12 +357,13 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         del sky
 
 
-def serial_gather(uvtask_list, uv_out):
+def serial_gather(list_of_task_dicts, uv_out):
     """Loop over uvtask list, acquire visibilities and add to uvdata object."""
-    for index, vis in uvtask_list.items():
-#        blt_ind, spw_ind, freq_ind = task.uvdata_index
-        blt_ind, spw_ind, freq_ind = index
-        uv_out.data_array[blt_ind, spw_ind, freq_ind, :] += vis
+    for uvtask_list in list_of_task_dicts:
+        for index, vis in uvtask_list.items():
+    #        blt_ind, spw_ind, freq_ind = task.uvdata_index
+            blt_ind, spw_ind, freq_ind = index
+            uv_out.data_array[blt_ind, spw_ind, freq_ind, :] += vis
 
     return uv_out
 
@@ -545,16 +546,17 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
 
     # gather all the finished local tasks into a list of list of len NPUs
     # gather is a blocking communication, have to wait for all PUs
-    full_tasklist = mpi.big_gather(comm, summed_task_dict, root=0)
+    vis_per_proc = mpi.big_gather(comm, np.array(list(summed_task_dict.values())), root=0)
+    ind_per_proc = mpi.big_gather(comm, np.array(list(summed_task_dict.keys())).astype(str), root=0)
     localtasks_count = comm.gather(Ntasks_local, root=0)
 
     # Concatenate the list of lists into a flat list of tasks
-    from collections import ChainMap
+#    from collections import ChainMap
     if rank == 0:
         localtasks_count = np.sum(localtasks_count)
 #        uvtask_list = sum(full_tasklist, [])
-        uvtask_list = dict(ChainMap(*full_tasklist))
-        uvdata_out = serial_gather(uvtask_list, uv_container)
+#        uvtask_list = dict(ChainMap(*full_tasklist))
+        uvdata_out = serial_gather(full_tasklist, uv_container)
 
         return uvdata_out
 

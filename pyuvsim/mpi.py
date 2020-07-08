@@ -7,7 +7,9 @@ from array import array
 from threading import Thread
 import resource
 import atexit
-from pickle import loads, dumps
+from msgpack import loads, dumps
+from msgpack_numpy import patch
+patch()
 
 import mpi4py
 import numpy as np
@@ -280,10 +282,21 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
         - ranges: A list of tuples, giving the start and end byte of each chunk.
         - MAX_BYTES: The size limit that was used.
     """
-
-    # The limit is on the integer describing the number of bytes gathered.
-    sbuf = dumps(objs)
+    nopickle = False
+    dtype = None
+    if isinstance(objs, np.ndarray) and objs.ndim == 1:
+        dtype = objs.dtype
+        sbuf = objs.tobytes()
+        nopickle = True
+    else:
+        sbuf = dumps(objs)
     bytesize = len(sbuf)
+
+    nopickle = comm.reduce(nopickle, op=MPI.PROD)
+    if nopickle and rank == root:
+        dtypes = comm.gather(dtype, root=root)
+        assert all(dt == dtypes[0] for dt in dtypes)
+        dtype = dtypes[0]
 
     # Sizes of send buffers to be sent from each rank.
     counts = np.array(comm.allgather(bytesize))
@@ -297,7 +310,6 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
 
     # Position in the output buffer for the current send buffer.
     start_loc = sum(counts[:comm.rank])
-
     start = 0
     end = 0
     ranges = []
@@ -323,11 +335,17 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
         )
         if comm.rank == 0:
             rbuf[start:end] = cur_rbuf[:]
-
+    rbuf = rbuf.tobytes()
     per_proc = None
+    assert False
     if comm.rank == root:
         per_proc = []
-        per_proc = [loads(rbuf[displ[ii]:displ[ii] + counts[ii]]) for ii in range(comm.size)]
+        if nopickle:
+            print("Using nopickle mode.", flush=True) 
+            per_proc = [np.frombuffer(rbuf[displ[ii]:displ[ii] + counts[ii]], dtype=dtype)
+                        for ii in range(comm.size)]
+        else:
+            per_proc = [loads(rbuf[displ[ii]:displ[ii] + counts[ii]]) for ii in range(comm.size)]
 
     split_info_dict = None
     if comm.rank == root:
