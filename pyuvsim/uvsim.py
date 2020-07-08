@@ -4,6 +4,8 @@
 
 import numpy as np
 import yaml
+from datetime import timedelta
+import time as pytime
 import warnings
 from astropy.coordinates import EarthLocation
 import astropy.units as units
@@ -497,7 +499,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         pbar.finish()
 
     if rank == 0 and not quiet:
-        print("Calculations Complete.", flush=True)
+        elapsed_full = timedelta(seconds=pytime.time() - pbar.t0)
+        print(f"Calculations Complete: {elapsed_full}", flush=True)
 
     # If profiling is active, save meta data:
     from .profiling import prof     # noqa
@@ -539,7 +542,14 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
 
     # gather all the finished local tasks into a list of list of len NPUs
     # gather is a blocking communication, have to wait for all PUs
+    print("Gathering full task list.", flush=True)
+    if rank == 0:
+        t0 = pytime.time()
     full_tasklist = mpi.big_gather(comm, summed_local_task_list, root=0)
+    if rank == 0:
+        print("... gathering completed: {}".format(
+            timedelta(seconds=pytime.time() - t0)
+        ), flush=True)
     localtasks_count = comm.gather(Ntasks_local, root=0)
 
     # Concatenate the list of lists into a flat list of tasks
