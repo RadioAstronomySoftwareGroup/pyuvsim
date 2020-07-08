@@ -2,12 +2,13 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
+import numpy as np
 import copy
 import itertools
 import os
+import warnings
 
 import astropy.constants as const
-import numpy as np
 import pyuvdata.utils as uvutils
 from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, Longitude, Latitude
@@ -32,7 +33,9 @@ def multi_beams():
     beam0.freq_interp_kind = 'cubic'
     beam0.interpolation_function = 'az_za_simple'
     beam1 = pyuvsim.AnalyticBeam('uniform')
-    beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
     beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.6)
     beam_list = pyuvsim.BeamList([beam0, beam1, beam2, beam3])
 
@@ -169,7 +172,7 @@ def test_visibility_source_below_horizon_radec(cst_beam, hera_loc):
                             obstime=time, frame='icrs', location=array_location)
 
     source = pyradiosky.SkyModel('src_down', source_coord.ra, source_coord.dec,
-                                 np.array([1.0, 0, 0, 0]).reshape(4, 1), 'flat')
+                                 np.array([1.0, 0, 0, 0]).reshape(4, 1) * units.Jy, 'flat')
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
@@ -800,7 +803,7 @@ def test_fullfreq_check(uvobj_beams_srcs):
     freqs0 = np.linspace(100, 130, uv_obj.Nfreqs) * 1e6 * units.Hz
     freqs1 = uv_obj.freq_array[0, :] * units.Hz
 
-    stokes = np.zeros((4, uv_obj.Nfreqs, Nsrcs))
+    stokes = np.zeros((4, uv_obj.Nfreqs, Nsrcs)) * units.Jy
     stokes[0, :, :] = 1.0
 
     ra = Longitude(np.linspace(0, 2 * np.pi, Nsrcs), 'rad')
@@ -857,3 +860,15 @@ def test_moonloc_error(uvobj_beams_srcs):
 
     with pytest.raises(ValueError, match="If world keyword is set, it must "):
         next(pyuvsim.uvsim.uvdata_to_task_iter(range(5), uv_obj, sources, beam_list, beam_dict))
+
+
+def test_run_mpierr():
+    params = pyuvsim.simsetup._config_str_to_dict(
+        os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
+    )
+    if pyuvsim.mpi is None:
+        with pytest.raises(ImportError, match='You need mpi4py to use the uvsim module'):
+            pyuvsim.run_uvsim(params, return_uv=True)
+
+        with pytest.raises(ImportError, match='You need mpi4py to use the uvsim module'):
+            pyuvsim.run_uvdata_uvsim(UVData(), ['beamlist'])

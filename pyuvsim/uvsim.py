@@ -4,17 +4,13 @@
 
 import numpy as np
 import yaml
-import warnings
 from astropy.coordinates import EarthLocation
 import astropy.units as units
 from astropy.units import Quantity
 from astropy.constants import c as speed_of_light
 from pyuvdata import UVData
 
-try:
-    from . import mpi
-except ImportError:
-    mpi = None
+from . import mpi
 from . import simsetup
 from . import utils as simutils
 from .antenna import Antenna
@@ -145,13 +141,6 @@ class UVEngine(object):
 
         sources = self.task.sources
         baseline = self.task.baseline
-
-        if not hasattr(sources, 'above_horizon'):
-            warnings.warn("SkyModel class lacks horizon cut on position and coherency calculations."
-                          " This will slow evaluation considerably. Please update your pyradiosky"
-                          " installation to the latest version."
-                          , DeprecationWarning)
-            setattr(sources, "above_horizon", slice(None))
 
         if sources.alt_az is None:
             sources.update_positions(self.task.time, self.task.telescope.location)

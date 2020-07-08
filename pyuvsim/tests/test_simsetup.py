@@ -1002,14 +1002,14 @@ def test_direct_fname():
     os.remove("triangle_bl_layout.csv")
 
 
-def test_beamlist_init():
+def test_beamlist_init_errors():
     telescope_config_name = os.path.join(SIM_DATA_PATH, 'bl_lite_mixed.yaml')
     with open(telescope_config_name, 'r') as yf:
         telconfig = yaml.safe_load(yf)
 
     # The path for beam 0 is invalid, and it's not needed for this test.
     del telconfig['beam_paths'][0]
-    beam_ids = np.arange(1, 4)
+    beam_ids = np.arange(1, 6)
 
     bad_conf_0 = copy.deepcopy(telconfig)
     bad_conf_0['beam_paths'][1] = 1.35
@@ -1031,6 +1031,30 @@ def test_beamlist_init():
     telconfig['spline_interp_opts'] = {'kx' : 2, 'ky' : 2}
     beam_list = pyuvsim.simsetup._construct_beam_list(beam_ids, telconfig)
     assert beam_list.spline_interp_opts is not None
+
+
+def test_beamlist_init():
+    telescope_config_name = os.path.join(SIM_DATA_PATH, 'bl_lite_mixed.yaml')
+    with open(telescope_config_name, 'r') as yf:
+        telconfig = yaml.safe_load(yf)
+
+    telconfig['beam_paths'][0] = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
+
+    beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(6), telconfig)
+    beam_list.set_obj_mode()
+
+    # How the beam attributes should turn out for this file:
+    assert isinstance(beam_list[0], UVBeam)
+    assert beam_list[1].type == 'airy'
+    assert beam_list[1].diameter == 16
+    assert beam_list[2].type == 'gaussian'
+    assert beam_list[2].sigma == 0.03
+    assert beam_list[3].type == 'airy'
+    assert beam_list[3].diameter == 12
+    assert beam_list[4].type == 'gaussian'
+    assert beam_list[4].diameter == 14
+    assert beam_list[5].type == 'gaussian'
+    assert beam_list[5].diameter == 12
 
 
 def test_moon_lsts():
@@ -1214,3 +1238,19 @@ def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
     assert smd_copy.ra.base is smd.ra.base
     assert smd_copy.dec.base is smd.dec.base
     assert smd_copy.stokes_I.base is smd.stokes_I.base
+
+
+def test_set_lsts_errors():
+    # Error cases on set_lsts function.
+    uv0 = UVData()
+    uv0.read_uvfits(longbl_uvfits_file)
+    uv0.lst_array = None
+
+    uv0.extra_keywords['world'] = 'moon'
+    if not pyuvsim.astropy_interface.hasmoon:
+        with pytest.assert_raises(ValueError, match="Cannot construct lsts for MoonLocation"):
+            pyuvsim.simsetup._set_lsts_on_uvdata(uv0)
+
+    uv0.extra_keywords['world'] = 'tatooine'
+    with pytest.assert_raises(ValueError, match="Invalid world tatooine."):
+        pyuvsim.simsetup._set_lsts_on_uvdata(uv0)

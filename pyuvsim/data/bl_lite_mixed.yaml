@@ -7,6 +7,10 @@ beam_paths:
     type: gaussian
     sigma: 0.03
   3: airy
+  4:
+    type: gaussian
+    diameter: 14
+  5: gaussian
 diameter: 12
 spline_interp_opts:
         kx: 4

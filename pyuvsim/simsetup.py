@@ -773,8 +773,6 @@ def _construct_beam_list(beam_ids, telconfig):
             # Values in the "beam_paths" override globally-defined options.
             shape_opts = {'diameter': None, 'sigma': None}
 
-            # Issue -- a locally-defined sigma should override a global diameter
-
             for opt in shape_opts.keys():
                 shape_opts[opt] = this_beam_opts.get(opt, None)
 
@@ -1676,8 +1674,7 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
     tdict = time_array_to_params(time_array)
     fdict = freq_array_to_params(freq_array)
 
-    if 'time_array' in tdict:
-        tdict.pop('time_array')
+    tdict.pop('time_array', None)
 
     param_dict = {
         "time": tdict,

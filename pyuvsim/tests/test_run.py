@@ -198,14 +198,17 @@ def test_zenith_spectral_sim(spectral_type, tmpdir):
 
 def test_pol_error():
     # Check that running with a uvdata object without the proper polarizations will fail.
-    pytest.importorskip('mpi4py')
-
     hera_uv = UVData()
 
     hera_uv.polarizations = ['xx']
 
     with pytest.raises(ValueError, match='input_uv must have XX,YY,XY,YX polarization'):
         pyuvsim.run_uvdata_uvsim(hera_uv, ['beamlist'])
+
+
+def test_input_uv_error():
+    with pytest.raises(TypeError, match="input_uv must be a UVData object"):
+        pyuvsim.run_uvdata_uvsim(None, None)
 
 
 @pytest.mark.skipif('not pyuvsim.astropy_interface.hasmoon')
