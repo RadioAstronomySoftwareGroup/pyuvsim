@@ -7,7 +7,7 @@ from array import array
 from threading import Thread
 import resource
 import atexit
-from msgpack import loads, dumps
+from pickle import loads, dumps
 
 import mpi4py
 import numpy as np
