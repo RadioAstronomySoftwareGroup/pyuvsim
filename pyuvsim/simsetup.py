@@ -19,7 +19,7 @@ import pyradiosky
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from .analyticbeam import AnalyticBeam
 from .telescope import BeamList
-from .astropy_interface import SkyCoord, MoonLocation, Time, LunarTopo
+from .astropy_interface import SkyCoord, MoonLocation, Time, LunarTopo, hasmoon
 try:
     import astropy_healpix
 except ImportError:
@@ -112,7 +112,7 @@ def _set_lsts_on_uvdata(uv_obj):
     if world == 'earth':
         uv_obj.set_lsts_from_time_array()
     elif world == 'moon':
-        if not 'hasmoon':
+        if not hasmoon:
             raise ValueError("Cannot construct lsts for MoonLocation without lunarsky module")
         un_jds, inv = np.unique(uv_obj.time_array, return_inverse=True)
         loc = MoonLocation(*uv_obj.telescope_location, unit='m')
