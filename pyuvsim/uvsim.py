@@ -134,9 +134,6 @@ class UVEngine(object):
     def apply_beam(self):
         """ Set apparent coherency from jones matrices and source coherency. """
 
-        if not self.update_beams:
-            return
-
         beam1_id, beam2_id = self.current_beam_pair
 
         sources = self.task.sources
@@ -316,12 +313,9 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
             sky.freq_array = freq_array[0]
         if sky.component_type == 'healpix' and hasattr(sky, 'healpix_to_point'):
             sky.healpix_to_point()
-        if sky.spectral_type != 'flat' and hasattr(sky, 'at_frequencies'):
+        if sky.spectral_type != 'flat':
             sky.at_frequencies(freq_array[0])
-        elif sky.spectral_type == 'full':
-            if not np.allclose(sky.freq_array, freq_array):
-                raise ValueError("SkyModel spectral type is 'full', and "
-                                 "its frequencies do not match simulation frequencies.")
+
         for task_index in task_ids:
             # Shape indicates slowest to fastest index.
             if not isinstance(task_index, tuple):
