@@ -527,11 +527,12 @@ def test_gather():
     uvtask_list = list(taskiter)
 
     uv_out = pyuvsim.simsetup._complete_uvdata(hera_uv, inplace=False)
+    vis_dict = {}
     for task in uvtask_list:
         engine = pyuvsim.UVEngine(task)
-        task.visibility_vector = engine.make_visibility()
+        vis_dict[str(task.uvdata_index)] = engine.make_visibility()
 
-    uv_out = pyuvsim.serial_gather(uvtask_list, uv_out)
+    uv_out = pyuvsim.serial_gather([vis_dict], uv_out)
 
     assert np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3)
 
