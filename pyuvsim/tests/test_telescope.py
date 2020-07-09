@@ -138,6 +138,19 @@ def test_string_mode(beam_objs):
         assert False
 
 
+@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
+def test_comparison(beam_objs):
+    beamlist = pyuvsim.BeamList(beam_objs)
+    beamlist.set_str_mode()
+
+    beamlist2 = pyuvsim.BeamList(beamlist._str_beam_list)
+    assert beamlist == beamlist2
+
+    beamlist.set_obj_mode()
+    beamlist2.set_obj_mode()
+    assert beamlist == beamlist2
+
+
 def test_no_overwrite(beam_objs):
     # Ensure UVBeam keywords are not overwritten by BeamList.uvb_params
     # while in object mode.

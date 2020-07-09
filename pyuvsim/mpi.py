@@ -351,10 +351,9 @@ class Counter:
             comm = world_comm
         rank = comm.Get_rank()
         itemsize = MPI.INT.Get_size()
+        nint = 0
         if rank == count_rank:
             nint = 1
-        else:
-            nint = 0
         self.win = MPI.Win.Allocate(nint * itemsize, itemsize,
                                     MPI.INFO_NULL, comm)
         if rank == 0:
