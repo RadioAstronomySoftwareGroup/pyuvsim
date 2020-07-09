@@ -81,8 +81,7 @@ def test_mock_catalog_off_zenith_source(hera_loc):
     assert cat == test_source
 
 
-def test_mock_diffuse_maps():
-    # TODO -- Also run for moonlocation
+def test_mock_diffuse_maps_errors():
     analytic_diffuse = pyuvsim.simsetup.analytic_diffuse
     astropy_healpix = pyuvsim.simsetup.astropy_healpix
     if (analytic_diffuse is not None) and (astropy_healpix is not None):
@@ -96,22 +95,43 @@ def test_mock_diffuse_maps():
                 Time.now(), arrangement='diffuse', diffuse_model='monopole'
             )
 
-        monocat, kwds = pyuvsim.simsetup.create_mock_catalog(
-            Time.now(), arrangement='diffuse', diffuse_model='monopole', map_nside=128
-        )
-        assert np.isclose(np.mean(monocat.stokes[0]).value, 0.5, atol=1e-2)
-        assert monocat.nside == 128
-        gauss_a = 0.05
-        gausscat, kwds = pyuvsim.simsetup.create_mock_catalog(
-            Time.now(), arrangement='diffuse', diffuse_model='gauss', map_nside=128,
-            diffuse_params={'a': gauss_a}
-        )
-        pixar = 4 * np.pi / (12 * 128**2) * units.sr
-        gaussint = np.sum(gausscat.stokes[0] * pixar).value
-        assert np.isclose(gaussint, gauss_a**2, rtol=1e-1)
     else:
         with pytest.raises(ValueError, match="analytic_diffuse and astropy_healpix"):
             pyuvsim.simsetup.create_mock_catalog(Time.now(), arrangement='diffuse')
+
+
+@pytest.mark.parametrize('model', [
+                         ['monopole', {}],
+                         ['gauss', {'a': 0.05}],
+                         ['polydome', {'n': 4}]
+                         ])
+@pytest.mark.parametrize('location', ['earth', 'moon'])
+def test_mock_diffuse_maps(model, hera_loc, apollo_loc, location):
+    analytic_diffuse = pytest.importorskip('analytic_diffuse')
+    pytest.importorskip('astropy_healpix')
+    if location == 'earth':
+        loc = hera_loc
+    else:
+        loc = apollo_loc
+    modname, modkwargs = model
+    map_nside = 128
+    t0 = Time.now()
+    cat, kwds = pyuvsim.simsetup.create_mock_catalog(
+        t0, arrangement='diffuse', array_location=loc,
+        diffuse_model=modname, map_nside=map_nside,
+        diffuse_params=modkwargs
+    )
+
+    cat.update_positions(t0, loc)
+
+    modfunc = analytic_diffuse.get_model(modname)
+    alt, az = cat.alt_az
+    za = np.pi / 2 - alt
+
+    vals = modfunc(az, za, **modkwargs)
+
+    assert cat.nside == map_nside
+    assert np.allclose(cat.stokes[0].to_value("K"), vals)
 
 
 def test_catalog_from_params():

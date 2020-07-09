@@ -13,6 +13,8 @@ from astropy.coordinates import EarthLocation
 from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
 
+from pyuvsim.astropy_interface import hasmoon, MoonLocation
+
 
 def pytest_collection_modifyitems(session, config, items):
     # Enforce that the profiler test is run last.
@@ -75,3 +77,11 @@ def cst_beam():
 @pytest.fixture(scope='session')
 def hera_loc():
     return EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
+
+
+@pytest.fixture(scope='session')
+def apollo_loc():
+    if hasmoon:
+        return MoonLocation(lat=0.6875, lon=24.433, height=0)
+    else:
+        return None

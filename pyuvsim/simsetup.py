@@ -166,13 +166,13 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     return_data: bool
         If True, return a SkyModelData object instead of SkyModel.
     diffuse_model: str
-        If arrangement == 'diffuse', name of the diffuse model to generate.
+        If arrangement is 'diffuse', name of the diffuse model to generate.
         See documentation in `analytic_diffuse.models` for details.
     diffuse_params: dict
-        If arrangement == 'diffuse', extra parameters accepted by the chosen model.
+        If arrangement is 'diffuse', extra parameters accepted by the chosen model.
         See documentation in `analytic_diffuse.models` for details.
     map_nside: int
-        If arrangement == 'diffuse', nside parameter for the healpix map to make.
+        If arrangement is 'diffuse', nside parameter for the healpix map to make.
 
     Returns
     -------
