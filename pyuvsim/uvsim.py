@@ -7,6 +7,7 @@ import yaml
 from datetime import timedelta
 import time as pytime
 import warnings
+import ast
 from astropy.coordinates import EarthLocation
 import astropy.units as units
 from astropy.units import Quantity
@@ -359,11 +360,12 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         del sky
 
 
-def serial_gather(uvtask_list, uv_out):
+def serial_gather(list_of_task_dicts, uv_out):
     """Loop over uvtask list, acquire visibilities and add to uvdata object."""
-    for task in uvtask_list:
-        blt_ind, spw_ind, freq_ind = task.uvdata_index
-        uv_out.data_array[blt_ind, spw_ind, freq_ind, :] += task.visibility_vector
+    for uvtask_list in list_of_task_dicts:
+        for index, vis in uvtask_list.items():
+            blt_ind, spw_ind, freq_ind = ast.literal_eval(index)
+            uv_out.data_array[blt_ind, spw_ind, freq_ind, :] += vis
 
     return uv_out
 
@@ -482,12 +484,11 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     count = mpi.Counter()
     for task in local_task_iter:
         engine.set_task(task)
+        vis = engine.make_visibility()
         if task.uvdata_index not in summed_task_dict.keys():
-            summed_task_dict[task.uvdata_index] = task
-        if summed_task_dict[task.uvdata_index].visibility_vector is None:
-            summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
+            summed_task_dict[task.uvdata_index] = vis
         else:
-            summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
+            summed_task_dict[task.uvdata_index] += vis
 
         count.next()
         if rank == 0 and not quiet:
@@ -526,26 +527,14 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
             for k, v in axes_dict.items():
                 afile.write("{} \t {:d}\n".format(k, int(v)))
 
-    # All the sources in this summed list are foobar-ed
-    # Source are summed over but only have 1 name
-    # Some source may be correct
-    summed_local_task_list = list(summed_task_dict.values())
-    # Tasks contain attributes that are not pickle-able.
-    # Remove everything except uvdata_index and visibility_vector
-    for task in summed_local_task_list:
-        del task.time
-        del task.freq
-        del task.freq_i
-        del task.sources
-        del task.baseline
-        del task.telescope
 
     # gather all the finished local tasks into a list of list of len NPUs
     # gather is a blocking communication, have to wait for all PUs
     print("Gathering full task list.", flush=True)
     if rank == 0:
         t0 = pytime.time()
-    full_tasklist = mpi.big_gather(comm, summed_local_task_list, root=0)
+    summed_task_dict = {str(key) : val for (key, val) in summed_task_dict.items()}
+    full_tasklist = mpi.big_gather(comm, summed_task_dict, root=0)
     if rank == 0:
         print("... gathering completed: {}".format(
             timedelta(seconds=pytime.time() - t0)
@@ -555,8 +544,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     # Concatenate the list of lists into a flat list of tasks
     if rank == 0:
         localtasks_count = np.sum(localtasks_count)
-        uvtask_list = sum(full_tasklist, [])
-        uvdata_out = serial_gather(uvtask_list, uv_container)
+        uvdata_out = serial_gather(full_tasklist, uv_container)
 
         return uvdata_out
 

@@ -7,7 +7,9 @@ from array import array
 from threading import Thread
 import resource
 import atexit
-from msgpack import loads, dumps
+import pickle
+import msgpack
+import msgpack_numpy
 
 import mpi4py
 import numpy as np
@@ -203,7 +205,7 @@ def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
             buf = objs.tobytes()
             nopickle = True
         else:
-            buf = dumps(objs)
+            buf = pickle.dumps(objs)
         bufsize = len(buf)
 
     # Sizes of send buffers to be sent from each rank.
@@ -231,7 +233,7 @@ def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
         result = np.frombuffer(buf, dtype=dtype)
         result = result.reshape(shape)
     else:
-        result = loads(buf)
+        result = pickle.loads(buf)
 
     if comm.rank == root:
         split_info_dict = {'MAX_BYTES': MAX_BYTES, 'ranges': ranges}
@@ -280,9 +282,12 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
         - ranges: A list of tuples, giving the start and end byte of each chunk.
         - MAX_BYTES: The size limit that was used.
     """
-
-    # The limit is on the integer describing the number of bytes gathered.
-    sbuf = dumps(objs)
+    use_msgpack = True
+    try:
+        sbuf = msgpack.dumps(objs, default=msgpack_numpy.encode)
+    except TypeError:
+        use_msgpack = False
+        sbuf = pickle.dumps(objs)
     bytesize = len(sbuf)
 
     # Sizes of send buffers to be sent from each rank.
@@ -297,7 +302,6 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
 
     # Position in the output buffer for the current send buffer.
     start_loc = sum(counts[:comm.rank])
-
     start = 0
     end = 0
     ranges = []
@@ -323,11 +327,14 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
         )
         if comm.rank == 0:
             rbuf[start:end] = cur_rbuf[:]
-
+    rbuf = rbuf.tobytes()
     per_proc = None
     if comm.rank == root:
-        per_proc = []
-        per_proc = [loads(rbuf[displ[ii]:displ[ii] + counts[ii]]) for ii in range(comm.size)]
+        if use_msgpack:
+            per_proc = [msgpack.loads(rbuf[displ[ii]:displ[ii] + counts[ii]], object_hook=msgpack_numpy.decode) for ii in range(comm.size)]
+        else:
+            per_proc = [pickle.loads(rbuf[displ[ii]:displ[ii] + counts[ii]]) for ii in range(comm.size)]
+
 
     split_info_dict = None
     if comm.rank == root:
