@@ -331,10 +331,15 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
     per_proc = None
     if comm.rank == root:
         if use_msgpack:
-            per_proc = [msgpack.loads(rbuf[displ[ii]:displ[ii] + counts[ii]], object_hook=msgpack_numpy.decode) for ii in range(comm.size)]
+            per_proc = [
+                msgpack.loads(rbuf[displ[ii]:displ[ii] + counts[ii]],
+                              object_hook=msgpack_numpy.decode)
+                for ii in range(comm.size)
+            ]
         else:
-            per_proc = [pickle.loads(rbuf[displ[ii]:displ[ii] + counts[ii]]) for ii in range(comm.size)]
-
+            per_proc = [
+                pickle.loads(rbuf[displ[ii]:displ[ii] + counts[ii]]) for ii in range(comm.size)
+            ]
 
     split_info_dict = None
     if comm.rank == root:

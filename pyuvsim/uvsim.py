@@ -527,7 +527,6 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
             for k, v in axes_dict.items():
                 afile.write("{} \t {:d}\n".format(k, int(v)))
 
-
     # gather all the finished local tasks into a list of list of len NPUs
     # gather is a blocking communication, have to wait for all PUs
     print("Gathering full task list.", flush=True)
