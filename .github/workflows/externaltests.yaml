@@ -1,0 +1,39 @@
+name: External Tests
+on: [push, pull_request]
+
+jobs:
+  pyuvsim:
+    name: herasim
+    runs-on: ubuntu-latest
+    env:
+      ENV_NAME: herasim
+      PYTHON: 3.7
+
+    steps:
+      - uses: actions/checkout@master
+        with:
+         fetch-depth: 1
+      - name: Get Miniconda Linux
+        run: |
+          wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/miniconda.sh;
+          bash $HOME/miniconda.sh -b -p $HOME/miniconda
+
+      - name: Setup paths
+        shell: bash
+        run: |
+          echo "::add-path::$HOME/miniconda/bin"
+          echo "::add-path::$HOME/miniconda/envs/test/bin"
+
+      - name: Setup Environment
+        run: ./ci/install_conda.sh
+
+      - name: run herasim tests
+        run: |
+          source activate $ENV_NAME
+          pip install --no-deps .
+          cd ../
+          git clone https://github.com/HERA-Team/hera_sim.git
+          cd hera_sim
+          pip install --no-deps .
+          mkdir test-reports
+          python -m pytest hera_sim --junitxml=test-reports/xunit.xml
