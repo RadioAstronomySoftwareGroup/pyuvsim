@@ -2,6 +2,7 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
+import numpy as np
 import sys
 from array import array as _array
 import struct as _struct
@@ -10,7 +11,6 @@ import atexit
 from pickle import loads, dumps
 
 import mpi4py
-import numpy as np
 
 mpi4py.rc.initialize = False  # noqa
 from mpi4py import MPI
@@ -348,7 +348,7 @@ class Counter:
     def __init__(self, comm=None, count_rank=0):
         self.count_rank = count_rank
         if comm is None:
-            comm = world_comm
+            comm = world_comm.Dup()
         rank = comm.Get_rank()
         itemsize = MPI.INT.Get_size()
         nint = 0
