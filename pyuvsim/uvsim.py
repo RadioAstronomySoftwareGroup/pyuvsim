@@ -485,6 +485,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
             )
             offset = flat_ind * size_complex
             vis_data.Accumulate(vis, 0, target=offset, op=mpi.MPI.SUM)
+            vis_data.Fence()
         else:
             vis_data[blti, spw, freq_ind, :] += vis
 

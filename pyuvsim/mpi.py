@@ -44,14 +44,14 @@ def start_mpi(block_nonroot_stdout=True):
 
     Parameters
     ----------
-
-    block_nonroot_stdout : bool (True)
+    block_nonroot_stdout : bool
         Redirect stdout on nonzero ranks to /dev/null, for cleaner output.
+        Default True.
 
     """
     global world_comm, node_comm, rank_comm, rank, Npus
     if not MPI.Is_initialized():
-        MPI.Init_thread(MPI.THREAD_MULTIPLE)
+        MPI.Init_thread(MPI.THREAD_SERIALIZED)     # RMA is incompatible with THREAD_MULTIPLE.
         atexit.register(MPI.Finalize)
     world_comm = MPI.COMM_WORLD
     node_comm = world_comm.Split_type(MPI.COMM_TYPE_SHARED)
