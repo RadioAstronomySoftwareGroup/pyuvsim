@@ -421,7 +421,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         uv_container = simsetup._complete_uvdata(input_uv, inplace=False)
         if 'world' in input_uv.extra_keywords:
             uv_container.extra_keywords['world'] = input_uv.extra_keywords['world']
-        vis_data = mpi.MPI.Win.Create(uv_container._data_array.value, comm = mpi.world_comm)
+        vis_data = mpi.MPI.Win.Create(uv_container._data_array.value, comm=mpi.world_comm)
     else:
         vis_data = mpi.MPI.Win.Create(None, comm=mpi.world_comm)
 
@@ -472,10 +472,14 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     count = mpi.Counter()
     size_complex = np.ones(1, dtype=complex).nbytes
     data_array_shape = (Nbls * Ntimes, 1, Nfreqs, 4)
+    uvdata_indices = []
     for task in local_task_iter:
         engine.set_task(task)
         vis = engine.make_visibility()
+
         blti, spw, freq_ind = task.uvdata_index
+
+        uvdata_indices.append(task.uvdata_index)
 
         flat_ind = np.ravel_multi_index(
             (blti, spw, freq_ind, 0), data_array_shape
@@ -496,29 +500,29 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     if rank == 0 and not quiet:
         print("Calculations Complete.", flush=True)
 
- #   # If profiling is active, save meta data:
- #   from .profiling import prof     # noqa
- #   if hasattr(prof, 'meta_file'):  # pragma: nocover
- #       # Saving axis sizes on current rank (local) and for the whole job (global).
- #       # These lines are affected by issue 179 of line_profiler, so the nocover
- #       # above will need to stay until this issue is resolved (see profiling.py).
- #       task_inds = np.array(list(summed_task_dict.keys()))
- #       bl_inds = task_inds[:, 0] % Nbls
- #       time_inds = (task_inds[:, 0] - bl_inds) // Nbls
- #       Ntimes_loc = np.unique(time_inds).size
- #       Nbls_loc = np.unique(bl_inds).size
- #       Nfreqs_loc = np.unique(task_inds[:, 2]).size
- #       axes_dict = {
- #           'Ntimes_loc': Ntimes_loc,
- #           'Nbls_loc': Nbls_loc,
- #           'Nfreqs_loc': Nfreqs_loc,
- #           'Nsrcs_loc': Nsky_parts,
- #           'prof_rank': prof.rank
- #       }
+    # If profiling is active, save meta data:
+    from .profiling import prof     # noqa
+    if hasattr(prof, 'meta_file'):  # pragma: nocover
+        # Saving axis sizes on current rank (local) and for the whole job (global).
+        # These lines are affected by issue 179 of line_profiler, so the nocover
+        # above will need to stay until this issue is resolved (see profiling.py).
+        task_inds = np.array(uvdata_indices)
+        bl_inds = task_inds[:, 0] % Nbls
+        time_inds = (task_inds[:, 0] - bl_inds) // Nbls
+        Ntimes_loc = np.unique(time_inds).size
+        Nbls_loc = np.unique(bl_inds).size
+        Nfreqs_loc = np.unique(task_inds[:, 2]).size
+        axes_dict = {
+            'Ntimes_loc': Ntimes_loc,
+            'Nbls_loc': Nbls_loc,
+            'Nfreqs_loc': Nfreqs_loc,
+            'Nsrcs_loc': Nsky_parts,
+            'prof_rank': prof.rank
+        }
 
- #       with open(prof.meta_file, 'w') as afile:
- #           for k, v in axes_dict.items():
- #               afile.write("{} \t {:d}\n".format(k, int(v)))
+        with open(prof.meta_file, 'w') as afile:
+            for k, v in axes_dict.items():
+                afile.write("{} \t {:d}\n".format(k, int(v)))
 
     vis_data.Fence()
     vis_data.Free()
