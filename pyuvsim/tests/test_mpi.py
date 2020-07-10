@@ -107,7 +107,6 @@ def test_mpi_counter():
         count.next()
     mpi.world_comm.Barrier()
     assert count.current_value() == N * mpi.world_comm.size
-    count.free()
 
 
 @pytest.mark.parametrize('MAX_BYTES', [mpi.INT_MAX, 100])

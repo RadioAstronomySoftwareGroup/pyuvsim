@@ -488,9 +488,9 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         vis_data.Accumulate(vis, 0, target=offset, op=mpi.MPI.SUM)
         vis_data.Fence()
 
-        count.next()
+        cval = count.next()
         if rank == 0 and not quiet:
-            pbar.update(count.current_value())
+            pbar.update(cval)
 
     comm.Barrier()
     count.free()

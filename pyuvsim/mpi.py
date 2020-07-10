@@ -343,6 +343,10 @@ class Counter:
 
     Adapted from the mpi4py nxtval-mpi3.py demo.
     https://github.com/mpi4py/mpi4py/blob/master/demo/nxtval/nxtval-mpi3.py
+
+    Notes
+    -----
+    Must be initialized and freed (using method "free") on all processes.
     """
 
     def __init__(self, comm=None, count_rank=0):
@@ -363,6 +367,7 @@ class Counter:
         self.win.Fence()
 
     def free(self):
+        self.win.Fence()
         self.win.Free()
 
     def next(self, increment=1):
@@ -380,7 +385,8 @@ class Counter:
         nval = _array('i', [0])
         self.win.Get([nval, 1, MPI.INT], 0)
         self.win.Unlock(0)
-        return nval[0]
+        val = nval[0]
+        return val
 
 
 def get_max_node_rss(return_per_node=False):

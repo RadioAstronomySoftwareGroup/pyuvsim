@@ -42,7 +42,7 @@ class progsteps:
         if step < 1.0:
             step = 1
         self.step = step
-        self.curval = -1
+        self.curval = 0
         self.remain = None
 
     def update(self, count):
