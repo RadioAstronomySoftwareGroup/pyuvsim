@@ -421,15 +421,12 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         uv_container = simsetup._complete_uvdata(input_uv, inplace=False)
         if 'world' in input_uv.extra_keywords:
             uv_container.extra_keywords['world'] = input_uv.extra_keywords['world']
-        if mpi.world_comm.size > 1:
-            vis_data = mpi.MPI.Win.Create(uv_container._data_array.value, comm = mpi.world_comm)
-        else:
-            vis_data = uv_container._data_array.value
+        vis_data = mpi.MPI.Win.Create(uv_container._data_array.value, comm = mpi.world_comm)
     else:
         vis_data = mpi.MPI.Win.Create(None, comm=mpi.world_comm)
 
-    if mpi.world_comm.size > 1:
-        vis_data.Fence()
+    vis_data.Fence()
+
     Nbls = input_uv.Nbls
     Ntimes = input_uv.Ntimes
     Nfreqs = input_uv.Nfreqs
@@ -479,15 +476,13 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         engine.set_task(task)
         vis = engine.make_visibility()
         blti, spw, freq_ind = task.uvdata_index
-        if mpi.world_comm.size > 1:
-            flat_ind = np.ravel_multi_index(
-                (blti, spw, freq_ind, 0), data_array_shape
-            )
-            offset = flat_ind * size_complex
-            vis_data.Accumulate(vis, 0, target=offset, op=mpi.MPI.SUM)
-            vis_data.Fence()
-        else:
-            vis_data[blti, spw, freq_ind, :] += vis
+
+        flat_ind = np.ravel_multi_index(
+            (blti, spw, freq_ind, 0), data_array_shape
+        )
+        offset = flat_ind * size_complex
+        vis_data.Accumulate(vis, 0, target=offset, op=mpi.MPI.SUM)
+        vis_data.Fence()
 
         count.next()
         if rank == 0 and not quiet:
@@ -525,9 +520,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
  #           for k, v in axes_dict.items():
  #               afile.write("{} \t {:d}\n".format(k, int(v)))
 
-    if mpi.world_comm.size > 1:
-        vis_data.Fence()
-        vis_data.Free()
+    vis_data.Fence()
+    vis_data.Free()
 
     if rank == 0:
         return uv_container
