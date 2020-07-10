@@ -69,7 +69,6 @@ def pytest_runtest_call(item):
         issubproc = bool(int(issubproc))
     except ValueError:
         pass
-
     call = ['mpirun', '--host', 'localhost:10', '-n', str(nproc),
             "python", "-m", "pytest", "{:s}::{:s}".format(str(item.fspath), str(item.name))]
     call.extend(["--tb=no", '-q', '--runxfail', '-s'])
@@ -79,7 +78,7 @@ def pytest_runtest_call(item):
             envcopy['TEST_IN_PARALLEL'] = '1'
             check_output(call, env=envcopy, timeout=70)
         except (TimeoutExpired, CalledProcessError) as err:
-            message = "Parallelized test {item.name} failed"
+            message = f"Parallelized test {item.name} failed"
             if isinstance(err, TimeoutExpired):
                 message += " due to timeout"
             message += "."
