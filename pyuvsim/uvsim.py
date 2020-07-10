@@ -526,6 +526,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
 
     if mpi.world_comm.size > 1:
         vis_data.Fence()
+        vis_data.Free()
 
     if rank == 0:
         return uv_container
