@@ -425,8 +425,6 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     else:
         vis_data = mpi.MPI.Win.Create(None, comm=mpi.world_comm)
 
-    vis_data.Fence()
-
     Nbls = input_uv.Nbls
     Ntimes = input_uv.Ntimes
     Nfreqs = input_uv.Nfreqs
@@ -473,6 +471,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     size_complex = np.ones(1, dtype=complex).nbytes
     data_array_shape = (Nbls * Ntimes, 1, Nfreqs, 4)
     uvdata_indices = []
+
     for task in local_task_iter:
         engine.set_task(task)
         vis = engine.make_visibility()
@@ -485,13 +484,14 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
             (blti, spw, freq_ind, 0), data_array_shape
         )
         offset = flat_ind * size_complex
+
+        vis_data.Lock(0)
         vis_data.Accumulate(vis, 0, target=offset, op=mpi.MPI.SUM)
-        vis_data.Fence()
+        vis_data.Unlock(0)
 
         cval = count.next()
         if rank == 0 and not quiet:
             pbar.update(cval)
-
     comm.Barrier()
     count.free()
     if rank == 0 and not quiet:
@@ -524,7 +524,6 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
             for k, v in axes_dict.items():
                 afile.write("{} \t {:d}\n".format(k, int(v)))
 
-    vis_data.Fence()
     vis_data.Free()
 
     if rank == 0:
