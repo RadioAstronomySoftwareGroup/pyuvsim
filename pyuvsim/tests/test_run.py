@@ -23,12 +23,14 @@ pytest.importorskip('mpi4py')  # noqa
 @pytest.fixture
 def goto_tempdir(tmpdir):
     # Run test within temporary directory.
+    newpath = str(tmpdir)
     cwd = os.getcwd()
-    os.chdir(str(tmpdir))
+    os.chdir(newpath)
 
-    yield
+    yield newpath
 
     os.chdir(cwd)
+
 
 @pytest.mark.parametrize('paramfile', ['param_1time_1src_testcat.yaml',
                                        'param_1time_1src_testvot.yaml'])
@@ -44,9 +46,11 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # This test obsparam file has "single_source.txt" as its catalog.
     pyuvsim.uvsim.run_uvsim(param_filename)
 
-    # For rank != 0, the tempdir will be different.
-    # This gets the path to the output file to all processes.
-    path = pyuvsim.mpi.world_comm.bcast(os.getcwd(), root=0)
+    # Loading the file and comparing is only done on rank 0.
+    if pyuvsim.mpi.rank != 0:
+        return
+
+    path = goto_tempdir
     ofilepath = os.path.join(path, 'tempfile.uvfits')
 
     uv_new = UVData()
