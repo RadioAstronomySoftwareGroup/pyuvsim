@@ -19,6 +19,7 @@ from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
 
 from pyuvsim.astropy_interface import hasmoon, MoonLocation
+from pyuvsim import mpi
 
 
 issubproc = os.environ.get('TEST_IN_PARALLEL', 0)
@@ -45,6 +46,18 @@ def pytest_configure(config):
         "markers",
         "parallel(n): mark test to run in n parallel mpi processes."
     )
+
+
+def pytest_addoption(parser):
+    parser.addoption("--nompi", action="store_true", help="skip mpi-parallelized tests.")
+
+
+def pytest_runtest_setup(item):
+    if 'parallel' in item.keywords:
+        if mpi is None:
+            pytest.skip("Need mpi4py to run parallelized test.")
+        elif item.config.getvalue('nompi'):
+            pytest.skip("Skipping parallelized tests with --nompi option.")
 
 
 @pytest.hookimpl(hookwrapper=True)
