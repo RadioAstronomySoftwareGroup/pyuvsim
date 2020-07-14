@@ -23,7 +23,7 @@ import pyradiosky
 
 @pytest.fixture(scope='module', autouse=True)
 def start_mpi():
-    mpi.start_mpi()
+    mpi.start_mpi(False)
 
 
 @pytest.fixture(scope='module')
