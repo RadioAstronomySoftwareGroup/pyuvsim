@@ -135,6 +135,9 @@ pytest
 You can alternatively run ```python -m pytest pyuvsim``` or ```python setup.py test```.
 You will need to have all dependencies installed.
 
+Some tests are run in parallel using the mpi4py module. Those tests have a decorator ``pytest.mark.parallel(n)``` where ```n``` is an integer giving the number
+of parallel processes to run the test on. To temporarily disable parallel tests, run pytest with the option ```--nompi```.
+
 ## Where to find Support
 
 Please feel free to submit new issues to the [issue log](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/issues) to request new features, document new bugs, or ask questions.
