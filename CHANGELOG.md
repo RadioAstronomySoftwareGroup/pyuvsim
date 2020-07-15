@@ -4,6 +4,10 @@
 
 ### Added
 - Support for unit tests parallelized with MPI.
+- Require that future changes not drastically increase runtime for current capabilities.
+
+### Changed
+- Use remote memory access to collect finished visibility data, without serialization.
 
 
 ## [1.2.0] - 2020-7-20
