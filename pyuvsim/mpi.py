@@ -346,7 +346,7 @@ class Counter:
 
     Notes
     -----
-    Must be initialized and freed (using method "free") on all processes.
+    Must be initialized on all processes.
     """
 
     def __init__(self, comm=None, count_rank=0):
