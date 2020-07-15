@@ -28,7 +28,7 @@
 - Error early if the task list is too long for gather.
 
 ### Deprecated
-- Support for pyradiosky versions <0.0.3.
+- Support for pyradiosky versions <0.1.0.
 
 ## [1.1.2] - 2020-2-14
 
