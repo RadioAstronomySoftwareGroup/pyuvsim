@@ -364,10 +364,9 @@ class Counter:
             mem = self.win.tomemory()
             mem[:] = _struct.pack('i', 0)
 
-        self.win.Fence()
+        comm.Barrier()
 
     def free(self):
-        self.win.Fence()
         self.win.Free()
 
     def next(self, increment=1):
@@ -385,8 +384,7 @@ class Counter:
         nval = _array('i', [0])
         self.win.Get([nval, 1, MPI.INT], 0)
         self.win.Unlock(0)
-        val = nval[0]
-        return val
+        return nval[0]
 
 
 def get_max_node_rss(return_per_node=False):
