@@ -3,6 +3,7 @@
 ## [1.2.0] - 2020-7-20
 
 ### Added
+- Support for unit tests parallelized with MPI.
 - Diffuse models in mock catalogs, via the analytic_diffuse module.
 - quantity_shared_bcast function to allow objects derived from astropy.units.Quantity to use shared memory broadcasting.
 - SkyModelData class to replace recarray conversion in pyradiosky.
