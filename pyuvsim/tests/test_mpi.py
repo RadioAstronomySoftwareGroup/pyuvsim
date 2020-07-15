@@ -105,6 +105,7 @@ def test_mpi_counter():
     N = 20
     for i in range(N):
         count.next()
+    mpi.world_comm.Barrier()
     assert count.current_value() == N * mpi.world_comm.size
     count.free()
 
