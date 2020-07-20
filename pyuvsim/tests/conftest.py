@@ -56,7 +56,7 @@ def pytest_addoption(parser):
 def pytest_runtest_setup(item):
     if 'parallel' in item.keywords:
         if mpi is None:
-            pytest.skip("Need mpi4py to run parallelized test.")
+            pytest.skip("Need mpi4py to run parallelized tests.")
         elif item.config.getoption('nompi', False):
             pytest.skip("Skipping parallelized tests with --nompi option.")
 
