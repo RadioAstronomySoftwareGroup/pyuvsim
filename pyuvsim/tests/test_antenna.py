@@ -43,12 +43,8 @@ def test_jones_set_spline(cst_beam, hera_loc):
 
     vers = pyuvdata.__version__.split('.')
     version = (float(vers[0]), float(vers[1]), float(vers[2]))
-    if version[0] < 2 or (version[0] >= 2 and version[2] < 1 and version[1] < 1):
-        with pytest.raises(TypeError, match='pyuvdata version >=2.0.1'):
-            antenna.get_beam_jones(array, altaz, 150e6)
-    else:
-        array.beam_list.spline_interp_opts = None
-        antenna.get_beam_jones(array, altaz, 150e6)
+    array.beam_list.spline_interp_opts = None
+    antenna.get_beam_jones(array, altaz, 150e6)
 
 
 def test_jones_set_interp(cst_beam, hera_loc):
