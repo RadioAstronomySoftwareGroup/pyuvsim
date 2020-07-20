@@ -4,17 +4,13 @@
 
 import numpy as np
 import yaml
-import warnings
 from astropy.coordinates import EarthLocation
 import astropy.units as units
 from astropy.units import Quantity
 from astropy.constants import c as speed_of_light
 from pyuvdata import UVData
 
-try:
-    from . import mpi
-except ImportError:
-    mpi = None
+from . import mpi
 from . import simsetup
 from . import utils as simutils
 from .antenna import Antenna
@@ -138,20 +134,10 @@ class UVEngine(object):
     def apply_beam(self):
         """ Set apparent coherency from jones matrices and source coherency. """
 
-        if not self.update_beams:
-            return
-
         beam1_id, beam2_id = self.current_beam_pair
 
         sources = self.task.sources
         baseline = self.task.baseline
-
-        if not hasattr(sources, 'above_horizon'):
-            warnings.warn("SkyModel class lacks horizon cut on position and coherency calculations."
-                          " This will slow evaluation considerably. Please update your pyradiosky"
-                          " installation to the latest version."
-                          , DeprecationWarning)
-            setattr(sources, "above_horizon", slice(None))
 
         if sources.alt_az is None:
             sources.update_positions(self.task.time, self.task.telescope.location)
@@ -275,7 +261,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     #   Skymodel will now be passed in as a catalog array.
     if not isinstance(catalog, SkyModelData):
         raise TypeError("catalog must be a SkyModelData object.")
-
     # Splitting the catalog for memory's sake.
     Nsrcs_total = catalog.Ncomponents
     if Nsky_parts > 1:
@@ -320,14 +305,17 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
     for src_i in src_iter:
         sky = catalog.get_skymodel(src_i)
+        if (
+            sky.spectral_type == 'flat'
+            and sky.freq_array is None
+            and sky.reference_frequency is None
+        ):
+            sky.freq_array = freq_array[0]
         if sky.component_type == 'healpix' and hasattr(sky, 'healpix_to_point'):
             sky.healpix_to_point()
-        if sky.spectral_type != 'flat' and hasattr(sky, 'at_frequencies'):
+        if sky.spectral_type != 'flat':
             sky.at_frequencies(freq_array[0])
-        elif sky.spectral_type == 'full':
-            if not np.allclose(sky.freq_array, freq_array):
-                raise ValueError("SkyModel spectral type is 'full', and "
-                                 "its frequencies do not match simulation frequencies.")
+
         for task_index in task_ids:
             # Shape indicates slowest to fastest index.
             if not isinstance(task_index, tuple):

@@ -1,0 +1,20 @@
+filing:
+  outdir: '.'
+  outfile_name: 'sim_results.uvfits'
+freq:
+  Nfreqs: 1
+  bandwidth: 800000.0
+  start_freq: 100000000.0
+sources:
+  catalog: 'mock'
+  time: 2457458.1738949567
+  mock_arrangement: 'diffuse'
+  diffuse_model: 'monopole'
+  map_nside: 128
+telescope:
+  telescope_config_name: 'hera_uniform.yaml'
+  array_layout: 'triangle_bl_layout.csv'
+time:
+  Ntimes: 1
+  integration_time: 11.0
+  start_time: 2457458.1738949567

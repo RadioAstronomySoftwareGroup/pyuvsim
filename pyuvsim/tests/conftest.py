@@ -4,23 +4,31 @@
 
 """Testing environment setup and teardown for pytest."""
 import os
-import shutil
 import warnings
 
 import pytest
 from astropy.time import Time
 from astropy.utils import iers
+from astropy.coordinates import EarthLocation
+from pyuvdata import UVBeam
+from pyuvdata.data import DATA_PATH
 
-from pyuvsim.data import DATA_PATH
+from pyuvsim.astropy_interface import hasmoon, MoonLocation
+
+
+def pytest_collection_modifyitems(session, config, items):
+    # Enforce that the profiler test is run last.
+
+    if len(items) <= 1:
+        return
+    for ii, it in enumerate(items):
+        if 'profiler' in it.name:
+            break
+    items.append(items.pop(ii))     # Move to the end.
 
 
 @pytest.fixture(autouse=True, scope="session")
 def setup_and_teardown_package():
-    """Make data/test directory to put test output files in."""
-    testdir = os.path.join(DATA_PATH, 'temporary_test_data/')
-    if not os.path.exists(testdir):
-        os.mkdir(testdir)
-
     # Do a calculation that requires a current IERS table. This will trigger
     # automatic downloading of the IERS table if needed, including trying the
     # mirror site in python 3 (but won't redownload if a current one exists).
@@ -38,10 +46,6 @@ def setup_and_teardown_package():
 
     iers.conf.auto_max_age = 30
 
-    # clean up the test directory after
-    if os.path.exists(testdir):
-        shutil.rmtree(testdir)
-
 
 @pytest.fixture(autouse=True)
 def ignore_deprecation():
@@ -50,3 +54,34 @@ def ignore_deprecation():
     warnings.filterwarnings('ignore', message='"initialize_catalog_from_params will not return'
                                               ' recarray by default in the future.',
                             category=PendingDeprecationWarning)
+
+
+@pytest.fixture(scope='session')
+def cst_beam():
+    beam = UVBeam()
+    beam.freq_interp_kind = 'linear'
+
+    freqs = [150e6, 123e6]
+
+    cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
+    beam_files = [os.path.join(DATA_PATH, 'NicCSTbeams', f) for f in cst_files]
+    beam.read_cst_beam(
+        beam_files, beam_type='efield', frequency=freqs,
+        telescope_name='HERA', feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+        model_name='E-field pattern - Rigging height 4.9m', model_version='1.0'
+    )
+    beam.peak_normalize()
+    return beam
+
+
+@pytest.fixture(scope='session')
+def hera_loc():
+    return EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
+
+
+@pytest.fixture(scope='session')
+def apollo_loc():
+    if hasmoon:
+        return MoonLocation(lat=0.6875, lon=24.433, height=0)
+    else:
+        return None

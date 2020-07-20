@@ -37,12 +37,10 @@ manytimes_config = os.path.join(
 gleam_param_file = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml')
 
 
-def test_mock_catalog_zenith_source():
+def test_mock_catalog_zenith_source(hera_loc):
     time = Time(2457458.65410, scale='utc', format='jd')
 
-    array_location = EarthLocation(
-        lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.
-    )
+    array_location = hera_loc
 
     source_coord = SkyCoord(
         alt=Angle(90 * units.deg), az=Angle(0 * units.deg),
@@ -53,22 +51,20 @@ def test_mock_catalog_zenith_source():
     ra = icrs_coord.ra
     dec = icrs_coord.dec
 
-    test_source = pyradiosky.SkyModel('src0', ra, dec, [1, 0, 0, 0], 'flat')
+    test_source = pyradiosky.SkyModel('src0', ra, dec, units.Quantity([1, 0, 0, 0], 'Jy'), 'flat')
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
     assert cat == test_source
 
 
-def test_mock_catalog_off_zenith_source():
+def test_mock_catalog_off_zenith_source(hera_loc):
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
 
     time = Time(2457458.65410, scale='utc', format='jd')
 
-    array_location = EarthLocation(
-        lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.
-    )
+    array_location = hera_loc
 
     source_coord = SkyCoord(
         alt=src_alt, az=src_az, obstime=time, frame='altaz', location=array_location
@@ -77,7 +73,7 @@ def test_mock_catalog_off_zenith_source():
 
     ra = icrs_coord.ra
     dec = icrs_coord.dec
-    test_source = pyradiosky.SkyModel('src0', ra, dec, [1.0, 0, 0, 0], 'flat')
+    test_source = pyradiosky.SkyModel('src0', ra, dec, units.Quantity([1.0, 0, 0, 0], "Jy"), 'flat')
 
     cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith',
                                                      alt=src_alt.deg)
@@ -85,14 +81,63 @@ def test_mock_catalog_off_zenith_source():
     assert cat == test_source
 
 
+def test_mock_diffuse_maps_errors():
+    analytic_diffuse = pyuvsim.simsetup.analytic_diffuse
+    astropy_healpix = pyuvsim.simsetup.astropy_healpix
+    if (analytic_diffuse is not None) and (astropy_healpix is not None):
+
+        # Error cases:
+        with pytest.raises(ValueError, match="Diffuse arrangement selected"):
+            pyuvsim.simsetup.create_mock_catalog(Time.now(), arrangement='diffuse')
+
+        with pytest.warns(UserWarning, match="No nside chosen"):
+            pyuvsim.simsetup.create_mock_catalog(
+                Time.now(), arrangement='diffuse', diffuse_model='monopole'
+            )
+
+    else:
+        with pytest.raises(ValueError, match="analytic_diffuse and astropy_healpix"):
+            pyuvsim.simsetup.create_mock_catalog(Time.now(), arrangement='diffuse')
+
+
+@pytest.mark.parametrize('model', [
+                         ['monopole', {}],
+                         ['gauss', {'a': 0.05}],
+                         ['polydome', {'n': 4}]
+                         ])
+@pytest.mark.parametrize('location', ['earth', 'moon'])
+def test_mock_diffuse_maps(model, hera_loc, apollo_loc, location):
+    analytic_diffuse = pytest.importorskip('analytic_diffuse')
+    pytest.importorskip('astropy_healpix')
+    if location == 'earth':
+        loc = hera_loc
+    else:
+        loc = apollo_loc
+    modname, modkwargs = model
+    map_nside = 128
+    t0 = Time.now()
+    cat, kwds = pyuvsim.simsetup.create_mock_catalog(
+        t0, arrangement='diffuse', array_location=loc,
+        diffuse_model=modname, map_nside=map_nside,
+        diffuse_params=modkwargs
+    )
+
+    cat.update_positions(t0, loc)
+
+    modfunc = analytic_diffuse.get_model(modname)
+    alt, az = cat.alt_az
+    za = np.pi / 2 - alt
+
+    vals = modfunc(az, za, **modkwargs)
+
+    assert cat.nside == map_nside
+    assert np.allclose(cat.stokes[0].to_value("K"), vals)
+
+
 def test_catalog_from_params():
     # Pass in parameter dictionary as dict
     hera_uv = UVData()
-    with pytest.warns(
-        UserWarning,
-        match='Telescope 28m_triangle_10time_10chan.yaml is not in known_telescopes.'
-    ):
-        hera_uv.read_uvfits(triangle_uvfits_file)
+    hera_uv.read_uvfits(triangle_uvfits_file)
 
     source_dict = {}
     with pytest.raises(KeyError, match='No catalog defined.'):
@@ -256,112 +301,114 @@ def test_vot_catalog_error(key_pop, message):
         pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
 
 
-@pytest.mark.parametrize("config_num", [0, 2])
-def test_param_reader(config_num):
+def test_param_reader():
     pytest.importorskip('mpi4py')
     # Reading in various configuration files
 
-    param_filename = param_filenames[config_num]
+    param_filename = os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml")
     hera_uv = UVData()
-    with pytest.warns(UserWarning) as warn:
-        hera_uv.read_uvfits(triangle_uvfits_file)
-    assert str(warn.pop().message).startswith('Telescope 28m_triangle_10time_10chan.yaml '
-                                              'is not in known_telescopes.')
+    hera_uv.read_uvfits(triangle_uvfits_file)
 
+    hera_uv.unphase_to_drift()
     hera_uv.telescope_name = 'HERA'
-    if config_num == 5:
-        hera_uv.select(bls=[(0, 1), (1, 2)])
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_data=True)
 
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
+    beam0.extra_keywords['beam_path'] = herabeam_default
     beam1 = pyuvsim.AnalyticBeam('uniform')
     beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
     beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.6)
     beam_list = pyuvsim.BeamList([beam0, beam1, beam2, beam3])
 
+    # To fill out other parameters in the UVBeam.
+    beam_list.set_str_mode()
+    beam_list.set_obj_mode()
+
     beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2, 'ANT4': 3}
-    Ntasks = hera_uv.Nblts * hera_uv.Nfreqs
-    taskiter = pyuvsim.uvdata_to_task_iter(range(Ntasks), hera_uv, sources,
-                                           beam_list, beam_dict=beam_dict)
-    expected_uvtask_list = list(taskiter)
 
-    # Check error conditions:
-    if config_num == 0:
-        params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
-        bak_params_bad = copy.deepcopy(params_bad)
+    # Error conditions:
+    params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
+    bak_params_bad = copy.deepcopy(params_bad)
 
-        # Missing config file info
-        params_bad['config_path'] = os.path.join(
-            SIM_DATA_PATH, 'nonexistent_directory', 'nonexistent_file'
-        )
-        with pytest.raises(ValueError, match="nonexistent_directory is not a directory"):
-            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+    # Missing config file info
+    params_bad['config_path'] = os.path.join(
+        SIM_DATA_PATH, 'nonexistent_directory', 'nonexistent_file'
+    )
+    with pytest.raises(ValueError, match="nonexistent_directory is not a directory"):
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
-        params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
-        params_bad['telescope']['array_layout'] = 'nonexistent_file'
-        with pytest.raises(ValueError, match="nonexistent_file from yaml does not exist"):
-            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+    params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
+    params_bad['telescope']['array_layout'] = 'nonexistent_file'
+    with pytest.raises(ValueError, match="nonexistent_file from yaml does not exist"):
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
-        params_bad['telescope']['telescope_config_name'] = 'nonexistent_file'
-        with pytest.raises(ValueError, match="telescope_config_name file from yaml does not exist"):
-            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+    params_bad['telescope']['telescope_config_name'] = 'nonexistent_file'
+    with pytest.raises(ValueError, match="telescope_config_name file from yaml does not exist"):
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
-        # Missing beam keywords
-        params_bad = copy.deepcopy(bak_params_bad)
+    # Missing beam keywords
+    params_bad = copy.deepcopy(bak_params_bad)
 
-        params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
+    params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
 
-        params_bad = copy.deepcopy(bak_params_bad)
-        params_bad['telescope']['telescope_config_name'] = os.path.join(
-            SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_gaussnoshape.yaml'
-        )
-        with pytest.raises(KeyError,
-                           match="Missing shape parameter for gaussian beam"):
-            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+    params_bad = copy.deepcopy(bak_params_bad)
+    params_bad['telescope']['telescope_config_name'] = os.path.join(
+        SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_gaussnoshape.yaml'
+    )
+    with pytest.raises(KeyError,
+                       match="Missing shape parameter for gaussian beam"):
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
-        params_bad['telescope']['telescope_config_name'] = os.path.join(
-            SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml'
-        )
-        with pytest.raises(KeyError, match="Missing diameter for airy beam."):
-            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+    params_bad['telescope']['telescope_config_name'] = os.path.join(
+        SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml'
+    )
+    with pytest.raises(KeyError, match="Missing diameter for airy beam."):
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
-        params_bad['telescope']['telescope_config_name'] = os.path.join(
-            SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml'
-        )
-        with pytest.raises(ValueError, match="Undefined beam model"):
-            pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+    params_bad['telescope']['telescope_config_name'] = os.path.join(
+        SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml'
+    )
+    with pytest.raises(ValueError, match="Undefined beam model"):
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_filename)
     new_beam_list.set_obj_mode()
+
+    pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
 
     with open(param_filename, 'r') as fhandle:
         param_dict = yaml.safe_load(fhandle)
     expected_ofilepath = pyuvsim.utils.write_uvdata(
         uv_obj, param_dict, return_filename=True, dryrun=True
     )
-    ofilename = 'sim_results.uvfits'
-    if config_num == 1:
-        if os.path.isdir('tempdir'):
-            os.rmdir('tempdir')
-        ofilename = os.path.join('.', 'tempdir', ofilename)
-    else:
-        ofilename = os.path.join('.', ofilename)
-    assert ofilename == expected_ofilepath
+    assert './sim_results.uvfits' == expected_ofilepath
 
-    Ntasks = uv_obj.Nblts * uv_obj.Nfreqs
-    taskiter = pyuvsim.uvdata_to_task_iter(
-        range(Ntasks), hera_uv, sources, beam_list, beam_dict=beam_dict
-    )
-    uvtask_list = list(taskiter)
+    # Spoof attributes that won't match.
+    uv_obj.antenna_names = uv_obj.antenna_names.tolist()
+    uv_obj.antenna_diameters = hera_uv.antenna_diameters
+    uv_obj.history = hera_uv.history
 
-    # Tasks are not ordered in UVTask lists, so need to sort them.
-    uvtask_list = sorted(uvtask_list)
-    expected_uvtask_list = sorted(expected_uvtask_list)
-    assert uvtask_list == expected_uvtask_list
+    uvfits_required_extra = [
+        "_antenna_positions",
+        "_gst0",
+        "_rdate",
+        "_earth_omega",
+        "_dut1",
+        "_timesys",
+    ]
+    for attr in uvfits_required_extra:
+        param = getattr(uv_obj, attr)
+        if param.value is None:
+            param.value = param.spoof_val
+            setattr(uv_obj, attr, param)
+
+    assert new_beam_dict == beam_dict
+    assert new_beam_list == beam_list
+    assert uv_obj == hera_uv
 
 
 def test_tele_parser():
@@ -654,7 +701,7 @@ def test_param_select_redundant():
 
 
 @pytest.mark.parametrize('case', np.arange(6))
-def test_uvdata_keyword_init(case):
+def test_uvdata_keyword_init(case, tmpdir):
     base_kwargs = {
         "antenna_layout_filepath": os.path.join(SIM_DATA_PATH,
                                                 "test_config/triangle_bl_layout.csv"),
@@ -728,12 +775,12 @@ def test_uvdata_keyword_init(case):
         new_kwargs['output_layout_filename'] = layout_fname
         new_kwargs['output_yaml_filename'] = obsparam_fname
         new_kwargs['array_layout'] = antpos_d
-        new_kwargs['path_out'] = simtest.TESTDATA_PATH
+        new_kwargs['path_out'] = str(tmpdir)
         new_kwargs['write_files'] = True
 
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
-        layout_path = os.path.join(simtest.TESTDATA_PATH, layout_fname)
-        obsparam_path = os.path.join(simtest.TESTDATA_PATH, obsparam_fname)
+        layout_path = str(tmpdir.join(layout_fname))
+        obsparam_path = str(tmpdir.join(obsparam_fname))
         assert os.path.exists(layout_path)
         assert os.path.exists(obsparam_path)
 
@@ -881,12 +928,12 @@ def test_mock_catalogs():
     os.remove(fname)
 
 
-def test_keyword_param_loop():
+def test_keyword_param_loop(tmpdir):
     # Check that yaml/csv files made by intialize_uvdata_from_keywords will work
     # on their own.
     layout_fname = 'temp_layout_kwdloop.csv'
     obsparam_fname = 'temp_obsparam_kwdloop.yaml'
-    path_out = simtest.TESTDATA_PATH
+    path_out = str(tmpdir)
     antpos_enu = np.ones(30).reshape((10, 3))
     antnums = np.arange(10)
     antpos_d = dict(zip(antnums, antpos_enu))
@@ -907,7 +954,7 @@ def test_keyword_param_loop():
     assert uv2 == uvd
 
 
-def test_multi_analytic_beams():
+def test_multi_analytic_beams(tmpdir):
     # Test inline definitions of beam attributes.
     # eg. (in beam configuration file):
     #
@@ -915,8 +962,8 @@ def test_multi_analytic_beams():
     #   0 : airy, diameter=14
     #   1 : airy, diameter=20
     #   2 : gaussian, sigma=0.5
-    par_fname = os.path.join(simtest.TESTDATA_PATH, 'test_teleconfig.yaml')
-    layout_fname = os.path.join(simtest.TESTDATA_PATH, 'test_layout_5ant.csv')
+    par_fname = str(tmpdir.join('test_teleconfig.yaml'))
+    layout_fname = str(tmpdir.join('test_layout_5ant.csv'))
 
     telescope_location = (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
     telescope_name = 'SKA'
@@ -945,7 +992,7 @@ def test_multi_analytic_beams():
     param_dict = {'telescope_config_name': par_fname, 'array_layout': layout_fname}
 
     pdict, beam_list, beam_dict = pyuvsim.simsetup.parse_telescope_params(
-        param_dict, simtest.TESTDATA_PATH)
+        param_dict, str(tmpdir))
 
     for i, nm in enumerate(names):
         bid = beam_ids[i]
@@ -975,14 +1022,14 @@ def test_direct_fname():
     os.remove("triangle_bl_layout.csv")
 
 
-def test_beamlist_init():
+def test_beamlist_init_errors():
     telescope_config_name = os.path.join(SIM_DATA_PATH, 'bl_lite_mixed.yaml')
     with open(telescope_config_name, 'r') as yf:
         telconfig = yaml.safe_load(yf)
 
     # The path for beam 0 is invalid, and it's not needed for this test.
     del telconfig['beam_paths'][0]
-    beam_ids = np.arange(1, 4)
+    beam_ids = np.arange(1, 6)
 
     bad_conf_0 = copy.deepcopy(telconfig)
     bad_conf_0['beam_paths'][1] = 1.35
@@ -1004,6 +1051,30 @@ def test_beamlist_init():
     telconfig['spline_interp_opts'] = {'kx' : 2, 'ky' : 2}
     beam_list = pyuvsim.simsetup._construct_beam_list(beam_ids, telconfig)
     assert beam_list.spline_interp_opts is not None
+
+
+def test_beamlist_init():
+    telescope_config_name = os.path.join(SIM_DATA_PATH, 'bl_lite_mixed.yaml')
+    with open(telescope_config_name, 'r') as yf:
+        telconfig = yaml.safe_load(yf)
+
+    telconfig['beam_paths'][0] = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
+
+    beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(6), telconfig)
+    beam_list.set_obj_mode()
+
+    # How the beam attributes should turn out for this file:
+    assert isinstance(beam_list[0], UVBeam)
+    assert beam_list[1].type == 'airy'
+    assert beam_list[1].diameter == 16
+    assert beam_list[2].type == 'gaussian'
+    assert beam_list[2].sigma == 0.03
+    assert beam_list[3].type == 'airy'
+    assert beam_list[3].diameter == 12
+    assert beam_list[4].type == 'gaussian'
+    assert beam_list[4].diameter == 14
+    assert beam_list[5].type == 'gaussian'
+    assert beam_list[5].diameter == 12
 
 
 def test_moon_lsts():
@@ -1060,7 +1131,7 @@ def test_mock_catalog_moon():
     assert mmock != emock
 
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def cat_with_some_pols():
     # Mock catalog with a couple sources polarized.
     Nsrcs = 30
@@ -1082,7 +1153,7 @@ def cat_with_some_pols():
         name=np.arange(Nsrcs).astype(str),
         ra=ra,
         dec=dec,
-        stokes=stokes,
+        stokes=stokes * units.Jy,
         spectral_type='full',
         freq_array=freqs
     )
@@ -1094,19 +1165,19 @@ def cat_with_some_pols():
 def test_skymodeldata_with_quantity_stokes(unit, cat_with_some_pols):
     # Support for upcoming pyradiosky change setting SkyModel.stokes
     # to an astropy Quantity.
-    if unit == 'K':
-        pytest.importorskip('astropy_healpix')
-        path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
-        sky = pyradiosky.SkyModel()
-        sky.read_healpix_hdf5(path)
-    else:
+    if unit == 'Jy':
         sky = cat_with_some_pols
-
+    else:
+        pytest.importorskip('analytic_diffuse')
+        sky, _ = pyuvsim.simsetup.create_mock_catalog(
+            Time.now(), arrangement='diffuse', diffuse_model='monopole', map_nside=16
+        )
     if not isinstance(sky.stokes, units.Quantity):
         sky.stokes *= units.Unit(unit)
 
     smd = pyuvsim.simsetup.SkyModelData(sky)
     assert np.all(sky.stokes.to_value(unit)[0] == smd.stokes_I)
+    assert smd.flux_unit == unit
 
     sky2 = smd.get_skymodel()
     if units.Quantity != pyradiosky.SkyModel()._stokes.expected_type:
@@ -1187,3 +1258,19 @@ def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
     assert smd_copy.ra.base is smd.ra.base
     assert smd_copy.dec.base is smd.dec.base
     assert smd_copy.stokes_I.base is smd.stokes_I.base
+
+
+def test_set_lsts_errors():
+    # Error cases on set_lsts function.
+    uv0 = UVData()
+    uv0.read_uvfits(longbl_uvfits_file)
+    uv0.lst_array = None
+
+    uv0.extra_keywords['world'] = 'moon'
+    if not pyuvsim.astropy_interface.hasmoon:
+        with pytest.raises(ValueError, match="Cannot construct lsts for MoonLocation"):
+            pyuvsim.simsetup._set_lsts_on_uvdata(uv0)
+
+    uv0.extra_keywords['world'] = 'tatooine'
+    with pytest.raises(ValueError, match="Invalid world tatooine."):
+        pyuvsim.simsetup._set_lsts_on_uvdata(uv0)

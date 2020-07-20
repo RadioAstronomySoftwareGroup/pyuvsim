@@ -10,7 +10,7 @@ from .analyticbeam import AnalyticBeam
 from . import mpi
 
 
-class Telescope(object):
+class Telescope:
     """
     Container for data common to all antennas in the array.
 
@@ -184,6 +184,11 @@ class BeamList(object):
         # Note that only one of these lists has nonzero length at a given time.
         return len(self._obj_beam_list) + len(self._str_beam_list)
 
+    def __iter__(self):
+        # Get the list as an iterable.
+        lst = self._str_beam_list if self.string_mode else self._obj_beam_list
+        return (be for be in lst)
+
     def __getitem__(self, ind):
         if self.string_mode:
             return self._str_beam_list[ind]
@@ -220,6 +225,11 @@ class BeamList(object):
                 raise ValueError(f"Invalid file path: {value}") from err
             self._obj_beam_list[ind] = value
             self._scrape_uvb_params(self._obj_beam_list, strict=False)
+
+    def __eq__(self, other):
+        if self.string_mode:
+            return self._str_beam_list == other._str_beam_list
+        return self._obj_beam_list == other._obj_beam_list
 
     def append(self, value):
         """

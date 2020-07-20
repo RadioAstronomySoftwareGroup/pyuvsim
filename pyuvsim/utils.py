@@ -76,16 +76,21 @@ def altaz_to_zenithangle_azimuth(altitude, azimuth):
     """
     Convert from astropy altaz convention to UVBeam az/za convention.
 
-    Args:
-        altitude: in radians
-        azimuth: in radians in astropy convention: East of North (N=0, E=pi/2)
+    Parameters
+    ----------
+    altitude, azimuth: float or array of float
+        altitude above horizon
+        azimuth in radians in astropy convention: East of North (N=0, E=pi/2)
 
-    Returns:
-        zenith_angle in radians
-        azimuth in radians in uvbeam convention: North of East(East=0, North=pi/2)
+    Returns
+    -------
+    zenith_angle: float or array of float
+        In radians
+    azimuth: float or array of float
+        In radians in uvbeam convention: North of East(East=0, North=pi/2)
     """
-    input_alt = np.array(altitude)
-    input_az = np.array(azimuth)
+    input_alt = np.asarray(altitude)
+    input_az = np.asarray(azimuth)
     if input_alt.size != input_az.size:
         raise ValueError('number of altitude and azimuth values must match.')
 
@@ -96,7 +101,7 @@ def altaz_to_zenithangle_azimuth(altitude, azimuth):
         wh_neg = np.where(new_azimuth < -1e-9)
         if wh_neg[0].size > 0:
             new_azimuth[wh_neg] = new_azimuth[wh_neg] + np.pi * 2
-    else:
+    elif new_azimuth.size == 1:
         if new_azimuth < -1e-9:
             new_azimuth = new_azimuth + np.pi * 2
 

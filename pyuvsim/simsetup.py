@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 import yaml
 
-from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude
+from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, AltAz, ICRS
 import astropy.units as units
 from pyuvdata import utils as uvutils, UVData
 import pyradiosky
@@ -19,7 +19,15 @@ import pyradiosky
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from .analyticbeam import AnalyticBeam
 from .telescope import BeamList
-from .astropy_interface import SkyCoord, MoonLocation, Time
+from .astropy_interface import SkyCoord, MoonLocation, Time, LunarTopo, hasmoon
+try:
+    import astropy_healpix
+except ImportError:
+    astropy_healpix = None
+try:
+    import analytic_diffuse
+except ImportError:
+    analytic_diffuse = None
 try:
     from . import mpi
     from .mpi import get_rank
@@ -104,7 +112,7 @@ def _set_lsts_on_uvdata(uv_obj):
     if world == 'earth':
         uv_obj.set_lsts_from_time_array()
     elif world == 'moon':
-        if not 'hasmoon':
+        if not hasmoon:
             raise ValueError("Cannot construct lsts for MoonLocation without lunarsky module")
         un_jds, inv = np.unique(uv_obj.time_array, return_inverse=True)
         loc = MoonLocation(*uv_obj.telescope_location, unit='m')
@@ -116,7 +124,8 @@ def _set_lsts_on_uvdata(uv_obj):
 
 
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
-                        alt=None, save=False, min_alt=None, rseed=None, return_data=False):
+                        alt=None, save=False, min_alt=None, rseed=None, return_data=False,
+                        diffuse_model=None, diffuse_params=None, map_nside=None):
     """
     Create a mock catalog.
 
@@ -137,6 +146,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         * `long-line`:  Horizon to horizon line of point sources
         * `hera_text`:  Spell out HERA around the zenith
         * `random`:  Randomly distributed point sources near zenith
+        * `diffuse`: Choice of solved models in the analytic_diffuse module.
     Nsrcs: int
         Number of sources to make (used for zenith, off-zenith, long-line, and random arrangements).
     array_location: `astropy.coordinates.EarthLocation`
@@ -155,6 +165,14 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         If using the random configuration, pass in a RandomState seed.
     return_data: bool
         If True, return a SkyModelData object instead of SkyModel.
+    diffuse_model: str
+        If arrangement is 'diffuse', name of the diffuse model to generate.
+        See documentation in `analytic_diffuse.models` for details.
+    diffuse_params: dict
+        If arrangement is 'diffuse', extra parameters accepted by the chosen model.
+        See documentation in `analytic_diffuse.models` for details.
+    map_nside: int
+        If arrangement is 'diffuse', nside parameter for the healpix map to make.
 
     Returns
     -------
@@ -162,8 +180,15 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         The catalog, as either a SkyModel or a SkyModelData (if `return_data` is True)
     dict
         A dictionary of keywords used to define the catalog.
+
+    Notes
+    -----
+    Generating diffuse models requires the `analytic_diffuse` and `astropy_healpix` modules.
     """
-    if not isinstance(time, Time):
+
+    quantity_stokes = pyradiosky.SkyModel()._stokes.expected_type == units.Quantity
+
+    if isinstance(time, float):
         time = Time(time, scale='utc', format='jd')
 
     if array_location is None:
@@ -171,7 +196,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
                                        height=1073.)
 
     if arrangement not in ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'hera_text',
-                           'random']:
+                           'random', 'diffuse']:
         raise KeyError("Invalid mock catalog arrangement: " + str(arrangement))
 
     mock_keywords = {
@@ -179,6 +204,13 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         'array_location': repr(
             (array_location.lat.deg, array_location.lon.deg, array_location.height.value))
     }
+
+    if isinstance(array_location, MoonLocation):
+        localframe = 'lunartopo'
+        mock_keywords['world'] = 'moon'
+    else:
+        localframe = 'altaz'
+        mock_keywords['world'] = 'earth'
 
     if arrangement == 'off-zenith':
         if alt is None:
@@ -269,28 +301,71 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         Nsrcs = alts.size
         fluxes = np.ones_like(alts)
 
-    catalog = []
+    if arrangement == 'diffuse':
+        if analytic_diffuse is None or astropy_healpix is None:
+            raise ValueError("analytic_diffuse and astropy_healpix "
+                             "modules are required to use diffuse mock catalog.")
+        if (diffuse_model is None):
+            raise ValueError("Diffuse arrangement selected, but diffuse model not chosen.")
+        if diffuse_params is None:
+            diffuse_params = {}
+        if map_nside is None:
+            warnings.warn("No nside chosen. Defaulting to 32")
+            map_nside = 32
 
-    if isinstance(array_location, MoonLocation):
-        localframe = 'lunartopo'
-        mock_keywords['world'] = 'moon'
+        mock_keywords['diffuse_model'] = diffuse_model
+        mock_keywords['map_nside'] = map_nside
+        mock_keywords['diffuse_params'] = repr(diffuse_params)
+
+        # Make the map, calculate AltAz positions of pixels, evaluate the model.
+        npix = 12 * map_nside**2
+        pixinds = np.arange(npix)
+
+        if localframe == 'lunartopo':
+            frame = LunarTopo(location=array_location, obstime=time)
+        else:
+            frame = AltAz(location=array_location, obstime=time)
+        hpix = astropy_healpix.HEALPix(nside=map_nside, frame=ICRS())
+        icrs_coord = hpix.healpix_to_skycoord(pixinds)
+        source_coord = icrs_coord.transform_to(frame)
+
+        modfunc = analytic_diffuse.get_model(diffuse_model)
+        fluxes = modfunc(source_coord.az.rad, source_coord.zen.rad, **diffuse_params)
+        stokes = np.zeros((4, 1, npix))
+        stokes[0, :] = fluxes
+
+        if quantity_stokes:
+            stokes *= units.K
+
+        catalog = pyradiosky.SkyModel(
+            ra=icrs_coord.ra, dec=icrs_coord.dec, stokes=stokes,
+            nside=map_nside, hpx_inds=pixinds, spectral_type='flat'
+        )
     else:
-        localframe = 'altaz'
-        mock_keywords['world'] = 'earth'
-    source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
-                            obstime=time, frame=localframe, location=array_location)
-    icrs_coord = source_coord.transform_to('icrs')
+        source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
+                                obstime=time, frame=localframe, location=array_location)
+        icrs_coord = source_coord.transform_to('icrs')
 
-    ra = icrs_coord.ra
-    dec = icrs_coord.dec
-    names = np.array(['src' + str(si) for si in range(Nsrcs)])
-    stokes = np.zeros((4, 1, Nsrcs))
-    stokes[0, :] = fluxes
-    catalog = pyradiosky.SkyModel(names, ra, dec, stokes, 'flat')
+        names = np.array(['src' + str(si) for si in range(Nsrcs)])
+        stokes = np.zeros((4, 1, Nsrcs))
+        stokes[0, :] = fluxes
+
+        if quantity_stokes:
+            stokes *= units.Jy
+
+        catalog = pyradiosky.SkyModel(
+            name=names, ra=icrs_coord.ra, dec=icrs_coord.dec, stokes=stokes, spectral_type='flat'
+        )
+
     if return_data:
         catalog = SkyModelData(catalog)
+
     if get_rank() == 0 and save:
-        np.savez('mock_catalog_' + arrangement, ra=ra.rad, dec=dec.rad, alts=alts, azs=azs,
+        np.savez('mock_catalog_' + arrangement,
+                 ra=icrs_coord.ra.rad,
+                 dec=icrs_coord.dec.rad,
+                 alts=alts,
+                 azs=azs,
                  fluxes=fluxes)
 
     return catalog, mock_keywords
@@ -408,6 +483,7 @@ class SkyModelData:
         new_sky.dec = self.dec[inds]
         new_sky.Nfreqs = self.Nfreqs
         new_sky.spectral_type = self.spectral_type
+        new_sky.flux_unit = self.flux_unit
 
         if self.reference_frequency is not None:
             new_sky.reference_frequency = self.reference_frequency[inds]
@@ -496,6 +572,7 @@ class SkyModelData:
             other['hpx_inds'] = self.hpx_inds
         else:
             other['name'] = self.name
+
         return pyradiosky.SkyModel(
             ra=ra_use, dec=dec_use, stokes=stokes_use,
             spectral_type=self.spectral_type, **other
@@ -552,7 +629,8 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
             source_select_kwds[key] = float(source_params[key])
     if catalog == 'mock':
         mock_keywords = {'arrangement': source_params['mock_arrangement']}
-        extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'min_alt', 'array_location']
+        extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'min_alt',
+                           'array_location', 'diffuse_model', 'diffuse_params', 'map_nside']
         for k in extra_mock_kwds:
             if k in source_params.keys():
                 if k == 'array_location':
@@ -693,14 +771,17 @@ def _construct_beam_list(beam_ids, telconfig):
 
             # Default to None for diameter and sigma.
             # Values in the "beam_paths" override globally-defined options.
-            beam_opts = {'diameter': None, 'sigma': None}
-            for opt in beam_opts.keys():
-                val = telconfig.get(opt, None)
-                val = this_beam_opts.get(opt, val)
-                beam_opts[opt] = val
+            shape_opts = {'diameter': None, 'sigma': None}
 
-            diameter = beam_opts.pop('diameter')
-            sigma = beam_opts.pop('sigma')
+            for opt in shape_opts.keys():
+                shape_opts[opt] = this_beam_opts.get(opt, None)
+
+            if all(v is None for v in shape_opts.values()):
+                for opt in shape_opts.keys():
+                    shape_opts[opt] = telconfig.get(opt, None)
+
+            diameter = shape_opts.pop('diameter')
+            sigma = shape_opts.pop('sigma')
 
             if beam_type == 'uniform':
                 beam_model = 'analytic_uniform'
@@ -795,7 +876,7 @@ def parse_telescope_params(tele_params, config_path=''):
             telescope_location_latlonalt = ast.literal_eval(telescope_location_latlonalt)
         world = tele_params.pop('world', None)
 
-    telescope_location = list(telescope_location_latlonalt)
+    telescope_location = np.array(telescope_location_latlonalt)
     telescope_location[0] *= np.pi / 180.
     telescope_location[1] *= np.pi / 180.  # Convert to radians
     tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
@@ -842,8 +923,8 @@ def parse_telescope_params(tele_params, config_path=''):
         return_dict['world'] = world
 
     return_dict['array_layout'] = layout_csv
-    return_dict['telescope_location'] = tuple(tele_params['telescope_location'])
-    return_dict['telescope_location_lat_lon_alt'] = tuple(telescope_location_latlonalt)
+    return_dict['telescope_location'] = np.asarray(tele_params['telescope_location'])
+    return_dict['telescope_location_lat_lon_alt'] = np.asarray(telescope_location_latlonalt)
     return_dict['telescope_name'] = telescope_name
 
     # if provided, parse sections related to beam files and types
@@ -1322,7 +1403,7 @@ def initialize_uvdata_from_keywords(
         in ENU coordinates [meters].
     antenna_names : list of str (optional)
         If unset, antenna names are assigned as "%s" % antnum.
-    telescope_location : len-3 tuple
+    telescope_location : array of float, shape (3,)
         Telescope location on Earth in LatLonAlt coordinates [deg, deg, meters]
     telescope_name : str
         Name of telescope
@@ -1435,7 +1516,7 @@ def initialize_uvdata_from_keywords(
         'antenna_nums': antenna_nums, 'no_autos': no_autos
     }
     tele_params = {
-        'telescope_location': repr(telescope_location),
+        'telescope_location': repr(tuple(telescope_location)),
         'telescope_name': telescope_name
     }
     layout_params = {
@@ -1548,7 +1629,7 @@ def uvdata_to_telescope_config(
     # Write the rest to a yaml file.
     yaml_dict = {
         "telescope_name": uvdata_in.telescope_name,
-        "telescope_location": repr(uvdata_in.telescope_location_lat_lon_alt_degrees),
+        "telescope_location": repr(tuple(uvdata_in.telescope_location_lat_lon_alt_degrees)),
         "Nants": uvdata_in.Nants_telescope,
         "beam_paths": {0: beam_filepath}
     }
@@ -1593,8 +1674,7 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
     tdict = time_array_to_params(time_array)
     fdict = freq_array_to_params(freq_array)
 
-    if 'time_array' in tdict:
-        tdict.pop('time_array')
+    tdict.pop('time_array', None)
 
     param_dict = {
         "time": tdict,
