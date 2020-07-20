@@ -23,7 +23,6 @@
 - Benchmarking tools.
 
 ### Changed
-- Use remote memory access to write visibilities directly to output UVData.
 - Switch to a new definition for the Counter class, without threading.
 - Cleaned up unit tests
 - Use `at_frequencies` method to enable support for all pyradiosky spectral types.
