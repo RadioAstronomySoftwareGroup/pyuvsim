@@ -1,0 +1,59 @@
+name: Publish Python distributions to PyPI and TestPyPI
+
+on: push
+
+jobs:
+  build-n-publish:
+    name: Build and publish to PyPI and TestPyPI
+    runs-on: ubuntu-latest
+    env:
+      ENV_NAME: publish
+      PYTHON: 3.7
+    steps:
+    - uses: actions/checkout@master
+      with:
+        fetch-depth: 0
+
+    - name: Get Miniconda Linux
+      run: |
+        wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/miniconda.sh;
+        bash $HOME/miniconda.sh -b -p $HOME/miniconda
+
+    - name: Setup paths
+      shell: bash
+      run: |
+        echo "::add-path::$HOME/miniconda/bin"
+        echo "::add-path::$HOME/miniconda/envs/test/bin"
+
+    - name: Setup Environment
+      run: ./ci/install_conda.sh
+
+    - name: Create environment variable
+      if: startsWith(github.ref, 'refs/tags/') != true
+      shell: bash
+      run: |
+        wget https://gist.github.com/plaplant/0902f09e59166bac742bbd554f3cd2f9/raw/make_dev_version.sh
+        source activate $ENV_NAME
+        version=$(bash make_dev_version.sh)
+        echo "::set-env name=SETUPTOOLS_SCM_PRETEND_VERSION::$version"
+
+    - name: Check environment variable
+      run: echo $SETUPTOOLS_SCM_PRETEND_VERSION
+
+    - name: Build a binary wheel and a source tarball
+      shell: bash
+      run: |
+        source activate $ENV_NAME
+        python -m pep517.build --source --out-dir dist/ .
+
+    - name: Publish to Test PyPI
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.test_pypi_password }}
+        repository_url: https://test.pypi.org/legacy/
+
+    - name: Publish to PyPI
+      if: startsWith(github.event.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.pypi_password }}

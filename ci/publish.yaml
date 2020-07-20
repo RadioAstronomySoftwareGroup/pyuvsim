@@ -1,0 +1,16 @@
+name: publish
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - astropy>=4.0
+  - h5py
+  - numpy>=1.15
+  - pip
+  - pyuvdata
+  - pyyaml>=5.1
+  - scipy
+  - setuptools_scm
+  - pip:
+    - pyradiosky
+     - pep517
