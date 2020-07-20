@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.2.0] - 2020-7-20
 
 ### Added
 - Diffuse models in mock catalogs, via the analytic_diffuse module.
