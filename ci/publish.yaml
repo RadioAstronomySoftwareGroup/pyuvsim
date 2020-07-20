@@ -13,4 +13,4 @@ dependencies:
   - setuptools_scm
   - pip:
     - pyradiosky
-     - pep517
+    - pep517
