@@ -4,7 +4,6 @@ import os
 import yaml
 from astropy import units
 import pytest
-import pyuvdata
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -41,8 +40,6 @@ def test_jones_set_spline(cst_beam, hera_loc):
     altaz[:, 0] = alts.flatten()
     altaz[:, 1] = azs.flatten()
 
-    vers = pyuvdata.__version__.split('.')
-    version = (float(vers[0]), float(vers[1]), float(vers[2]))
     array.beam_list.spline_interp_opts = None
     antenna.get_beam_jones(array, altaz, 150e6)
 
