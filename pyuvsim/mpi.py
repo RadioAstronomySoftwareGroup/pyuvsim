@@ -360,6 +360,8 @@ class Counter:
             mem = self.win.tomemory()
             mem[:] = _struct.pack('i', 0)
 
+        self.win.Fence()
+
     def free(self):
         self.win.Free()
 
@@ -378,8 +380,7 @@ class Counter:
         nval = _array('i', [0])
         self.win.Get([nval, 1, MPI.INT], 0)
         self.win.Unlock(0)
-        cval = world_comm.allreduce(nval[0], op=MPI.MAX)
-        return cval
+        return nval[0]
 
 
 def get_max_node_rss(return_per_node=False):

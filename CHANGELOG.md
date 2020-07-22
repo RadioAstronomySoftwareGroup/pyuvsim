@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Support for unit tests parallelized with MPI.
+
+
 ## [1.2.0] - 2020-7-20
 
 ### Added

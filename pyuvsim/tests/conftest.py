@@ -5,8 +5,13 @@
 """Testing environment setup and teardown for pytest."""
 import os
 import warnings
+import pickle as pkl
+import re
+from subprocess import CalledProcessError, TimeoutExpired, check_output, DEVNULL
 
 import pytest
+from _pytest.reports import TestReport
+from _pytest._code.code import ExceptionChainRepr
 from astropy.time import Time
 from astropy.utils import iers
 from astropy.coordinates import EarthLocation
@@ -14,6 +19,14 @@ from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
 
 from pyuvsim.astropy_interface import hasmoon, MoonLocation
+from pyuvsim import mpi
+
+
+issubproc = os.environ.get('TEST_IN_PARALLEL', 0)
+try:
+    issubproc = bool(int(issubproc))
+except ValueError:
+    pass
 
 
 def pytest_collection_modifyitems(session, config, items):
@@ -24,7 +37,138 @@ def pytest_collection_modifyitems(session, config, items):
     for ii, it in enumerate(items):
         if 'profiler' in it.name:
             break
-    items.append(items.pop(ii))     # Move to the end.
+    items.append(items.pop(ii))     # Move profiler tests to the end.
+
+
+def pytest_configure(config):
+    """Register an additional marker."""
+    config.addinivalue_line(
+        "markers",
+        "parallel(n, timeout=70): mark test to run in n parallel mpi processes."
+        " Optionally, set a timeout in seconds."
+    )
+
+
+def pytest_addoption(parser):
+    parser.addoption("--nompi", action="store_true", help="skip mpi-parallelized tests.")
+
+
+def pytest_runtest_setup(item):
+    if 'parallel' in item.keywords:
+        if mpi is None:
+            pytest.skip("Need mpi4py to run parallelized tests.")
+        elif item.config.getoption('nompi', False):
+            pytest.skip("Skipping parallelized tests with --nompi option.")
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_exception_interact(node, call, report):
+    if issubproc:
+        from pyuvsim import mpi     # noqa
+        if report.failed:
+            pth = f"/tmp/mpitest_{report.head_line}"
+            try:
+                os.makedirs(pth)
+            except OSError:
+                pass
+            with open(os.path.join(pth, f"report_rank{mpi.rank}.pkl"), 'wb') as ofile:
+                pkl.dump(report, ofile)
+            raise call.excinfo.value
+    yield
+
+
+def pytest_runtest_call(item):
+    # If a test is to be run in parallel, spawn a subprocess that runs it in parallel.
+    parmark = item.get_closest_marker("parallel")
+    if parmark is None:
+        return
+    nproc = 1
+    if len(parmark.args) >= 1:
+        try:
+            nproc = int(parmark.args[0])
+        except ValueError:
+            raise ValueError(f"Invalid number of processes: {parmark.args[0]}")
+
+    timeout = 70
+    if 'timeout' in parmark.kwargs:
+        timeout = float(parmark.kwargs['timeout'])
+
+    call = ['mpirun', '--host', 'localhost:10', '-n', str(nproc),
+            "python", "-m", "pytest", "{:s}::{:s}".format(str(item.fspath), str(item.name))]
+    if not issubproc:
+        try:
+            envcopy = os.environ.copy()
+            envcopy['TEST_IN_PARALLEL'] = '1'
+            check_output(call, env=envcopy, stderr=DEVNULL, timeout=timeout)
+        except (TimeoutExpired, CalledProcessError) as err:
+            message = f"Parallelized test {item.name} failed"
+            if isinstance(err, TimeoutExpired):
+                message += (f" after {timeout} seconds due to timeout. \nThe timeout may be set"
+                            " via the ``timeout`` keyword in the ``parallel`` decorator. \n"
+                            "A stalled test may be caused by an inconsistent MPI state. Check"
+                            " that blocking operations are reached by all processes")
+            message += "."
+            raise AssertionError(message) from err
+
+
+class _MPIExceptionChainRepr(ExceptionChainRepr):
+    """
+    Extension of _pytest._code.code.ExceptionChainRepr.
+
+    Changes the toterminal method to better represent exceptions
+    coming from multiple MPI processes.
+    """
+
+    mpi_ranks = []
+
+    def __init__(self, exception_chain_repr, mpi_ranks):
+        if isinstance(mpi_ranks, int):
+            mpi_ranks = [mpi_ranks]
+        self.mpi_ranks.extend(mpi_ranks)
+        super().__init__(exception_chain_repr.chain)
+
+    def append(self, exception_chain_repr, mpi_rank):
+        self.mpi_ranks.append(mpi_rank)
+        self.chain.append(exception_chain_repr.chain[0])
+
+    def toterminal(self, tw):
+        for ii, element in enumerate(self.chain):
+            rank = self.mpi_ranks[ii]
+            tw.line("")
+            tw.sep('— ', f"MPI Rank = {rank}", cyan=True)
+            element[0].toterminal(tw)
+            if element[2] is not None:
+                tw.line("")
+                tw.line(element[2], yellow=True)
+        super(ExceptionChainRepr, self).toterminal(tw)
+
+
+def pytest_runtest_makereport(item, call):
+    report = TestReport.from_item_and_call(item, call)
+    parmark = item.get_closest_marker("parallel")
+
+    # Is a parallel test but not currently within the subprocess.
+    if report.failed and (not issubproc) and (parmark is not None) and (report.when == 'call'):
+        pth = f"/tmp/mpitest_{report.head_line}"
+        if os.path.exists(pth):
+            for ii, repf in enumerate(os.listdir(pth)):
+                if not repf.endswith(".pkl"):
+                    continue
+                rank = int(re.findall('(?<=rank)[0-9]+', repf)[0])
+                rank_report = pkl.load(open(os.path.join(pth, repf), 'rb'))
+                os.remove(os.path.join(pth, repf))
+                if ii == 0:
+                    report = rank_report
+                    report.longrepr = _MPIExceptionChainRepr(report.longrepr, rank)
+                else:
+                    report.longrepr.append(rank_report.longrepr, rank)
+            os.rmdir(pth)
+        nproc = int(parmark.args[0])
+        outcome = call.excinfo.exconly()
+        mpitest_info = f"Run with {nproc} processes."
+        mpitest_info += f"\nFailed with message: {outcome}"
+        report.longrepr.addsection("MPI Info", mpitest_info)
+    return report
 
 
 @pytest.fixture(autouse=True, scope="session")

@@ -20,45 +20,49 @@ from pyuvsim.analyticbeam import c_ms
 pytest.importorskip('mpi4py')  # noqa
 
 
-@pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
-def test_run_paramfile_uvsim():
+@pytest.fixture
+def goto_tempdir(tmpdir):
+    # Run test within temporary directory.
+    newpath = str(tmpdir)
+    cwd = os.getcwd()
+    os.chdir(newpath)
+
+    yield newpath
+
+    os.chdir(cwd)
+
+
+@pytest.mark.parametrize('paramfile', ['param_1time_1src_testcat.yaml',
+                                       'param_1time_1src_testvot.yaml'])
+@pytest.mark.parallel(2)
+def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # Test vot and txt catalogs for parameter simulation
     # Compare to reference files.
-
     uv_ref = UVData()
     uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
     uv_ref.unphase_to_drift(use_ant_pos=True)
 
-    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
-    with open(param_filename) as pfile:
-        params_dict = yaml.safe_load(pfile)
-    tempfilename = params_dict['filing']['outfile_name']
-
+    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', paramfile)
     # This test obsparam file has "single_source.txt" as its catalog.
     pyuvsim.uvsim.run_uvsim(param_filename)
 
-    uv_new_txt = UVData()
+    # Loading the file and comparing is only done on rank 0.
+    if pyuvsim.mpi.rank != 0:
+        return
+
+    path = goto_tempdir
+    ofilepath = os.path.join(path, 'tempfile.uvfits')
+
+    uv_new = UVData()
     with pytest.warns(UserWarning, match='antenna_diameters is not set'):
-        uv_new_txt.read_uvfits(tempfilename)
+        uv_new.read_uvfits(ofilepath)
 
-    uv_new_txt.unphase_to_drift(use_ant_pos=True)
-    os.remove(tempfilename)
+    uv_new.unphase_to_drift(use_ant_pos=True)
 
-    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
-    pyuvsim.uvsim.run_uvsim(param_filename)
-
-    uv_new_vot = UVData()
-    with pytest.warns(UserWarning, match='antenna_diameters is not set'):
-        uv_new_vot.read_uvfits(tempfilename)
-
-    uv_new_vot.unphase_to_drift(use_ant_pos=True)
-    os.remove(tempfilename)
-    uv_new_txt.history = uv_ref.history  # History includes irrelevant info for comparison
-    uv_new_vot.history = uv_ref.history
-    uv_new_txt.object_name = uv_ref.object_name
-    uv_new_vot.object_name = uv_ref.object_name
-    assert uv_new_txt == uv_ref
-    assert uv_new_vot == uv_ref
+    # Reset parts that will deviate
+    uv_new.history = uv_ref.history
+    uv_new.object_name = uv_ref.object_name
+    assert uv_new == uv_ref
 
 
 @pytest.mark.parametrize('model', ['monopole', 'cosza', 'quaddome', 'monopole-nonflat'])
