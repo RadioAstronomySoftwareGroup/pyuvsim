@@ -53,7 +53,7 @@ MWA_nocore:
    - This is the MWA128 Phase I layout with the core 40 antennas removed (88 antennas remain).
    - The layout is written in mwa_nocore_layout.csv and the telescope configuration is in mwa88_nocore_config.yaml. The configuration specifies that all antennas have the unphysical "uniform" beam.
 
-![mwa88_layout.png](Memos/figures/mwa88_layout.png "MWA-88 layout")
+![mwa88_layout.png](../first_generation/Memos/figures/mwa88_layout.png "MWA-88 layout")
 
 
 ### Beams
