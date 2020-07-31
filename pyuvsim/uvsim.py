@@ -21,8 +21,7 @@ from .simsetup import SkyModelData
 from .astropy_interface import MoonLocation, hasmoon, Time
 
 
-__all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim',
-           'serial_gather']
+__all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim']
 
 
 class UVTask(object):
@@ -343,15 +342,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
 
             yield task
         del sky
-
-
-def serial_gather(uvtask_list, uv_out):
-    """Loop over uvtask list, acquire visibilities and add to uvdata object."""
-    for task in uvtask_list:
-        blt_ind, spw_ind, freq_ind = task.uvdata_index
-        uv_out.data_array[blt_ind, spw_ind, freq_ind, :] += task.visibility_vector
-
-    return uv_out
 
 
 def _check_ntasks_valid(Ntasks_tot):
