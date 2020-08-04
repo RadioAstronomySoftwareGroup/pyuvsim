@@ -32,16 +32,23 @@ def multi_beams():
     beam0.read_beamfits(herabeam_default)
     beam0.freq_interp_kind = 'cubic'
     beam0.interpolation_function = 'az_za_simple'
-    beam1 = beam0.copy()
-    beam1.to_healpix(nside=8)
-    beam1.interpolation_function = 'healpix_simple'
-    beam2 = pyuvsim.AnalyticBeam('uniform')
+    beam1 = pyuvsim.AnalyticBeam('uniform')
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
-        beam3 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
-    beam4 = pyuvsim.AnalyticBeam('airy', diameter=14.6)
+        beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
+    beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.6)
+    beams = [beam0, beam1, beam2, beam3]
 
-    return [beam0, beam1, beam2, beam3, beam4]
+    try:
+        import astropy_healpix
+        assert astropy_healpix is not None
+    except ImportError:
+        beam4 = beam0.copy()
+        beam4.to_healpix(nside=8)
+        beam4.interpolation_function = 'healpix_simple'
+        beams.append(beam4)
+
+    return beams
 
 
 multi_beams = multi_beams()
@@ -474,7 +481,7 @@ def test_gather():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_data=True)
 
-    beam_list = pyuvsim.BeamList([multi_beams[2]])
+    beam_list = pyuvsim.BeamList([multi_beams[1]])
 
     Nblts = hera_uv.Nblts
     Nfreqs = hera_uv.Nfreqs
