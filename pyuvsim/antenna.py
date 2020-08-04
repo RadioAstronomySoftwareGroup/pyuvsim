@@ -68,10 +68,10 @@ class Antenna(object):
         else:
             freq = np.array([frequency])
 
-        if array.beam_list[self.beam_id].data_normalization != 'peak':
-            array.beam_list[self.beam_id].peak_normalize()
-
         beam = array.beam_list[self.beam_id]
+
+        if beam.data_normalization != 'peak':
+            beam.peak_normalize()
 
         if freq_interp_kind is not None:
             beam.freq_interp_kind = freq_interp_kind
