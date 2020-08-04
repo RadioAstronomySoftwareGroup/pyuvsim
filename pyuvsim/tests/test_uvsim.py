@@ -32,14 +32,16 @@ def multi_beams():
     beam0.read_beamfits(herabeam_default)
     beam0.freq_interp_kind = 'cubic'
     beam0.interpolation_function = 'az_za_simple'
-    beam1 = pyuvsim.AnalyticBeam('uniform')
+    beam1 = beam0.copy()
+    beam1.to_healpix(nside=8)
+    beam1.interpolation_function = 'healpix_simple'
+    beam2 = pyuvsim.AnalyticBeam('uniform')
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
-        beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
-    beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.6)
-    beam_list = pyuvsim.BeamList([beam0, beam1, beam2, beam3])
+        beam3 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
+    beam4 = pyuvsim.AnalyticBeam('airy', diameter=14.6)
 
-    return beam_list
+    return [beam0, beam1, beam2, beam3, beam4]
 
 
 multi_beams = multi_beams()
@@ -284,7 +286,6 @@ def test_single_offzenith_source(beam, hera_loc):
     visibility = engine.make_visibility()
 
     # analytically calculate visibility
-    beam.interpolation_function = 'az_za_simple'
     beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_alt.rad, src_az.rad)
     beam_za2, beam_az2 = simutils.altaz_to_zenithangle_azimuth(src_alt_az[0], src_alt_az[1])
 
