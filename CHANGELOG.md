@@ -5,6 +5,8 @@
 ### Added
 - Support for unit tests parallelized with MPI.
 
+### Fixed
+- pixel interpolation was defaulting to az_za_simple for all beams, breaking healpix-coord UVBeams.
 
 ## [1.2.0] - 2020-7-20
 

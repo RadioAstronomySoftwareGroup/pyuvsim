@@ -40,13 +40,12 @@ def multi_beams():
     beams = [beam0, beam1, beam2, beam3]
 
     try:
-        import astropy_healpix
-        assert astropy_healpix is not None
-    except ImportError:
         beam4 = beam0.copy()
         beam4.to_healpix(nside=8)
         beam4.interpolation_function = 'healpix_simple'
         beams.append(beam4)
+    except (ImportError, ModuleNotFoundError):
+        pass
 
     return beams
 
