@@ -203,7 +203,6 @@ def ignore_deprecation():
 @pytest.fixture(scope='session')
 def cst_beam():
     beam = UVBeam()
-    beam.freq_interp_kind = 'linear'
 
     freqs = [150e6, 123e6]
 
@@ -214,6 +213,8 @@ def cst_beam():
         telescope_name='HERA', feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
         model_name='E-field pattern - Rigging height 4.9m', model_version='1.0'
     )
+    beam.freq_interp_kind = 'linear'
+    beam.interpolation_function = 'az_za_simple'
     beam.peak_normalize()
     return beam
 

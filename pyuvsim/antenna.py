@@ -71,11 +71,13 @@ class Antenna(object):
         if array.beam_list[self.beam_id].data_normalization != 'peak':
             array.beam_list[self.beam_id].peak_normalize()
 
+        beam = array.beam_list[self.beam_id]
+
         if freq_interp_kind is not None:
-            array.beam_list[self.beam_id].freq_interp_kind = freq_interp_kind
+            beam.freq_interp_kind = freq_interp_kind
 
         if interpolation_function is not None:
-            array.beam_list[self.beam_id].interpolation_function = interpolation_function
+            beam.interpolation_function = interpolation_function
 
         spline_opts = None
         if isinstance(array.beam_list, BeamList):
@@ -89,7 +91,7 @@ class Antenna(object):
 
         try:
             interp_data, interp_basis_vector = \
-                array.beam_list[self.beam_id].interp(**interp_kwargs)
+                beam.interp(**interp_kwargs)
         except TypeError as err:   # pragma: nocover
             raise TypeError(
                 "pyuvdata version >=2.0.1 required to use spline_interp_opts"

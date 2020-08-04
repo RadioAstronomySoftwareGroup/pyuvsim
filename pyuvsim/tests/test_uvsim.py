@@ -98,7 +98,7 @@ def uvobj_beams_srcs():
 def test_visibility_single_zenith_source(cst_beam, hera_loc):
     """Test single zenith source."""
 
-    beam0 = cst_beam
+    beam0 = cst_beam.copy()
     beam1 = pyuvsim.AnalyticBeam('uniform')
     beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=np.radians(10.0))
     beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.0)
@@ -147,7 +147,7 @@ def test_visibility_source_below_horizon(cst_beam, hera_loc):
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
-    beam = cst_beam
+    beam = cst_beam.copy()
 
     beam_list = pyuvsim.BeamList([beam])
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
@@ -367,7 +367,6 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
 
     # analytically calculate visibilities
     beam.peak_normalize()
-    beam.interpolation_function = 'az_za_simple'
     interpolated_beam, interp_basis_vector = beam.interp(
         az_array=np.array([0.0]), za_array=np.array([src_za.rad]),
         freq_array=np.array([freq.to_value('Hz')])
@@ -475,7 +474,7 @@ def test_gather():
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_data=True)
 
-    beam_list = pyuvsim.BeamList([multi_beams[1]])
+    beam_list = pyuvsim.BeamList([multi_beams[2]])
 
     Nblts = hera_uv.Nblts
     Nfreqs = hera_uv.Nfreqs

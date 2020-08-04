@@ -41,7 +41,7 @@ def test_jones_set_spline(cst_beam, hera_loc):
     altaz[:, 1] = azs.flatten()
 
     array.beam_list.spline_interp_opts = None
-    antenna.get_beam_jones(array, altaz, 150e6)
+    antenna.get_beam_jones(array, altaz, 150e6, interpolation_function='az_za_simple')
 
 
 def test_jones_set_interp(cst_beam, hera_loc):
