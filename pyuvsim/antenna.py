@@ -79,6 +79,11 @@ class Antenna(object):
         if interpolation_function is not None:
             beam.interpolation_function = interpolation_function
 
+        # If interpolation_function is unset, or the beam lacks the attribute
+        # (i.e., is analytic) then default to az_za_simple.
+        if getattr(beam, 'interpolation_function', 'analytic') is None:
+            beam.interpolation_function = 'az_za_simple'
+
         spline_opts = None
         if isinstance(array.beam_list, BeamList):
             spline_opts = array.beam_list.spline_interp_opts
