@@ -4,6 +4,7 @@
 
 import astropy.units as units
 import numpy as np
+import warnings
 
 from . import utils as simutils
 from .telescope import BeamList
@@ -83,6 +84,8 @@ class Antenna(object):
         # (i.e., is analytic) then default to az_za_simple.
         if getattr(beam, 'interpolation_function', 'analytic') is None:
             beam.interpolation_function = 'az_za_simple'
+            warnings.warn(f"UVBeam interpolation_function is not set."
+                          " Defaulting to {beam.interpolation_function}.")
 
         spline_opts = None
         if isinstance(array.beam_list, BeamList):

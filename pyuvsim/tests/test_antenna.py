@@ -51,7 +51,7 @@ def test_jones_set_interp(cst_beam, hera_loc):
 
     beam = cst_beam.copy()
     beam.freq_interp_kind = None
-    beam.interpolation_function = 'az_za_simple'
+
     beam_list = pyuvsim.BeamList([beam])
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 10, 0]), 0)
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
@@ -71,3 +71,21 @@ def test_jones_set_interp(cst_beam, hera_loc):
     assert (np.all(jones2 == jones0)
             and np.all(jones1 == jones)
             and np.all(jones1 == jones0))
+
+
+def test_set_interps(cst_beam, hera_loc):
+    array_location = hera_loc
+
+    beam = cst_beam.copy()
+    beam.interpolation_function = None
+
+    beam_list = pyuvsim.BeamList([beam])
+    antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 10, 0]), 0)
+    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+    source_altaz = np.array([[0.0], [np.pi / 4.]])
+    freq = 123e6 * units.Hz
+
+    with pytest.warns(UserWarning, match="UVBeam interpolation_function is not set"):
+        antenna1.get_beam_jones(array, source_altaz, freq)
+
+    assert beam.interpolation_function == 'az_za_simple'
