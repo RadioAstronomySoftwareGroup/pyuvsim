@@ -5,6 +5,7 @@
 import astropy.units as units
 import numpy as np
 import warnings
+from pyuvdata import UVBeam
 
 from . import utils as simutils
 from .telescope import BeamList
@@ -80,9 +81,8 @@ class Antenna(object):
         if interpolation_function is not None:
             beam.interpolation_function = interpolation_function
 
-        # If interpolation_function is unset, or the beam lacks the attribute
-        # (i.e., is analytic) then default to az_za_simple.
-        if getattr(beam, 'interpolation_function', 'analytic') is None:
+        # UVBeams need an interpolation_function. If none is set, default to az_za_simple.
+        if isinstance(beam, UVBeam) and getattr(beam, 'interpolation_function') is None:
             beam.interpolation_function = 'az_za_simple'
             warnings.warn(f"UVBeam interpolation_function is not set."
                           " Defaulting to {beam.interpolation_function}.")
