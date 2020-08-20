@@ -27,6 +27,7 @@ Bug fix checklist:
 - [ ] My fix includes a new test that breaks as a result of the bug (if possible).
 - [ ] All new and existing tests pass.
 - [ ] I have checked that I reproduce the reference simulations or if there are differences they are explained below (if appropriate). If there are changes that are correct, I will update the reference simulation files after this PR is merged.
+- [ ] I have checked (e.g., using the benchmarking tools) that this change does not significantly increase typical runtimes. If it does, I have included a justification in the comments on this PR.
 - [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/master/CHANGELOG.md).
 
 New feature checklist:
@@ -35,6 +36,7 @@ New feature checklist:
 - [ ] I have added tests to cover my new feature.
 - [ ] All new and existing tests pass.
 - [ ] I have checked that I reproduce the reference simulations or if there are differences they are explained below (if appropriate). If there are changes that are correct, I will update the reference simulation files after this PR is merged.
+- [ ] I have checked (e.g., using the benchmarking tools) that this change does not significantly increase typical runtimes. If it does, I have included a justification in the comments on this PR.
 - [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/master/CHANGELOG.md).
 
 Breaking change checklist:
@@ -44,6 +46,7 @@ Breaking change checklist:
 - [ ] I have added tests to cover my changes.
 - [ ] All new and existing tests pass.
 - [ ] I have checked that I reproduce the reference simulations or if there are differences they are explained below (if appropriate). If there are changes that are correct, I will update the reference simulation files after this PR is merged.
+- [ ] I have checked (e.g., using the benchmarking tools) that this change does not significantly increase typical runtimes. If it does, I have included a justification in the comments on this PR.
 - [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/master/CHANGELOG.md).
 
 Reference simulation update or replacement:

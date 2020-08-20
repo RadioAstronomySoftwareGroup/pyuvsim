@@ -486,11 +486,24 @@ def test_gather():
     uvtask_list = list(taskiter)
 
     uv_out = pyuvsim.simsetup._complete_uvdata(hera_uv, inplace=False)
+
+    size_complex = np.ones(1, dtype=complex).nbytes
+
+    visbuf = bytearray(uv_out.data_array)
     for task in uvtask_list:
         engine = pyuvsim.UVEngine(task)
-        task.visibility_vector = engine.make_visibility()
+        vis = engine.make_visibility()
 
-    uv_out = pyuvsim.serial_gather(uvtask_list, uv_out)
+        blti, spw, freq_ind = task.uvdata_index
+
+        flat_ind = np.ravel_multi_index(
+            (blti, spw, freq_ind, 0), uv_out.data_array.shape
+        )
+        offset = flat_ind * size_complex
+        val = np.frombuffer(visbuf[offset:offset + vis.nbytes], dtype=np.complex128)
+        val += vis
+        visbuf[offset:offset + vis.nbytes] = bytearray(val)[:]
+    uv_out.data_array = np.frombuffer(visbuf, dtype=complex).reshape(uv_out.data_array.shape)
 
     assert np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3)
 

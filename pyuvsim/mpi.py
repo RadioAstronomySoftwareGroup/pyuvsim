@@ -2,6 +2,7 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
+import numpy as np
 import sys
 from array import array as _array
 import struct as _struct
@@ -10,7 +11,6 @@ import atexit
 from pickle import loads, dumps
 
 import mpi4py
-import numpy as np
 
 mpi4py.rc.initialize = False  # noqa
 from mpi4py import MPI
@@ -44,14 +44,14 @@ def start_mpi(block_nonroot_stdout=True):
 
     Parameters
     ----------
-
-    block_nonroot_stdout : bool (True)
+    block_nonroot_stdout : bool
         Redirect stdout on nonzero ranks to /dev/null, for cleaner output.
+        Default True.
 
     """
     global world_comm, node_comm, rank_comm, rank, Npus
     if not MPI.Is_initialized():
-        MPI.Init_thread(MPI.THREAD_MULTIPLE)
+        MPI.Init_thread(MPI.THREAD_SERIALIZED)     # RMA is incompatible with THREAD_MULTIPLE.
         atexit.register(MPI.Finalize)
     world_comm = MPI.COMM_WORLD
     node_comm = world_comm.Split_type(MPI.COMM_TYPE_SHARED)
@@ -343,12 +343,16 @@ class Counter:
 
     Adapted from the mpi4py nxtval-mpi3.py demo.
     https://github.com/mpi4py/mpi4py/blob/master/demo/nxtval/nxtval-mpi3.py
+
+    Notes
+    -----
+    Must be initialized on all processes.
     """
 
     def __init__(self, comm=None, count_rank=0):
         self.count_rank = count_rank
         if comm is None:
-            comm = world_comm
+            comm = world_comm.Dup()
         rank = comm.Get_rank()
         itemsize = MPI.INT.Get_size()
         nint = 0
@@ -360,7 +364,7 @@ class Counter:
             mem = self.win.tomemory()
             mem[:] = _struct.pack('i', 0)
 
-        self.win.Fence()
+        comm.Barrier()
 
     def free(self):
         self.win.Free()

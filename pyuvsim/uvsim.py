@@ -21,8 +21,7 @@ from .simsetup import SkyModelData
 from .astropy_interface import MoonLocation, hasmoon, Time
 
 
-__all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim',
-           'serial_gather']
+__all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim']
 
 
 class UVTask(object):
@@ -345,15 +344,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         del sky
 
 
-def serial_gather(uvtask_list, uv_out):
-    """Loop over uvtask list, acquire visibilities and add to uvdata object."""
-    for task in uvtask_list:
-        blt_ind, spw_ind, freq_ind = task.uvdata_index
-        uv_out.data_array[blt_ind, spw_ind, freq_ind, :] += task.visibility_vector
-
-    return uv_out
-
-
 def _check_ntasks_valid(Ntasks_tot):
     """Check that the size of the task array won't overflow the gather."""
 
@@ -421,6 +411,9 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         uv_container = simsetup._complete_uvdata(input_uv, inplace=False)
         if 'world' in input_uv.extra_keywords:
             uv_container.extra_keywords['world'] = input_uv.extra_keywords['world']
+        vis_data = mpi.MPI.Win.Create(uv_container._data_array.value, comm=mpi.world_comm)
+    else:
+        vis_data = mpi.MPI.Win.Create(None, comm=mpi.world_comm)
 
     Nbls = input_uv.Nbls
     Ntimes = input_uv.Ntimes
@@ -458,7 +451,6 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         beam_list, beam_dict, Nsky_parts=Nsky_parts
     )
 
-    summed_task_dict = {}
     Ntasks_tot = comm.reduce(Ntasks_tot, op=mpi.MPI.MAX, root=0)
     if rank == 0 and not quiet:
         print("Tasks: ", Ntasks_tot, flush=True)
@@ -466,19 +458,30 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
 
     engine = UVEngine()
     count = mpi.Counter()
+    size_complex = np.ones(1, dtype=complex).nbytes
+    data_array_shape = (Nbls * Ntimes, 1, Nfreqs, 4)
+    uvdata_indices = []
+
     for task in local_task_iter:
         engine.set_task(task)
-        if task.uvdata_index not in summed_task_dict.keys():
-            summed_task_dict[task.uvdata_index] = task
-        if summed_task_dict[task.uvdata_index].visibility_vector is None:
-            summed_task_dict[task.uvdata_index].visibility_vector = engine.make_visibility()
-        else:
-            summed_task_dict[task.uvdata_index].visibility_vector += engine.make_visibility()
+        vis = engine.make_visibility()
 
-        count.next()
+        blti, spw, freq_ind = task.uvdata_index
+
+        uvdata_indices.append(task.uvdata_index)
+
+        flat_ind = np.ravel_multi_index(
+            (blti, spw, freq_ind, 0), data_array_shape
+        )
+        offset = flat_ind * size_complex
+
+        vis_data.Lock(0)
+        vis_data.Accumulate(vis, 0, target=offset, op=mpi.MPI.SUM)
+        vis_data.Unlock(0)
+
+        cval = count.next()
         if rank == 0 and not quiet:
-            pbar.update(count.current_value())
-
+            pbar.update(cval)
     comm.Barrier()
     count.free()
     if rank == 0 and not quiet:
@@ -493,7 +496,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         # Saving axis sizes on current rank (local) and for the whole job (global).
         # These lines are affected by issue 179 of line_profiler, so the nocover
         # above will need to stay until this issue is resolved (see profiling.py).
-        task_inds = np.array(list(summed_task_dict.keys()))
+        task_inds = np.array(uvdata_indices)
         bl_inds = task_inds[:, 0] % Nbls
         time_inds = (task_inds[:, 0] - bl_inds) // Nbls
         Ntimes_loc = np.unique(time_inds).size
@@ -511,32 +514,10 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
             for k, v in axes_dict.items():
                 afile.write("{} \t {:d}\n".format(k, int(v)))
 
-    # All the sources in this summed list are foobar-ed
-    # Source are summed over but only have 1 name
-    # Some source may be correct
-    summed_local_task_list = list(summed_task_dict.values())
-    # Tasks contain attributes that are not pickle-able.
-    # Remove everything except uvdata_index and visibility_vector
-    for task in summed_local_task_list:
-        del task.time
-        del task.freq
-        del task.freq_i
-        del task.sources
-        del task.baseline
-        del task.telescope
+    vis_data.Free()
 
-    # gather all the finished local tasks into a list of list of len NPUs
-    # gather is a blocking communication, have to wait for all PUs
-    full_tasklist = mpi.big_gather(comm, summed_local_task_list, root=0)
-    localtasks_count = comm.gather(Ntasks_local, root=0)
-
-    # Concatenate the list of lists into a flat list of tasks
     if rank == 0:
-        localtasks_count = np.sum(localtasks_count)
-        uvtask_list = sum(full_tasklist, [])
-        uvdata_out = serial_gather(uvtask_list, uv_container)
-
-        return uvdata_out
+        return uv_container
 
 
 def run_uvsim(params, return_uv=False, quiet=False):
