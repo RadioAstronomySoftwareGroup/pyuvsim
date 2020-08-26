@@ -4,6 +4,8 @@
 
 import astropy.units as units
 import numpy as np
+import warnings
+from pyuvdata import UVBeam
 
 from . import utils as simutils
 from .telescope import BeamList
@@ -26,7 +28,7 @@ class Antenna(object):
         self.beam_id = beam_id
 
     def get_beam_jones(self, array, source_alt_az, frequency, reuse_spline=True,
-                       interpolation_function='az_za_simple', freq_interp_kind=None):
+                       interpolation_function=None, freq_interp_kind=None):
         """
         2x2 array of Efield vectors in Az/Alt
 
@@ -45,19 +47,16 @@ class Antenna(object):
         interpolation_function: str
             Set the angular interpolation function on the UVBeam.
             See UVBeam.interp for options.
-            Defaults to az_za_simple.
         freq_interp_kind : str
             Interpolation method for frequencies.
             Note -- This overrides whatever method may be set on the
             UVBeam objects.
         Returns
         -------
-
         jones_matrix : (2,2) ndarray, dtype float
             The first axis is feed, the second axis is vector component
             on the sky in az/za.
         """
-
         # get_direction_jones needs to be defined on UVBeam
         # 2x2 array of Efield vectors in alt/az
 
@@ -71,14 +70,22 @@ class Antenna(object):
         else:
             freq = np.array([frequency])
 
-        if array.beam_list[self.beam_id].data_normalization != 'peak':
-            array.beam_list[self.beam_id].peak_normalize()
+        beam = array.beam_list[self.beam_id]
+
+        if beam.data_normalization != 'peak':
+            beam.peak_normalize()
 
         if freq_interp_kind is not None:
-            array.beam_list[self.beam_id].freq_interp_kind = freq_interp_kind
+            beam.freq_interp_kind = freq_interp_kind
 
         if interpolation_function is not None:
-            array.beam_list[self.beam_id].interpolation_function = interpolation_function
+            beam.interpolation_function = interpolation_function
+
+        # UVBeams need an interpolation_function. If none is set, default to az_za_simple.
+        if isinstance(beam, UVBeam) and getattr(beam, 'interpolation_function') is None:
+            beam.interpolation_function = 'az_za_simple'
+            warnings.warn(f"UVBeam interpolation_function is not set."
+                          " Defaulting to {beam.interpolation_function}.")
 
         spline_opts = None
         if isinstance(array.beam_list, BeamList):
@@ -92,7 +99,7 @@ class Antenna(object):
 
         try:
             interp_data, interp_basis_vector = \
-                array.beam_list[self.beam_id].interp(**interp_kwargs)
+                beam.interp(**interp_kwargs)
         except TypeError as err:   # pragma: nocover
             raise TypeError(
                 "pyuvdata version >=2.0.1 required to use spline_interp_opts"

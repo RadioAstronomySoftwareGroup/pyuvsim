@@ -9,6 +9,8 @@
 ### Changed
 - Use remote memory access to collect finished visibility data, without serialization.
 
+### Fixed
+- pixel interpolation was defaulting to az_za_simple for all beams, breaking healpix-coord UVBeams.
 
 ## [1.2.0] - 2020-7-20
 

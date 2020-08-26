@@ -42,7 +42,6 @@ def heratext_posfreq():
 def test_uniform_beam(heratext_posfreq):
     beam = pyuvsim.AnalyticBeam('uniform')
     beam.peak_normalize()
-    beam.interpolation_function = 'az_za_simple'
 
     az_vals, za_vals, freqs = heratext_posfreq
 
@@ -62,7 +61,6 @@ def test_airy_beam_values(heratext_posfreq):
     diameter_m = 14.
     beam = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)
     beam.peak_normalize()
-    beam.interpolation_function = 'az_za_simple'
 
     az_vals, za_vals, freq_vals = heratext_posfreq
 
@@ -89,7 +87,6 @@ def test_uv_beam_widths():
     diameter_m = 25.0
     beam = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)
     beam.peak_normalize()
-    beam.interpolation_function = 'az_za_simple'
 
     Nfreqs = 20
     freq_vals = np.linspace(100e6, 130e6, Nfreqs)
@@ -125,7 +122,6 @@ def test_achromatic_gaussian_beam(heratext_posfreq):
     sigma_rad = Angle('5d').to_value('rad')
     beam = pyuvsim.AnalyticBeam('gaussian', sigma=sigma_rad)
     beam.peak_normalize()
-    beam.interpolation_function = 'az_za_simple'
 
     az_vals, za_vals, freq_vals = heratext_posfreq
     nsrcs = az_vals.size

@@ -37,9 +37,17 @@ def multi_beams():
         warnings.simplefilter('ignore')
         beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
     beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.6)
-    beam_list = pyuvsim.BeamList([beam0, beam1, beam2, beam3])
+    beams = [beam0, beam1, beam2, beam3]
 
-    return beam_list
+    try:
+        beam4 = beam0.copy()
+        beam4.to_healpix(nside=8)
+        beam4.interpolation_function = 'healpix_simple'
+        beams.append(beam4)
+    except (ImportError, ModuleNotFoundError):
+        pass
+
+    return beams
 
 
 multi_beams = multi_beams()
@@ -96,7 +104,7 @@ def uvobj_beams_srcs():
 def test_visibility_single_zenith_source(cst_beam, hera_loc):
     """Test single zenith source."""
 
-    beam0 = cst_beam
+    beam0 = cst_beam.copy()
     beam1 = pyuvsim.AnalyticBeam('uniform')
     beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=np.radians(10.0))
     beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.0)
@@ -145,7 +153,7 @@ def test_visibility_source_below_horizon(cst_beam, hera_loc):
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
-    beam = cst_beam
+    beam = cst_beam.copy()
 
     beam_list = pyuvsim.BeamList([beam])
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
@@ -284,7 +292,6 @@ def test_single_offzenith_source(beam, hera_loc):
     visibility = engine.make_visibility()
 
     # analytically calculate visibility
-    beam.interpolation_function = 'az_za_simple'
     beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_alt.rad, src_az.rad)
     beam_za2, beam_az2 = simutils.altaz_to_zenithangle_azimuth(src_alt_az[0], src_alt_az[1])
 
@@ -366,7 +373,6 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
 
     # analytically calculate visibilities
     beam.peak_normalize()
-    beam.interpolation_function = 'az_za_simple'
     interpolated_beam, interp_basis_vector = beam.interp(
         az_array=np.array([0.0]), za_array=np.array([src_za.rad]),
         freq_array=np.array([freq.to_value('Hz')])
