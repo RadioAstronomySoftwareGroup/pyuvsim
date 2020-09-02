@@ -1217,6 +1217,8 @@ def test_skymodeldata(component_type, cat_with_some_pols):
 
     # Make skymodel from SkyModelData.
     sky1 = smd.get_skymodel()
+    # history is not copied into SkyModelData.
+    sky1.history = sky.history
 
     assert sky1 == sky
 
