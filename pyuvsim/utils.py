@@ -295,7 +295,7 @@ def iter_array_split(part_index, N, M):
     Returns an iterator giving the indices of `part` below:
         part = np.array_split(np.arange(N), M)[part_index]
 
-    This mimics the behavior of array_split without having to make
+    This mimics the behavior of numpy.array_split without having to make
     the whole array that will be split.
     """
 
