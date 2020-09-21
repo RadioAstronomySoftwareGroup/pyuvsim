@@ -17,13 +17,19 @@ def diameter_to_sigma(diam, freqs):
     Find the stddev of a gaussian with fwhm equal to that of
     an Airy disk's main lobe for a given diameter.
 
-    Args:
-        diam: Antenna diameter in meters
-        freqs: Array of frequencies, in Hz
-    Returns:
-        sigma: The standard deviation in zenith angle radians for a Gaussian beam
-               with FWHM equal to that of an Airy disk's main lobe for an aperture
-               with the given diameter.
+    Parameters
+    ----------
+    diam: float
+        Antenna diameter in meters
+    freqs: array
+        Frequencies in Hz
+
+    Returns
+    -------
+    sigma: float
+        The standard deviation in zenith angle radians for a Gaussian beam
+        with FWHM equal to that of an Airy disk's main lobe for an aperture
+        with the given diameter.
     """
 
     wavelengths = c_ms / freqs
@@ -35,36 +41,38 @@ def diameter_to_sigma(diam, freqs):
     return sigma
 
 
-class AnalyticBeam(object):
+class AnalyticBeam:
     """
-    Defines an object with similar functionality to pyuvdata.UVBeam
+    Calculate Jones matrices from analytic functions.
 
-    Directly calculates jones matrices at given azimuths and zenith angles
-    from analytic functions.
+    This provides similar functionality to pyuvdata.UVBeam, but its "interp" method
+    evaluates the function at given azimuths and zenith angles, instead of interpolating
+    from data.
 
-    Args:
-        type: str, {'uniform', 'airy', 'gaussian'}
-            Beam type to use. Supported types:
+    Supported types include:
+        * Uniform beam: Unit response from all directions.
+        * Airy: An Airy disk pattern (the 2D Fourier transform of a circular aperture of
+          width given by `diameter`)
+        * Gaussian: A peak-normalized gaussian function.
+            * If given a `diameter`, then this makes a chromatic beam with FWHMs
+              matching an equivalent Airy disk beam at each frequency.
+            * If given a `sigma`, this makes an achromatic beam with standard deviation
+              set to `sigma`
+            * If given a `sigma`, `ref_freq`, and `spectral_index`, then this will make
+              a chromatic beam with standard deviation defined by a power law:
+              `stddev(f) = sigma * (f/ref_freq)**(spectral_index)`
 
-            * Uniform beam: Unit response from all directions.
-            * Airy: An Airy disk pattern (the 2D Fourier transform of a circular aperture of
-              width given by `diameter`)
-            * Gaussian: A peak-normalized gaussian function.
-                * If given a `diameter`, then this makes a chromatic beam with FWHMs
-                  matching an equivalent Airy disk beam at each frequency.
-                * If given a `sigma`, this makes an achromatic beam with standard deviation
-                  set to `sigma`
-                * If given a `sigma`, `ref_freq`, and `spectral_index`, then this will make
-                  a chromatic beam with standard deviation defined by a power law:
-                  `stddev(f) = sigma * (f/ref_freq)**(spectral_index)`
-
-        sigma: (float)
-            standard deviation [radians] for gaussian beam
-            When spectral index is set, this represents the FWHM at the ref_freq.
-        spectral_index : (float, optional)
-            Scale gaussian beam width as a power law with frequency.
-        ref_freq : (float, optional)
-            If set, this sets the reference frequency for the beam width power law.
+    Parameters
+    ----------
+    type: str, {'uniform', 'airy', 'gaussian'}
+        Beam type to use.
+    sigma: float
+        standard deviation [radians] for gaussian beam.
+        When spectral index is set, this represents the FWHM at the ref_freq.
+    spectral_index: float
+        Scale gaussian beam width as a power law with frequency.
+    ref_freq: float
+        If set, this sets the reference frequency for the beam width power law.
     """
 
     supported_types = ['uniform', 'gaussian', 'airy']
@@ -106,7 +114,7 @@ class AnalyticBeam(object):
 
     def interp(self, az_array, za_array, freq_array, reuse_spline=None, spline_opts=None):
         """
-        Evaluate the primary beam at given az, za locations (in radians).
+        Evaluate the primary beam at given positions and frequencies.
 
         (similar to UVBeam.interp)
 
@@ -128,14 +136,17 @@ class AnalyticBeam(object):
 
         Returns
         -------
-        array-like of float
+        beam_vals: array-like of float
             Array of beam values, shape (Naxes_vec, Nspws, Nfeeds or Npols,
                 Nfreqs or freq_array.size if freq_array is passed,
                 Npixels/(Naxis1, Naxis2) or az_array.size if az/za_arrays are passed)
-        array-like of float
-            Array of interpolated basis vectors (or self.basis_vector_array
-                if az/za_arrays are not passed), shape: (Naxes_vec, Ncomponents_vec,
-                Npixels/(Naxis1, Naxis2) or az_array.size if az/za_arrays are passed)
+        interp_basis_vectors: None
+            Currently returns None. In UVBeam, this is the set of basis vectors for the electric
+            field component values.
+
+        Notes
+        -----
+        See pyuvdata.UVBeam.interp documentation for more details on the returned data.
         """
         if az_array.ndim > 1 or za_array.ndim > 1 or freq_array.ndim > 1:
             raise ValueError("az_array, za_array and freq_array must all be one dimensional.")

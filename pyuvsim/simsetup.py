@@ -1057,13 +1057,17 @@ def parse_frequency_params(freq_params):
     """
     Parse the "freq" section of obsparam.
 
-    Args:
-        freq_params: Dictionary of frequency parameters.
-            See pyuvsim documentation for examples of allowable key combinations.
-            https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#frequency
+    Parameters
+    ----------
+    freq_params: dict
+        Dictionary of frequency parameters.
+        See pyuvsim documentation for examples of allowable key combinations.
+        https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#frequency
 
-    Returns:
-        dict
+    Returns
+    -------
+    dict:
+        Dictionary of UVData parameters related to frequency:
             * `channel_width`: (dtype float, ndarray, shape=(Nfreqs)) Frequency channel
               widths in Hz
             * `Nfreqs`: (int) Number of frequencies
@@ -1161,13 +1165,17 @@ def parse_time_params(time_params):
     """
     Parse the "time" section of obsparam.
 
-    Args:
-        time_params: Dictionary of time parameters
-            See pyuvsim documentation for examples of allowable key combinations.
-            https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#time
+    Parameters
+    ----------
+    time_params: dict
+        Dictionary of time parameters
+        See pyuvsim documentation for examples of allowable key combinations.
+        https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#time
 
-    Returns:
-        dict
+    Returns
+    -------
+    dict:
+        Dictionary of UVData parameters related to time:
             * `integration_time`: (float) Time array spacing in seconds.
             * `Ntimes`: (int) Number of times
             * `start_time`: (float) Starting time in Julian Date
@@ -1269,14 +1277,23 @@ def parse_time_params(time_params):
 
 def freq_array_to_params(freq_array):
     """
-    Give the channel width, bandwidth, start, and end frequencies corresponding
-    to a given frequency array.
+    Get a set of parameters that can be used to generate a given frequency array.
 
-    Args:
-        freq_array : (ndarray, shape = (Nfreqs,)) of frequencies [Hz].
+    Returns a dictionary of parameters that can be used by parse_freq_params
+    to obtain the freq_array passed in.
 
-    Returns:
+    Parameters
+    ----------
+    freq_array: array of float
+        Frequencies in Hz.
+
+    Returns
+    -------
+    dict:
         Dictionary of frequency parameters consistent with freq_array.
+        (channel_width, Nfreqs, bandwidth, start_freq, end_freq)
+        See pyuvsim documentation for details:
+        https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#frequency
     """
     freq_array = np.asarray(freq_array).ravel()
 
@@ -1298,13 +1315,23 @@ def freq_array_to_params(freq_array):
 
 def time_array_to_params(time_array):
     """
-    Returns integration_time, duration, and start and end times corresponding to a given time array.
+    Get a set of parameters that can be used to generate a given time array.
 
-    Args:
-        time_array : (ndarray) of julian dates
+    Returns a dictionary of parameters that can be used by parse_time_params
+    to obtain the time_array passed in.
 
-    Returns:
+    Parameters
+    ----------
+    time_array: array of float
+        Julian dates.
+
+    Returns
+    -------
+    dict:
         Dictionary of time parameters consistent with time_array.
+        (integration_time, Ntimes, duration_days, start_time, end_times)
+        See pyuvsim documentation for details:
+        https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#time
     """
     time_array = np.asarray(time_array)
     Ntimes_uniq = np.unique(time_array).size
@@ -1517,8 +1544,8 @@ def _complete_uvdata(uv_in, inplace=False):
 
     This will overwrite existing data in `uv_in`!
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     uv_in : :class:~`pyuvdata.UVData` instance
         Usually an incomplete object, containing only metadata.
     inplace : bool, optional
@@ -1762,29 +1789,36 @@ def uvdata_to_telescope_config(
         uvdata_in, beam_filepath, layout_csv_name=None, telescope_config_name=None,
         return_names=False, path_out='.'):
     """
-    For a given UVData object, generate telescope parameter files.
+    Make telescope parameter files for the antenna positions and names/numbers in a UVData object.
 
-    See documentation for more information on the specification.
+    Parameters
+    ----------
+    uvdata_in: pyuvdata.UVData
+        UVData object for which to make config files.
+    path_out: str
+        Target directory for the config files.
+    beam_filepath: str
+        Path to a beamfits file.
+    layout_csv_name: str
+        The name for the antenna positions.
+        Default <telescope_name>_layout.csv, where <telescope_name> is uvdata_in.telescope_name
+    telescope_config_name: str
+        The name for the telescope config file
+        Default telescope_config_<telescope_name>.yaml
+    return_names: bool
+        Return the file names. Default is False. Used in tests.
 
-    Args:
-        uvdata_in (UVData): object to process
-        path_out (str): Target directory for the config file.
-        beam_filepath (str): Path to a beamfits file.
-        layout_csv_name (str, optional): The name for the antenna positions
-            csv file (Default <telescope_name>_layout.csv)
-        telescope_config_name (str, optional): The name for the telescope config file
-            (Default telescope_config_<telescope_name>.yaml)
-        return_names (bool, optional): Return the file names. Used in tests.
+    Returns
+    -------
+    tuple:
+        if return_names, returns (path, telescope_config_name, layout_csv_name)
 
-    Returns:
-        if return_names, returns tuple (path, telescope_config_name, layout_csv_name)
-
-    Notes:
-        The generate files are, briefly:
-
-        telescope_config: YAML file with telescope_location and telescope_name
+    Notes
+    -----
+    The generate files are, briefly:
+        * telescope_config: YAML file with telescope_location and telescope_name
             The beam list is spoofed, since that information cannot be found in a UVData object.
-        layout_csv: tab separated value file giving ENU antenna positions/
+        * layout_csv: tab separated value file giving ENU antenna positions.
             Beam ID is spoofed as well.
     """
 
@@ -1832,16 +1866,27 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
                           layout_csv_name='', catalog='mock', path_out='.'):
     """
     Extract simulation configuration settings from uvfits.
+    Make parameter files
 
-    Args:
-        uvdata_in (UVData): uvdata object.
+    When used with `uvdata_to_telescope_config`, this will produce all the necessary
+    configuration yaml and csv file  to make an "empty" UVData object comparable to
+    the argument `uvdata_in`. The generated file will match `uvdata_in` in frequency, time,
+    antenna positions, and uvw coordinates.
 
-    Keywords:
-        param_filename (str, optional): output param file name, defaults to obsparam_#.yaml.
-        telescope_config_name (str, optional): Name of yaml file file. Defaults to blank string.
-        layout_csv_name (str, optional): Name of layout csv file. Defaults to blank string.
-        catalog (str, optional): Path to catalog file, defaults to 'mock'.
-        path_out (str, optional): Where to put config files.
+    Parameters
+    ----------
+    uvdata_in: pyuvdata.UVData
+        UVData object for which to make config files.
+    param_filename: str
+        output param file name, defaults to obsparam_#.yaml.
+    telescope_config_name: str
+        Name of telescope configuration yaml file. Defaults to blank string.
+    layout_csv_name: str
+        Name of antenna layout csv file. Defaults to blank string.
+    catalog: str
+        Path to catalog file. Defaults to 'mock'.
+    path_out: str
+        Where to put config files.
     """
 
     if param_filename is None:
