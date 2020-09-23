@@ -5,7 +5,7 @@
 import numpy as np
 
 
-class Baseline(object):
+class Baseline:
     """
     Defines a single pair of Antenna objects, the means for calculating their
     uvw coordinates, and comparing them

@@ -11,7 +11,7 @@ from . import utils as simutils
 from .telescope import BeamList
 
 
-class Antenna(object):
+class Antenna:
     """
     Defines an object that can return a Jones matrix and has a specified
     location, name, and number.

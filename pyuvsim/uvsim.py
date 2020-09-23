@@ -25,7 +25,7 @@ from .astropy_interface import MoonLocation, hasmoon, Time
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim']
 
 
-class UVTask(object):
+class UVTask:
     # holds all the information necessary to calculate a visibility for a set of sources at a
     # single (t, f, bl)
 
@@ -80,7 +80,7 @@ class UVTask(object):
         return not self.__gt__(other)
 
 
-class UVEngine(object):
+class UVEngine:
 
     def __init__(self, task=None, update_positions=True, update_beams=True, reuse_spline=True):
         self.reuse_spline = reuse_spline  # Reuse spline fits in beam interpolation

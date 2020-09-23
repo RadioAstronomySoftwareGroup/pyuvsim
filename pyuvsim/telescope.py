@@ -46,7 +46,7 @@ class Telescope:
         return False
 
 
-class BeamList(object):
+class BeamList:
     """
     A container for the set of beam models and related parameters.
 
