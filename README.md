@@ -37,7 +37,7 @@ Each addition of new physics is validated against analytic calculations and incl
 1. Exact antenna positions.  (complete)
 1. Varied beam models across the array (complete, tested against analytic)
 1. Diffuse emission (complete, tested against analytic, paper in prep)
-1. Arbitrary spectrum (complete) 
+1. Arbitrary spectrum (complete)
 1. Non-terrestrial observatories (Lunar observatory complete)
 1. Time domain sources (TODO)
 1. Ionospheric scintillation (TODO)
