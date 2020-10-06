@@ -23,7 +23,7 @@
 <!--- Go over all the following points, and replace the space with an `x` in all the boxes that apply. -->
 <!--- If you're unsure about any of these, don't hesitate to ask. We're here to help! -->
 For all pull requests:
-- [ ] I have read the [contribution guide](https://github.com/RadioAstronomySoftwareGroup/pyuvdata/blob/main/.github/CONTRIBUTING.md).
+- [ ] I have read the [contribution guide](CONTRIBUTING.md).
 - [ ] My code follows the code style of this project.
 
 Bug fix checklist:
