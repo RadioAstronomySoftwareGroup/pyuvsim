@@ -66,7 +66,7 @@ http://makeapullrequest.com/ and http://www.firsttimersonly.com/. If you have mo
   - If you're fixing a bug, include a new test that breaks as a result of the bug (if possible).
   - Ensure that all your new code is covered by tests and that the existing tests pass. Tests can be run by running `pytest` in the top level `pyuvsim` directory. To run tests and automatically create a coverage report, run the script `test_coverage.sh` in the `scripts` directory. Coverage reports require the `pytest-cov` plug-in.
   - If your change has the potential to change the calculations in the code or the speed
-  of the code, please run that the reference simulations following the directions
+  of the code, please run the reference simulations following the directions
   [here](../docs/developers.rst). Please verify that the simulation results are either
   unchanged or that the change is as expected and physically motivated. If there is a
   change, be sure to highlight it in the pull request. Also verify that your change does
