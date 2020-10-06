@@ -144,13 +144,8 @@ Please feel free to submit new issues to the [issue log](https://github.com/Radi
 
 ## How to contribute
 Contributions to this package to add new features or address any of the
-issues in the [issue log](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/issues) are very welcome.
-Please submit improvements as pull requests against the repo after verifying that
-the existing tests pass and any new code is well covered by unit tests.
-
-Bug reports or feature requests are also very welcome, please add them to the
-issue log after verifying that the issue does not already exist.
-Comments on existing issues are also welcome.
+issues in the [issue log](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/issues) are very welcome, as are bug reports or feature requests.
+Please see our [guide on contributing](.github/CONTRIBUTING.md)
 
 ## Versioning Approach
 We use a `generation.major.minor` format.
@@ -166,3 +161,17 @@ Testing: Backed by unittests
 * __Physical effects__: things like polarization effects, noise, ionospheric modeling, or nonterrestrial observing positions.
 * __Major computational improvement__:  Support for new catalog types (e.g, diffuse maps), new analysis tools, changes to parallelization scheme
 * __Small improvements__: Better documentation or example code, outer framework redesign.
+
+
+# Maintainers
+pyuvsim is maintained by the RASG Managers, which currently include:
+
+ - Adam Beardsley (Arizona State University)
+ - Bryna Hazelton (University of Washington)
+ - Daniel Jacobs (Arizona State University)
+ - Paul La Plante (University of California, Berkeley)
+ - Jonathan Pober (Brown University)
+
+Please use the channels discussed in the [guide on contributing](.github/CONTRIBUTING.md)
+for code-related discussions. You can contact us privately if needed at
+[rasgmanagers@gmail.com](mailto:rasgmanagers@gmail.com).
