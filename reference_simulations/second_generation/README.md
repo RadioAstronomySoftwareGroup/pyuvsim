@@ -21,7 +21,7 @@ We detail the set of reference simulations below.
 |   obsparam_ref_2.1_airy.yaml      |               gleam.vot              |   60   |   128  | MWA_nocore |   airy      | ref_2.1_airy.uvh5         |
 |  obsparam_ref_2.2_uvbeam.yaml     |               gleam.vot              |   1    |   128  | MWA_nocore | HERA_UVBeam | ref_2.2_uvbeam_gleam.uvh5 |
 | obsparam_ref_2.3_airy_flatPS.yaml | healpix_flat_EoR_spectrum_noise.hdf5 |   1    |   128  | MWA_nocore |   airy      | ref_2.3_airy_flatPS.uvh5  |
-|  obsparam_ref_1.3_gauss.yaml      |       healpix_gsm_shell.hdf5         |   1    |   128  | MWA_nocore |   airy      | ref_2.3_airy_gsm.uvh5     |
+|  obsparam_ref_2.3_airy_gsm.yaml   |       healpix_gsm_shell.hdf5         |   1    |   128  | MWA_nocore |   airy      | ref_2.3_airy_gsm.uvh5     |
 
 
 The total number of data points is constrained by the current level of optimization and availability of computing resources. pyuvsim is currently running on the Oscar cluster at Brown University, given limitations of memory and processor availability.
