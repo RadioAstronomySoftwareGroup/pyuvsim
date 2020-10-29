@@ -14,19 +14,35 @@ general simulator design.
 
 A comparison to other simulators may be found at [ReadTheDocs](https://pyuvsim.readthedocs.io/en/latest/comparison.html).
 
-## Motivation and Approach
-pyuvsim's two primary goals are interferometer simulation accuracy at the level of
-precision necessary for 21cm cosmology science, and maximum flexibility in use cases.
-Key elements of this approach include:
+## pyuvsim, the Interferometer Simulator of Record
+pyuvsim's  primary goal is to be an interferometer simulator accurate at the level of
+precision necessary for 21cm cosmology science,
 
 1. High level of test coverage including accuracy (design goal is 97%).
-2. Include analytic tests in unittests.
-3. Comparison with external simulations.
-4. Design for scalability across many cpus.
-5. Fully-polarized instrument response, floating-point source position accuracy,
-   full-sky field of view, and exact antenna positions.
-6. Support for varied beam models across the array.
-7. Defining a clear, user-friendly standard for simulation design.
+2. Testing against analytic calculations, monitored by continuous integration (see memo #XXX)
+3. Comparison with external simulations with standardized reference simulations
+## Usability and extensibility
+A secondary goal is a community simulation environment which provides well documented and flexible code to support a diversity of use cases.
+Key elements of this approach include:
+1. Design for scalability across many cpus.
+2. Defining a clear, user-friendly standard for simulation design.
+3. Documentation of analytic validation and reference simulations
+
+# Physical Instrumental Effects
+Each addition of new physics is validated against analytic calculations and included in a new reference simulation. Physics that have been included or are on the roadmap.
+1. Fully-polarized instrument response (complete)
+1. Polarized sources (analytic testing ~90% )
+1. Floating-point source position accuracy (complete)
+1. Full-sky field of view (complete)
+1. Exact antenna positions.  (complete)
+1. Varied beam models across the array (complete, tested against analytic)
+1. Diffuse emission (complete, tested against analytic, paper in prep)
+1. Arbitrary spectrum (complete)
+1. Non-terrestrial observatories (Lunar observatory complete)
+1. Time domain sources (TODO)
+1. Ionospheric scintillation (TODO)
+
+
 
 ## Installation
 Simple installation via pip is available for users, developers should follow
