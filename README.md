@@ -14,7 +14,7 @@ general simulator design.
 
 A comparison to other simulators may be found at [ReadTheDocs](https://pyuvsim.readthedocs.io/en/latest/comparison.html).
 
-## PYUVSIM, the Interferometer Simulator of Record
+## pyuvsim, the Interferometer Simulator of Record
 pyuvsim's  primary goal is to be an interferometer simulator accurate at the level of
 precision necessary for 21cm cosmology science,
 
