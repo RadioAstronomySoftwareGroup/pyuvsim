@@ -16,13 +16,14 @@ jobs:
         run: |
           wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/miniconda.sh;
           bash $HOME/miniconda.sh -b -p $HOME/miniconda
+      - name : Setup paths
+        run: echo "$HOME/miniconda/bin" >> $GITHUB_PATH
+
       - name: Setup Environment
         run: |
-          export PATH="$HOME/miniconda/bin:$PATH"
           ./ci/install_conda.sh
       - name: Linting
         run: |
-          export PATH="$HOME/miniconda/bin:$PATH"
           source activate ${ENV_NAME}
           pre-commit install
           pre-commit run -a
@@ -54,20 +55,24 @@ jobs:
         run: |
           wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/miniconda.sh;
           bash $HOME/miniconda.sh -b -p $HOME/miniconda
+
+      - name : Setup paths
+        run: echo "$HOME/miniconda/bin" >> $GITHUB_PATH
+
       - name: Setup Environment
         run: |
-          export PATH="$HOME/miniconda/bin:$PATH"
           ./ci/install_conda.sh
+
       - name: Install
         run: |
-          export PATH="$HOME/miniconda/bin:$PATH"
           source activate ${ENV_NAME}
           pip install .
+
       - name: Run Tests
         run: |
-          export PATH="$HOME/miniconda/bin:$PATH"
           source activate $ENV_NAME
           python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+
       - uses: codecov/codecov-action@master
         if: matrix.os == 'ubuntu-latest' && success()
         with:
@@ -88,20 +93,23 @@ jobs:
         run: |
           wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/miniconda.sh;
           bash $HOME/miniconda.sh -b -p $HOME/miniconda
+      - name : Setup paths
+        run: echo "$HOME/miniconda/bin" >> $GITHUB_PATH
+
       - name: Setup Environment
         run: |
-          export PATH="$HOME/miniconda/bin:$PATH"
           ./ci/install_conda.sh
+
       - name: Install
         run: |
-          export PATH="$HOME/miniconda/bin:$PATH"
           source activate ${ENV_NAME}
           pip install .
+
       - name: Run Tests
         run: |
-          export PATH="$HOME/miniconda/bin:$PATH"
           source activate $ENV_NAME
           python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+
       - uses: codecov/codecov-action@master
         if: success()
         with:
