@@ -68,10 +68,8 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
 @pytest.mark.parametrize('model', ['monopole', 'cosza', 'quaddome', 'monopole-nonflat'])
 def test_analytic_diffuse(model, tmpdir):
     # Generate the given model and simulate for a few baselines.
-    # Import from analytic_diffuse  (consider moving to rasg_affiliates?)
-    pytest.importorskip('analytic_diffuse')
+    analytic_diffuse = pytest.importorskip('analytic_diffuse')
     pytest.importorskip('astropy_healpix')
-    import analytic_diffuse
 
     modname = model
     use_w = False

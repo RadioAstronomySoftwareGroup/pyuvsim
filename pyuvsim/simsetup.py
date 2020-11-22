@@ -727,9 +727,10 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
 
 
 def _construct_beam_list(beam_ids, telconfig):
-    beam_list = BeamList([])
+    beam_list = BeamList([], beam_ids=beam_ids)
     if 'spline_interp_opts' in telconfig.keys():
         beam_list.spline_interp_opts = telconfig['spline_interp_opts']
+
     for beamID in beam_ids:
         beam_model = telconfig['beam_paths'][beamID]
 
@@ -741,15 +742,18 @@ def _construct_beam_list(beam_ids, telconfig):
             raise ValueError('Beam model is not properly specified in telescope config file.')
 
         # first check to see if the beam_model is a string giving a file location
-        if (isinstance(beam_model, str)
-                and (os.path.exists(beam_model)
-                     or os.path.exists(os.path.join(SIM_DATA_PATH, beam_model)))):
+        ispath = False
+        if isinstance(beam_model, str):
+            longpath = os.path.join(SIM_DATA_PATH, beam_model)
+            ispath = True
             if os.path.exists(beam_model):
                 beam_list.append(beam_model)
+            elif os.path.exists(longpath):
+                beam_list.append(longpath)
             else:
-                beam_list.append(os.path.join(SIM_DATA_PATH, beam_model))
+                ispath = False
         # Failing that, try to parse the beam string as an analytic beam.
-        else:
+        if not ispath:
             if isinstance(beam_model, str):
                 beam_type = beam_model
             elif 'type' in beam_model:
@@ -798,7 +802,6 @@ def _construct_beam_list(beam_ids, telconfig):
                     beam_model = '_'.join(['analytic_airy', 'diam=' + str(diameter)])
                 else:
                     raise KeyError("Missing diameter for airy beam.")
-
             beam_list.append(beam_model)
     return beam_list
 

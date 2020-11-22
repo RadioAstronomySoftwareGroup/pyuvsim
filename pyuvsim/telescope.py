@@ -46,7 +46,7 @@ class Telescope:
         return False
 
 
-class BeamList(object):
+class BeamList:
     """
     A container for the set of beam models and related parameters.
 
@@ -64,15 +64,19 @@ class BeamList(object):
 
     Attributes
     ----------
-    string_mode : bool
+    string_mode: bool
         Is True if the beams are represented as strings, False if they're objects
 
-    uvb_params : dict
+    uvb_params: dict
         Set of additional attributes to set on UVBeam objects.
+
+    beam_ids: dict
+        keys are identifiers associated with each beam in the list.
+        values are the indices of them in the list.
 
     Parameters
     ----------
-    beam_list : list (optional)
+    beam_list: list (optional)
         A list of UVBeam/AnalyticBeam objects or strings describing beams. If
         beam_list consists of objects, then the BeamList will be initialized in
         object mode with string_mode == False. If beam_list consists of strings,
@@ -80,12 +84,15 @@ class BeamList(object):
 
         Passing in a mixture of strings and objects will error.
 
-    uvb_params : dict (optional)
+    uvb_params: dict (optional)
         Options to set uvb_params, overriding settings from passed-in UVBeam objects.
+
+    beam_ids: list (optional)
+        Identifiers associated with each beam in the list.
 
     Raises
     ------
-    ValueError :
+    ValueError:
         For an invalid beam_list (mix of strings and objects).
 
     Notes
@@ -97,12 +104,14 @@ class BeamList(object):
 
     """
 
+    beam_ids = None
+
     _float_params = {'sig': 'sigma', 'diam': 'diameter',
                      'reff': 'ref_freq', 'ind': 'spectral_index'}
 
     string_mode = True
 
-    def __init__(self, beam_list=None, uvb_params=None):
+    def __init__(self, beam_list=None, uvb_params=None, beam_ids=None):
 
         self.uvb_params = {'freq_interp_kind': 'cubic',
                            'interpolation_function': 'az_za_simple'}
@@ -118,6 +127,9 @@ class BeamList(object):
                 self.string_mode = False
             else:
                 raise ValueError("Invalid beam list: " + str(beam_list))
+
+        if beam_ids is not None:
+            self.beam_ids = dict(zip(beam_ids, range(len(beam_ids))))
 
         # If any UVBeam objects are passed in, update uvb_params:
         list_uvb_params = {}
@@ -231,7 +243,7 @@ class BeamList(object):
             return self._str_beam_list == other._str_beam_list
         return self._obj_beam_list == other._obj_beam_list
 
-    def append(self, value):
+    def append(self, value, beam_id=None):
         """
         Append to the beam list.
 

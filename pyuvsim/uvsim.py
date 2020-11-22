@@ -143,7 +143,6 @@ class UVEngine(object):
 
         if self.update_local_coherency:
             self.local_coherency = sources.coherency_calc()
-
         self.beam1_jones = baseline.antenna1.get_beam_jones(
             self.task.telescope, sources.alt_az[..., sources.above_horizon],
             self.task.freq, reuse_spline=self.reuse_spline
@@ -299,6 +298,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         location = MoonLocation.from_selenocentric(*tloc, unit='m')
     else:
         raise ValueError("If world keyword is set, it must be either 'moon' or 'earth'.")
+
     telescope = Telescope(input_uv.telescope_name, location, beam_list)
     freq_array = input_uv.freq_array * units.Hz
     time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)

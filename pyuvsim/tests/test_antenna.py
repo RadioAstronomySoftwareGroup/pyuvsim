@@ -25,8 +25,8 @@ def test_jones_set_spline(cst_beam, hera_loc):
 
     assert beam0 is beam_list[-1]
 
-    # Make antenna that uses beam #1
-    antenna = pyuvsim.Antenna('ant1', 1, np.array([0, 10, 0]), 1)
+    # Make antenna that uses beam 0
+    antenna = pyuvsim.Antenna('ant1', 1, np.array([0, 10, 0]), 0)
     array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
 
     altaz = [[0.0134], [1.0]]

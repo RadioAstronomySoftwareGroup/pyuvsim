@@ -11,7 +11,7 @@ from . import utils as simutils
 from .telescope import BeamList
 
 
-class Antenna(object):
+class Antenna:
     """
     Defines an object that can return a Jones matrix and has a specified
     location, name, and number.
@@ -70,7 +70,10 @@ class Antenna(object):
         else:
             freq = np.array([frequency])
 
-        beam = array.beam_list[self.beam_id]
+        ind = self.beam_id
+        if array.beam_list.beam_ids is not None:
+            ind = array.beam_list.beam_ids[self.beam_id]
+        beam = array.beam_list[ind]
 
         if beam.data_normalization != 'peak':
             beam.peak_normalize()

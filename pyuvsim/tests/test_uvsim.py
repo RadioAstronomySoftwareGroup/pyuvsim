@@ -74,6 +74,8 @@ def uvobj_beams_srcs():
     param_dict['select'] = {'redundant_threshold': 0.1}
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
 
+    del beam_list.beam_ids
+
     # Add more beams to the list.
     # Don't use the uniform beam (need to see coherency change with positions).
     ref_freq, alpha = 100e6, -0.5

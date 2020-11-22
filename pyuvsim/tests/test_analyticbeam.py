@@ -165,7 +165,7 @@ def test_gaussbeam_values():
 
     catalog.update_positions(time, array_location)
     beam = pyuvsim.AnalyticBeam('gaussian', sigma=sigma)
-    array = pyuvsim.Telescope('telescope_name', array_location, [beam])
+    array = pyuvsim.Telescope('telescope_name', array_location, pyuvsim.BeamList([beam]))
 
     # Need a dummy baseline for this test.
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
