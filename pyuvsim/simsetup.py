@@ -254,7 +254,12 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         mock_keywords['Nsrcs'] = Nsrcs
         np.random.seed(seed=rseed)
         mock_keywords['rseed'] = np.random.get_state()[1][0]
-        alts = np.random.uniform(min_alt, 90, Nsrcs)
+
+        # Necessary to get uniform distribution per solid angle.
+        cos_min_alt = np.cos(np.radians(min_alt))
+        alts = np.degrees(np.arccos(2 * np.random.uniform(0, 1, Nsrcs)
+                                    * cos_min_alt - 1
+                                    ))
         azs = np.random.uniform(0, 2 * np.pi, Nsrcs)
         fluxes = np.ones(Nsrcs, dtype=float)
 
