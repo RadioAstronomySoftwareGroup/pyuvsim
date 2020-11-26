@@ -884,38 +884,32 @@ def test_uvfits_to_config():
     assert simtest.compare_dictionaries(param_dict, orig_param_dict)
 
 
-def test_mock_catalogs():
+@pytest.mark.parametrize(
+    "arrangement,text_cat",
+    [
+        ('cross', 'mock_cross_2458098.27471.txt'),
+        ('hera_text', 'mock_hera_text_2458098.27471.txt'),
+        ('long-line', 'mock_long-line_2458098.27471.txt'),
+        ('off-zenith', 'mock_off-zenith_2458098.27471.txt'),
+        ('triangle', 'mock_triangle_2458098.27471.txt'),
+        ('random', 'mock_random_2458098.27471.txt'),
+        ('zenith', 'mock_zenith_2458098.27471.txt'),
+    ]
+)
+def test_mock_catalogs(arrangement, text_cat):
     time = Time(2458098.27471265, scale='utc', format='jd')
+    cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, arrangement, rseed=2458098)
 
-    arrangements = ['off-zenith', 'zenith', 'cross', 'triangle', 'long-line', 'random', 'hera_text']
-
-    cats = {}
-    for arr in arrangements:
-        # rseed is only used by the "random" mock catalog
-        cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, arr, rseed=2458098)
-        cats[arr] = cat
-
-    # For each mock catalog, verify the Ra/Dec source positions against a text catalog.
-
-    text_catalogs = {
-        'cross': 'mock_cross_2458098.27471.txt',
-        'hera_text': 'mock_hera_text_2458098.27471.txt',
-        'long-line': 'mock_long-line_2458098.27471.txt',
-        'off-zenith': 'mock_off-zenith_2458098.27471.txt',
-        'triangle': 'mock_triangle_2458098.27471.txt',
-        'random': 'mock_random_2458098.27471.txt',
-        'zenith': 'mock_zenith_2458098.27471.txt'
-    }
-    with pytest.raises(KeyError, match="Invalid mock catalog arrangement: invalid_catalog_name"):
-        pyuvsim.create_mock_catalog(time, 'invalid_catalog_name')
-
+    # For each mock catalog, verify the Ra/Dec source positions against a saved text catalog.
     radec_catalog = pyradiosky.SkyModel()
-    for arr in arrangements:
-        radec_catalog.read_text_catalog(
-            os.path.join(SIM_DATA_PATH, 'test_catalogs', text_catalogs[arr])
-        )
-        assert np.all(radec_catalog == cats[arr])
+    radec_catalog.read_text_catalog(
+        os.path.join(SIM_DATA_PATH, 'test_catalogs', text_cat)
+    )
+    assert np.all(radec_catalog == cat)
 
+
+def test_saved_mock_catalog():
+    time = Time(2458098.27471265, scale='utc', format='jd')
     cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, 'random', save=True)
     loc = eval(mock_kwds['array_location'])
     loc = EarthLocation.from_geodetic(loc[1], loc[0], loc[2])  # Lon, Lat, alt
@@ -923,9 +917,15 @@ def test_mock_catalogs():
     alts_reload = np.load(fname)['alts']
     cat.update_positions(time, loc)
     alt, az = cat.alt_az
+    os.remove(fname)
     assert np.all(alt > np.radians(30.))
     assert np.allclose(alts_reload, np.degrees(alt))
-    os.remove(fname)
+
+
+def test_mock_catalog_error():
+    time = Time(2458098.27471265, scale='utc', format='jd')
+    with pytest.raises(KeyError, match="Invalid mock catalog arrangement: invalid_catalog_name"):
+        pyuvsim.create_mock_catalog(time, 'invalid_catalog_name')
 
 
 def test_keyword_param_loop(tmpdir):
