@@ -910,7 +910,7 @@ def test_mock_catalogs(arrangement, text_cat):
 
 def test_saved_mock_catalog():
     time = Time(2458098.27471265, scale='utc', format='jd')
-    cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, 'random', save=True)
+    cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, 'random', Nsrcs=100, save=True)
     loc = eval(mock_kwds['array_location'])
     loc = EarthLocation.from_geodetic(loc[1], loc[0], loc[2])  # Lon, Lat, alt
     fname = 'mock_catalog_random.npz'
@@ -918,8 +918,51 @@ def test_saved_mock_catalog():
     cat.update_positions(time, loc)
     alt, az = cat.alt_az
     os.remove(fname)
-    assert np.all(alt > np.radians(30.))
     assert np.allclose(alts_reload, np.degrees(alt))
+
+
+@pytest.mark.parametrize('min_alt', [-20, 0, None, 50])
+def test_randsource_minalt(min_alt):
+    time = Time(2458098.27471265, scale='utc', format='jd')
+    cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(
+        time, 'random', Nsrcs=100, min_alt=min_alt
+    )
+    loc = eval(mock_kwds['array_location'])
+    loc = EarthLocation.from_geodetic(loc[1], loc[0], loc[2])  # Lon, Lat, alt
+    cat.update_positions(time, loc)
+    alt, az = cat.alt_az
+    if min_alt is None:
+        min_alt = 30    # Checking default
+    assert np.all(alt >= np.radians(min_alt))
+
+
+def test_randsource_distribution():
+    # Check that random sources are uniformly distributed per solid angle
+
+    astropy_healpix = pytest.importorskip("astropy_healpix")
+    Nsrcs = 40000
+    time = Time(2458098.27471265, scale='utc', format='jd')
+    cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(
+        time, 'random', Nsrcs=Nsrcs, min_alt=-90, rseed=2458098
+    )
+    loc = eval(mock_kwds['array_location'])
+    loc = EarthLocation.from_geodetic(loc[1], loc[0], loc[2])  # Lon, Lat, alt
+    cat.update_positions(time, loc)
+    alt, az = cat.alt_az
+
+    # Bin into low-res HEALPix pixels.
+    nside = 32
+    npix = 12 * nside**2
+    hp = astropy_healpix.HEALPix(nside)
+
+    inds = hp.lonlat_to_healpix(Longitude(az, unit='rad'), Latitude(alt, unit='rad'))
+    un, counts = np.unique(inds, return_counts=True)
+
+    # counts should be Poisson-distributed with rate lambda = nsrcs / npix
+    # variance and mean should be close to lambda
+    lam = Nsrcs / npix
+    assert np.isclose(np.mean(counts), lam, atol=1.0)
+    assert np.isclose(np.var(counts), lam, atol=1.0)
 
 
 def test_mock_catalog_error():
