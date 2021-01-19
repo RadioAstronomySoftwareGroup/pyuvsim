@@ -9,9 +9,9 @@ dependencies:
   - mpi4py>=3.0.0
   - numpy>=1.15
   - pip
+  - pre-commit
   - psutil
   - pypandoc
-  - pyradiosky
   - pytest
   - pytest-cov
   - pyuvdata
@@ -21,7 +21,6 @@ dependencies:
   - setuptools_scm
   - sphinx
   - pip:
-    - pre-commit
     - pyradiosky>=0.1.0
     - lunarsky
     - git+git://github.com/aelanman/analytic_diffuse
