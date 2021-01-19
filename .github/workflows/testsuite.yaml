@@ -86,11 +86,14 @@ jobs:
         run: |
           python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
-      - uses: codecov/codecov-action@master
-        if: matrix.os == 'ubuntu-latest' && success()
+      - name: Upload Coverage
+        uses: codecov/codecov-action@master
+        if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
           file: ./coverage.xml #optional
+          env_vars: OS,PYTHON
+          fail_ci_if_error: true
 
   min_deps:
     env:
@@ -137,3 +140,5 @@ jobs:
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
           file: ./coverage.xml #optional
+          env_vars: OS,PYTHON
+          fail_ci_if_error: true
