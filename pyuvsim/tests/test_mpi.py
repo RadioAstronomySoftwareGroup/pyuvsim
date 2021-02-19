@@ -100,7 +100,7 @@ def test_mem_usage():
 @pytest.mark.parallel(4)
 def test_mpi_counter():
     # Warning -- This test has been flaky in the past.
-    mpi.start_mpi()
+    mpi.start_mpi(False)
     count = mpi.Counter()
     N = 20
     for i in range(N):
@@ -108,6 +108,19 @@ def test_mpi_counter():
     mpi.world_comm.Barrier()
     assert count.current_value() == N * mpi.world_comm.size
     count.free()
+
+
+@pytest.mark.parallel(5)
+def test_mpi_parallel_flags():
+    mpi.start_mpi()
+    base_rank = 0
+    flagarr = mpi.ParallelFlag(base_rank=base_rank)
+    if mpi.rank % 2 == 0:
+        flagarr.set_true()
+    mpi.world_comm.Barrier()
+    if mpi.rank == base_rank:
+        check = (np.arange(mpi.world_comm.size)) % 2 == 0
+        assert np.all(check == flagarr.flags)
 
 
 @pytest.mark.parametrize('MAX_BYTES', [mpi.INT_MAX, 100])

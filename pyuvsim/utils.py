@@ -27,7 +27,6 @@ class progsteps:
 
     Parameters
     ----------
-
     maxval : int
         Maximum value to count to.
 
@@ -112,13 +111,19 @@ def zenithangle_azimuth_to_altaz(zenith_angle, azimuth):
     """
     Convert from astropy altaz convention to UVBeam az/za convention.
 
-    Args:
-        zenith_angle: in radians
-        azimuth: in radians in uvbeam convention: North of East(East=0, North=pi/2)
+    Parameters
+    ----------
+    zenith_angle: float, array_like of float
+        Zenith angle in radians
+    azimuth: float, array_like of float
+        Azimuth in radians in uvbeam convention: North of East(East=0, North=pi/2)
 
-    Returns:
-        altitude in radians
-        azimuth in radians in astropy convention: East of North (N=0, E=pi/2)
+    Returns
+    -------
+    altitude: array of float
+        Altitude in radians
+    azimuth: array of float
+        In radians in astropy convention: East of North (N=0, E=pi/2)
     """
     input_za = np.array(zenith_angle)
     input_az = np.array(azimuth)

@@ -78,7 +78,6 @@ def shared_mem_bcast(arr, root=0):
 
     Parameters
     ----------
-
     arr: ndarray
         Data to be shared.
     root: int
@@ -360,7 +359,7 @@ class Counter:
             nint = 1
         self.win = MPI.Win.Allocate(nint * itemsize, itemsize,
                                     MPI.INFO_NULL, comm)
-        if rank == 0:
+        if rank == count_rank:
             mem = self.win.tomemory()
             mem[:] = _struct.pack('i', 0)
 
@@ -372,19 +371,65 @@ class Counter:
     def next(self, increment=1):
         incr = _array('i', [increment])
         nval = _array('i', [0])
-        self.win.Lock(0)
+        self.win.Lock(self.count_rank)
         self.win.Get_accumulate([incr, 1, MPI.INT],
                                 [nval, 1, MPI.INT],
                                 0, op=MPI.SUM)
-        self.win.Unlock(0)
+        self.win.Unlock(self.count_rank)
         return nval[0]
 
     def current_value(self):
-        self.win.Lock(0)
+        self.win.Lock(self.count_rank)
         nval = _array('i', [0])
-        self.win.Get([nval, 1, MPI.INT], 0)
-        self.win.Unlock(0)
+        self.win.Get([nval, 1, MPI.INT], self.count_rank)
+        self.win.Unlock(self.count_rank)
         return nval[0]
+
+
+class ParallelFlag:
+    """
+    Uses RMA to monitor status on multiple processes.
+
+    A boolean array of length comm.size, which each process
+    can flip without blocking.
+    """
+
+    def __init__(self, comm=None, base_rank=0):
+        self.base_rank = base_rank
+        if comm is None:
+            comm = world_comm.Dup()
+        self.comm = comm
+        rank = comm.Get_rank()
+        itemsize = MPI.BOOL.Get_size()
+        nitem = 0
+        if rank == base_rank:
+            nitem = comm.Get_size()
+
+        self.win = MPI.Win.Allocate(nitem * itemsize, itemsize,
+                                    MPI.INFO_NULL, self.comm)
+        self.flags = None
+        if rank == base_rank:
+            mem = self.win.tomemory()
+            mem[:] = _array('b', [0] * nitem)
+            self.flags = np.ndarray(nitem, dtype=bool, buffer=mem)
+
+        self.comm.Barrier()
+
+    def _set(self, dat):
+        rank = self.comm.Get_rank()
+        val = _struct.pack('b', dat)
+        self.win.Lock(self.base_rank)
+        self.win.Put([val, 1, MPI.BOOL], self.base_rank, target=rank)
+        self.win.Unlock(self.base_rank)
+
+    def set_true(self):
+        self._set(True)
+
+    def set_false(self):
+        self._set(False)
+
+    def free(self):
+        self.win.Free()
 
 
 def get_max_node_rss(return_per_node=False):
