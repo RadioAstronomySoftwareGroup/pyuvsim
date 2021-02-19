@@ -374,7 +374,7 @@ class Counter:
         self.win.Lock(self.count_rank)
         self.win.Get_accumulate([incr, 1, MPI.INT],
                                 [nval, 1, MPI.INT],
-                                0, op=MPI.SUM)
+                                self.count_rank, op=MPI.SUM)
         self.win.Unlock(self.count_rank)
         return nval[0]
 

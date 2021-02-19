@@ -9,7 +9,6 @@ import astropy.units as units
 from astropy.units import Quantity
 from astropy.constants import c as speed_of_light
 from pyuvdata import UVData
-import time
 
 from . import mpi
 from . import simsetup
@@ -459,7 +458,6 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
 
     engine = UVEngine()
     count = mpi.Counter()
-    parflag = mpi.ParallelFlag()
     size_complex = np.ones(1, dtype=complex).nbytes
     data_array_shape = (Nbls * Ntimes, 1, Nfreqs, 4)
     uvdata_indices = []
@@ -484,19 +482,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         cval = count.next()
         if rank == 0 and not quiet:
             pbar.update(cval)
-
-    parflag.set_true()
-
-    # Continue pbar reporting after rank 0 finishes
-    # until all processes are done.
-    if rank == 0 and not quiet:
-        while np.any(~parflag.flags):
-            time.sleep(2)
-            pbar.update(count.current_value())
-
     comm.Barrier()
     count.free()
-    parflag.free()
     if rank == 0 and not quiet:
         pbar.finish()
 

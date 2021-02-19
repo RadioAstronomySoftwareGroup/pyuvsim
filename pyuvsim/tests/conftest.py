@@ -110,6 +110,11 @@ def pytest_runtest_call(item):
             message += "."
             raise AssertionError(message) from err
 
+        # If passing, do not run after this function.
+        def blank_func(*args, **kwargs):
+            return True
+        item.obj = blank_func
+
 
 class _MPIExceptionChainRepr(ExceptionChainRepr):
     """
