@@ -261,8 +261,8 @@ def test_gleam_catalog_spectral_type(spectral_type):
 
 @pytest.mark.parametrize(
     ("key_pop", "message"),
-    [("ra_column", "No RA column name specified"),
-     ("dec_column", "No Dec column name specified")])
+    [("ra_column", "No ra_column specified"),
+     ("dec_column", "No dec_column specified")])
 def test_vot_catalog_warns(key_pop, message):
     vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
 
@@ -286,9 +286,9 @@ def test_vot_catalog_warns(key_pop, message):
 
 @pytest.mark.parametrize(
     ("key_pop", "message"),
-    [("table_name", "No VO table name specified"),
-     ("id_column", "No ID column name specified"),
-     ("flux_columns", "No Flux column names specified")])
+    [("table_name", "No table_name specified"),
+     ("id_column", "No id_column specified"),
+     ("flux_columns", "No flux_columns specified")])
 def test_vot_catalog_error(key_pop, message):
     vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
 

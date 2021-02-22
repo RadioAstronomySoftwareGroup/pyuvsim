@@ -674,6 +674,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
         sky = pyradiosky.SkyModel()
         if not os.path.isfile(catalog):
             catalog = os.path.join(param_dict['config_path'], catalog)
+
         if catalog.endswith("txt"):
             sky.read_text_catalog(catalog)
         elif catalog.endswith('vot'):
@@ -688,30 +689,35 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
                 )
             else:
                 vo_params = {}
-                if "table_name" not in source_params:
-                    raise ValueError(f"No VO table name specified for {catalog}.")
-                vo_params["table_name"] = source_params["table_name"]
-                if "id_column" not in source_params:
-                    raise ValueError(f"No ID column name specified for {catalog}.")
-                vo_params["id_column"] = source_params["id_column"]
-                if "flux_columns" not in source_params:
-                    raise ValueError(f"No Flux column names specified for {catalog}.")
-                vo_params["flux_columns"] = source_params["flux_columns"]
-                if "ra_column" not in source_params:
-                    warnings.warn(f"No RA column name specified for {catalog}, using default.")
-                    vo_params["ra_column"] = "RAJ2000"
-                else:
-                    vo_params["ra_column"] = source_params["ra_column"]
-                if "dec_column" not in source_params:
-                    warnings.warn(f"No Dec column name specified for {catalog}, using default.")
-                    vo_params["dec_column"] = "DEJ2000"
-                else:
-                    vo_params["dec_column"] = source_params["dec_column"]
+                required_params = ["table_name", "id_column", "flux_columns"]
+                warn_params = {"ra_column": "RAJ2000", "dec_column": "DEJ2000"}
+                for param in required_params:
+                    if param not in source_params:
+                        raise ValueError(f"No {param} specified for {catalog}.")
+                    vo_params[param] = source_params[param]
+                for param, default in warn_params.items():
+                    if param not in source_params:
+                        warnings.warn(f"No {param} specified for {catalog}, using default.")
+                        vo_params[param] = default
+                    else:
+                        vo_params[param] = source_params[param]
 
                 vo_params["reference_frequency"] = None
                 sky.read_votable_catalog(catalog, **vo_params)
+        elif catalog.endswith('skyh5'):
+            sky.read_skyh5(catalog)
         elif catalog.endswith('hdf5'):
-            sky.read_healpix_hdf5(catalog)
+            # In principal, this could either be a skyh5 or an old-style healvis hdf5 file
+            # Try skyh5 first, if that doesn't work, use the old method
+            try:
+                sky.read_skyh5(catalog)
+            except ValueError:
+                sky.read_healpix_hdf5(catalog)
+        else:
+            raise ValueError(
+                "The file extension is not recognized as a valid one for SkyModel objects. "
+                "Expected extensions include: '.txt', '.vot', '.skyh5' and '.hdf5'."
+            )
 
     # Do source selections, if any.
     if input_uv is not None:
