@@ -225,7 +225,81 @@ def test_gleam_catalog():
     assert gleam_catalog.Ncomponents == 50
 
 
+def test_skyh5_catalog(tmp_path):
+    gleam_filename = os.path.join(
+        SIM_DATA_PATH, 'gleam_50srcs.vot'
+    )
+    skyobj = pyradiosky.SkyModel.from_gleam_catalog(gleam_filename)
+    assert skyobj.Ncomponents == 50
+
+    skyh5_file = os.path.join(tmp_path, 'gleam.skyh5')
+    skyobj.write_skyh5(skyh5_file)
+
+    starting_param_filename = os.path.join(
+        SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml'
+    )
+
+    param_filename = os.path.join(
+        tmp_path, 'param_test_skyh5_gleam.yaml'
+    )
+
+    with open(starting_param_filename, 'r') as yf:
+        param_dict = yaml.safe_load(yf)
+
+    param_dict['sources']['catalog'] = skyh5_file
+    with open(param_filename, 'w') as yfile:
+        yaml.dump(param_dict, yfile, default_flow_style=False)
+
+    skyh5_catalog = (
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            param_filename, return_recarray=False
+        )[0]
+    )
+    assert skyh5_catalog.Ncomponents == 50
+
+    # test works with `hdf5` extension:
+    hdf5_file = os.path.join(tmp_path, 'gleam.hdf5')
+    skyobj.write_skyh5(hdf5_file)
+
+    param_dict['sources']['catalog'] = hdf5_file
+    with open(param_filename, 'w') as yfile:
+        yaml.dump(param_dict, yfile, default_flow_style=False)
+
+    hdf5_catalog = (
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            param_filename, return_recarray=False
+        )[0]
+    )
+    assert hdf5_catalog == skyh5_catalog
+
+    # test error with unknown extension
+    h5_file = os.path.join(tmp_path, 'gleam.h5')
+    skyobj.write_skyh5(hdf5_file)
+
+    param_dict['sources']['catalog'] = h5_file
+    with open(param_filename, 'w') as yfile:
+        yaml.dump(param_dict, yfile, default_flow_style=False)
+
+    with pytest.raises(ValueError, match="The file extension is not recognized as a valid one"):
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            param_filename, return_recarray=False
+        )
+
+
 def test_healpix_catalog():
+    pytest.importorskip('astropy_healpix')
+    path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
+    sky = pyradiosky.SkyModel()
+    sky.read_healpix_hdf5(path)
+
+    params = {'sources': {'catalog': path}}
+    hpx_sky = pyuvsim.simsetup.initialize_catalog_from_params(
+        params, return_recarray=False
+    )[0]
+    assert hpx_sky == sky
+
+
+def test_healpix_hdf5_catalog():
     pytest.importorskip('astropy_healpix')
     path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
     sky = pyradiosky.SkyModel()
