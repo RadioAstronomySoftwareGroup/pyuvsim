@@ -697,7 +697,9 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
                     vo_params[param] = source_params[param]
                 for param, default in warn_params.items():
                     if param not in source_params:
-                        warnings.warn(f"No {param} specified for {catalog}, using default.")
+                        warnings.warn(
+                            f"No {param} specified for {catalog}, using default: {default}."
+                        )
                         vo_params[param] = default
                     else:
                         vo_params[param] = source_params[param]
