@@ -6,7 +6,10 @@ dependencies:
   - scipy
   - astropy
   - mpi4py
+  - pip
   - pyyaml
   - setuptools_scm
-  - conda-forge::pyuvdata
+  - conda-forge::pyuvdata>=2.1.3
   - conda-forge::pypandoc
+  - pip:
+    - pyradiosky>=0.1.0
