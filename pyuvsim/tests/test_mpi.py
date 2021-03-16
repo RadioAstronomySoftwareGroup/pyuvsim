@@ -112,22 +112,6 @@ def test_mpi_counter(count_rank):
     count.free()
 
 
-@pytest.mark.parametrize("base_rank", [0, 2])
-@pytest.mark.parallel(5)
-def test_mpi_parallel_flags(base_rank):
-    mpi.start_mpi()
-    flagarr = mpi.ParallelFlag(base_rank=base_rank)
-    if mpi.rank % 2 == 0:
-        flagarr.set_true()
-    else:
-        flagarr.set_false()
-    mpi.world_comm.Barrier()
-    if mpi.rank == base_rank:
-        check = (np.arange(mpi.world_comm.size)) % 2 == 0
-        assert np.all(check == flagarr.flags)
-    flagarr.free()
-
-
 @pytest.mark.parametrize('MAX_BYTES', [mpi.INT_MAX, 100])
 def test_big_gather(MAX_BYTES, fake_tasks):
 
