@@ -97,16 +97,18 @@ def test_mem_usage():
     assert np.isclose(change, incsize / 2**30, atol=5e-2)
 
 
+@pytest.mark.parametrize("count_rank", [0, 2])
 @pytest.mark.parallel(4)
-def test_mpi_counter():
+def test_mpi_counter(count_rank):
     # Warning -- This test has been flaky in the past.
     mpi.start_mpi()
-    count = mpi.Counter()
+    count = mpi.Counter(count_rank=count_rank)
     N = 20
     for i in range(N):
         count.next()
     mpi.world_comm.Barrier()
-    assert count.current_value() == N * mpi.world_comm.size
+    if mpi.world_comm.rank == count_rank:
+        assert count.current_value() == N * mpi.world_comm.size
     count.free()
 
 

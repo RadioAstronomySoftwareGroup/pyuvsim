@@ -78,7 +78,6 @@ def shared_mem_bcast(arr, root=0):
 
     Parameters
     ----------
-
     arr: ndarray
         Data to be shared.
     root: int
@@ -360,7 +359,7 @@ class Counter:
             nint = 1
         self.win = MPI.Win.Allocate(nint * itemsize, itemsize,
                                     MPI.INFO_NULL, comm)
-        if rank == 0:
+        if rank == count_rank:
             mem = self.win.tomemory()
             mem[:] = _struct.pack('i', 0)
 
@@ -372,18 +371,18 @@ class Counter:
     def next(self, increment=1):
         incr = _array('i', [increment])
         nval = _array('i', [0])
-        self.win.Lock(0)
+        self.win.Lock(self.count_rank)
         self.win.Get_accumulate([incr, 1, MPI.INT],
                                 [nval, 1, MPI.INT],
-                                0, op=MPI.SUM)
-        self.win.Unlock(0)
+                                self.count_rank, op=MPI.SUM)
+        self.win.Unlock(self.count_rank)
         return nval[0]
 
     def current_value(self):
-        self.win.Lock(0)
+        self.win.Lock(self.count_rank)
         nval = _array('i', [0])
-        self.win.Get([nval, 1, MPI.INT], 0)
-        self.win.Unlock(0)
+        self.win.Get([nval, 1, MPI.INT], self.count_rank)
+        self.win.Unlock(self.count_rank)
         return nval[0]
 
 
