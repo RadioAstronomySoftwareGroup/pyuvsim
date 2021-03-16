@@ -10,6 +10,7 @@
 - Use remote memory access to collect finished visibility data, without serialization.
 
 ### Fixed
+- Bug MPI-enabled tests which caused failure on tests that wouldn't pass in serial mode.
 - Fix bugs in reading catalogs using pyradiosky for `skyh5` files and files with unusual extension names.
 - Corrects the distribution of random points for the random mock catalog.
 - pixel interpolation was defaulting to az_za_simple for all beams, breaking healpix-coord UVBeams.
