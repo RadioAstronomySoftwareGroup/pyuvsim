@@ -67,6 +67,7 @@ def start_mpi(block_nonroot_stdout=True):
         # For non-root ranks, do not print to stdout.
         # (Uncovered until we have multi-rank tests)
         sys.stdout = open('/dev/null', 'w')
+        atexit.register(sys.stdout.close)
 
 
 def shared_mem_bcast(arr, root=0):
