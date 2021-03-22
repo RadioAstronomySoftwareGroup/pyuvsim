@@ -65,7 +65,6 @@ def start_mpi(block_nonroot_stdout=True):
 
     if (not rank == 0) and block_nonroot_stdout:  # pragma: no cover
         # For non-root ranks, do not print to stdout.
-        # (Uncovered until we have multi-rank tests)
         sys.stdout = open('/dev/null', 'w')
         atexit.register(sys.stdout.close)
 

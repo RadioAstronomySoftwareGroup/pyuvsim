@@ -485,12 +485,10 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
 
     request = comm.Ibarrier()
 
-    current_value = count.current_value()
     while not request.Test():
         cval = count.current_value()
-        if rank == 0 and not quiet and cval != current_value:
+        if rank == 0 and not quiet:
             pbar.update(cval)
-            current_value = cval
 
     count.free()
     if rank == 0 and not quiet:
