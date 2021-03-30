@@ -453,7 +453,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
 
     Ntasks_tot = comm.reduce(Ntasks_tot, op=mpi.MPI.MAX, root=0)
     if rank == 0 and not quiet:
-        print(f"Nsky_parts: {Nsky_parts}", flush=True)
+        print(f"Nsky parts: {Nsky_parts}", flush=True)
         print("Tasks: ", Ntasks_tot, flush=True)
         pbar = simutils.progsteps(maxval=Ntasks_tot)
 
