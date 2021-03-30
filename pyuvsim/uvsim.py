@@ -563,20 +563,27 @@ def run_uvsim(params, return_uv=False, quiet=False):
     skydata = SkyModelData()
 
     if rank == 0:
+        start = Time.now()
         input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(params)
         skydata, source_list_name = simsetup.initialize_catalog_from_params(
             params, input_uv, return_recarray=False
         )
+        print(f"UVData initialization took {(Time.now() - start).to('minute'):.3f}")
+        start = Time.now()
         skydata = simsetup.SkyModelData(skydata)
+        print(f"Skymodel setup took {(Time.now() - start).to('minute'):.3f}")
 
     input_uv = comm.bcast(input_uv, root=0)
     beam_list = comm.bcast(beam_list, root=0)
     beam_dict = comm.bcast(beam_dict, root=0)
     skydata.share(root=0)
 
+    start = Time.now()
     uv_out = run_uvdata_uvsim(
         input_uv, beam_list, beam_dict=beam_dict, catalog=skydata, quiet=quiet
     )
+    if rank == 0:
+        print(f"Run uvdata uvsim took {(Time.now() - start).to('minute'):.3f}")
 
     if rank == 0:
         if isinstance(params, str):
