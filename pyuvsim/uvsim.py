@@ -4,6 +4,7 @@
 
 import numpy as np
 import yaml
+import time
 from astropy.coordinates import EarthLocation
 import astropy.units as units
 from astropy.units import Quantity
@@ -490,6 +491,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         if rank == 0 and not quiet:
             cval = count.current_value()
             pbar.update(cval)
+        time.sleep(1)
 
     count.free()
     if rank == 0 and not quiet:
