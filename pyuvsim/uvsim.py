@@ -458,8 +458,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
             print(
                 "The source list has been split into Nsky_parts"
                 f" <= {Nsky_parts} chunks on some or all nodes"
-                " due to memory limitations."
-                , flush=True,
+                " due to memory limitations.",
+                flush=True,
             )
         print("Tasks: ", Ntasks_tot, flush=True)
         pbar = simutils.progsteps(maxval=Ntasks_tot)
