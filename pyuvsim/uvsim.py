@@ -454,7 +454,13 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     Nsky_parts = comm.reduce(Nsky_parts, op=mpi.MPI.MAX, root=0)
     Ntasks_tot = comm.reduce(Ntasks_tot, op=mpi.MPI.SUM, root=0)
     if rank == 0 and not quiet:
-        print(f"Max Nsky parts: {Nsky_parts}", flush=True)
+        if Nsky_parts > 1:
+            print(
+                "The source list has been split into Nsky_parts"
+                f" <= {Nsky_parts} chunks on some or all nodes"
+                " due to memory limitations."
+                , flush=True,
+            )
         print("Tasks: ", Ntasks_tot, flush=True)
         pbar = simutils.progsteps(maxval=Ntasks_tot)
 
