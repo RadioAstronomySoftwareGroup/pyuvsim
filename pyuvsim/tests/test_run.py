@@ -2,10 +2,12 @@
 # Copyright (c) 2020 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-import numpy as np
 import os
-import pytest
+import sys
 import yaml
+import pytest
+import resource
+import numpy as np
 from astropy import units
 
 from pyuvdata import UVData
@@ -132,12 +134,37 @@ def test_analytic_diffuse(model, tmpdir):
 @pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
 def test_run_paramdict_uvsim():
     # Running a simulation from parameter dictionary.
-
     params = pyuvsim.simsetup._config_str_to_dict(
         os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
     )
 
     pyuvsim.run_uvsim(params, return_uv=True)
+
+
+@pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
+def test_run_nsky_parts(capsys):
+    # there parameters were hand picked and fine-tuned to create nsky_parts = 2
+    #  this test feels very wonky just to ensure the nsky_parts is printed
+    scale = 1.0
+    if 'linux' in sys.platform:
+        scale = 2**10
+    # Running a simulation from parameter dictionary.
+    os.environ["SLURM_MEM_PER_NODE"] = str(
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 1e6 + 5
+    )  # Only 5MB of memory more than used right now
+    params = pyuvsim.simsetup._config_str_to_dict(
+        os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
+    )
+    # just piggy backing on the setup but we need more sources for this to work
+    params['sources']["catalog"] = "mock"
+    params["sources"]["mock_arrangement"] = "random"
+    params["sources"]["Nsrcs"] = 5000
+
+    pyuvsim.run_uvsim(params, return_uv=True)
+
+    captured = capsys.readouterr()
+    assert "The source list has been split into Nsky_parts" in captured.out
+    del os.environ["SLURM_MEM_PER_NODE"]
 
 
 @pytest.mark.parametrize(
