@@ -23,6 +23,7 @@ dependencies:
   - pip:
     - cached-property
     - pyradiosky>=0.1.0
+    - vis-cpu
     - git+https://github.com/HERA-Team/uvtools.git
     - git+https://github.com/rasg-affiliates/healvis
     - git+https://github.com/HERA-Team/hera_cal.git
