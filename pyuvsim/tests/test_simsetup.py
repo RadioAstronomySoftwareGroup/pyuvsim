@@ -235,7 +235,7 @@ def test_skyh5_catalog(tmp_path):
     assert skyobj.Ncomponents == 50
 
     skyh5_file = os.path.join(tmp_path, 'gleam.skyh5')
-    skyobj.write_skyh5(skyh5_file)
+    skyobj.write_skyh5(skyh5_file, clobber=True)
 
     starting_param_filename = os.path.join(
         SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml'
@@ -261,7 +261,7 @@ def test_skyh5_catalog(tmp_path):
 
     # test works with `hdf5` extension:
     hdf5_file = os.path.join(tmp_path, 'gleam.hdf5')
-    skyobj.write_skyh5(hdf5_file)
+    skyobj.write_skyh5(hdf5_file, clobber=True)
 
     param_dict['sources']['catalog'] = hdf5_file
     with open(param_filename, 'w') as yfile:
@@ -276,7 +276,7 @@ def test_skyh5_catalog(tmp_path):
 
     # test error with unknown extension
     h5_file = os.path.join(tmp_path, 'gleam.h5')
-    skyobj.write_skyh5(h5_file)
+    skyobj.write_skyh5(hdf5_file, clobber=True)
 
     param_dict['sources']['catalog'] = h5_file
     with open(param_filename, 'w') as yfile:
