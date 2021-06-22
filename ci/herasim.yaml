@@ -8,6 +8,7 @@ dependencies:
   - astropy-healpix
   - attrs
   - click
+  - deprecation
   - future
   - h5py
   - nose
