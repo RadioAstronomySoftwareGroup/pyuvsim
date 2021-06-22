@@ -11,6 +11,7 @@ dependencies:
   - deprecation
   - future
   - h5py
+  - matplotlib>=3.4.2
   - nose
   - numpy>=1.15
   - pip
@@ -28,3 +29,4 @@ dependencies:
     - git+https://github.com/HERA-Team/uvtools.git
     - git+https://github.com/rasg-affiliates/healvis
     - git+https://github.com/HERA-Team/hera_cal.git
+    - git+https://github.com/HERA-Team/baseline_dependent_averaging.git
