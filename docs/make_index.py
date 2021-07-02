@@ -14,7 +14,8 @@ from astropy.time import Time
 
 def write_index_rst(readme_file=None, write_file=None):
     t = Time.now()
-    t.out_subfmt = 'date'
+    t.format = "iso"
+    t.out_subfmt = "date"
     out = ('.. pyuvsim documentation master file, created by\n'
            '   make_index.py on {date}\n\n').format(date=t.iso)
 
