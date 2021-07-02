@@ -395,6 +395,7 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
     assert np.allclose(visibilities, visibilities_analytic)
 
 
+@pytest.mark.filterwarnings("ignore:The uvw_array does not match the expected values")
 def test_file_to_tasks(cst_beam):
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
@@ -460,6 +461,8 @@ def test_file_to_tasks(cst_beam):
         antennas2.append(antennas[index])
 
     sources = sources.get_skymodel()
+    # set the frequency array to match what happens in uvdata_to_task_iter
+    sources.freq_array = hera_uv.freq_array[0] * units.Hz
 
     for idx, antenna1 in enumerate(antennas1):
         antenna2 = antennas2[idx]
@@ -474,6 +477,7 @@ def test_file_to_tasks(cst_beam):
         assert task == exp_task
 
 
+@pytest.mark.filterwarnings("ignore:The uvw_array does not match the expected values")
 def test_gather():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)

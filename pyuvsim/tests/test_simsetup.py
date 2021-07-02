@@ -100,6 +100,7 @@ def test_mock_diffuse_maps_errors():
             pyuvsim.simsetup.create_mock_catalog(Time.now(), arrangement='diffuse')
 
 
+@pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
 @pytest.mark.parametrize('model', [
                          ['monopole', {}],
                          ['gauss', {'a': 0.05}],
@@ -134,6 +135,7 @@ def test_mock_diffuse_maps(model, hera_loc, apollo_loc, location):
     assert np.allclose(cat.stokes[0].to_value("K"), vals)
 
 
+@pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
 def test_catalog_from_params():
     # Pass in parameter dictionary as dict
     hera_uv = UVData()
@@ -171,7 +173,7 @@ def test_catalog_from_params():
 
     with pytest.warns(
         UserWarning,
-        match="Warning: No julian date given for mock catalog. Defaulting to first time step."
+        match="No julian date given for mock catalog. Defaulting to first time step."
     ):
         catalog_str, srclistname2 = pyuvsim.simsetup.initialize_catalog_from_params(
             {'sources': source_dict}, hera_uv, return_recarray=False
@@ -286,11 +288,12 @@ def test_skyh5_catalog(tmp_path):
         )
 
 
+@pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
 def test_healpix_catalog():
     pytest.importorskip('astropy_healpix')
-    path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
+    path = os.path.join(SKY_DATA_PATH, 'healpix_disk.skyh5')
     sky = pyradiosky.SkyModel()
-    sky.read_healpix_hdf5(path)
+    sky.read_skyh5(path)
 
     params = {'sources': {'catalog': path}}
     hpx_sky = pyuvsim.simsetup.initialize_catalog_from_params(
@@ -299,7 +302,12 @@ def test_healpix_catalog():
     assert hpx_sky == sky
 
 
+@pytest.mark.filterwarnings("ignore:This method reads an old 'healvis' style healpix HDF5 file")
 def test_healpix_hdf5_catalog():
+    """Test that an old healvis style hdf5 file works.
+
+    Remove this when we require a newer version of pyradiosky.
+    """
     pytest.importorskip('astropy_healpix')
     path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
     sky = pyradiosky.SkyModel()
@@ -375,6 +383,7 @@ def test_vot_catalog_error(key_pop, message):
         pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
 
 
+@pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
 def test_param_reader():
     pytest.importorskip('mpi4py')
     # Reading in various configuration files
@@ -1281,6 +1290,7 @@ def cat_with_some_pols():
     return sky
 
 
+@pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
 @pytest.mark.parametrize('unit', ['Jy', 'K'])
 def test_skymodeldata_with_quantity_stokes(unit, cat_with_some_pols):
     # Support for upcoming pyradiosky change setting SkyModel.stokes
@@ -1305,6 +1315,7 @@ def test_skymodeldata_with_quantity_stokes(unit, cat_with_some_pols):
     assert sky2 == sky
 
 
+@pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
 @pytest.mark.parametrize('component_type', ['point', 'healpix'])
 def test_skymodeldata(component_type, cat_with_some_pols):
     # Test that SkyModelData class can properly recreate a SkyModel and subselect.
@@ -1312,9 +1323,9 @@ def test_skymodeldata(component_type, cat_with_some_pols):
         sky = cat_with_some_pols
     else:
         pytest.importorskip('astropy_healpix')
-        path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
+        path = os.path.join(SKY_DATA_PATH, 'healpix_disk.skyh5')
         sky = pyradiosky.SkyModel()
-        sky.read_healpix_hdf5(path)
+        sky.read_skyh5(path)
 
     smd = pyuvsim.simsetup.SkyModelData(sky)
 

@@ -84,8 +84,8 @@ class Antenna(object):
         # UVBeams need an interpolation_function. If none is set, default to az_za_simple.
         if isinstance(beam, UVBeam) and getattr(beam, 'interpolation_function') is None:
             beam.interpolation_function = 'az_za_simple'
-            warnings.warn(f"UVBeam interpolation_function is not set."
-                          " Defaulting to {beam.interpolation_function}.")
+            warnings.warn("UVBeam interpolation_function is not set."
+                          f" Defaulting to {beam.interpolation_function}.")
 
         spline_opts = None
         if isinstance(array.beam_list, BeamList):
@@ -109,7 +109,7 @@ class Antenna(object):
 
         # interp_data has shape:
         #   (Naxes_vec, Nspws, Nfeeds, 1 (freq),  Ncomponents (source positions))
-        jones_matrix = np.zeros((2, 2, Ncomponents), dtype=np.complex)
+        jones_matrix = np.zeros((2, 2, Ncomponents), dtype=complex)
 
         # first axis is feed, second axis is theta, phi (opposite order of beam!)
         jones_matrix[0, 0] = interp_data[1, 0, 0, 0, :]

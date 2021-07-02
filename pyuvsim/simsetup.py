@@ -657,7 +657,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
             if input_uv is not None:
                 mock_keywords['time'] = input_uv.time_array[0]
                 warnings.warn(
-                    "Warning: No julian date given for mock catalog. Defaulting to first time step."
+                    "No julian date given for mock catalog. Defaulting to first time step."
                 )
             else:
                 raise ValueError(
@@ -884,7 +884,7 @@ def parse_telescope_params(tele_params, config_path=''):
                 "you must provide telescope_name"
             )
         telescope_location_latlonalt = tele_params['telescope_location']
-        if isinstance(telescope_location_latlonalt, (str, np.str)):
+        if isinstance(telescope_location_latlonalt, str):
             telescope_location_latlonalt = ast.literal_eval(telescope_location_latlonalt)
         world = tele_params.pop('world', None)
 
@@ -902,7 +902,7 @@ def parse_telescope_params(tele_params, config_path=''):
         # Interpet as file path to layout csv file.
         layout_csv = array_layout
         # if array layout is a str, parse it as .csv filepath
-        if isinstance(layout_csv, (str, np.str)):
+        if isinstance(layout_csv, str):
             if not os.path.exists(layout_csv):
                 layout_csv = os.path.join(config_path, layout_csv)
                 if not os.path.exists(layout_csv):
@@ -1757,7 +1757,7 @@ def _complete_uvdata(uv_in, inplace=False):
 
     # Clear existing data, if any.
     _shape = (uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols)
-    uv_obj.data_array = np.zeros(_shape, dtype=np.complex)
+    uv_obj.data_array = np.zeros(_shape, dtype=complex)
     uv_obj.flag_array = np.zeros(_shape, dtype=bool)
     uv_obj.nsample_array = np.ones(_shape, dtype=float)
 

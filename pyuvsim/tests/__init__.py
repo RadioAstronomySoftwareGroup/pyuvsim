@@ -50,7 +50,7 @@ def compare_dictionaries(d1, d2):
                 )
         elif isinstance(d1[key], dict):
             compare_dictionaries(d1[key], d2[key])
-        elif isinstance(d1[key], (float, np.float, np.float32)):
+        elif isinstance(d1[key], (float, np.float32)):
             assert np.allclose(d1[key], d2[key]), (
                 "key: {key} has type {key1_type} in d1 and {key2_type} in d2\n"
                 "d1:  data has type {data1_type} and value {data1_val}\n"
