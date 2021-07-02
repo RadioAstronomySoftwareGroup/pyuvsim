@@ -64,6 +64,10 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # Reset parts that will deviate
     uv_new.history = uv_ref.history
     uv_new.object_name = uv_ref.object_name
+
+    # remove filename attribute to ensure equality
+    uv_new.filename = None
+    uv_ref.filename = None
     assert uv_new == uv_ref
 
 

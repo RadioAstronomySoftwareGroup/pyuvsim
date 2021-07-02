@@ -274,7 +274,7 @@ def test_skyh5_catalog(tmp_path):
 
     # test error with unknown extension
     h5_file = os.path.join(tmp_path, 'gleam.h5')
-    skyobj.write_skyh5(hdf5_file)
+    skyobj.write_skyh5(h5_file)
 
     param_dict['sources']['catalog'] = h5_file
     with open(param_filename, 'w') as yfile:
@@ -482,6 +482,9 @@ def test_param_reader():
 
     assert new_beam_dict == beam_dict
     assert new_beam_list == beam_list
+
+    # remove filename attribute to ensure equality
+    hera_uv.filename = None
     assert uv_obj == hera_uv
 
 
