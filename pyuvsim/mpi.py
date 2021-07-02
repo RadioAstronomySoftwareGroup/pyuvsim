@@ -12,8 +12,8 @@ from pickle import loads, dumps
 
 import mpi4py
 
-mpi4py.rc.initialize = False  # noqa
-from mpi4py import MPI
+mpi4py.rc.initialize = False
+from mpi4py import MPI  # noqa
 
 rank = 0  # COMM_WORLD rank
 Npus = 1

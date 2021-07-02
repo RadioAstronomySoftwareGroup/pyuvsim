@@ -51,7 +51,7 @@ def test_uniform_beam(heratext_posfreq):
     interpolated_beam, interp_basis_vector = beam.interp(
         az_array=az_vals, za_array=za_vals, freq_array=freqs
     )
-    expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=np.float)
+    expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=float)
     expected_data[1, 0, 0, :, :] = 1
     expected_data[0, 0, 1, :, :] = 1
     assert np.allclose(interpolated_beam, expected_data)
@@ -68,7 +68,7 @@ def test_airy_beam_values(heratext_posfreq):
         az_array=az_vals, za_array=za_vals, freq_array=freq_vals
     )
 
-    expected_data = np.zeros((2, 1, 2, 1, az_vals.size), dtype=np.float)
+    expected_data = np.zeros((2, 1, 2, 1, az_vals.size), dtype=float)
     za_grid, f_grid = np.meshgrid(za_vals, freq_vals)
     xvals = diameter_m / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / c_ms
     airy_values = np.zeros_like(xvals)
@@ -131,8 +131,8 @@ def test_achromatic_gaussian_beam(heratext_posfreq):
         az_array=np.array(az_vals), za_array=np.array(za_vals), freq_array=np.array(freq_vals)
     )
 
-    expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=np.float)
-    interp_zas = np.zeros((n_freqs, nsrcs), dtype=np.float)
+    expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=float)
+    interp_zas = np.zeros((n_freqs, nsrcs), dtype=float)
     for f_ind in range(n_freqs):
         interp_zas[f_ind, :] = np.array(za_vals)
     gaussian_vals = np.exp(-(interp_zas ** 2) / (2 * sigma_rad ** 2))
@@ -143,6 +143,7 @@ def test_achromatic_gaussian_beam(heratext_posfreq):
     assert np.allclose(interpolated_beam, expected_data)
 
 
+@pytest.mark.filterwarnings("ignore:The uvw_array does not match the expected values")
 def test_gaussbeam_values():
     """
     Make the long-line point sources up to 10 degrees from zenith.

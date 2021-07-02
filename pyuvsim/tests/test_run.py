@@ -71,6 +71,7 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     assert uv_new == uv_ref
 
 
+@pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
 @pytest.mark.parametrize('model', ['monopole', 'cosza', 'quaddome', 'monopole-nonflat'])
 def test_analytic_diffuse(model, tmpdir):
     # Generate the given model and simulate for a few baselines.
@@ -146,6 +147,7 @@ def test_run_paramdict_uvsim():
 
 
 @pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
+@pytest.mark.filterwarnings("ignore:No julian date given for mock catalog")
 def test_run_nsky_parts(capsys):
     # there parameters were hand picked and fine-tuned to create nsky_parts = 2
     #  this test feels very wonky just to ensure the nsky_parts is printed
@@ -185,6 +187,8 @@ def test_run_gleam_uvsim(spectral_type):
     pyuvsim.run_uvsim(params, return_uv=True)
 
 
+@pytest.mark.filterwarnings("ignore:The reference_frequency is aliased as `frequency`")
+@pytest.mark.filterwarnings("ignore:recarray flux columns will no longer be labeled")
 @pytest.mark.parametrize(
     "spectral_type",
     ["subband", "spectral_index"])
