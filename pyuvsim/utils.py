@@ -175,19 +175,32 @@ def check_file_exists_and_increment(filepath, extension=None):
     return filepath
 
 
-def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_format=None):
+def write_uvdata(
+    uv_obj,
+    param_dict,
+    return_filename=False,
+    dryrun=False,
+    out_format=None,
+    clobber=True,
+):
     """
     Parse output file information from parameters and write uvfits to file.
 
-    Args:
-        uv_obj: UVData object to write out.
-        param_dict: parameter dictionary defining output path, filename, and
-                    whether or not to clobber.
-        return_filename: (Default false) Return the file path
-        dryrun: (Default false) Don't write to file.
-        out_format: (Default uvfits) Write as uvfits/miriad/uvh5
+    Parameters
+    ----------
+    uv_obj : UVData Object
+        The object to be written out.
+    param_dict : Dict
+        parameter dictionary defining output path, filename, and whether or not to clobber.
+    return_filename : Bool
+        (Default false) Return the file path
+    dryrun : Bool
+        (Default false) Don't write to file.
+    out_format : Str
+        (Default uvfits) Write as uvfits/miriad/uvh5
 
-    Returns:
+    Returns
+    -------
         File path, if return_filename is True
     """
     if 'filing' in param_dict.keys():
@@ -233,7 +246,7 @@ def write_uvdata(uv_obj, param_dict, return_filename=False, dryrun=False, out_fo
         elif out_format == 'miriad':
             uv_obj.write_miriad(outfile_name, clobber=not noclobber)
         elif out_format == 'uvh5':
-            uv_obj.write_uvh5(outfile_name)
+            uv_obj.write_uvh5(outfile_name, clobber=not noclobber)
         else:
             raise ValueError(
                 "Invalid output format. Options are \" uvfits\", \"uvh5\", or \"miriad\"")
