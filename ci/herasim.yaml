@@ -24,7 +24,7 @@ dependencies:
   - setuptools_scm
   - pip:
     - cached-property
-    - pyradiosky>=0.1.0
+    - pyradiosky>=0.1.2
     - vis-cpu>=0.2.0
     - git+https://github.com/HERA-Team/uvtools.git
     - git+https://github.com/rasg-affiliates/healvis

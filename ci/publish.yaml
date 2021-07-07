@@ -12,5 +12,5 @@ dependencies:
   - scipy
   - setuptools_scm
   - pip:
-    - pyradiosky>=0.1.0
+    - pyradiosky>=0.1.2
     - pep517
