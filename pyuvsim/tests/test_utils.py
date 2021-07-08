@@ -151,8 +151,11 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     uv2 = UVData()
     uv2.read(expected_ofname)
 
+    # Depending on pyuvdat version the filename may exist
     # munge the filename attribute
-    uv2.filename = uv.filename
+    # This can be removed if we ever require pyuvdata>=2.21
+    if hasattr(uv2, "filename"):
+        uv2.filename = uv.filename
 
     assert uv == uv2
 
@@ -164,14 +167,16 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         filing_dict,
         out_format=save_format,
     )
-    # munge the filename attribute to make sure inequailty is from the data
-    uv2.filename = uv.filename
+
+    if hasattr(uv2, "filename"):
+        uv2.filename = uv.filename
+
     assert uv2 != uv
 
     uv2.read(expected_ofname)
 
-    # munge the filename attribute
-    uv2.filename = uv.filename
+    if hasattr(uv2, "filename"):
+        uv2.filename = uv.filename
     assert uv2 == uv
 
 
