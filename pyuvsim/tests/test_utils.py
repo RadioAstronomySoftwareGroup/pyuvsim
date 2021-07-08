@@ -151,6 +151,9 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     uv2 = UVData()
     uv2.read(expected_ofname)
 
+    # munge the filename attribute
+    uv2.filename = uv.filename
+
     assert uv == uv2
 
     uv.data_array += 1
@@ -161,10 +164,14 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         filing_dict,
         out_format=save_format,
     )
-
+    # munge the filename attribute to make sure inequailty is from the data
+    uv2.filename = uv.filename
     assert uv2 != uv
 
     uv2.read(expected_ofname)
+
+    # munge the filename attribute
+    uv2.filename = uv.filename
     assert uv2 == uv
 
 
