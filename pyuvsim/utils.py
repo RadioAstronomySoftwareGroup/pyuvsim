@@ -181,7 +181,6 @@ def write_uvdata(
     return_filename=False,
     dryrun=False,
     out_format=None,
-    clobber=True,
 ):
     """
     Parse output file information from parameters and write uvfits to file.
