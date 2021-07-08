@@ -129,6 +129,46 @@ def test_write_uvdata(save_format, tmpdir):
 
 
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
+@pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5'])
+def test_write_uvdata_clobber(save_format, tmpdir):
+    """ Test function that defines filenames from parameter dict """
+    uv = UVData()
+    uv.read_uvfits(triangle_uvfits_file)
+    uv.set_lsts_from_time_array()
+    ofname = str(tmpdir.join('test_file'))
+    filing_dict = {'outfile_name': ofname}
+    expected_ofname = simutils.write_uvdata(
+        uv,
+        filing_dict,
+        return_filename=True,
+        out_format=save_format,
+    )
+
+    ofname = os.path.join('.', ofname)
+
+    assert os.path.exists(expected_ofname)
+
+    uv2 = UVData()
+    uv2.read(expected_ofname)
+
+    assert uv == uv2
+
+    uv.data_array += 1
+
+    filing_dict["clobber"] = True
+    simutils.write_uvdata(
+        uv,
+        filing_dict,
+        out_format=save_format,
+    )
+
+    assert uv2 != uv
+
+    uv2.read(expected_ofname)
+    assert uv2 == uv
+
+
+@pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
 def test_write_error_with_no_format(tmpdir):
     """Test write_uvdata will error if no format is given."""
     uv = UVData()
