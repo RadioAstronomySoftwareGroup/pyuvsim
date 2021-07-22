@@ -14,7 +14,7 @@
 - Fix bugs in reading catalogs using pyradiosky for `skyh5` files and files with unusual extension names.
 - Corrects the distribution of random points for the random mock catalog.
 - pixel interpolation was defaulting to az_za_simple for all beams, breaking healpix-coord UVBeams.
-
+- `SkyModel.name` is now coerced to an array.
 ## [1.2.0] - 2020-7-20
 
 ### Added
