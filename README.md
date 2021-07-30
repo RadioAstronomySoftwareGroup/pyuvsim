@@ -77,11 +77,11 @@ Required:
 * pyuvdata>=2.1.3
 * pyradiosky>=0.1.0
 * setuptools_scm
+* psutil
 
 Optional:
 
 * mpi4py>=3.0.0
-* psutil
 * line_profiler
 * lunarsky
 

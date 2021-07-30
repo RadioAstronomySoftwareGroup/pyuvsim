@@ -418,7 +418,10 @@ class SkyModelData:
     def __init__(self, sky_in=None):
         # Collect relevant attributes.
         if sky_in is not None:
-            self.name = np.asarray(sky_in.name) if sky_in.name is not None else None
+            if sky_in.name is not None:
+                self.name = np.asarray(sky_in.name)
+            else:
+                self.name = None
             self.nside = sky_in.nside
             self.hpx_inds = sky_in.hpx_inds
             self.component_type = sky_in.component_type
