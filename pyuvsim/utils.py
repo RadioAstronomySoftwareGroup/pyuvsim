@@ -8,11 +8,7 @@ import time as pytime
 from datetime import timedelta
 
 import numpy as np
-try:
     import psutil
-    HAVE_PSUTIL = True
-except ImportError:  # pragma: no cover
-    HAVE_PSUTIL = False
 
 from . import __version__
 
