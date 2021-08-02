@@ -131,7 +131,7 @@ def test_write_uvdata(save_format, tmpdir):
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
 @pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5'])
 def test_write_uvdata_clobber(save_format, tmpdir):
-    """ Test function that defines filenames from parameter dict """
+    """Test overwriting a uvdata object yields the expected results."""
     uv = UVData()
     uv.read_uvfits(triangle_uvfits_file)
     uv.set_lsts_from_time_array()
