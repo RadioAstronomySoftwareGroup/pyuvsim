@@ -8,7 +8,7 @@ import time as pytime
 from datetime import timedelta
 
 import numpy as np
-    import psutil
+import psutil
 
 from . import __version__
 
@@ -258,12 +258,6 @@ def get_avail_memory():
     If this is not called from within a SLURM task, it will estimate
     using psutils methods.
     """
-    if not HAVE_PSUTIL:
-        raise ImportError("You need psutils to estimate available memory. "
-                          "Install it by running pip install pyuvsim[sim] "
-                          "or pip install pyuvsim[all] if you also want "
-                          "the line_profiler installed.")
-
     slurm_key = 'SLURM_MEM_PER_NODE'
     if slurm_key in os.environ:
         return float(os.environ[slurm_key]) * 1e6  # MB -> B
