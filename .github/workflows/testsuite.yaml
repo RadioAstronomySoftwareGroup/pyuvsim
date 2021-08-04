@@ -87,7 +87,7 @@ jobs:
           python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: Upload Coverage
-        uses: codecov/codecov-action@v1.5.2
+        uses: codecov/codecov-action@v2.0.2
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -135,7 +135,7 @@ jobs:
         run: |
           python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
-      - uses: codecov/codecov-action@v1.5.2
+      - uses: codecov/codecov-action@v2.0.2
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
