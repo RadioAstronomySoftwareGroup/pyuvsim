@@ -352,6 +352,14 @@ class BeamList:
     def check_consistency(self, check_pols: bool = True):
         """Check the consistency of all beams in the list.
 
+        This checks basic parameters of the objects for consistency, eg. the ``beam_type``.
+        It is meant to be manually called by the user.
+
+        Parameters
+        ----------
+        check_pols
+            Whether to check polarization-related parameters.
+
         Raises
         ------
         BeamConsistencyError
