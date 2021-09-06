@@ -155,7 +155,7 @@ class BeamList:
                     else:
                         warnings.warn(err.args[0])  # Use exception message as warning message.
 
-        new_pars = {k: v for k, v in new_pars.items() if not v == []}
+        new_pars = {k: v for k, v in new_pars.items() if v != []}
 
         return new_pars
 
@@ -174,7 +174,7 @@ class BeamList:
     def __iter__(self):
         """Get the list as an iterable."""
         lst = self._str_beam_list if self.string_mode else self._obj_beam_list
-        return (be for be in lst)
+        return iter(lst)
 
     def __getitem__(self, ind):
         """Get a particular beam from the list."""
@@ -192,16 +192,20 @@ class BeamList:
         if self.string_mode:
             # If value is a string, then _scrape_uvb_params returns an empty dictionary.
             newobj_params = self._scrape_uvb_params([value], strict=False)
-            mismatches = []
-            for key, val in newobj_params.items():
-                if key in self.uvb_params:
-                    if not val == self.uvb_params[key]:
-                        mismatches.append(key)
-            if len(mismatches) > 0:
-                compare = "\n\t".join([
-                    "current = {}, new = {}".format(self.uvb_params[key], newobj_params[key])
-                    for key in mismatches]
+            mismatches = [
+                key
+                for key, val in newobj_params.items()
+                if key in self.uvb_params and val != self.uvb_params[key]
+            ]
+
+            if mismatches:
+                compare = "\n\t".join(
+                    "current = {}, new = {}".format(
+                        self.uvb_params[key], newobj_params[key]
+                    )
+                    for key in mismatches
                 )
+
                 raise ValueError('UVBeam parameters do not match '
                                  'those currently set: \n\t' + compare)
 
@@ -321,7 +325,7 @@ class BeamList:
             If any UVBeam objects lack a "beam_path" keyword in the "extra_keywords"
             attribute, specifying the path to the beamfits file that generates it.
         """
-        if not self._obj_beam_list == []:
+        if self._obj_beam_list != []:
             # Convert object beams to string definitions
             new_uvb_par = self._scrape_uvb_params(self._obj_beam_list, strict=True)
             self.uvb_params.update(new_uvb_par)
@@ -338,12 +342,63 @@ class BeamList:
 
         Sets :attr:`~.string_mode` to False.
         """
-        if not self._str_beam_list == []:
+        if self._str_beam_list != []:
             self._obj_beam_list = [self._str_to_obj(bstr, use_shared_mem=use_shared_mem)
                                    for bstr in self._str_beam_list]
         self._set_params_on_uvbeams(self._obj_beam_list)
         self._str_beam_list = []
         self.string_mode = False
+
+    def check_consistency(self, check_pols: bool = True):
+        """Check the consistency of all beams in the list.
+
+        Raises
+        ------
+        BeamConsistencyError
+            If any beam is inconsistent with the rest of the beams.
+        """
+        if self.string_mode:
+            warnings.warn(
+                "Cannot check consistency of a string-mode BeamList!"
+            )
+            return
+
+        b0 = self[0]
+
+        def check_thing(item, j):
+            beam = self[j]
+
+            if hasattr(b0, item) and not hasattr(beam, item):
+                raise BeamConsistencyError(f"beam {j+1} does not have {item} but beam 1 does")
+
+            if hasattr(beam, item) and not hasattr(b0, item):
+                raise BeamConsistencyError(f"beam {j+1} has {item} but beam 1 doesn't")
+
+            b00 = getattr(b0, item)
+            bjj = getattr(beam, item)
+
+            bad = np.any(b00 != bjj) if hasattr(b00, '__len__') else b00 != bjj
+            if bad:
+                raise BeamConsistencyError(
+                    f"{item} of beam {j+1} is not consistent with beam 1: {bjj} vs. {b00}"
+                )
+
+        for j in range(1, len(self)):
+            check_thing('beam_type', j)
+
+            if check_pols:
+                if b0.beam_type == 'efield':
+                    check_thing('Nfeeds', j)
+                    check_thing('feed_array', j)
+
+                elif b0.beam_type == 'power':
+                    check_thing("polarization_array", j)
+
+                check_thing("x_orientation", j)
+
+
+class BeamConsistencyError(Exception):
+    pass
 
 
 class Telescope:
