@@ -211,3 +211,15 @@ def test_beamlist_errors(beam_objs):
     tel0 = pyuvsim.Telescope('tel0', array_location, newbeams)
     tel1 = pyuvsim.Telescope('tel1', array_location, beam_objs)
     assert tel0 != tel1
+
+
+def test_beamlist_consistency(beam_objs):
+    newbeams = copy.deepcopy(beam_objs)
+    beamlist = pyuvsim.BeamList(newbeams[:2])
+
+    beamlist.check_consistency()
+
+    with pytest.raises(pyuvsim.BeamConsistencyError):
+        # Raises because analytic beams have no Nfeeds
+        beamlist = pyuvsim.BeamList(newbeams[:3])
+        beamlist.check_consistency()
