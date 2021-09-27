@@ -1,9 +1,13 @@
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2021 Radio Astronomy Software Group
+# Licensed under the 3-clause BSD License
+import os
 
 import numpy as np
-import os
 import yaml
 from astropy import units
 import pytest
+import pyuvdata.tests as uvtest
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -85,7 +89,9 @@ def test_set_interps(cst_beam, hera_loc):
     source_altaz = np.array([[0.0], [np.pi / 4.]])
     freq = 123e6 * units.Hz
 
-    with pytest.warns(UserWarning, match="UVBeam interpolation_function is not set"):
+    with uvtest.check_warnings(
+        UserWarning, match="UVBeam interpolation_function is not set"
+    ):
         antenna1.get_beam_jones(array, source_altaz, freq)
 
     assert beam.interpolation_function == 'az_za_simple'

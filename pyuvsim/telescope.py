@@ -128,6 +128,31 @@ class BeamList(object):
         self.uvb_params.update(list_uvb_params)
         self.uvb_params.update(uvb_params)    # Optional parameters for the UVBeam objects
 
+        x_orientation_list = []
+        for beam in beam_list:
+            if self.string_mode:
+                beam_use = self._str_to_obj(beam)
+            else:
+                beam_use = beam
+
+            if hasattr(beam_use, "x_orientation"):
+                x_orientation_list.append(beam_use.x_orientation)
+        if (
+            len(x_orientation_list) == 0
+            or x_orientation_list.count(None) == len(x_orientation_list)
+        ):
+            self.x_orientation = None
+        elif x_orientation_list.count(x_orientation_list[0]) == len(x_orientation_list):
+            self.x_orientation = x_orientation_list[0]
+        else:
+            raise ValueError("UVBeam x_orientations do not match among beams in list.")
+
+        if len(x_orientation_list) > 0 and self.x_orientation is None:
+            warnings.warn(
+                "All polarized beams have x_orientation set to None. This will make it "
+                "hard to interpret the polarizations of the simulated visibilities."
+            )
+
     def _scrape_uvb_params(self, beam_objs, strict=True):
         """
         Collect uvb_params from the set of beam objects.
