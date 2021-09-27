@@ -2,8 +2,8 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-import copy
 import os
+import copy
 import shutil
 
 import numpy as np
@@ -12,6 +12,7 @@ import yaml
 from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, Latitude, Longitude
 from pyuvdata import UVBeam, UVData
+import pyuvdata.tests as uvtest
 import pyradiosky
 from pyradiosky.data import DATA_PATH as SKY_DATA_PATH
 
@@ -90,7 +91,7 @@ def test_mock_diffuse_maps_errors():
         with pytest.raises(ValueError, match="Diffuse arrangement selected"):
             pyuvsim.simsetup.create_mock_catalog(Time.now(), arrangement='diffuse')
 
-        with pytest.warns(UserWarning, match="No nside chosen"):
+        with uvtest.check_warnings(UserWarning, match="No nside chosen"):
             pyuvsim.simsetup.create_mock_catalog(
                 Time.now(), arrangement='diffuse', diffuse_model='monopole'
             )
@@ -152,9 +153,13 @@ def test_catalog_from_params():
         'Nsrcs': 5,
         'time': hera_uv.time_array[0]
     }
-    with pytest.warns(
-        UserWarning,
-        match="No array_location specified. Defaulting to the HERA site."
+    with uvtest.check_warnings(
+        [UserWarning, PendingDeprecationWarning, DeprecationWarning],
+        match=[
+            "No array_location specified. Defaulting to the HERA site.",
+            "initialize_catalog_from_params will return a SkyModel instance",
+            "recarray flux columns will no longer be labeled",
+        ]
     ):
         pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
 
@@ -171,7 +176,7 @@ def test_catalog_from_params():
     with pytest.raises(ValueError, match="input_uv must be supplied if using mock catalog"):
         pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
 
-    with pytest.warns(
+    with uvtest.check_warnings(
         UserWarning,
         match="No julian date given for mock catalog. Defaulting to first time step."
     ):
@@ -203,7 +208,9 @@ def test_gleam_catalog():
     gleam_param_filename = os.path.join(
         SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml'
     )
-    with pytest.warns(UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."):
+    with uvtest.check_warnings(
+        UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."
+    ):
         gleam_catalog = (
             pyuvsim.simsetup.initialize_catalog_from_params(
                 gleam_param_filename, return_recarray=False
@@ -220,7 +227,9 @@ def test_gleam_catalog():
     param_dict["sources"].pop("min_flux")
     param_dict["sources"].pop("max_flux")
 
-    with pytest.warns(UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."):
+    with uvtest.check_warnings(
+        UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."
+    ):
         gleam_catalog = (
             pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
         )
@@ -358,7 +367,7 @@ def test_vot_catalog_warns(key_pop, message):
     param_dict['config_path'] = os.path.dirname(vot_param_filename)
     param_dict["sources"].pop(key_pop)
 
-    with pytest.warns(UserWarning, match=message):
+    with uvtest.check_warnings(UserWarning, match=message):
         vot_catalog2 = (
             pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
         )
@@ -391,6 +400,8 @@ def test_param_reader():
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml")
     hera_uv = UVData()
     hera_uv.read_uvfits(triangle_uvfits_file)
+    # set missing x_orientation
+    hera_uv.x_orientation = "east"
 
     hera_uv.unphase_to_drift()
     hera_uv.telescope_name = 'HERA'
@@ -460,6 +471,7 @@ def test_param_reader():
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_filename)
     new_beam_list.set_obj_mode()
+    assert uv_obj.x_orientation == "east"
 
     pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
 
@@ -929,15 +941,17 @@ def test_uvfits_to_config():
                                                     path_out=opath, return_names=True)
 
     uv0.integration_time[-1] += 2  # Test case of non-uniform integration times
-    with pytest.warns(UserWarning) as warn:
+    with uvtest.check_warnings(
+        UserWarning,
+        match='The integration time is not constant. '
+        'Using the shortest integration time'
+    ):
         pyuvsim.simsetup.uvdata_to_config_file(
             uv0,
             telescope_config_name=os.path.join(path, telescope_config),
             layout_csv_name=os.path.join(path, layout_fname),
             path_out=opath
         )
-    assert str(warn[0].message).startswith('The integration time is not constant. '
-                                           'Using the shortest integration time')
 
     # From parameters, generate a uvdata object.
     param_dict = pyuvsim.simsetup._config_str_to_dict(os.path.join(opath, param_filename))

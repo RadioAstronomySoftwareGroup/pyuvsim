@@ -742,15 +742,9 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
 
 
 def _construct_beam_list(beam_ids, telconfig):
-    beam_list = BeamList([])
-    if 'spline_interp_opts' in telconfig.keys():
-        beam_list.spline_interp_opts = telconfig['spline_interp_opts']
+    beam_list = []
     for beamID in beam_ids:
         beam_model = telconfig['beam_paths'][beamID]
-
-        for key in beam_list.uvb_params.keys():
-            if key in telconfig:
-                beam_list.uvb_params[key] = telconfig[key]
 
         if not isinstance(beam_model, (str, dict)):
             raise ValueError('Beam model is not properly specified in telescope config file.')
@@ -815,7 +809,16 @@ def _construct_beam_list(beam_ids, telconfig):
                     raise KeyError("Missing diameter for airy beam.")
 
             beam_list.append(beam_model)
-    return beam_list
+
+    beam_list_obj = BeamList(beam_list=beam_list)
+    if 'spline_interp_opts' in telconfig.keys():
+        beam_list_obj.spline_interp_opts = telconfig['spline_interp_opts']
+
+    for key in beam_list_obj.uvb_params.keys():
+        if key in telconfig:
+            beam_list_obj.uvb_params[key] = telconfig[key]
+
+    return beam_list_obj
 
 
 def parse_telescope_params(tele_params, config_path=''):
@@ -839,7 +842,7 @@ def parse_telescope_params(tele_params, config_path=''):
 
         * `Nants_data`: Number of antennas
         * `Nants_telescope`: Number of antennas
-        *  `antenna_names`: list of antenna names
+        * `antenna_names`: list of antenna names
         * `antenna_numbers`: corresponding list of antenna numbers
         * `antenna_positions`: Array of ECEF antenna positions
         * `telescope_location`: ECEF array center location
@@ -847,6 +850,7 @@ def parse_telescope_params(tele_params, config_path=''):
         * `telescope_config_file`: Path to configuration yaml file
         * `antenna_location_file`: Path to csv layout file
         * `telescope_name`: observatory name
+        * `x_orientation`: physical orientation of the dipole labelled as "x"
         * `world`: Either "earth" or "moon".
     beam_list : :class:`pyuvsim.BeamList`
         This is a BeamList object in string mode.
@@ -1275,6 +1279,7 @@ def initialize_uvdata_from_params(obs_params):
     tele_params, beam_list, beam_dict = parse_telescope_params(tele_dict, config_path=param_dict[
         'config_path'])
     uvparam_dict.update(tele_params)
+    uvparam_dict["x_orientation"] = beam_list.x_orientation
 
     # Use extra_keywords to pass along required paths for file history.
     extra_keywords = {}
@@ -1386,6 +1391,64 @@ def initialize_uvdata_from_params(obs_params):
             uv_obj.compress_by_redundancy(tol=redundant_threshold)
 
     return uv_obj, beam_list, beam_dict
+
+
+def _complete_uvdata(uv_in, inplace=False):
+    """Fill out all required parameters of a :class:~`pyuvdata.UVData` object such that
+    it passes the :func:~`pyuvdata.UVData.check()`.
+
+    This will overwrite existing data in `uv_in`!
+
+    Arguments
+    ---------
+    uv_in : :class:~`pyuvdata.UVData` instance
+        Usually an incomplete object, containing only metadata.
+    inplace : bool, optional
+        Whether to perform the filling on the passed object, or a copy.
+
+    Returns
+    -------
+    :class:~`pyuvdata.UVData` : filled/completed object (if `inplace` is `True`, it is
+        the modified input)
+    """
+    if not inplace:
+        uv_obj = copy.deepcopy(uv_in)
+    else:
+        uv_obj = uv_in
+
+    uv_obj._set_drift()
+    uv_obj.vis_units = 'Jy'
+
+    uv_obj.instrument = uv_obj.telescope_name
+    if uv_obj.lst_array is None:
+        _set_lsts_on_uvdata(uv_obj)
+    uv_obj.spw_array = np.array([0])
+    if uv_obj.Nfreqs == 1:
+        uv_obj.channel_width = 1.  # Hz
+    else:
+        uv_obj.channel_width = np.diff(uv_obj.freq_array[0])[0]
+    uv_obj.set_uvws_from_antenna_positions()
+    if uv_obj.Ntimes == 1:
+        uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
+    else:
+        # Note: currently only support a constant spacing of times
+        uv_obj.integration_time = (
+            np.ones_like(uv_obj.time_array, dtype=np.float64)
+            * np.diff(np.unique(uv_obj.time_array))[0]
+            * (24. * 60 ** 2)  # Seconds
+        )
+
+    # Clear existing data, if any.
+    _shape = (uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols)
+    uv_obj.data_array = np.zeros(_shape, dtype=complex)
+    uv_obj.flag_array = np.zeros(_shape, dtype=bool)
+    uv_obj.nsample_array = np.ones(_shape, dtype=float)
+
+    uv_obj.extra_keywords = {}
+
+    uv_obj.check()
+
+    return uv_obj
 
 
 def initialize_uvdata_from_keywords(
@@ -1711,61 +1774,3 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
 
     with open(os.path.join(path_out, param_filename), 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)
-
-
-def _complete_uvdata(uv_in, inplace=False):
-    """Fill out all required parameters of a :class:~`pyuvdata.UVData` object such that
-    it passes the :func:~`pyuvdata.UVData.check()`.
-
-    This will overwrite existing data in `uv_in`!
-
-    Arguments
-    ---------
-    uv_in : :class:~`pyuvdata.UVData` instance
-        Usually an incomplete object, containing only metadata.
-    inplace : bool, optional
-        Whether to perform the filling on the passed object, or a copy.
-
-    Returns
-    -------
-    :class:~`pyuvdata.UVData` : filled/completed object (if `inplace` is `True`, it is
-        the modified input)
-    """
-    if not inplace:
-        uv_obj = copy.deepcopy(uv_in)
-    else:
-        uv_obj = uv_in
-
-    uv_obj._set_drift()
-    uv_obj.vis_units = 'Jy'
-
-    uv_obj.instrument = uv_obj.telescope_name
-    if uv_obj.lst_array is None:
-        _set_lsts_on_uvdata(uv_obj)
-    uv_obj.spw_array = np.array([0])
-    if uv_obj.Nfreqs == 1:
-        uv_obj.channel_width = 1.  # Hz
-    else:
-        uv_obj.channel_width = np.diff(uv_obj.freq_array[0])[0]
-    uv_obj.set_uvws_from_antenna_positions()
-    if uv_obj.Ntimes == 1:
-        uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
-    else:
-        # Note: currently only support a constant spacing of times
-        uv_obj.integration_time = (
-            np.ones_like(uv_obj.time_array, dtype=np.float64)
-            * np.diff(np.unique(uv_obj.time_array))[0]
-            * (24. * 60 ** 2)  # Seconds
-        )
-
-    # Clear existing data, if any.
-    _shape = (uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols)
-    uv_obj.data_array = np.zeros(_shape, dtype=complex)
-    uv_obj.flag_array = np.zeros(_shape, dtype=bool)
-    uv_obj.nsample_array = np.ones(_shape, dtype=float)
-
-    uv_obj.extra_keywords = {}
-
-    uv_obj.check()
-
-    return uv_obj

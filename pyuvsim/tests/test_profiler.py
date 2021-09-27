@@ -1,12 +1,13 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+import os
+import shutil
+import atexit
 
 from numpy import unique
-import os
-import atexit
-import shutil
 import pytest
+import pyuvdata.tests as uvtest
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -29,7 +30,7 @@ def test_profiler(tmpdir):
     testprof_fname = str(outpath.join('time_profile.out'))
     print(testprof_fname)
     pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname, dump_raw=True)
-    with pytest.warns(UserWarning, match='Profiler already set'):
+    with uvtest.check_warning(UserWarning, match='Profiler already set'):
         pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname[:-4], dump_raw=True)
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
     pyuvsim.uvsim.run_uvsim(param_filename, return_uv=True)

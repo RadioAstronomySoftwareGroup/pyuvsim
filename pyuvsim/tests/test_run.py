@@ -4,13 +4,14 @@
 
 import os
 import sys
+import resource
+
 import yaml
 import pytest
-import resource
 import numpy as np
 from astropy import units
-
 from pyuvdata import UVData
+import pyuvdata.tests as uvtest
 from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
 
 import pyuvsim
@@ -44,6 +45,9 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
     uv_ref.unphase_to_drift(use_ant_pos=True)
 
+    # set the x_orientation
+    uv_ref.x_orientation = "east"
+
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', paramfile)
     # This test obsparam file has "single_source.txt" as its catalog.
     pyuvsim.uvsim.run_uvsim(param_filename)
@@ -56,7 +60,7 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     ofilepath = os.path.join(path, 'tempfile.uvfits')
 
     uv_new = UVData()
-    with pytest.warns(UserWarning, match='antenna_diameters is not set'):
+    with uvtest.check_warnings(UserWarning, match='antenna_diameters is not set'):
         uv_new.read_uvfits(ofilepath)
 
     uv_new.unphase_to_drift(use_ant_pos=True)

@@ -3,14 +3,16 @@ import os
 import copy
 from astropy.coordinates import EarthLocation
 
-from pyuvdata import UVBeam
 import pytest
+from pyuvdata import UVBeam
+import pyuvdata.tests as uvtest
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
+
 
 # Ignore warnings of pending sigma deprecation
 @pytest.mark.filterwarnings('ignore:Achromatic gaussian')
@@ -44,9 +46,8 @@ def test_convert_loop(beam_objs):
     beams[1].freq_interp_kind = 'cubic'
 
     # Should warn about inconsistent params on UVBeams.
-    with pytest.warns(UserWarning) as confwarn:
+    with uvtest.check_warnings(UserWarning, match="Conflicting settings for"):
         beamlist = pyuvsim.BeamList(beams)
-    assert str(confwarn.pop().message).startswith("Conflicting settings for")
 
     # Convert beams to strings:
     # Fail, because UVBeams are inconsistent.
@@ -88,9 +89,8 @@ def test_object_mode(beam_objs):
     uvb.freq_interp_kind = 'quartic'
 
     # Warn if inserted object mismatches.
-    with pytest.warns(UserWarning) as confwarn:
+    with uvtest.check_warnings(UserWarning, match="Conflicting settings for"):
         beamlist.append(uvb)
-    assert str(confwarn.pop().message).startswith("Conflicting settings for")
     assert len(beamlist) == 7
 
     # Error if converting to string mode with mismatched keywords:
@@ -180,6 +180,23 @@ def test_beamlist_errors(beam_objs):
     beam_path = 'invalid_file.uvbeam'
     with pytest.raises(ValueError, match='Invalid file path'):
         beamlist.append(beam_path)
+
+    # test error on beams with different x_orientation
+    newbeams[0].x_orientation = None
+    with pytest.raises(
+        ValueError, match="UVBeam x_orientations do not match among beams in list."
+    ):
+        pyuvsim.BeamList(newbeams)
+
+    # test warning on beams with different x_orientation
+    newbeams[0].x_orientation = None
+    newbeams[1].x_orientation = None
+    with uvtest.check_warnings(
+        UserWarning,
+        match="All polarized beams have x_orientation set to None. This will make it "
+        "hard to interpret the polarizations of the simulated visibilities.",
+    ):
+        pyuvsim.BeamList(newbeams)
 
     # Compare Telescopes with beamlists of different lengths
     del newbeams[0]
