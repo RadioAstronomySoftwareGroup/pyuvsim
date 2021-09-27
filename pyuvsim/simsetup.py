@@ -10,7 +10,7 @@ import warnings
 
 import numpy as np
 import yaml
-
+from packaging import version  # packaging is installed with setuptools
 from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, AltAz, ICRS
 import astropy.units as units
 from pyuvdata import utils as uvutils, UVData
@@ -123,6 +123,86 @@ def _set_lsts_on_uvdata(uv_obj):
     return uv_obj
 
 
+def _create_catalog_diffuse(
+    map_nside, diffuse_model, diffuse_params, time, localframe, array_location
+):
+
+    # Make the map, calculate AltAz positions of pixels, evaluate the model.
+    npix = 12 * map_nside**2
+    pixinds = np.arange(npix)
+
+    if localframe == 'lunartopo':
+        frame = LunarTopo(location=array_location, obstime=time)
+    else:
+        frame = AltAz(location=array_location, obstime=time)
+    hpix = astropy_healpix.HEALPix(nside=map_nside, frame=ICRS())
+    icrs_coord = hpix.healpix_to_skycoord(pixinds)
+    source_coord = icrs_coord.transform_to(frame)
+
+    alts = source_coord.alt.rad
+    azs = source_coord.az.rad
+
+    modfunc = analytic_diffuse.get_model(diffuse_model)
+    fluxes = modfunc(source_coord.az.rad, source_coord.zen.rad, **diffuse_params)
+
+    stokes = np.zeros((4, 1, npix))
+    stokes[0, :] = fluxes
+
+    if pyradiosky.SkyModel()._stokes.expected_type == units.Quantity:
+        stokes *= units.K
+
+    if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):
+        catalog = pyradiosky.SkyModel(
+            stokes=stokes,
+            nside=map_nside,
+            hpx_inds=pixinds,
+            spectral_type='flat',
+            frame="icrs"
+        )
+    else:
+        catalog = pyradiosky.SkyModel(
+            stokes=stokes,
+            nside=map_nside,
+            hpx_inds=pixinds,
+            spectral_type='flat',
+        )
+
+    return catalog, icrs_coord, alts, azs, fluxes
+
+
+def _create_catalog_discrete(Nsrcs, alts, azs, fluxes, time, localframe, array_location):
+    source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
+                            obstime=time, frame=localframe, location=array_location)
+    icrs_coord = source_coord.transform_to('icrs')
+
+    names = np.array(['src' + str(si) for si in range(Nsrcs)])
+    stokes = np.zeros((4, 1, Nsrcs))
+    stokes[0, :] = fluxes
+
+    if pyradiosky.SkyModel()._stokes.expected_type == units.Quantity:
+        stokes *= units.Jy
+
+    if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):
+        catalog = pyradiosky.SkyModel(
+            name=names,
+            ra=icrs_coord.ra,
+            dec=icrs_coord.dec,
+            stokes=stokes,
+            spectral_type='flat',
+            frame="icrs"
+        )
+    else:
+        catalog = pyradiosky.SkyModel(
+            name=names,
+            ra=icrs_coord.ra,
+            dec=icrs_coord.dec,
+            stokes=stokes,
+            spectral_type='flat'
+        )
+
+    return catalog, icrs_coord
+
+
 def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=None,
                         alt=None, save=False, min_alt=None, rseed=None, return_data=False,
                         diffuse_model=None, diffuse_params=None, map_nside=None):
@@ -185,8 +265,6 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     -----
     Generating diffuse models requires the `analytic_diffuse` and `astropy_healpix` modules.
     """
-
-    quantity_stokes = pyradiosky.SkyModel()._stokes.expected_type == units.Quantity
 
     if isinstance(time, float):
         time = Time(time, scale='utc', format='jd')
@@ -321,47 +399,14 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         mock_keywords['map_nside'] = map_nside
         mock_keywords['diffuse_params'] = repr(diffuse_params)
 
-        # Make the map, calculate AltAz positions of pixels, evaluate the model.
-        npix = 12 * map_nside**2
-        pixinds = np.arange(npix)
-
-        if localframe == 'lunartopo':
-            frame = LunarTopo(location=array_location, obstime=time)
-        else:
-            frame = AltAz(location=array_location, obstime=time)
-        hpix = astropy_healpix.HEALPix(nside=map_nside, frame=ICRS())
-        icrs_coord = hpix.healpix_to_skycoord(pixinds)
-        source_coord = icrs_coord.transform_to(frame)
-
-        modfunc = analytic_diffuse.get_model(diffuse_model)
-        fluxes = modfunc(source_coord.az.rad, source_coord.zen.rad, **diffuse_params)
-        stokes = np.zeros((4, 1, npix))
-        stokes[0, :] = fluxes
-
-        if quantity_stokes:
-            stokes *= units.K
-
-        catalog = pyradiosky.SkyModel(
-            stokes=stokes,
-            nside=map_nside,
-            hpx_inds=pixinds,
-            spectral_type='flat',
-            frame="icrs"
+        catalog, icrs_coord, alts, azs, fluxes = _create_catalog_diffuse(
+            map_nside, diffuse_model, diffuse_params, time, localframe, array_location
         )
+
     else:
-        source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
-                                obstime=time, frame=localframe, location=array_location)
-        icrs_coord = source_coord.transform_to('icrs')
 
-        names = np.array(['src' + str(si) for si in range(Nsrcs)])
-        stokes = np.zeros((4, 1, Nsrcs))
-        stokes[0, :] = fluxes
-
-        if quantity_stokes:
-            stokes *= units.Jy
-
-        catalog = pyradiosky.SkyModel(
-            name=names, ra=icrs_coord.ra, dec=icrs_coord.dec, stokes=stokes, spectral_type='flat'
+        catalog, icrs_coord = _create_catalog_discrete(
+            Nsrcs, alts, azs, fluxes, time, localframe, array_location
         )
 
     if return_data:
