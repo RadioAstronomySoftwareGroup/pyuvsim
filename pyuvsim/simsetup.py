@@ -148,8 +148,7 @@ def _create_catalog_diffuse(
     stokes = np.zeros((4, 1, npix))
     stokes[0, :] = fluxes
 
-    if pyradiosky.SkyModel()._stokes.expected_type == units.Quantity:
-        stokes *= units.K
+    stokes *= units.K
 
     if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):
         catalog = pyradiosky.SkyModel(
@@ -179,8 +178,7 @@ def _create_catalog_discrete(Nsrcs, alts, azs, fluxes, time, localframe, array_l
     stokes = np.zeros((4, 1, Nsrcs))
     stokes[0, :] = fluxes
 
-    if pyradiosky.SkyModel()._stokes.expected_type == units.Quantity:
-        stokes *= units.Jy
+    stokes *= units.Jy
 
     if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):
         catalog = pyradiosky.SkyModel(
