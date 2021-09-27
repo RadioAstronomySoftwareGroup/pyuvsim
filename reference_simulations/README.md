@@ -7,7 +7,7 @@ folder and replaces the previous set as the validation standard for new `pyuvsim
 versions.
 
 For convenience, several scripts are provided to help run the reference simulations and
-compare their results to a standard set (hosted on a publicly-accessible Google drive).
+compare their results to a standard set (hosted on a publicly-accessible [Google drive](https://drive.google.com/drive/folders/0B0DC3mpkVdq6fjhZTWdsV2pBQXNKNHVWeExRd3gzdFN4WXp3cDVLaTlZZHlrVmZ0eFNtOHM?resourcekey=0-AOKBEf0D_nO0o8uOO-g-QQ&usp=sharing)).
 At this time, these scripts are designed for a cluster managed by Simple Linux Utility Resource
 Manager (SLURM).
 
