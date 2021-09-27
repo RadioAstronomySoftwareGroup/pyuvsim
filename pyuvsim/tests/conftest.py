@@ -218,6 +218,7 @@ def cst_beam():
         telescope_name='HERA', feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
         model_name='E-field pattern - Rigging height 4.9m', model_version='1.0'
     )
+    beam.x_orientation = 'east'
     beam.freq_interp_kind = 'linear'
     beam.interpolation_function = 'az_za_simple'
     beam.peak_normalize()

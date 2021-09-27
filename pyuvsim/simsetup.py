@@ -342,8 +342,11 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
             stokes *= units.K
 
         catalog = pyradiosky.SkyModel(
-            ra=icrs_coord.ra, dec=icrs_coord.dec, stokes=stokes,
-            nside=map_nside, hpx_inds=pixinds, spectral_type='flat'
+            stokes=stokes,
+            nside=map_nside,
+            hpx_inds=pixinds,
+            spectral_type='flat',
+            frame="icrs"
         )
     else:
         source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
