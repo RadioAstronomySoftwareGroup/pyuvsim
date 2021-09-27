@@ -142,7 +142,7 @@ class BeamList(object):
             or x_orientation_list.count(None) == len(x_orientation_list)
         ):
             self.x_orientation = None
-        elif x_orientation_list.count(x_orientation_list[0]) == len(x_orientation_list):
+        elif all(x == x_orientation_list[0] for x in x_orientation_list):
             self.x_orientation = x_orientation_list[0]
         else:
             raise ValueError("UVBeam x_orientations do not match among beams in list.")
