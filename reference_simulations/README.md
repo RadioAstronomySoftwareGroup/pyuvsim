@@ -26,6 +26,9 @@ Manager (SLURM).
  - download_latest_data.py
         Run this first to download the reference sim data from the google drive. The new data will be
         compared to these files. They will end up in a directory `latest_ref_data`.
+        An optional parameter "--with-inputs" will download the input data stored
+        on the Google Drive such as large beams and sky models.
+        The input data is saved into the same directory as the script.
 
  - compare_with_last.py
         Given the paths to the latest output files (uvh5), this will compare the data in those files
