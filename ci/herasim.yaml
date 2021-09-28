@@ -7,12 +7,10 @@ dependencies:
   - astropy>=4.0
   - astropy-healpix
   - attrs
-  - click
   - deprecation
-  - future
   - h5py
   - matplotlib>=3.4.2
-  - nose
+  - mpi4py>=3.0.0
   - numpy>=1.15
   - pip
   - psutil
@@ -25,7 +23,7 @@ dependencies:
   - pip:
     - cached-property
     - pyradiosky>=0.1.2
-    - vis-cpu>=0.2.0
+    - vis-cpu>=0.2.2
     - git+https://github.com/HERA-Team/uvtools.git
     - git+https://github.com/rasg-affiliates/healvis
     - git+https://github.com/HERA-Team/hera_cal.git
