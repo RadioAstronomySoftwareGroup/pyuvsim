@@ -58,6 +58,12 @@ def test_convert_loop(beam_objs):
 
     beamlist.set_str_mode()
 
+    # check that _obj_to_str on a string beam works
+    beamlist2 = copy.deepcopy(beamlist)
+    beamlist2._obj_to_str(beamlist2[0])
+
+    assert beamlist2 == beamlist
+
     assert beamlist.uvb_params['freq_interp_kind'] == 'linear'
 
     for bs in beamlist:

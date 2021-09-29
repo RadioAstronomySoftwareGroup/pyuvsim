@@ -150,7 +150,7 @@ def _create_catalog_diffuse(
 
     stokes *= units.K
 
-    if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):
+    if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):  # pragma: no cover
         catalog = pyradiosky.SkyModel(
             stokes=stokes,
             nside=map_nside,
@@ -180,7 +180,7 @@ def _create_catalog_discrete(Nsrcs, alts, azs, fluxes, time, localframe, array_l
 
     stokes *= units.Jy
 
-    if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):
+    if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):  # pragma: no cover
         catalog = pyradiosky.SkyModel(
             name=names,
             ra=icrs_coord.ra,
