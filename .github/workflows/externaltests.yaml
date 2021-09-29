@@ -10,20 +10,25 @@ jobs:
         # Adding -l {0} helps ensure conda can be found properly.
         shell: bash -l {0}
     env:
-      ENV_NAME: herasim
+      ENV_NAME: tests
       PYTHON: 3.7
 
     steps:
       - uses: actions/checkout@master
         with:
          fetch-depth: 1
+      - name: clone hera_sim
+        run: |
+          cd ../
+          git clone https://github.com/HERA-Team/hera_sim.git
+          cd pyuvsim
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2.0.0
         with:
           auto-update-conda: true
           miniconda-version: "latest"
           python-version: ${{ env.PYTHON }}
-          environment-file: ci/${{ env.ENV_NAME }}.yaml
+          environment-file: ../hera_sim/ci/${{ env.ENV_NAME }}.yaml
           activate-environment: ${{ env.ENV_NAME }}
 
       - name: Conda Info
@@ -39,7 +44,6 @@ jobs:
         run: |
           pip install --no-deps .
           cd ../
-          git clone https://github.com/HERA-Team/hera_sim.git
           cd hera_sim
           pip install --no-deps .
           mkdir test-reports
