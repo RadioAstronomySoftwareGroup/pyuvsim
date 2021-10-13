@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.2.1] - 2021-10-13
+
 ### Added
 - Support for unit tests parallelized with MPI.
 - Require that future changes not drastically increase runtime for current capabilities.
@@ -10,6 +12,7 @@
 - Use remote memory access to collect finished visibility data, without serialization.
 
 ### Fixed
+- `x_orientation` is now checked on UVBeam objects and flowed into the output UVData files.
 - `SkyModel.name` is now coerced to an array.
 - Bug MPI-enabled tests which caused failure on tests that wouldn't pass in serial mode.
 - Fix bugs in reading catalogs using pyradiosky for `skyh5` files and files with unusual extension names.
