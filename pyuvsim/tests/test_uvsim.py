@@ -101,6 +101,26 @@ def uvobj_beams_srcs():
     return uv_obj, beam_list, beam_dict, sources
 
 
+@pytest.fixture
+def uvdata_two_redundant_bls_triangle_sources():
+    # A uvdata object, beam list, beam dict, and source array.
+    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
+    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
+    uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
+
+    uv_obj.select(freq_chans=[0], antenna_nums=[0, 1, 2], inplace=True)
+
+    beam_list[0] = pyuvsim.AnalyticBeam('airy', diameter=13.0)
+
+    time = Time(uv_obj.time_array[0], format='jd', scale='utc')
+    sources, kwds = pyuvsim.create_mock_catalog(
+        time, arrangement='triangle', Nsrcs=3, return_data=True
+    )
+
+    return uv_obj, beam_list, beam_dict, sources
+
+
 def test_visibility_single_zenith_source(cst_beam, hera_loc):
     """Test single zenith source."""
 
@@ -895,3 +915,24 @@ def test_run_mpierr():
 
         with pytest.raises(ImportError, match='You need mpi4py to use the uvsim module'):
             pyuvsim.run_uvdata_uvsim(UVData(), ['beamlist'])
+
+
+def test_ordering(uvdata_two_redundant_bls_triangle_sources):
+    uvdata_linear, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
+
+    uvdata_linear.reorder_blts(order="baseline", minor_order="time")
+
+    out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
+        input_uv=uvdata_linear,
+        beam_list=beam_list,
+        beam_dict=beam_dict,
+        catalog=sky_model,
+    )
+    uvdata_linear.data_array = out_uv.data_array
+
+    uvdata_linear.reorder_blts(order="time", conj_convention="ant1<ant2")
+
+    # THIS FAILS
+    assert not np.allclose(
+        uvdata_linear.get_data((0, 1)), uvdata_linear.get_data((1, 2))
+    )
