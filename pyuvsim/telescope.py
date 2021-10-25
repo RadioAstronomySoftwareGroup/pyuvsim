@@ -6,9 +6,19 @@
 import numpy as np
 import warnings
 from pyuvdata import UVBeam, parameter
+import functools
 
 from .analyticbeam import AnalyticBeam
 from . import mpi
+
+
+def consistent(method):
+    @functools.wraps(method)
+    def inner(self):
+        if not self.is_consistent:
+            self.check_consistency(force=True)
+
+    return inner
 
 
 class BeamList:
@@ -64,7 +74,8 @@ class BeamList:
 
     string_mode = True
 
-    def __init__(self, beam_list=None, uvb_params=None):
+    def __init__(self, beam_list=None, uvb_params=None, check: bool = True, force_check: bool=False):
+
         self.uvb_params = {'freq_interp_kind': 'cubic',
                            'interpolation_function': 'az_za_simple'}
         self.spline_interp_opts = None
@@ -89,30 +100,47 @@ class BeamList:
         self.uvb_params.update(list_uvb_params)
         self.uvb_params.update(uvb_params)    # Optional parameters for the UVBeam objects
 
-        x_orientation_list = []
-        for beam in beam_list:
-            if self.string_mode:
-                beam_use = self._str_to_obj(beam)
-            else:
-                beam_use = beam
+        self.is_consistent = False
+        if check:
+            self.check_consistency(force=force_check)
 
-            if hasattr(beam_use, "x_orientation"):
-                x_orientation_list.append(beam_use.x_orientation)
-        if (
-            len(x_orientation_list) == 0
-            or x_orientation_list.count(None) == len(x_orientation_list)
-        ):
-            self.x_orientation = None
-        elif all(x == x_orientation_list[0] for x in x_orientation_list):
-            self.x_orientation = x_orientation_list[0]
-        else:
-            raise ValueError("UVBeam x_orientations do not match among beams in list.")
+            if self.x_orientation is None:
+                warnings.warn(
+                    "All polarized beams have x_orientation set to None. This will make it "
+                    "hard to interpret the polarizations of the simulated visibilities."
+                )
 
-        if len(x_orientation_list) > 0 and self.x_orientation is None:
-            warnings.warn(
-                "All polarized beams have x_orientation set to None. This will make it "
-                "hard to interpret the polarizations of the simulated visibilities."
-            )
+    @consistent
+    @property
+    def x_orientation(self):
+        """The x_orientation of all beams in list (if consistent)."""
+        return getattr(self._obj_beam_list[0], "x_orientation", None)
+
+    @consistent
+    @property
+    def beam_type(self):
+        """The beam_type of all beams in list (if consistent)."""
+        return getattr(self._obj_beam_list[0], "beam_type", None)
+
+    @consistent
+    @property
+    def feed_array(self):
+        """The feed_array of all beams in list (if consistent)."""
+        return getattr(self._obj_beam_list[0], "feed_array", None)
+    
+    @consistent
+    @property
+    def polarization_array(self):
+        """The polarization_array of all beams in list (if consistent)."""
+        return getattr(self._obj_beam_list[0], "polarization_array", None)
+    
+
+    @consistent
+    @property
+    def Nfeeds(self):
+        """The Nfeeds of all beams in list (if consistent)."""
+        return getattr(self._obj_beam_list[0], "Nfeeds", None)
+    
 
     def _scrape_uvb_params(self, beam_objs, strict=True):
         """
@@ -281,15 +309,17 @@ class BeamList:
         uvb.extra_keywords['beam_path'] = path
         return uvb
 
-    def _obj_to_str(self, beam_model):
-        """Convert beam objects to strings that may generate them."""
+    @classmethod
+    def _obj_to_str(cls, beam_model):
+        # Convert beam objects to strings that may generate them.
+
         if isinstance(beam_model, str):
             return beam_model
         if isinstance(beam_model, AnalyticBeam):
             btype = beam_model.type
 
             bm_str = 'analytic_' + btype
-            for abbrv, full in self._float_params.items():
+            for abbrv, full in cls._float_params.items():
                 val = getattr(beam_model, full)
                 if val is not None:
                     bm_str += '_' + abbrv + '=' + str(val)
@@ -333,7 +363,7 @@ class BeamList:
         self._obj_beam_list = []
         self.string_mode = True
 
-    def set_obj_mode(self, use_shared_mem=False):
+    def set_obj_mode(self, use_shared_mem=False, check: bool=True):
         """
         Initialize AnalyticBeam and UVBeam objects from string representations.
 
@@ -348,8 +378,11 @@ class BeamList:
         self._set_params_on_uvbeams(self._obj_beam_list)
         self._str_beam_list = []
         self.string_mode = False
+        
+        if check:
+            self.check_consistency()
 
-    def check_consistency(self, check_pols: bool = True):
+    def check_consistency(self, check_pols: bool = True, force: bool=False):
         """Check the consistency of all beams in the list.
 
         This checks basic parameters of the objects for consistency, eg. the ``beam_type``.
@@ -366,10 +399,15 @@ class BeamList:
             If any beam is inconsistent with the rest of the beams.
         """
         if self.string_mode:
-            warnings.warn(
-                "Cannot check consistency of a string-mode BeamList!"
-            )
-            return
+            if not force:
+                warnings.warn(
+                    "Cannot check consistency of a string-mode BeamList!"
+                )
+                return
+            else:
+                self.set_obj_mode(check=True)
+                self.set_str_mode()
+                return
 
         b0 = self[0]
 
@@ -404,6 +442,7 @@ class BeamList:
 
                 check_thing("x_orientation", j)
 
+        self.is_consistent = True
 
 class BeamConsistencyError(Exception):
     pass
