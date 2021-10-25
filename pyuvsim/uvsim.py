@@ -400,6 +400,12 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     if not ((input_uv.Npols == 4) and (input_uv.polarization_array.tolist() == [-5, -6, -7, -8])):
         raise ValueError("input_uv must have XX,YY,XY,YX polarization")
 
+    input_order = None
+    if input_uv.blt_order is not None:
+        input_order = input_uv.blt_order
+
+    input_uv.reorder_blts(order="time", minor_order="baseline")
+
     # The root node will initialize our simulation
     # Read input file and make uvtask list
     if rank == 0 and not quiet:
@@ -532,6 +538,15 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     vis_data.Free()
 
     if rank == 0:
+        if input_order is not None:
+            if len(input_order) < 1:
+                input_order = (input_order[0], None)
+
+            uv_container.reorder_blts(
+                order=input_order[0],
+                minor_order=input_order[1],
+            )
+
         return uv_container
 
 
