@@ -648,6 +648,12 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     # Construct beam objects from strings
     beam_list.set_obj_mode(use_shared_mem=True)
 
+    # In case the user created the beam list without checking consistency:
+    beam_list.check_consistency()
+    
+    if beam_list.beam_type != 'efield':
+        raise ValueError("Beam type must be efield!")
+
     # Estimating required memory to decide how to split source array.
     mem_avail = (simutils.get_avail_memory()
                  - mpi.get_max_node_rss(return_per_node=True) * 2**30)
