@@ -13,6 +13,7 @@ from . import mpi
 
 
 def consistent(method):
+    """Decorator for checking consistency before accessing a parameter."""
     @functools.wraps(method)
     def inner(self):
         if not self.is_consistent:
@@ -55,6 +56,15 @@ class BeamList:
     uvb_params : dict (optional)
         Options to set uvb_params, overriding settings from passed-in UVBeam objects.
 
+    check
+        Whether to perform a consistency check on the beams (i.e. asserting that several
+        of their defining parameters are the same for all beams in the list).
+
+    force_check
+        The consistency check is only possible for object-beams (not string mode). If
+        `force_check` is True, it will convert beams to object-mode to force the check
+        to run (then convert back to string mode).
+
     Raises
     ------
     ValueError :
@@ -74,7 +84,13 @@ class BeamList:
 
     string_mode = True
 
-    def __init__(self, beam_list=None, uvb_params=None, check: bool = True, force_check: bool=False):
+    def __init__(
+        self,
+        beam_list=None,
+        uvb_params=None,
+        check: bool = True,
+        force_check: bool = False
+    ):
 
         self.uvb_params = {'freq_interp_kind': 'cubic',
                            'interpolation_function': 'az_za_simple'}
@@ -127,20 +143,18 @@ class BeamList:
     def feed_array(self):
         """The feed_array of all beams in list (if consistent)."""
         return getattr(self._obj_beam_list[0], "feed_array", None)
-    
+
     @consistent
     @property
     def polarization_array(self):
         """The polarization_array of all beams in list (if consistent)."""
         return getattr(self._obj_beam_list[0], "polarization_array", None)
-    
 
     @consistent
     @property
     def Nfeeds(self):
         """The Nfeeds of all beams in list (if consistent)."""
         return getattr(self._obj_beam_list[0], "Nfeeds", None)
-    
 
     def _scrape_uvb_params(self, beam_objs, strict=True):
         """
@@ -363,7 +377,7 @@ class BeamList:
         self._obj_beam_list = []
         self.string_mode = True
 
-    def set_obj_mode(self, use_shared_mem=False, check: bool=True):
+    def set_obj_mode(self, use_shared_mem=False, check: bool = True):
         """
         Initialize AnalyticBeam and UVBeam objects from string representations.
 
@@ -378,11 +392,11 @@ class BeamList:
         self._set_params_on_uvbeams(self._obj_beam_list)
         self._str_beam_list = []
         self.string_mode = False
-        
+
         if check:
             self.check_consistency()
 
-    def check_consistency(self, check_pols: bool = True, force: bool=False):
+    def check_consistency(self, check_pols: bool = True, force: bool = False):
         """Check the consistency of all beams in the list.
 
         This checks basic parameters of the objects for consistency, eg. the ``beam_type``.
@@ -443,6 +457,7 @@ class BeamList:
                 check_thing("x_orientation", j)
 
         self.is_consistent = True
+
 
 class BeamConsistencyError(Exception):
     pass
