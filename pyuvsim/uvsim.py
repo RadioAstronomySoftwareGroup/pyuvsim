@@ -650,7 +650,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
 
     # In case the user created the beam list without checking consistency:
     beam_list.check_consistency()
-    
+
     if beam_list.beam_type != 'efield':
         raise ValueError("Beam type must be efield!")
 

@@ -215,7 +215,7 @@ def test_beamlist_errors(beam_objs):
 
 def test_beamlist_consistency(beam_objs):
     newbeams = copy.deepcopy(beam_objs)
-    
+
     # Does check, but raises no error
     pyuvsim.BeamList(newbeams[:2])
 
@@ -223,10 +223,12 @@ def test_beamlist_consistency(beam_objs):
         # Raises because analytic beams have no Nfeeds
         pyuvsim.BeamList(newbeams[:3])
 
+
 def test_beamlist_consistency_properties(beam_objs):
     newbeams = copy.deepcopy(beam_objs)
     beamlist = pyuvsim.BeamList(newbeams[:2])
     assert beamlist.x_orientation == newbeams[0].x_orientation
+
 
 def test_beamlist_consistency_stringmode(beam_objs):
     newbeams = copy.deepcopy(beam_objs)
@@ -239,9 +241,8 @@ def test_beamlist_consistency_stringmode(beam_objs):
         if not record:
             pytest.fail("Expected a warning!")
 
-
     beamlist = pyuvsim.BeamList(newbeams[:3], check=False)
     beamlist.set_str_mode()
-    
+
     with pytest.raises(pyuvsim.BeamConsistencyError):
         pyuvsim.BeamList(beamlist._str_beam_list, force_check=True)
