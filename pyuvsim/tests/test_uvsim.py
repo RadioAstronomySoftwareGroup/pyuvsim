@@ -937,7 +937,6 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
 
     uvdata_linear.reorder_blts(order="time", conj_convention="ant1<ant2")
 
-    # THIS FAILS
     assert not np.allclose(
         uvdata_linear.get_data((0, 1)), uvdata_linear.get_data((1, 2))
     )
