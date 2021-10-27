@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- Input `uvdata.blt_order` forced to be (time, baseline) before a simulation is run. Attempts to reorder output uvdata object if input ordering was different.
+
 ## [1.2.1] - 2021-10-13
 
 ### Added
