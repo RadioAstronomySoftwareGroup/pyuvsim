@@ -917,11 +917,12 @@ def test_run_mpierr():
             pyuvsim.run_uvdata_uvsim(UVData(), ['beamlist'])
 
 
-def test_ordering(uvdata_two_redundant_bls_triangle_sources):
+@pytest.mark.parametrize("order", [("bda",), ("baseline", "time"), ("ant2", "time")])
+def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
     pytest.importorskip('mpi4py')
     uvdata_linear, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
 
-    uvdata_linear.reorder_blts(order="baseline", minor_order="time")
+    uvdata_linear.reorder_blts(*order)
 
     out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
         input_uv=uvdata_linear,
@@ -929,6 +930,9 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources):
         beam_dict=beam_dict,
         catalog=sky_model,
     )
+
+    assert out_uv.blt_order == order
+
     uvdata_linear.data_array = out_uv.data_array
 
     uvdata_linear.reorder_blts(order="time", conj_convention="ant1<ant2")

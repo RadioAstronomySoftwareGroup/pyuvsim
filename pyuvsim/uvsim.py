@@ -539,7 +539,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
 
     if rank == 0:
         if input_order is not None:
-            if len(input_order) < 1:
+            if len(input_order) < 2:
                 input_order = (input_order[0], None)
 
             uv_container.reorder_blts(
