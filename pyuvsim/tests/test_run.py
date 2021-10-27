@@ -44,6 +44,7 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     uv_ref = UVData()
     uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
     uv_ref.unphase_to_drift(use_ant_pos=True)
+    uv_ref.reorder_blts("time", minor_order="baseline")
 
     # set the x_orientation
     uv_ref.x_orientation = "east"

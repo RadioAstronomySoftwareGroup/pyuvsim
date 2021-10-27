@@ -1077,7 +1077,8 @@ def test_keyword_param_loop(tmpdir):
     layout_fname = 'temp_layout_kwdloop.csv'
     obsparam_fname = 'temp_obsparam_kwdloop.yaml'
     path_out = str(tmpdir)
-    antpos_enu = np.ones(30).reshape((10, 3))
+    # add some jiggle so you get non-zero uvws
+    antpos_enu = (np.ones(30) + np.random.uniform(-10, 10, 30)).reshape((10, 3))
     antnums = np.arange(10)
     antpos_d = dict(zip(antnums, antpos_enu))
     uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(
