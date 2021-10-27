@@ -1405,6 +1405,26 @@ def initialize_uvdata_from_params(obs_params):
     uv_obj.set_uvws_from_antenna_positions()
     uv_obj.history = ''
 
+    uv_obj._set_drift()
+    uv_obj.vis_units = 'Jy'
+
+    uv_obj.instrument = uv_obj.telescope_name
+    uv_obj.spw_array = np.array([0])
+    if uv_obj.Nfreqs == 1:
+        uv_obj.channel_width = 1.  # Hz
+    else:
+        uv_obj.channel_width = np.diff(uv_obj.freq_array[0])[0]
+
+    if uv_obj.Ntimes == 1:
+        uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
+    else:
+        # Note: currently only support a constant spacing of times
+        uv_obj.integration_time = (
+            np.ones_like(uv_obj.time_array, dtype=np.float64)
+            * np.diff(np.unique(uv_obj.time_array))[0]
+            * (24. * 60 ** 2)  # Seconds
+        )
+
     # select on object
     valid_select_keys = [
         'antenna_nums', 'antenna_names', 'ant_str', 'bls',
@@ -1436,6 +1456,8 @@ def initialize_uvdata_from_params(obs_params):
         if redundant_threshold is not None:
             uv_obj.compress_by_redundancy(tol=redundant_threshold)
 
+    uv_obj.check()
+
     return uv_obj, beam_list, beam_dict
 
 
@@ -1462,27 +1484,11 @@ def _complete_uvdata(uv_in, inplace=False):
     else:
         uv_obj = uv_in
 
-    uv_obj._set_drift()
-    uv_obj.vis_units = 'Jy'
-
-    uv_obj.instrument = uv_obj.telescope_name
+    # moved to have meta-data compatible objects from the init
+    # but retain this functionality for now.
+    # in most cases should be a no-op anyway.
     if uv_obj.lst_array is None:
         _set_lsts_on_uvdata(uv_obj)
-    uv_obj.spw_array = np.array([0])
-    if uv_obj.Nfreqs == 1:
-        uv_obj.channel_width = 1.  # Hz
-    else:
-        uv_obj.channel_width = np.diff(uv_obj.freq_array[0])[0]
-    uv_obj.set_uvws_from_antenna_positions()
-    if uv_obj.Ntimes == 1:
-        uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
-    else:
-        # Note: currently only support a constant spacing of times
-        uv_obj.integration_time = (
-            np.ones_like(uv_obj.time_array, dtype=np.float64)
-            * np.diff(np.unique(uv_obj.time_array))[0]
-            * (24. * 60 ** 2)  # Seconds
-        )
 
     # Clear existing data, if any.
     _shape = (uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols)
