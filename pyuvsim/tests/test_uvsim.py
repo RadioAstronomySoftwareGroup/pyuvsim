@@ -925,18 +925,19 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
     uvdata_linear.reorder_blts(*order)
 
     out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
-        input_uv=uvdata_linear,
+        input_uv=uvdata_linear.copy(),
         beam_list=beam_list,
         beam_dict=beam_dict,
         catalog=sky_model,
     )
-
     assert out_uv.blt_order == order
+    assert out_uv.blt_order == uvdata_linear.blt_order
 
     uvdata_linear.data_array = out_uv.data_array
 
-    uvdata_linear.reorder_blts(order="time", conj_convention="ant1<ant2")
-
-    assert not np.allclose(
+    assert np.allclose(
         uvdata_linear.get_data((0, 1)), uvdata_linear.get_data((1, 2))
+    )
+    assert not np.allclose(
+        uvdata_linear.get_data((0, 1)), uvdata_linear.get_data((0, 2))
     )
