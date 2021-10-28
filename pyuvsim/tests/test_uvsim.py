@@ -946,6 +946,7 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
 
 
 def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources):
+    pytest.importorskip('mpi4py')
     uvdata_linear, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
 
     uvdata_linear.conjugate_bls("ant1<ant2")
