@@ -79,8 +79,8 @@ def uvobj_beams_srcs():
     ref_freq, alpha = 100e6, -0.5
     beam_list[0] = pyuvsim.AnalyticBeam('airy', diameter=13.0)
     beam_list.append(pyuvsim.AnalyticBeam('airy', diameter=14.6))
-    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.03))
-    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.03,
+    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.3))
+    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.3,
                      ref_freq=ref_freq, spectral_index=alpha))
 
     # Assign the last few antennas to use these other beams.
@@ -934,6 +934,8 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
     assert out_uv.blt_order == uvdata_linear.blt_order
 
     uvdata_linear.data_array = out_uv.data_array
+
+    uvdata_linear.reorder_blts(order="time", minor_order="baseline", conj_convention="ant1<ant2")
 
     assert np.allclose(
         uvdata_linear.get_data((0, 1)), uvdata_linear.get_data((1, 2))
