@@ -280,12 +280,11 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         antennas.append(Antenna(antname, num, antpos_enu[num], beam_id))
 
     baselines = {}
-    Ntimes = input_uv.Ntimes
     Nfreqs = input_uv.Nfreqs
-    Nbls = input_uv.Nbls
+    Nblts = input_uv.Nblts
 
-    tasks_shape = (Ntimes, Nfreqs, Nbls)
-    time_ax, freq_ax, bl_ax = range(3)
+    tasks_shape = (Nblts, Nfreqs)
+    blt_ax, freq_ax = range(2)
 
     tloc = [np.float64(x) for x in input_uv.telescope_location]
 
@@ -319,26 +318,25 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
             # Shape indicates slowest to fastest index.
             if not isinstance(task_index, tuple):
                 task_index = np.unravel_index(task_index, tasks_shape)
-            bl_i = task_index[bl_ax]
-            time_i = task_index[time_ax]
+            blt_i = task_index[blt_ax]
             freq_i = task_index[freq_ax]
 
-            blti = bl_i + time_i * Nbls  # baseline is the fast axis
+            bl_num = input_uv.baseline_array[blt_i]
 
             # We reuse a lot of baseline info, so make the baseline list on the first go and reuse.
-            if bl_i not in baselines.keys():
-                antnum1 = input_uv.ant_1_array[blti]
-                antnum2 = input_uv.ant_2_array[blti]
+            if bl_num not in baselines.keys():
+                antnum1 = input_uv.ant_1_array[blt_i]
+                antnum2 = input_uv.ant_2_array[blt_i]
                 index1 = np.where(input_uv.antenna_numbers == antnum1)[0][0]
                 index2 = np.where(input_uv.antenna_numbers == antnum2)[0][0]
-                baselines[bl_i] = Baseline(antennas[index1], antennas[index2])
+                baselines[bl_num] = Baseline(antennas[index1], antennas[index2])
 
-            time = time_array[blti]
-            bl = baselines[bl_i]
+            time = time_array[blt_i]
+            bl = baselines[bl_num]
             freq = freq_array[0, freq_i]  # 0 = spw axis
 
             task = UVTask(sky, time, freq, bl, telescope, freq_i)
-            task.uvdata_index = (blti, 0, freq_i)    # 0 = spectral window index
+            task.uvdata_index = (blt_i, 0, freq_i)    # 0 = spectral window index
 
             yield task
         del sky
