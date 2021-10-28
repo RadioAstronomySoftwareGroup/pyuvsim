@@ -200,7 +200,7 @@ class UVEngine(object):
         return vis_vector
 
 
-def _make_task_inds(Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus):
+def _make_task_inds(Nblts, Nfreqs, Nsrcs, rank, Npus):
     """
     Make iterators defining task and sources computed on rank.
 
@@ -212,7 +212,7 @@ def _make_task_inds(Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus):
        - Within the task loop, decide on source chunks and make skymodels on the fly.
     """
 
-    Nbltf = Nbls * Ntimes * Nfreqs
+    Nbltf = Nblts * Nfreqs
 
     split_srcs = False
 
@@ -420,12 +420,13 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         vis_data = mpi.MPI.Win.Create(None, comm=mpi.world_comm)
 
     Nbls = input_uv.Nbls
+    Nblts = input_uv.Nblts
     Ntimes = input_uv.Ntimes
     Nfreqs = input_uv.Nfreqs
     Nsrcs = catalog.Ncomponents
 
     task_inds, src_inds, Ntasks_local, Nsrcs_local = _make_task_inds(
-        Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus
+        Nblts, Nfreqs, Nsrcs, rank, Npus
     )
 
     # Construct beam objects from strings

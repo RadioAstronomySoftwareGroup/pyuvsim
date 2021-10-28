@@ -611,7 +611,7 @@ def test_task_coverage():
         tasks_all = []
         for rank in range(Npus):
             task_inds, src_inds, Ntasks_local, Nsrcs_local = pyuvsim.uvsim._make_task_inds(
-                Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus
+                Nbls * Ntimes, Nfreqs, Nsrcs, rank, Npus
             )
             src_inds = np.arange(Nsrcs)[src_inds]   # Turn slice into iterator
             tasks = itertools.product(task_inds, src_inds)
@@ -638,7 +638,7 @@ def test_task_coverage():
         tasks_all = []
         for rank in range(Npus):
             task_inds, src_inds, Ntasks_local, Nsrcs_local = pyuvsim.uvsim._make_task_inds(
-                Nbls, Ntimes, Nfreqs, Nsrcs, rank, Npus
+                Nbls * Ntimes, Nfreqs, Nsrcs, rank, Npus
             )
 
             tasks = itertools.product(task_inds, src_inds)
