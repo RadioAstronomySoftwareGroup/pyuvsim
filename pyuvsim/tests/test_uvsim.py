@@ -943,3 +943,35 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
     assert not np.allclose(
         uvdata_linear.get_data((0, 1)), uvdata_linear.get_data((0, 2))
     )
+
+
+def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources):
+    uvdata_linear, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
+
+    uvdata_linear.conjugate_bls("ant1<ant2")
+
+    assert uvdata_linear.Nblts == uvdata_linear.Nbls * uvdata_linear.Ntimes
+    # grab indices for one of the baselines in the array
+    indices = np.nonzero(
+        uvdata_linear.baseline_array == uvdata_linear.antnums_to_baseline(0, 2)
+    )[0]
+    print(uvdata_linear.antnums_to_baseline(0, 2), indices)
+    # discard half of them
+    indices = indices[::2]
+    blt_inds = np.delete(np.arange(uvdata_linear.Nblts), indices)
+    uvdata_linear.select(blt_inds=blt_inds)
+
+    assert uvdata_linear.Nblts != uvdata_linear.Nbls * uvdata_linear.Ntimes
+
+    out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
+        input_uv=uvdata_linear.copy(),
+        beam_list=beam_list,
+        beam_dict=beam_dict,
+        catalog=sky_model,
+    )
+
+    assert np.allclose(
+        out_uv.get_data((0, 1)), out_uv.get_data((1, 2))
+    )
+    # make sure (0, 2) has fewer times
+    assert out_uv.get_data((0, 2)).shape == (out_uv.Ntimes // 2, out_uv.Nfreqs, out_uv.Npols)
