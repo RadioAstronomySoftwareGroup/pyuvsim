@@ -421,7 +421,6 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
 
     Nbls = input_uv.Nbls
     Nblts = input_uv.Nblts
-    Ntimes = input_uv.Ntimes
     Nfreqs = input_uv.Nfreqs
     Nsrcs = catalog.Ncomponents
 
@@ -472,7 +471,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     engine = UVEngine()
     count = mpi.Counter()
     size_complex = np.ones(1, dtype=complex).nbytes
-    data_array_shape = (Nbls * Ntimes, 1, Nfreqs, 4)
+    data_array_shape = (Nblts, 1, Nfreqs, 4)
     uvdata_indices = []
 
     for task in local_task_iter:
