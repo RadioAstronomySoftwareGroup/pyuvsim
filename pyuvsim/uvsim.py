@@ -312,12 +312,12 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         input_uv.freq_array.flatten().reshape(1, -1),
         (input_uv.Nblts, input_uv.Nfreqs),
     ).flat
+
     # indexing with the slice should return a view,
-    # but the iterator has to be collected into
-    # an array.
+    # but the iterator has to be collected into an array.
     # This should incure 64 * Ntasks_local bits per array
     # some additional overhead for numpy arrays as well
-    # usually seeing [0.01, 0.03] MiB / task memory required
+    # usually seeing [0.00001, 0.00003] MiB / task memory required
     # based on the reference simulations.
     order = np.lexsort((_bls[task_slice], _freqs[task_slice], _times[task_slice])).flat
 
