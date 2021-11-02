@@ -24,7 +24,7 @@ parser.add_argument(
 parser.add_argument(
     "--with-inputs",
     dest="inputs",
-    type=bool,
+    action="store_true",
     help=(
         "Additionally download input data from the google drive for simulations whose "
         "inputs cannot be stored on github directly."
