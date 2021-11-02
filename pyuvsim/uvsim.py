@@ -286,10 +286,18 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     tasks_shape = (Nblts, Nfreqs)
     blt_ax, freq_ax = range(2)
 
+    # we need to get slice or indices to index into the flat iterators
+    # it does not accept range arguments as indices.
+    if isinstance(task_ids, range):
+        task_slice = slice(task_ids.start, task_ids.stop, task_ids.step)
+    else:
+        # There is a test where the input ids is an np.arange object
+        # direct indexing should be fine.
+        task_slice = task_ids
+
     # broadcast_to returns a view into the array
     # flat returns an iterator object.
     # no overhead from these calls.
-    task_slice = slice(task_ids.start, task_ids.stop, task_ids.step)
     _times = np.broadcast_to(
         input_uv.time_array.reshape(-1, 1),
         (input_uv.Nblts, input_uv.Nfreqs),
@@ -307,17 +315,11 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     # indexing with the slice should return a view,
     # but the iterator has to be collected into
     # an array.
-    # This should incure 64 * Ntasks_local bytes per array
+    # This should incure 64 * Ntasks_local bits per array
     # some additional overhead for numpy arrays as well
     # usually seeing [0.01, 0.03] MiB / task memory required
     # based on the reference simulations.
-    order = np.lexsort(
-        (
-            _bls[task_slice],
-            _freqs[task_slice],
-            _times[task_slice],
-        )
-    ).flat
+    order = np.lexsort((_bls[task_slice], _freqs[task_slice], _times[task_slice])).flat
 
     tloc = [np.float64(x) for x in input_uv.telescope_location]
 
