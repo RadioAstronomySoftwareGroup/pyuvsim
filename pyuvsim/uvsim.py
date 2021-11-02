@@ -314,7 +314,13 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         if sky.spectral_type != 'flat':
             sky.at_frequencies(freq_array[0])
 
-        for task_index in task_ids:
+        _times = np.tile(input_uv.time_array, (input_uv.Nfreqs, 1)).T.flatten()[task_ids]
+        _bls = np.tile(input_uv.baseline_array, (input_uv.Nfreqs, 1)).T.flatten()[task_ids]
+        _freqs = np.tile(input_uv.freq_array.flatten(), (input_uv.Nblts, 1)).flatten()[task_ids]
+        order = np.lexsort((_freqs, _bls, _times))
+
+        for index in order:
+            task_index = task_ids[index]
             # Shape indicates slowest to fastest index.
             if not isinstance(task_index, tuple):
                 task_index = np.unravel_index(task_index, tasks_shape)
