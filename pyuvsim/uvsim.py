@@ -314,10 +314,38 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         if sky.spectral_type != 'flat':
             sky.at_frequencies(freq_array[0])
 
-        _times = np.tile(input_uv.time_array, (input_uv.Nfreqs, 1)).T.flatten()[task_ids]
-        _bls = np.tile(input_uv.baseline_array, (input_uv.Nfreqs, 1)).T.flatten()[task_ids]
-        _freqs = np.tile(input_uv.freq_array.flatten(), (input_uv.Nblts, 1)).flatten()[task_ids]
-        order = np.lexsort((_bls, _freqs, _times))
+        # broadcast_to returns a view into the array
+        # flat returns an iterator object.
+        # no overhead from these calls.
+        task_slice = slice(task_ids.start, task_ids.stop, task_ids.step)
+        _times = np.broadcast_to(
+            input_uv.time_array.reshape(-1, 1),
+            (input_uv.Nblts, input_uv.Nfreqs),
+        ).flat
+
+        _bls = np.broadcast_to(
+            input_uv.baseline_array.reshape(-1, 1),
+            (input_uv.Nblts, input_uv.Nfreqs),
+        ).flat
+
+        _freqs = np.broadcast_to(
+            input_uv.freq_array.flatten().reshape(1, -1),
+            (input_uv.Nblts, input_uv.Nfreqs),
+        ).flat
+        # indexing with the slice should return a view,
+        # but the iterator has to be collected into
+        # an array.
+        # This should incure 64 * Ntasks_local bytes per array
+        # some additional overhead for numpy arrays as well
+        # usually seeing [0.01, 0.03] MiB / task memory required
+        # based on the reference simulations.
+        order = np.lexsort(
+            (
+                _bls[task_slice],
+                _freqs[task_slice],
+                _times[task_slice],
+            )
+        ).flat
 
         for index in order:
             task_index = task_ids[index]
