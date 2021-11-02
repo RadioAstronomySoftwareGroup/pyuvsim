@@ -80,7 +80,7 @@ def uvobj_beams_srcs():
     beam_list[0] = pyuvsim.AnalyticBeam('airy', diameter=13.0)
     beam_list.append(pyuvsim.AnalyticBeam('airy', diameter=14.6))
     beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.3))
-    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.3,
+    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.8,
                      ref_freq=ref_freq, spectral_index=alpha))
 
     # Assign the last few antennas to use these other beams.
