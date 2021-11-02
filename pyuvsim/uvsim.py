@@ -286,6 +286,39 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     tasks_shape = (Nblts, Nfreqs)
     blt_ax, freq_ax = range(2)
 
+    # broadcast_to returns a view into the array
+    # flat returns an iterator object.
+    # no overhead from these calls.
+    task_slice = slice(task_ids.start, task_ids.stop, task_ids.step)
+    _times = np.broadcast_to(
+        input_uv.time_array.reshape(-1, 1),
+        (input_uv.Nblts, input_uv.Nfreqs),
+    ).flat
+
+    _bls = np.broadcast_to(
+        input_uv.baseline_array.reshape(-1, 1),
+        (input_uv.Nblts, input_uv.Nfreqs),
+    ).flat
+
+    _freqs = np.broadcast_to(
+        input_uv.freq_array.flatten().reshape(1, -1),
+        (input_uv.Nblts, input_uv.Nfreqs),
+    ).flat
+    # indexing with the slice should return a view,
+    # but the iterator has to be collected into
+    # an array.
+    # This should incure 64 * Ntasks_local bytes per array
+    # some additional overhead for numpy arrays as well
+    # usually seeing [0.01, 0.03] MiB / task memory required
+    # based on the reference simulations.
+    order = np.lexsort(
+        (
+            _bls[task_slice],
+            _freqs[task_slice],
+            _times[task_slice],
+        )
+    ).flat
+
     tloc = [np.float64(x) for x in input_uv.telescope_location]
 
     world = input_uv.extra_keywords.get('world', 'earth')
@@ -313,39 +346,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
             sky.healpix_to_point()
         if sky.spectral_type != 'flat':
             sky.at_frequencies(freq_array[0])
-
-        # broadcast_to returns a view into the array
-        # flat returns an iterator object.
-        # no overhead from these calls.
-        task_slice = slice(task_ids.start, task_ids.stop, task_ids.step)
-        _times = np.broadcast_to(
-            input_uv.time_array.reshape(-1, 1),
-            (input_uv.Nblts, input_uv.Nfreqs),
-        ).flat
-
-        _bls = np.broadcast_to(
-            input_uv.baseline_array.reshape(-1, 1),
-            (input_uv.Nblts, input_uv.Nfreqs),
-        ).flat
-
-        _freqs = np.broadcast_to(
-            input_uv.freq_array.flatten().reshape(1, -1),
-            (input_uv.Nblts, input_uv.Nfreqs),
-        ).flat
-        # indexing with the slice should return a view,
-        # but the iterator has to be collected into
-        # an array.
-        # This should incure 64 * Ntasks_local bytes per array
-        # some additional overhead for numpy arrays as well
-        # usually seeing [0.01, 0.03] MiB / task memory required
-        # based on the reference simulations.
-        order = np.lexsort(
-            (
-                _bls[task_slice],
-                _freqs[task_slice],
-                _times[task_slice],
-            )
-        ).flat
 
         for index in order:
             task_index = task_ids[index]
