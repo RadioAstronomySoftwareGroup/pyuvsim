@@ -583,9 +583,9 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
                 )
         else:
             warnings.warn(
-                "The parameter `blt_order` could not be identified for input_uv. "
-                "The ordering was changed to `(time, baseline)` during the simulation "
-                " but cannot be changed back."
+                "The parameter `blt_order` could not be identified for input_uv "
+                " so the ordering cannot be restored."
+                "The output UVData object will have (time, baseline) ordering."
             )
 
         return uv_container
