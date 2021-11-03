@@ -1455,7 +1455,10 @@ def initialize_uvdata_from_params(obs_params):
 
         if redundant_threshold is not None:
             uv_obj.compress_by_redundancy(tol=redundant_threshold)
-
+    # we construct uvdata objects in (time, ant1) order
+    # but the simulator will force (time, baseline) later
+    # so order this now so we don't get any warnings.
+    uv_obj.reorder_blts(order="time", minor_order="baseline")
     uv_obj.check()
 
     return uv_obj, beam_list, beam_dict

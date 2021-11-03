@@ -4,8 +4,9 @@
 
 import numpy as np
 import yaml
-from astropy.coordinates import EarthLocation
+import warnings
 import astropy.units as units
+from astropy.coordinates import EarthLocation
 from astropy.units import Quantity
 from astropy.constants import c as speed_of_light
 from pyuvdata import UVData
@@ -434,11 +435,10 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     if not ((input_uv.Npols == 4) and (input_uv.polarization_array.tolist() == [-5, -6, -7, -8])):
         raise ValueError("input_uv must have XX,YY,XY,YX polarization")
 
-    input_order = None
-    if input_uv.blt_order is not None:
-        input_order = input_uv.blt_order
+    input_order = input_uv.blt_order
 
-    input_uv.reorder_blts(order="time", minor_order="baseline")
+    if input_order != ("time", "baseline"):
+        input_uv.reorder_blts(order="time", minor_order="baseline")
 
     # The root node will initialize our simulation
     # Read input file and make uvtask list
@@ -575,10 +575,17 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         if input_order is not None:
             if len(input_order) < 2:
                 input_order = (input_order[0], None)
-
-            uv_container.reorder_blts(
-                order=input_order[0],
-                minor_order=input_order[1],
+            # Don't call the functionif we're already expecting (time, baseline)
+            if input_order != ("time", "baseline"):
+                uv_container.reorder_blts(
+                    order=input_order[0],
+                    minor_order=input_order[1],
+                )
+        else:
+            warnings.warn(
+                "The parameter `blt_order` could not be identified for input_uv. "
+                "The ordering was changed to `(time, baseline)` during the simulation "
+                " but cannot be changed back."
             )
 
         return uv_container

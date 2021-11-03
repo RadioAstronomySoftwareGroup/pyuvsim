@@ -506,6 +506,11 @@ def test_param_reader():
 
     # remove filename attribute to ensure equality
     hera_uv.filename = None
+
+    # the old object was written before ordering was enforced
+    assert hera_uv.blt_order != uv_obj.blt_order
+    hera_uv.reorder_blts("time", "baseline")
+
     assert uv_obj == hera_uv
 
 
