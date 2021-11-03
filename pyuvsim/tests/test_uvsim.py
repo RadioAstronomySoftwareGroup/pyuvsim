@@ -14,6 +14,7 @@ from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, Longitude, Latitude
 import pytest
 from pyuvdata import UVData, UVBeam
+import pyuvdata.tests as uvtest
 import pyradiosky
 
 import pyuvsim
@@ -943,6 +944,26 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
     assert not np.allclose(
         uvdata_linear.get_data((0, 1)), uvdata_linear.get_data((0, 2))
     )
+
+
+@pytest.mark.parametrize("order", [("bda",), ("baseline", "time"), ("ant2", "time")])
+def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
+    pytest.importorskip('mpi4py')
+    uvdata_linear, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
+
+    uvdata_linear.reorder_blts(*order)
+    # delete the order like we forgot to set it
+    uvdata_linear.blt_order = None
+    with uvtest.check_warnings(
+        UserWarning, match="The parameter `blt_order` could not be identified."
+    ):
+        out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
+            input_uv=uvdata_linear.copy(),
+            beam_list=beam_list,
+            beam_dict=beam_dict,
+            catalog=sky_model,
+        )
+    assert out_uv.blt_order == ("time", "baseline")
 
 
 def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources):
