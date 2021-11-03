@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- Ability to simulate UVData objects where Nblts != Nbls * Ntimes. Currently only supported with direct `run_uvdata_uvsim` calls.
+
 ### Fixed
 - Input `uvdata.blt_order` forced to be (time, baseline) before a simulation is run. Attempts to reorder output uvdata object if input ordering was different.
 
