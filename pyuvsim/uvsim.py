@@ -575,7 +575,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         if input_order is not None:
             if len(input_order) < 2:
                 input_order = (input_order[0], None)
-            # Don't call the functionif we're already expecting (time, baseline)
+            # Don't call the function if we're already expecting (time, baseline)
             if input_order != ("time", "baseline"):
                 uv_container.reorder_blts(
                     order=input_order[0],
