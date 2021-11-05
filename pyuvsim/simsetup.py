@@ -473,8 +473,16 @@ class SkyModelData:
             self.component_type = sky_in.component_type
             self.spectral_type = sky_in.spectral_type
             self.Ncomponents = sky_in.Ncomponents
-            self.ra = sky_in.ra.deg
-            self.dec = sky_in.dec.deg
+            if hasattr(sky_in, "get_lon_lat"):
+                if sky_in.frame != "icrs":
+                    sky_in.transform_to(ICRS)
+                sky_ra, sky_dec = sky_in.get_lon_lat()
+                self.ra = sky_ra.deg
+                self.dec = sky_dec.deg
+            else:
+                # backwards compatibility for pyradiosky < 0.1.3
+                self.ra = sky_in.ra.deg
+                self.dec = sky_in.dec.deg
             self.Nfreqs = sky_in.Nfreqs
             stokes_in = sky_in.stokes
 
@@ -632,6 +640,45 @@ class SkyModelData:
         )
 
 
+def _sky_select_calc_rise_set(sky, source_params, telescope_lat_deg=None):
+    if hasattr(sky, "cut_nonrising"):
+
+        if telescope_lat_deg is not None:
+            telescope_lat = Latitude(telescope_lat_deg * units.deg)
+            sky.cut_nonrising(telescope_lat)
+            calc_kwargs = {}
+            if "horizon_buffer" in source_params:
+                calc_kwargs["horizon_buffer"] = float(source_params["horizon_buffer"])
+            sky.calculate_rise_set_lsts(telescope_lat, **calc_kwargs)
+
+        min_brightness = None
+        if "min_flux" in source_params:
+            min_brightness = float(source_params["min_flux"]) * units.Jy
+        max_brightness = None
+        if "max_flux" in source_params:
+            max_brightness = float(source_params["max_flux"]) * units.Jy
+
+        sky.select(min_brightness=min_brightness, max_brightness=max_brightness)
+
+    else:
+        # backwards compatibility for pyradiosky < 0.1.3
+
+        # Parse source selection options
+        select_options = ['min_flux', 'max_flux', 'horizon_buffer']
+
+        # Put catalog selection cuts in source section.
+        source_select_kwds = {}
+        for key in select_options:
+            if key in source_params:
+                source_select_kwds[key] = float(source_params[key])
+        if telescope_lat_deg is not None:
+            source_select_kwds['latitude_deg'] = telescope_lat_deg
+
+        sky.source_cuts(**source_select_kwds)
+
+    return sky
+
+
 def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=True):
     """
     Make catalog from parameter file specifications.
@@ -666,20 +713,12 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
     else:
         param_dict = obs_params
 
-    # Parse source selection options
-    select_options = ['min_flux', 'max_flux', 'horizon_buffer']
-    source_select_kwds = {}
-
     source_params = param_dict['sources']
     if 'catalog' in source_params:
         catalog = source_params['catalog']
     else:
         raise KeyError("No catalog defined.")
 
-    # Put catalog selection cuts in source section.
-    for key in select_options:
-        if key in source_params:
-            source_select_kwds[key] = float(source_params[key])
     if catalog == 'mock':
         mock_keywords = {'arrangement': source_params['mock_arrangement']}
         extra_mock_kwds = ['time', 'Nsrcs', 'zen_ang', 'save', 'min_alt',
@@ -770,11 +809,14 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
                 "Expected extensions include: '.txt', '.vot', '.skyh5' and '.hdf5'."
             )
 
-    # Do source selections, if any.
     if input_uv is not None:
-        source_select_kwds['latitude_deg'] = input_uv.telescope_location_lat_lon_alt_degrees[0]
-
-    sky.source_cuts(**source_select_kwds)
+        telescope_lat_deg = input_uv.telescope_location_lat_lon_alt_degrees[0]
+    else:
+        telescope_lat_deg = None
+    # Do source selections, if any.
+    sky = _sky_select_calc_rise_set(
+        sky, source_params, telescope_lat_deg=telescope_lat_deg
+    )
 
     # Make SkyModelData to share it.
     if return_recarray:

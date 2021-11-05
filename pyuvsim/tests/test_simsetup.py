@@ -1258,8 +1258,11 @@ def test_moon_lsts():
     assert new_obj.check()
 
 
+# all these filters can be removed when we require pyradiosky >= 0.2.0
 @pytest.mark.filterwarnings("ignore:The _ra parameters are not")
 @pytest.mark.filterwarnings("ignore:The _dec parameters are not")
+@pytest.mark.filterwarnings("ignore:The _lon parameters are not")
+@pytest.mark.filterwarnings("ignore:The _lat parameters are not")
 @pytest.mark.filterwarnings("ignore:Future equality does not pass")
 def test_mock_catalog_moon():
     # A mock catalog made with a MoonLocation.
@@ -1349,8 +1352,14 @@ def test_skymodeldata(component_type, cat_with_some_pols):
 
     smd = pyuvsim.simsetup.SkyModelData(sky)
 
-    assert (smd.ra == sky.ra.deg).all()
-    assert (smd.dec == sky.dec.deg).all()
+    if hasattr(sky, "get_lon_lat"):
+        sky_ra, sky_dec = sky.get_lon_lat()
+        assert (smd.ra == sky_ra.deg).all()
+        assert (smd.dec == sky_dec.deg).all()
+    else:
+        # backwards compatibility for pyradiosky < 0.1.3
+        assert (smd.ra == sky.ra.deg).all()
+        assert (smd.dec == sky.dec.deg).all()
 
     if isinstance(sky.stokes, units.Quantity):
         smd.stokes_I *= units.Unit(smd.flux_unit)
