@@ -1,8 +1,9 @@
-import numpy as np
-import yaml
 import os
+import re
 import h5py
+import yaml
 import socket
+import numpy as np
 from pyradiosky import write_healpix_hdf5
 
 from pyuvsim.simsetup import _write_layout_csv, freq_array_to_params
@@ -233,12 +234,25 @@ def update_runlog(settings_dict, logfile='BENCHMARKS.log'):
 
     data_file = os.path.join(settings_dict['data_out'], 'benchmark.uvh5')
 
-    pyuvsim_version = ''
+    # Look for "pyuvsim verison: ??" but disregard any number of spaces between
+    # "pyuvsim" "version" the ":" and the version itself.
+    # \d+\.\d+\.\d+ ==> version ?.?.?
+    # \.dev(?:\d)*\+g\w{7} ==> optional subversion string too ".dev##+g" followed by the hash
+    # (\.\w+)? possibly a branch name too
+    # (?:.....)? means an match this group 0 or one times (essentially making it optional)
+    pattern = r"pyuvsim\s*version\s*:\s*(?P<VERSION>\d+\.\d+\.\d+(\.dev(?:\d)*\+g\w{7}(?:\.\w+)?)?)"
+
     with h5py.File(data_file, 'r') as dfile:
         hist = dfile['Header/history'][()].decode('UTF-8')
-        for line in hist.split('  '):    # Two spaces
-            if 'pyuvsim version' in line:
-                pyuvsim_version = line.split(': ')[-1]
+
+        match = re.search(pattern, hist)
+
+        if match is not None:
+            pyuvsim_version = match.group("VERSION")
+        else:
+            # try to just split it out of the history brute force.
+            # diregard the last character (a '.' in a sentence).
+            pyuvsim_version = hist.split("pyuvsim version: ")[1].split(" ")[0][:-1]
 
     header_vals = [
         "Date/Time", 'uvsim_version', 'HostName', 'SettingsFile',
