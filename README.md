@@ -58,9 +58,11 @@ should install `pyuvsim` with  `pip install pyuvsim[sim]`. Note that the
 system, but we do test against Mac OSX as well.
 
 There are a few more optional dependencies for `pyuvsim` which enable some features,
-such as `line_profiler` to use the built-in profiling.
+such as `astropy_healpix` to use healpix based sky catalogs, `python-casacore` for
+writing out measurement sets and `lunarsky` for simulating telescopes on the moon.
 If you would like these tools as well as the full simulator, install
-`pyuvsim` with `pip install pyuvsim[all]`
+`pyuvsim` with `pip install pyuvsim[all]` (or use the `[healpix]`, `[casa]` or `[moon]`
+options to only get the dependencies for each of those functionalities).
 
 If you wish to manage dependencies manually read on.
 
@@ -70,20 +72,21 @@ following packages before installing `pyuvsim`:
 
 Required:
 
-* numpy>=1.15
 * astropy>=4.0
-* scipy>1.0.1
-* pyyaml>=5.1
-* pyuvdata>=2.1.5
-* pyradiosky>=0.1.0
-* setuptools_scm
+* numpy>=1.15
 * psutil
+* pyradiosky>=0.1.0
+* pyuvdata>=2.1.5
+* pyyaml>=5.1
+* scipy>1.0.1
+* setuptools_scm
 
 Optional:
 
-* mpi4py>=3.0.0
-* line_profiler
-* lunarsky
+* astropy-healpix (for working with beams in HEALPix formats)
+* mpi4py>=3.0.0 (for actually running simulations)
+* lunarsky (for simulating telescopes on the moon)
+* python-casacore >= 3.1.0 (for writing CASA measurement sets)
 
 ### Developer Installation
 If you are developing `pyuvsim`, you will need to download and install the
