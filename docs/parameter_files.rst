@@ -124,8 +124,8 @@ Time
     The time array is specified similarly. The entries in the ``time_array`` indicate the
     **center of each time step in Julian date**. The ``integration_time`` is the time
     step size in seconds. The user may also specify ``duration_hours`` or ``duration_days``
-        to specify the total time covered by all time steps. The following relations
-        among parameters hold::
+    to specify the total time covered by all time steps. The following relations among
+    parameters hold::
 
         duration_hours = Ntimes * integration_time / (3600.)
         duration_days = duration_hours / 24.
