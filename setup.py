@@ -29,7 +29,7 @@ setup_args = {
     'use_scm_version': {'local_scheme': branch_scheme},
     'include_package_data': True,
     'install_requires': ['numpy>=1.15', 'scipy', 'astropy>=4.0', 'pyyaml',
-                         'pyradiosky>=0.1.2', 'pyuvdata>=2.1.3', 'setuptools_scm', 'psutil'],
+                         'pyradiosky>=0.1.2', 'pyuvdata>=2.1.5', 'setuptools_scm', 'psutil'],
     'test_requires': ['pytest'],
     'classifiers': ['Development Status :: 5 - Production/Stable',
                     'Intended Audience :: Science/Research',
