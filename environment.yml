@@ -4,7 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - astropy>=4.0
-  - h5py
+  - astropy-healpix
   - line_profiler
   - mpi4py>=3.0.0
   - numpy>=1.15
@@ -12,6 +12,7 @@ dependencies:
   - pre-commit
   - psutil
   - pypandoc
+  - python-casacore>=3.1.0
   - pytest
   - pytest-cov
   - pyuvdata>=2.1.5

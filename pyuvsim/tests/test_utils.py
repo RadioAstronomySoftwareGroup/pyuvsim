@@ -110,8 +110,10 @@ def test_file_namer(tmpdir, ext):
 @pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5', 'ms'])
 def test_write_uvdata(save_format, tmpdir):
     """ Test function that defines filenames from parameter dict """
-    if save_format == "ms" and not hasattr(UVData, "write_ms"):
-        pytest.skip()
+    if save_format == "ms":
+        pytest.importorskip("casacore")
+        if not hasattr(UVData, "write_ms"):
+            pytest.skip()
 
     uv = UVData()
     uv.read_uvfits(triangle_uvfits_file)
@@ -137,8 +139,10 @@ def test_write_uvdata(save_format, tmpdir):
 @pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5', 'ms'])
 def test_write_uvdata_clobber(save_format, tmpdir):
     """Test overwriting a uvdata object yields the expected results."""
-    if save_format == "ms" and not hasattr(UVData, "write_ms"):
-        pytest.skip()
+    if save_format == "ms":
+        pytest.importorskip("casacore")
+        if not hasattr(UVData, "write_ms"):
+            pytest.skip()
 
     uv = UVData()
     uv.read_uvfits(triangle_uvfits_file)

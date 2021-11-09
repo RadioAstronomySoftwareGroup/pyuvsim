@@ -249,6 +249,14 @@ def write_uvdata(
             uv_obj.write_uvh5(outfile_name, clobber=not noclobber)
         elif out_format == 'ms':
             try:
+                import casacore.tables  # noqa
+                import casacore.tables.tableutil  # noqa
+            except ImportError as error:  # pragma: no cover
+                raise ImportError(
+                    "casacore is not installed but is required for measurement set "
+                    "functionality"
+                ) from error
+            try:
                 uv_obj.write_ms(outfile_name, clobber=not noclobber)
             except AttributeError as err:
                 raise AttributeError(

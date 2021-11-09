@@ -4,14 +4,14 @@ channels:
   - defaults
 dependencies:
   - astropy>=4.0
+  - astropy-healpix
   - coverage
-  - h5py
   - line_profiler
   - mpi4py>=3.0.0
   - numpy>=1.15
   - pip
-  - astropy-healpix
   - psutil
+  - python-casacore>=3.1.0
   - pytest
   - pytest-cov
   - pyuvdata>=2.1.5
