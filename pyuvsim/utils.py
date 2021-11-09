@@ -256,6 +256,11 @@ def write_uvdata(
                     "casacore is not installed but is required for measurement set "
                     "functionality"
                 ) from error
+            # force the antenna diameters to a double to avoid an error in write_ms
+            # this can be removed when we require pyuvdata>=2.2.5
+            uv_obj.antenna_diameters = np.asarray(
+                uv_obj.antenna_diameters, dtype=np.float64
+            )
             try:
                 uv_obj.write_ms(outfile_name, clobber=not noclobber)
             except AttributeError as err:
