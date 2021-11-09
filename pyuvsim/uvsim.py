@@ -56,8 +56,8 @@ class UVTask(object):
                 and (self.telescope == other.telescope))
 
     def __gt__(self, other):
-        blti0, _, fi0 = self.uvdata_index
-        blti1, _, fi1 = other.uvdata_index
+        blti0, fi0 = self.uvdata_index
+        blti1, fi1 = other.uvdata_index
         if self.baseline == other.baseline:
             if fi0 == fi1:
                 return blti0 > blti1
@@ -65,8 +65,8 @@ class UVTask(object):
         return self.baseline > other.baseline
 
     def __ge__(self, other):
-        blti0, _, fi0 = self.uvdata_index
-        blti1, _, fi1 = other.uvdata_index
+        blti0, fi0 = self.uvdata_index
+        blti1, fi1 = other.uvdata_index
         if self.baseline == other.baseline:
             if fi0 == fi1:
                 return blti0 >= blti1
@@ -261,6 +261,11 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     #   Skymodel will now be passed in as a catalog array.
     if not isinstance(catalog, SkyModelData):
         raise TypeError("catalog must be a SkyModelData object.")
+
+    # use future array shapes
+    if not input_uv.future_array_shapes:
+        input_uv.use_future_array_shapes()
+
     # Splitting the catalog for memory's sake.
     Nsrcs_total = catalog.Ncomponents
     if Nsky_parts > 1:
@@ -344,11 +349,11 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
             and sky.freq_array is None
             and sky.reference_frequency is None
         ):
-            sky.freq_array = freq_array[0]
+            sky.freq_array = freq_array
         if sky.component_type == 'healpix' and hasattr(sky, 'healpix_to_point'):
             sky.healpix_to_point()
         if sky.spectral_type != 'flat':
-            sky.at_frequencies(freq_array[0])
+            sky.at_frequencies(freq_array)
 
         for index in order:
             task_index = task_ids[index]
@@ -370,10 +375,10 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
 
             time = time_array[blt_i]
             bl = baselines[bl_num]
-            freq = freq_array[0, freq_i]  # 0 = spw axis
+            freq = freq_array[freq_i]  # 0 = spw axis
 
             task = UVTask(sky, time, freq, bl, telescope, freq_i)
-            task.uvdata_index = (blt_i, 0, freq_i)    # 0 = spectral window index
+            task.uvdata_index = (blt_i, freq_i)    # 0 = spectral window index
 
             yield task
         del sky
@@ -435,8 +440,10 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     if not ((input_uv.Npols == 4) and (input_uv.polarization_array.tolist() == [-5, -6, -7, -8])):
         raise ValueError("input_uv must have XX,YY,XY,YX polarization")
 
-    input_order = input_uv.blt_order
+    if not input_uv.future_array_shapes:
+        input_uv.use_future_array_shapes()
 
+    input_order = input_uv.blt_order
     if input_order != ("time", "baseline"):
         input_uv.reorder_blts(order="time", minor_order="baseline")
 
@@ -507,19 +514,19 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     engine = UVEngine()
     count = mpi.Counter()
     size_complex = np.ones(1, dtype=complex).nbytes
-    data_array_shape = (Nblts, 1, Nfreqs, 4)
+    data_array_shape = (Nblts, Nfreqs, 4)
     uvdata_indices = []
 
     for task in local_task_iter:
         engine.set_task(task)
         vis = engine.make_visibility()
 
-        blti, spw, freq_ind = task.uvdata_index
+        blti, freq_ind = task.uvdata_index
 
         uvdata_indices.append(task.uvdata_index)
 
         flat_ind = np.ravel_multi_index(
-            (blti, spw, freq_ind, 0), data_array_shape
+            (blti, freq_ind, 0), data_array_shape
         )
         offset = flat_ind * size_complex
 

@@ -143,7 +143,7 @@ def test_achromatic_gaussian_beam(heratext_posfreq):
     assert np.allclose(interpolated_beam, expected_data)
 
 
-@pytest.mark.filterwarnings("ignore:The uvw_array does not match the expected values")
+@pytest.mark.filterwarnings("ignore:UVW orientation appears to be flipped")
 def test_gaussbeam_values():
     """
     Make the long-line point sources up to 10 degrees from zenith.

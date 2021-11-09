@@ -74,6 +74,7 @@ def uvobj_beams_srcs():
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     param_dict['select'] = {'redundant_threshold': 0.1}
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    assert uv_obj.future_array_shapes
 
     # Add more beams to the list.
     # Don't use the uniform beam (need to see coherency change with positions).
@@ -416,7 +417,7 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
     assert np.allclose(visibilities, visibilities_analytic)
 
 
-@pytest.mark.filterwarnings("ignore:The uvw_array does not match the expected values")
+@pytest.mark.filterwarnings("ignore:UVW orientation appears to be flipped")
 def test_file_to_tasks(cst_beam):
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
@@ -444,13 +445,13 @@ def test_file_to_tasks(cst_beam):
     task0 = copy.deepcopy(tlist[0])
     task1 = copy.deepcopy(tlist[1])
     task0.baseline = task1.baseline
-    task0.uvdata_index = (0, 0, 0)
-    task1.uvdata_index = (1, 0, 0)
+    task0.uvdata_index = (0, 0)
+    task1.uvdata_index = (1, 0)
     assert task1 > task0
     assert task1 >= task0
 
-    task0.uvdata_index = (0, 0, 0)
-    task1.uvdata_index = (0, 0, 1)
+    task0.uvdata_index = (0, 0)
+    task1.uvdata_index = (0, 1)
     assert task1 > task0
     assert task1 >= task0
     assert task0 <= task1
@@ -483,22 +484,24 @@ def test_file_to_tasks(cst_beam):
 
     sources = sources.get_skymodel()
     # set the frequency array to match what happens in uvdata_to_task_iter
-    sources.freq_array = hera_uv.freq_array[0] * units.Hz
+    sources.freq_array = np.asarray([hera_uv.freq_array[0]]) * units.Hz
 
     for idx, antenna1 in enumerate(antennas1):
         antenna2 = antennas2[idx]
         baseline = pyuvsim.Baseline(antenna1, antenna2)
-        task = pyuvsim.UVTask(sources, time.jd, hera_uv.freq_array[0, 0], baseline, telescope)
-        task.uvdata_index = (idx, 0, 0)
+        task = pyuvsim.UVTask(sources, time.jd, hera_uv.freq_array[0], baseline, telescope)
+        task.uvdata_index = (idx, 0)
         expected_task_list.append(task)
 
     expected_task_list.sort()
     for idx, task in enumerate(uvtask_list):
         exp_task = expected_task_list[idx]
+        print(task.sources.freq_array)
+        print(exp_task.sources.freq_array)
         assert task == exp_task
 
 
-@pytest.mark.filterwarnings("ignore:The uvw_array does not match the expected values")
+@pytest.mark.filterwarnings("ignore:UVW orientation appears to be flipped")
 def test_gather():
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
@@ -525,10 +528,10 @@ def test_gather():
         engine = pyuvsim.UVEngine(task)
         vis = engine.make_visibility()
 
-        blti, spw, freq_ind = task.uvdata_index
+        blti, freq_ind = task.uvdata_index
 
         flat_ind = np.ravel_multi_index(
-            (blti, spw, freq_ind, 0), uv_out.data_array.shape
+            (blti, freq_ind, 0), uv_out.data_array.shape
         )
         offset = flat_ind * size_complex
         val = np.frombuffer(visbuf[offset:offset + vis.nbytes], dtype=np.complex128)
@@ -845,7 +848,7 @@ def test_fullfreq_check(uvobj_beams_srcs):
     Nsrcs = 30
 
     freqs0 = np.linspace(100, 130, uv_obj.Nfreqs) * 1e6 * units.Hz
-    freqs1 = uv_obj.freq_array[0, :] * units.Hz
+    freqs1 = uv_obj.freq_array * units.Hz
 
     stokes = np.zeros((4, uv_obj.Nfreqs, Nsrcs)) * units.Jy
     stokes[0, :, :] = 1.0 * units.Jy

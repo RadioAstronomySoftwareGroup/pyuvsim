@@ -400,6 +400,7 @@ def test_param_reader():
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml")
     hera_uv = UVData()
     hera_uv.read_uvfits(triangle_uvfits_file)
+    hera_uv.use_future_array_shapes()
     # set missing x_orientation
     hera_uv.x_orientation = "east"
 
@@ -543,7 +544,15 @@ def test_tele_parser():
         pyuvsim.simsetup.parse_telescope_params(tdict)
 
 
-def test_freq_parser():
+@pytest.mark.parametrize(
+    "bpass_kwds",
+    [('start_freq', 'end_freq'), ('channel_width', 'Nfreqs'), ('bandwidth',)]
+)
+@pytest.mark.parametrize(
+    "chwid_kwds", [('bandwidth', 'Nfreqs'), ('channel_width',)]
+)
+@pytest.mark.parametrize("ref_freq_kwds", [('start_freq',), ('end_freq',)])
+def test_freq_parser(bpass_kwds, chwid_kwds, ref_freq_kwds):
     """
     Check all valid input parameter cases for frequencies.
     """
@@ -566,60 +575,71 @@ def test_freq_parser():
 
     # As long as one tuple from each set is represented,
     # the param parser should work.
+    keys = tuple(set(bpass_kwds + chwid_kwds + (ref_freq_kwds)))  # Get unique keys
+    subdict = {key: fdict_base[key] for key in keys}
+    test = pyuvsim.parse_frequency_params(subdict)
+    assert np.allclose(test['freq_array'], freq_array)
 
-    bpass_kwd_combos = [
-        ('start_freq', 'end_freq'), ('channel_width', 'Nfreqs'), ('bandwidth',)
+    cw_array = np.full((10,), fdict_base['channel_width'], dtype=float)
+    assert np.allclose(test['channel_width'], cw_array)
+
+
+@pytest.mark.parametrize(
+    "freq_array", [np.linspace(0.0, 4.5, 10), np.asarray([0.0, 0.5, 2, 4])]
+)
+@pytest.mark.parametrize(
+    "channel_width", [0.5, np.full((10,), 0.5, dtype=float), np.asarray([0.5, 0.5, 1, 2])]
+)
+def test_freq_parser_freq_array(freq_array, channel_width):
+    """
+    Check parsing works with a vector of channel widths.
+    """
+    subdict = {"freq_array": freq_array, "channel_width": channel_width}
+    # As long as one tuple from each set is represented,
+    # the param parser should work.
+    test = pyuvsim.parse_frequency_params(subdict)
+    assert np.allclose(test['freq_array'], freq_array)
+    if not isinstance(channel_width, np.ndarray):
+        assert np.allclose(test['channel_width'], np.ones_like(freq_array) * 0.5)
+    else:
+        assert np.allclose(test['channel_width'], channel_width)
+
+
+@pytest.mark.parametrize(
+    "freq_dict,msg",
+    [
+        ({'bandwidth': 5.0}, 'Either start or end frequency must be specified: bandwidth'),
+        (
+            {'start_freq': 0.0, 'Nfreqs': 10},
+            'Either bandwidth or channel width must be specified: Nfreqs, start_freq'
+        ),
+        (
+            {'start_freq': 0.0, 'channel_width': 0.5},
+            'Either bandwidth or band edges must be specified: channel_width, start_freq'
+        ),
+        (
+            {'start_freq': 0.0, 'end_freq': 4.5},
+            'Either channel_width or Nfreqs  must be included in parameters:end_freq, start_freq'
+        ),
+        ({'freq_array': [0.0]}, 'Channel width must be specified if freq_array has length 1'),
+        (
+            {'freq_array': [0.0, 0.5, 2, 4]},
+            'Channel width must be specified if spacing in freq_array is uneven.'
+        ),
+        (
+            {'channel_width': 3.14, 'start_freq': 1.0, 'end_freq': 8.3},
+            'end_freq - start_freq must be evenly divisible by channel_width'
+        ),
+        (
+            {'start_freq': 0.0, 'Nfreqs': 10, 'channel_width': np.full((10,), 0.5, dtype=float)},
+            'channel_width must be a scalar if freq_array is not specified'
+        ),
     ]
-    chwid_kwd_combos = [('bandwidth', 'Nfreqs'), ('channel_width',)]
-    ref_freq_combos = [('start_freq',), ('end_freq',)]
-
-    for bpass in bpass_kwd_combos:
-        for chwid in chwid_kwd_combos:
-            for ref in ref_freq_combos:
-                keys = tuple(set(bpass + chwid + (ref)))  # Get unique keys
-                subdict = {key: fdict_base[key] for key in keys}
-                test = pyuvsim.parse_frequency_params(subdict)
-                assert np.allclose(test['freq_array'][0], freq_array)
-
+)
+def test_freq_parser_errors(freq_dict, msg):
     # Now check error cases
-    err_cases = [
-        ('bandwidth',),
-        ('start_freq', 'Nfreqs'),
-        ('start_freq', 'channel_width'),
-        ('start_freq', 'end_freq')
-    ]
-    err_mess = [
-        'Either start or end frequency must be specified: bandwidth',
-        'Either bandwidth or channel width must be specified: Nfreqs, start_freq',
-        'Either bandwidth or band edges must be specified: channel_width, start_freq',
-        'Either channel_width or Nfreqs  must be included in parameters:end_freq, '
-        'start_freq'
-    ]
-    for ei, er in enumerate(err_cases):
-        subdict = {key: fdict_base[key] for key in er}
-        with pytest.raises(ValueError, match=err_mess[ei]):
-            pyuvsim.parse_frequency_params(subdict)
-
-    subdict = {'freq_array': freq_array[0]}
-    with pytest.raises(ValueError,
-                       match='Channel width must be specified if freq_arr has length 1'):
-        pyuvsim.parse_frequency_params(subdict)
-
-    subdict = {'freq_array': freq_array[[0, 1, 4, 8]]}
-    with pytest.raises(ValueError, match='Spacing in frequency array is uneven.'):
-        pyuvsim.parse_frequency_params(subdict)
-
-    subdict = {'channel_width': 3.14, 'start_freq': 1.0, 'end_freq': 8.3}
-    with pytest.raises(ValueError,
-                       match='end_freq - start_freq must be evenly divisible by channel_width'):
-        pyuvsim.parse_frequency_params(subdict)
-
-    subdict = fdict_base.copy()
-    subdict['Nfreqs'] = 7
-    del subdict['freq_array']
-    with pytest.raises(ValueError,
-                       match='Frequency array spacings are not equal to channel width.'):
-        pyuvsim.parse_frequency_params(subdict)
+    with pytest.raises(ValueError, match=msg):
+        pyuvsim.parse_frequency_params(freq_dict)
 
 
 def test_time_parser():
@@ -829,7 +849,7 @@ def test_uvdata_keyword_init(case, tmpdir):
                            uvd.telescope_location_lat_lon_alt_degrees)
         assert np.allclose(base_kwargs['integration_time'], uvd.integration_time)
         assert base_kwargs['telescope_name'] == uvd.telescope_name
-        assert base_kwargs['start_freq'] == uvd.freq_array[0, 0]
+        assert base_kwargs['start_freq'] == uvd.freq_array[0]
         assert base_kwargs['start_time'] == uvd.time_array[0]
         assert base_kwargs['Ntimes'] == uvd.Ntimes
         assert base_kwargs['Nfreqs'] == uvd.Nfreqs
@@ -865,7 +885,7 @@ def test_uvdata_keyword_init(case, tmpdir):
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**new_kwargs)
 
         assert np.allclose(uvd.time_array[::uvd.Nbls], ta)
-        assert np.allclose(uvd.freq_array[0], fa)
+        assert np.allclose(uvd.freq_array, fa)
     elif case == 4:
         # test feeding array layout as dictionary
         uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**base_kwargs)
