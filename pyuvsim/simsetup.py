@@ -1064,34 +1064,41 @@ def parse_frequency_params(freq_params):
 
     Returns:
         dict
-            * `channel_width`: (float) Frequency channel spacing in Hz
+            * `channel_width`: (dtype float, ndarray, shape=(Nfreqs)) Frequency channel
+              widths in Hz
             * `Nfreqs`: (int) Number of frequencies
-            * `freq_array`: (dtype float, ndarray, shape=(Nspws, Nfreqs)) Frequency channel
+            * `freq_array`: (dtype float, ndarray, shape=(Nfreqs)) Frequency channel
               centers in Hz
     """
     freq_keywords = ['freq_array', 'start_freq', 'end_freq', 'Nfreqs', 'channel_width', 'bandwidth']
     fa, sf, ef, nf, cw, bw = [fk in freq_params for fk in freq_keywords]
     kws_used = ", ".join(sorted(freq_params.keys()))
     freq_params = copy.deepcopy(freq_params)
-    init_freq_params = copy.deepcopy(freq_params)
 
     if fa:
         freq_arr = np.asarray(freq_params['freq_array'])
         freq_params['Nfreqs'] = freq_arr.size
-        if freq_params['Nfreqs'] > 1:
-            freq_params['channel_width'] = np.diff(freq_arr)[0]
-            if not np.allclose(np.diff(freq_arr), freq_params['channel_width']):
-                raise ValueError("Spacing in frequency array is uneven.")
-        elif 'channel_width' not in freq_params:
-            raise ValueError("Channel width must be specified "
-                             "if freq_arr has length 1")
+        if 'channel_width' not in freq_params:
+            if freq_params['Nfreqs'] > 1:
+                freq_params['channel_width'] = np.diff(freq_arr)[0]
+                if not np.allclose(np.diff(freq_arr), freq_params['channel_width']):
+                    raise ValueError(
+                        "Channel width must be specified if spacing in freq_array is uneven."
+                    )
+            else:
+                raise ValueError("Channel width must be specified if freq_array has length 1")
     else:
         if not (sf or ef):
             raise ValueError('Either start or end frequency must be specified: ' + kws_used)
+        if cw:
+            if np.asarray(freq_params['channel_width']).size > 1:
+                raise ValueError("channel_width must be a scalar if freq_array is not specified")
+
         if not nf:
             if not cw:
                 raise ValueError("Either channel_width or Nfreqs "
                                  " must be included in parameters:" + kws_used)
+
             if sf and ef:
                 freq_params['bandwidth'] = (
                     freq_params['end_freq']
@@ -1137,19 +1144,14 @@ def parse_frequency_params(freq_params):
                                freq_params['end_freq'] + freq_params['channel_width'],
                                freq_params['Nfreqs'], endpoint=False)
 
-    if freq_params['Nfreqs'] != 1:
-        if not np.allclose(np.diff(freq_arr),
-                           freq_params['channel_width'] * np.ones(freq_params["Nfreqs"] - 1)):
-            raise ValueError("Frequency array spacings are not equal to channel width."
-                             + "\nInput parameters are: {}".format(str(init_freq_params)))
-
-    Nspws = 1 if 'Nspws' not in freq_params else freq_params['Nspws']
-    freq_arr = np.repeat(freq_arr, Nspws).reshape(Nspws, freq_params['Nfreqs'])
+    chan_width = np.atleast_1d(freq_params["channel_width"])
+    if chan_width.size < freq_params['Nfreqs'] and chan_width.size == 1:
+        chan_width = np.full((freq_params['Nfreqs'],), chan_width, dtype=float)
 
     return_dict = {}
     return_dict['Nfreqs'] = freq_params['Nfreqs']
     return_dict['freq_array'] = freq_arr
-    return_dict['channel_width'] = freq_params['channel_width']
+    return_dict['channel_width'] = chan_width
     return_dict['Nspws'] = 1
 
     return return_dict
@@ -1416,6 +1418,7 @@ def initialize_uvdata_from_params(obs_params):
         uvparam_dict['object_name'] = param_dict['object_name']
 
     uv_obj = UVData()
+    uv_obj._set_future_array_shapes()
     # use the __iter__ function on UVData to get list of UVParameters on UVData
     valid_param_names = [getattr(uv_obj, param).name for param in uv_obj]
     for k in valid_param_names:
@@ -1451,12 +1454,27 @@ def initialize_uvdata_from_params(obs_params):
     uv_obj.vis_units = 'Jy'
 
     uv_obj.instrument = uv_obj.telescope_name
-    uv_obj.spw_array = np.array([0])
-    if uv_obj.Nfreqs == 1:
-        uv_obj.channel_width = 1.  # Hz
-    else:
-        uv_obj.channel_width = np.diff(uv_obj.freq_array[0])[0]
 
+    uv_obj.spw_array = np.array([0])
+    if uv_obj.channel_width is None:
+        if uv_obj.Nfreqs == 1:
+            uv_obj.channel_width = 1.  # Hz
+        else:
+            freq_deltas = np.diff(uv_obj.freq_array)
+            if np.min(freq_deltas) == np.max(freq_deltas) or np.isclose(
+                np.min(freq_deltas),
+                np.max(freq_deltas),
+                rtol=uv_obj._freq_array.tols[0],
+                atol=uv_obj._freq_array.tols[1],
+            ):
+                uv_obj.channel_width = np.ones(
+                    (uv_obj.Nfreqs,), freq_deltas[0], dtype=float
+                )
+            else:
+                raise ValueError(
+                    "channel_width cannot be determined because frequencies are not "
+                    "equally spaced."
+                )
     if uv_obj.Ntimes == 1:
         uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
     else:
@@ -1536,13 +1554,16 @@ def _complete_uvdata(uv_in, inplace=False):
         _set_lsts_on_uvdata(uv_obj)
 
     # Clear existing data, if any.
-    _shape = (uv_obj.Nblts, uv_obj.Nspws, uv_obj.Nfreqs, uv_obj.Npols)
+    _shape = (uv_obj.Nblts, uv_obj.Nfreqs, uv_obj.Npols)
     uv_obj.data_array = np.zeros(_shape, dtype=complex)
     uv_obj.flag_array = np.zeros(_shape, dtype=bool)
     uv_obj.nsample_array = np.ones(_shape, dtype=float)
 
     uv_obj.extra_keywords = {}
 
+    # this should not be necessary, but is because of a bug in pyuvdata.
+    # it can be removed after we require pyuvdata > 2.2.4
+    uv_obj._set_future_array_shapes()
     uv_obj.check()
 
     return uv_obj
@@ -1840,7 +1861,7 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
         param_filename = check_file_exists_and_increment(os.path.join(path_out, 'obsparam.yaml'))
         param_filename = os.path.basename(param_filename)
 
-    freq_array = uvdata_in.freq_array[0, :]
+    freq_array = uvdata_in.freq_array
     time_array = uvdata_in.time_array
     integration_time_array = np.array(uvdata_in.integration_time)
     if np.max(integration_time_array) != np.min(integration_time_array):

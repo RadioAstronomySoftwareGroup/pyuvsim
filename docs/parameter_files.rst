@@ -1,11 +1,15 @@
 Parameter and configuration Files
 ===================================
 
-When running simulations from yaml and csv files, there are four configuration files that must be used.
+When running simulations from yaml and csv files, there are four configuration files
+that must be used.
 
-The outermost parameter file is the `obsparam_*.yaml`, which is parsed by ``initialize_uvdata_from_params`` into a UVdata object, a source list, a beam dictionary, and a beam list.
+The outermost parameter file is the `obsparam_*.yaml`, which is parsed by
+``initialize_uvdata_from_params`` into a UVdata object, a source list, a beam dictionary,
+and a beam list.
 
-The antenna layout and telescope config yaml files determine the full properties of the array, including location, beam models, layout, and naming.
+The antenna layout and telescope config yaml files determine the full properties of the
+array, including location, beam models, layout, and naming.
 
 The catalog text files give point source lists.
 
@@ -57,16 +61,22 @@ Passed into ``run_param_pyuvsim.py``
       antenna_nums: [1, 7, 9, 15]
       redundant_threshold: 0.1 # redundancy threshold in meters. Only simulate one baseline per redundant group
 
-**Note** The example above is shown with all allowed keywords, but many of these are redundant. This will be further explained below. Only one source catalog will be used at a time.
+**Note** The example above is shown with all allowed keywords, but many of these are
+redundant. This will be further explained below. Only one source catalog will be used
+at a time.
 
 Filing
 ^^^^^^
-    Specifies where the results file will be output, what name the file should have, and whether or not to overwrite existing files. None of these parameters are required.
+    Specifies where the results file will be output, what name the file should have,
+    and whether or not to overwrite existing files. None of these parameters are required.
 
 Frequency
 ^^^^^^^^^
 
-    As is the standard with ``pyuvdata``, the frequency channel numbers refer to the **frequency at the channel center**. The ``bandpass`` refers to the total band covered by all channels, and the channel width is the separation between channel centers. Therefore, the following relations hold::
+    As is the standard with ``pyuvdata``, the frequency channel numbers refer to the
+    **frequency at the channel center**. The ``bandpass`` refers to the total band
+    covered by all channels, and the channel width is the separation between channel
+    centers. Therefore, the following relations hold::
 
 		bandpass = Nfreqs * channel_width
 		bandpass = (end_freq + channel_width/2.) - (start_freq - channel_width/2.) = ( end_freq - start_freq) + channel_width
@@ -74,7 +84,9 @@ Frequency
 		end_freq = start_freq + bandpass - channel_width
 
 
-    Time and frequency structure may be defined with different combinations of keywords to suit the user's purposes. The user must specify sufficient information for the frequency array to be defined.
+    Time and frequency structure may be defined with different combinations of keywords
+    to suit the user's purposes. The user must specify sufficient information for the
+    frequency array to be defined.
 
     Minimum frequency requirements:
 
@@ -94,14 +106,26 @@ Frequency
         * (``start_freq``)
         * (``end_freq``)
 
-    As long as one of the sets from each category above is met by the supplied keywords, the frequency array will be successfully built.
+    As long as one of the sets from each category above is met by the supplied
+    keywords, the frequency array will be successfully built.
     You can also just give an explicit ``freq_array``.
 
+    The ``channel_width`` should be specified as a scalar unless ``freq_array`` is specified,
+    in which case ``channel_width`` can either be a scalar or an array of the same
+    length as ``freq_array``.
+
+    If you specify an explicit ``freq_array`` that is not evenly spaced or is only
+    length one, you must specify the ``channel_width``, either as a single value (in Hz)
+    or as an array of the same length as ``freq_array``.
 
 Time
 ^^^^
 
-    The time array is specified similarly. The entries in the ``time_array`` indicate the **center of each time step in Julian date**. The ``integration_time`` is the time step size in seconds. The user may also specify ``duration_hours`` or ``duration_days`` to specify the total time covered by all time steps. The following relations among parameters hold::
+    The time array is specified similarly. The entries in the ``time_array`` indicate the
+    **center of each time step in Julian date**. The ``integration_time`` is the time
+    step size in seconds. The user may also specify ``duration_hours`` or ``duration_days``
+        to specify the total time covered by all time steps. The following relations
+        among parameters hold::
 
         duration_hours = Ntimes * integration_time / (3600.)
         duration_days = duration_hours / 24.
@@ -109,7 +133,8 @@ Time
         start_time = end_time - duration_days + integration_time / 86400
         end_time = start_time + duration_days - integration_time / 86400
 
-    The numerical factors are to convert among seconds, days, and hours. The user must specify sufficient information for the time array to be defined:
+    The numerical factors are to convert among seconds, days, and hours. The user must
+    specify sufficient information for the time array to be defined:
 
     Minimum time requirements:
 
@@ -129,20 +154,27 @@ Time
         * (``start_time``)
         * (``end_time``)
 
-    As long as one of the sets from each category above is met by the supplied keywords, the time array will be successfully built.
+    As long as one of the sets from each category above is met by the supplied keywords,
+    the time array will be successfully built.
 
 
 
 Telescope Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-    Under the telescope section, the keywords ``array_layout`` and ``telescope_config_name`` give paths to, respectively, the array layout text file and the telescope metadata configuration yaml file. These path may either be absolute or specified relative to the location of the obsparam yaml file.
+    Under the telescope section, the keywords ``array_layout`` and ``telescope_config_name``
+        give paths to, respectively, the array layout text file and the telescope metadata
+        configuration yaml file. These path may either be absolute or specified relative
+        to the location of the obsparam yaml file.
 
     Example array layout with four antennas:
 
     .. literalinclude:: example_configs/baseline_lite.csv
 
-    Columns here provide, in order from left to right, the antenna name, antenna number, a beam ID number, and the antenna positions relative to the array center in eastings/northings/up-ings in meters. The layout file has a corresponding telescope metadata file, shown below:
+    Columns here provide, in order from left to right, the antenna name, antenna number,
+    a beam ID number, and the antenna positions relative to the array center in
+    east, north, up (ENU) in meters. The layout file has a corresponding telescope
+    metadata file, shown below:
 
     .. literalinclude:: example_configs/bl_lite_mixed.yaml
 
@@ -173,12 +205,18 @@ Telescope Configuration
     Analytic beams may require additional parameters.
 
     - uniform = The same response in all directions. No additional parameters.
-    - gaussian = Gaussian function shaped beam. Requires either an antenna diameter (in meters) or a standard deviation sigma (in radians). This standard deviation sets the width of the beam in zenith angle. Note that defining gaussian beams via `sigma` will be deprecated in the future.
-    - airy = Airy disk (ie, diffraction pattern of a circular aperture). Requires an antenna diameter.
+    - gaussian = Gaussian function shaped beam. Requires either an antenna diameter
+    (in meters) or a standard deviation sigma (in radians). This standard deviation sets
+    the width of the beam in zenith angle. Note that defining gaussian beams via `sigma`
+        will be deprecated in the future.
+    - airy = Airy disk (ie, diffraction pattern of a circular aperture). Requires an
+    antenna diameter.
 
-    Note that beams defined with an antenna diameter will be chromatic (their widths on the sky will change with frequency).
+    Note that beams defined with an antenna diameter will be chromatic (their widths on
+    the sky will change with frequency).
 
-    The figure below shows the array created by these configurations, with beam type indicated by color.
+    The figure below shows the array created by these configurations, with beam type
+    indicated by color.
 
     .. image:: Images/baseline_lite.png
 	    :width: 600
@@ -188,15 +226,17 @@ Telescopes on the Moon
 ~~~~~~~~~~~~~~~~~~~~~~
    If the ``lunarsky`` module is installed, the ``telescope_location`` can be interpreted as the
    lon/lat/alt of an observatory on the Moon, defined in the "Mean Earth/ Mean Rotation"
-   frame (see documentation on ``lunarsky``). Setting the keyword ``world: moon`` in the telescope_config
-   file enables this:
+   frame (see documentation on ``lunarsky``). Setting the keyword ``world: moon`` in the
+   telescope_config file enables this:
 
    .. literalinclude:: example_configs/tranquility_config.yaml
 
 
 Sources
 ^^^^^^^
-    Specify the path to a text catalog file via ``catalog``. The path can be given as an absolute path or relative to the location of the obsparam. This catalog should be readable with `pyradiosky`.
+    Specify the path to a text catalog file via ``catalog``. The path can be given as an
+    absolute path or relative to the location of the obsparam. This catalog should be
+    readable with `pyradiosky`.
 
     An example catalog file:
 
@@ -208,7 +248,7 @@ Sources
         * ``SOURCE_ID`` : Identifier for the source
         * ``RA_J2000`` : Right ascension of source at J2000 epoch, in decimal degrees.
         * ``DEC_J2000`` : Declination of source at J2000 epoch, in decimal degrees.
-        * ``FLUX``: Source stokes I brightness in Janskies.  (Currently only point sources are supported).
+        * ``FLUX``: Source stokes I brightness in Janskies.  (Currently only pointsources are supported).
         * ``Frequency``: A reference frequency for the given flux. This will be used for spectral modeling.
 
     If the catalog is a GLEAM VO table file, optionally specify the ``spectral_type``
@@ -222,18 +262,37 @@ Sources
       * ``ra_column`` : The name of the column to use for the source RAs (recommended, defaults to ``RAJ2000``).
       * ``dec_column`` : The name of the column to use for the source Decs (recommended, defaults to ``DEJ2000``).
 
-    Alternatively, you can specify a ``mock`` and provide the ``mock_arrangement`` keyword to specify which mock catalog to generate. Available options are shown in the ``create_mock_catalog`` docstring:
+    Alternatively, you can specify a ``mock`` and provide the ``mock_arrangement``
+        keyword to specify which mock catalog to generate. Available options are shown
+        in the ``create_mock_catalog`` docstring:
 
     .. module:: pyuvsim
 
     .. autofunction:: create_mock_catalog
 
-    Flux limits can be made by providing the keywords ``min_flux`` and ``max_flux``. These specify the min/max stokes I flux to choose from the catalog.
+    Flux limits can be made by providing the keywords ``min_flux`` and ``max_flux``.
+    These specify the min/max stokes I flux to choose from the catalog.
 
-    The option ``horizon_buffer`` can be set (in radians) to adjust the tolerance on the coarse horizon cut. After reading in the catalog, ``pyuvsim`` roughly calculates the rise and set times (in local sidereal time, in radians) for each source. If the source never rises, it is excluded from the simulation, and if the source never sets its rise/set times are set to None. This calculation is less accurate than the astropy alt/az calculation used in the main task loop, so a "buffer" angle is added to the set lst (and subtracted from the rise lst) to ensure sources aren't accidentally excluded. Tests indicate that a 10 minute buffer is sufficient. Pyuvsim also excludes sources below the horizon after calculating their AltAz coordinates, which is more accurate. The coarse cut is only to reduce computational load.
+    The option ``horizon_buffer`` can be set (in radians) to adjust the tolerance on the
+    coarse horizon cut. After reading in the catalog, ``pyuvsim`` roughly calculates the
+    rise and set times (in local sidereal time, in radians) for each source. If the
+    source never rises, it is excluded from the simulation, and if the source never sets
+    its rise/set times are set to None. This calculation is less accurate than the
+    astropy alt/az calculation used in the main task loop, so a "buffer" angle is added
+    to the set lst (and subtracted from the rise lst) to ensure sources aren't
+    accidentally excluded. Tests indicate that a 10 minute buffer is sufficient.
+    Pyuvsim also excludes sources below the horizon after calculating their AltAz
+    coordinates, which is more accurate. The coarse cut is only to reduce computational load.
 
 Select
 ^^^^^^
-    Specify keywords to select which baselines to simulate. The selection is done by UVData.select, so it can accept any keyword that function accepts, except ones that affect polarization because pyuvsim computes all polarizations.
+    Specify keywords to select which baselines to simulate. The selection is done by
+    UVData.select, so it can accept any keyword that function accepts, except ones that
+    affect polarization because pyuvsim computes all polarizations.
 
-    In addition to the UVData.select keywords, a ``redundant_threshold`` parameter can be specified. If it is present, only one baseline from each set of redundant baselines is simulated. The ``redundant_threshold`` specifies how different two baseline vectors can be to still be called redundant -- the magnitude of the vector differences must be less than or equal to the threshold. The vector differences are calculated for a phase center of zenith (i.e. in drift mode).
+    In addition to the UVData.select keywords, a ``redundant_threshold`` parameter can
+    be specified. If it is present, only one baseline from each set of redundant
+    baselines is simulated. The ``redundant_threshold`` specifies how different two
+    baseline vectors can be to still be called redundant -- the magnitude of the vector
+    differences must be less than or equal to the threshold. The vector differences are
+    calculated for a phase center of zenith (i.e. in drift mode).

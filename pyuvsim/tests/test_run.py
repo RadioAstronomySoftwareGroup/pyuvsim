@@ -49,6 +49,9 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # set the x_orientation
     uv_ref.x_orientation = "east"
 
+    # fix the channel width, which doesn't match the channel width in the parameter file
+    uv_ref.channel_width = 1000000.0
+
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', paramfile)
     # This test obsparam file has "single_source.txt" as its catalog.
     pyuvsim.uvsim.run_uvsim(param_filename)
@@ -133,10 +136,10 @@ def test_analytic_diffuse(model, tmpdir):
 
     uv_out = pyuvsim.run_uvsim(obspar_path, return_uv=True)
     # Convert from Jy to K sr
-    dat = uv_out.data_array[:, 0, 0, 0] * jy_to_ksr(uv_out.freq_array[0, 0]).value
+    dat = uv_out.data_array[:, 0, 0] * jy_to_ksr(uv_out.freq_array[0]).value
     # Evaluate the solution and compare to visibilities.
     soln = analytic_diffuse.get_solution(modname)
-    uvw_lam = uv_out.uvw_array * uv_out.freq_array[0, 0] / c_ms
+    uvw_lam = uv_out.uvw_array * uv_out.freq_array[0] / c_ms
     ana = soln(uvw_lam, **params)
     assert np.allclose(ana / 2, dat, atol=1e-2)
 
@@ -210,7 +213,7 @@ def test_zenith_spectral_sim(spectral_type, tmpdir):
     Nfreqs = 20
     freqs = np.linspace(110e6, 115e6, Nfreqs)
     freq_params = pyuvsim.simsetup.freq_array_to_params(freqs)
-    freqs = pyuvsim.simsetup.parse_frequency_params(freq_params)['freq_array'][0, :]
+    freqs = pyuvsim.simsetup.parse_frequency_params(freq_params)['freq_array']
     freqs *= units.Hz
     spectrum = (freqs.value / ref_freq)**alpha
 
@@ -237,7 +240,7 @@ def test_zenith_spectral_sim(spectral_type, tmpdir):
     uv_out = pyuvsim.run_uvsim(params, return_uv=True)
 
     for ii in range(uv_out.Nbls):
-        assert np.allclose(uv_out.data_array[ii, 0, :, 0], spectrum / 2)
+        assert np.allclose(uv_out.data_array[ii, :, 0], spectrum / 2)
 
 
 def test_pol_error():
@@ -273,5 +276,5 @@ def test_sim_on_moon():
     uv_out = pyuvsim.uvsim.run_uvdata_uvsim(
         uv_obj, beam_list, beam_dict, catalog=sources, quiet=True
     )
-    assert np.allclose(uv_out.data_array[:, 0, :, 0], 0.5)
+    assert np.allclose(uv_out.data_array[:, :, 0], 0.5)
     assert uv_out.extra_keywords['world'] == 'moon'
