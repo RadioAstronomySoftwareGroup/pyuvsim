@@ -11,10 +11,15 @@
 ## [1.2.1] - 2021-10-13
 
 ### Added
+- Support for writing out measurement set files.
 - Support for unit tests parallelized with MPI.
 - Require that future changes not drastically increase runtime for current capabilities.
 
 ### Changed
+- Require pyuvdata >= 2.1.5
+- Use future array shapes on UVData objects.
+- Use the replacements for the deprecated `SkyModel.source_cuts` method if the pyradiosky
+version is new enough to have them.
 - Use remote memory access to collect finished visibility data, without serialization.
 
 ### Fixed
