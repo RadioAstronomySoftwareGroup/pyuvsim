@@ -192,7 +192,7 @@ def write_uvdata(
     dryrun : Bool
         (Default false) Don't write to file.
     out_format : Str
-        (Default uvfits) Write as uvfits/miriad/uvh5
+        (Default uvfits) Write as uvfits/miriad/uvh5/ms
 
     Returns
     -------
@@ -205,6 +205,7 @@ def write_uvdata(
     if 'output_format' in param_dict:
         out_format = param_dict['output_format']
     elif out_format is None:
+        # TODO should this be the default? It requires forcing phasing...
         out_format = 'uvfits'
 
     if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
@@ -230,6 +231,10 @@ def write_uvdata(
         if not outfile_name.endswith(".uvh5"):
             outfile_name = outfile_name + ".uvh5"
 
+    if out_format == 'ms':
+        if not outfile_name.endswith(".ms"):
+            outfile_name = outfile_name + ".ms"
+
     noclobber = ('clobber' not in param_dict) or not bool(param_dict['clobber'])
     if noclobber:
         outfile_name = check_file_exists_and_increment(outfile_name)
@@ -242,9 +247,11 @@ def write_uvdata(
             uv_obj.write_miriad(outfile_name, clobber=not noclobber)
         elif out_format == 'uvh5':
             uv_obj.write_uvh5(outfile_name, clobber=not noclobber)
+        elif out_format == 'ms':
+            uv_obj.write_ms(outfile_name, clobber=not noclobber)
         else:
             raise ValueError(
-                "Invalid output format. Options are \" uvfits\", \"uvh5\", or \"miriad\"")
+                "Invalid output format. Options are 'uvfits', 'uvh5', 'miriad' or 'ms'.")
     if return_filename:
         return outfile_name
 

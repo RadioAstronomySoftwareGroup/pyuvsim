@@ -107,7 +107,7 @@ def test_file_namer(tmpdir, ext):
 
 
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
-@pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5'])
+@pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5', 'ms'])
 def test_write_uvdata(save_format, tmpdir):
     """ Test function that defines filenames from parameter dict """
     uv = UVData()
@@ -124,12 +124,14 @@ def test_write_uvdata(save_format, tmpdir):
         assert ofname + '.uvfits' == expected_ofname
     elif save_format == 'uvh5':
         assert ofname + '.uvh5' == expected_ofname
+    elif save_format == 'ms':
+        assert ofname + '.ms' == expected_ofname
     else:
         assert ofname == expected_ofname
 
 
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
-@pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5'])
+@pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5', 'ms'])
 def test_write_uvdata_clobber(save_format, tmpdir):
     """Test overwriting a uvdata object yields the expected results."""
     uv = UVData()
@@ -151,11 +153,27 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     uv2 = UVData()
     uv2.read(expected_ofname)
 
-    # Depending on pyuvdat version the filename may exist
+    # Depending on pyuvdata version the filename may exist
     # munge the filename attribute
-    # This can be removed if we ever require pyuvdata>=2.21
+    # This can be removed if we ever require pyuvdata>=2.2.1
     if hasattr(uv2, "filename"):
         uv2.filename = uv.filename
+
+    if save_format == "ms":
+        # MS adds some stuff to history & extra keywords
+        uv2.history = uv.history
+        uv2.extra_keywords = uv.extra_keywords
+
+        # when we write to MS we set some things that weren't set before.
+        # We intend to set these on UVData objects generically in the future...
+        uv.dut1 = uv2.dut1
+        uv.earth_omega = uv2.earth_omega
+        uv.gst0 = uv2.gst0
+        uv.rdate = uv2.rdate
+        uv.timesys = uv2.timesys
+
+        # for some reason, the vis_units also change. This is more problematic...
+        uv2.vis_units = uv.vis_units
 
     assert uv == uv2
 
@@ -170,13 +188,28 @@ def test_write_uvdata_clobber(save_format, tmpdir):
 
     if hasattr(uv2, "filename"):
         uv2.filename = uv.filename
+    if save_format == "ms":
+        # MS adds some stuff to history & extra keywords
+        uv2.history = uv.history
+        uv2.extra_keywords = uv.extra_keywords
+        # for some reason, the vis_units also change. This is more problematic...
+        uv2.vis_units = uv.vis_units
 
+    assert uv2._data_array != uv._data_array
     assert uv2 != uv
 
     uv2.read(expected_ofname)
 
     if hasattr(uv2, "filename"):
         uv2.filename = uv.filename
+
+    if save_format == "ms":
+        # MS adds some stuff to history & extra keywords
+        uv2.history = uv.history
+        uv2.extra_keywords = uv.extra_keywords
+        # for some reason, the vis_units also change. This is more problematic...
+        uv2.vis_units = uv.vis_units
+
     assert uv2 == uv
 
 
