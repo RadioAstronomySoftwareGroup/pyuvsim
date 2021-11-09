@@ -25,7 +25,7 @@ Passed into ``run_param_pyuvsim.py``
       outfile_prefix: 'sim' # Prefix for the output file name, separated by underscores
       outfile_suffix: 'results' # Suffix for output file name
       outfile_name: 'sim_results' # Alternatively, give the full name
-      output_format: 'uvfits'  # Format for output. Default is uvfits, but miriad and uvh5 are also supported.
+      output_format: 'uvfits'  # Format for output. Default is 'uvfits', but measurement sets ('ms'), 'miriad' and 'uvh5' are also supported.
       clobber: False        # overwrite existing files. (Default False)
     freq:
       Nfreqs: 10    # Number of frequencies
