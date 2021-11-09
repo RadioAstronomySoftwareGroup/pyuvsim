@@ -248,7 +248,12 @@ def write_uvdata(
         elif out_format == 'uvh5':
             uv_obj.write_uvh5(outfile_name, clobber=not noclobber)
         elif out_format == 'ms':
-            uv_obj.write_ms(outfile_name, clobber=not noclobber)
+            try:
+                uv_obj.write_ms(outfile_name, clobber=not noclobber)
+            except AttributeError as err:
+                raise AttributeError(
+                    "Writing measurement sets requires pyuvdata version >= 2.2.2"
+                ) from err
         else:
             raise ValueError(
                 "Invalid output format. Options are 'uvfits', 'uvh5', 'miriad' or 'ms'.")
