@@ -563,7 +563,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         time_inds = (task_inds[:, 0] - bl_inds) // Nbls
         Ntimes_loc = np.unique(time_inds).size
         Nbls_loc = np.unique(bl_inds).size
-        Nfreqs_loc = np.unique(task_inds[:, 2]).size
+        Nfreqs_loc = np.unique(task_inds[:, 1]).size
         axes_dict = {
             'Ntimes_loc': Ntimes_loc,
             'Nbls_loc': Nbls_loc,
