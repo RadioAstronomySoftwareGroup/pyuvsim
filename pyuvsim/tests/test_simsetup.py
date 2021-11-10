@@ -61,7 +61,12 @@ def test_mock_catalog_zenith_source(hera_loc):
     cat_data = pyuvsim.simsetup.SkyModelData(cat)
     cat_data2, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_data=True)
 
-    assert cat_data == cat_data2
+    for attr in cat_data.__dict__:
+        assert getattr(cat_data, attr) == getattr(cat_data2, attr)
+
+    new_cat = cat_data.get_skymodel()
+
+    assert new_cat == cat
 
 
 def test_mock_catalog_off_zenith_source(hera_loc):
