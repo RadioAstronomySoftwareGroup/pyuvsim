@@ -248,7 +248,7 @@ Sources
         * ``SOURCE_ID`` : Identifier for the source
         * ``RA_J2000`` : Right ascension of source at J2000 epoch, in decimal degrees.
         * ``DEC_J2000`` : Declination of source at J2000 epoch, in decimal degrees.
-        * ``FLUX``: Source stokes I brightness in Janskies.  (Currently only pointsources are supported).
+        * ``FLUX``: Source stokes I brightness in Janskies.  (Currently only point sources are supported).
         * ``Frequency``: A reference frequency for the given flux. This will be used for spectral modeling.
 
     If the catalog is a GLEAM VO table file, optionally specify the ``spectral_type``
