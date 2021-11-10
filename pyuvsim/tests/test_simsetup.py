@@ -54,9 +54,14 @@ def test_mock_catalog_zenith_source(hera_loc):
 
     test_source = pyradiosky.SkyModel('src0', ra, dec, units.Quantity([1, 0, 0, 0], 'Jy'), 'flat')
 
-    cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='zenith')
+    cat, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
     assert cat == test_source
+
+    cat_data = pyuvsim.simsetup.SkyModelData(cat)
+    cat_data2, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_data=True)
+
+    assert cat_data == cat_data2
 
 
 def test_mock_catalog_off_zenith_source(hera_loc):
@@ -76,8 +81,7 @@ def test_mock_catalog_off_zenith_source(hera_loc):
     dec = icrs_coord.dec
     test_source = pyradiosky.SkyModel('src0', ra, dec, units.Quantity([1.0, 0, 0, 0], "Jy"), 'flat')
 
-    cat, mock_keywords = pyuvsim.create_mock_catalog(time, arrangement='off-zenith',
-                                                     alt=src_alt.deg)
+    cat, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
 
     assert cat == test_source
 
@@ -118,7 +122,7 @@ def test_mock_diffuse_maps(model, hera_loc, apollo_loc, location):
     modname, modkwargs = model
     map_nside = 128
     t0 = Time.now()
-    cat, kwds = pyuvsim.simsetup.create_mock_catalog(
+    cat, _ = pyuvsim.simsetup.create_mock_catalog(
         t0, arrangement='diffuse', array_location=loc,
         diffuse_model=modname, map_nside=map_nside,
         diffuse_params=modkwargs
@@ -393,10 +397,18 @@ def test_vot_catalog_error(key_pop, message):
 
 
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
-def test_param_reader():
-    pytest.importorskip('mpi4py')
-    # Reading in various configuration files
-
+@pytest.mark.parametrize(
+    "remove_channel_width,single_freq,uneven_freqs",
+    [
+        (True, False, False),
+        (True, False, True),
+        (True, True, False),
+        (False, False, False),
+        (False, False, True),
+        (False, True, False)
+    ]
+)
+def test_param_reader(remove_channel_width, single_freq, uneven_freqs):
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml")
     hera_uv = UVData()
     hera_uv.read_uvfits(triangle_uvfits_file)
@@ -406,9 +418,6 @@ def test_param_reader():
 
     hera_uv.unphase_to_drift()
     hera_uv.telescope_name = 'HERA'
-
-    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_data=True)
 
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
@@ -424,57 +433,29 @@ def test_param_reader():
 
     beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2, 'ANT4': 3}
 
-    # Error conditions:
-    params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    bak_params_bad = copy.deepcopy(params_bad)
-
-    # Missing config file info
-    params_bad['config_path'] = os.path.join(
-        SIM_DATA_PATH, 'nonexistent_directory', 'nonexistent_file'
-    )
-    with pytest.raises(ValueError, match="nonexistent_directory is not a directory"):
-        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
-
-    params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
-    params_bad['telescope']['array_layout'] = 'nonexistent_file'
-    with pytest.raises(ValueError, match="nonexistent_file from yaml does not exist"):
-        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
-
-    params_bad['telescope']['telescope_config_name'] = 'nonexistent_file'
-    with pytest.raises(ValueError, match="telescope_config_name file from yaml does not exist"):
-        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
-
-    # Missing beam keywords
-    params_bad = copy.deepcopy(bak_params_bad)
-
-    params_bad['config_path'] = os.path.join(SIM_DATA_PATH, "test_config")
-
-    params_bad = copy.deepcopy(bak_params_bad)
-    params_bad['telescope']['telescope_config_name'] = os.path.join(
-        SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_gaussnoshape.yaml'
-    )
-    with pytest.raises(KeyError,
-                       match="Missing shape parameter for gaussian beam"):
-        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
-
-    params_bad['telescope']['telescope_config_name'] = os.path.join(
-        SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml'
-    )
-    with pytest.raises(KeyError, match="Missing diameter for airy beam."):
-        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
-
-    params_bad['telescope']['telescope_config_name'] = os.path.join(
-        SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml'
-    )
-    with pytest.raises(ValueError, match="Undefined beam model"):
-        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
-
     # Check default configuration
     uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_filename)
     new_beam_list.set_obj_mode()
     assert uv_obj.x_orientation == "east"
 
-    pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
+    if uneven_freqs:
+        uv_obj.freq_array[-1] += 1
+        hera_uv.freq_array[-1] += 1
+    if single_freq:
+        uv_obj.select(freq_chans=[0])
+        hera_uv.select(freq_chans=[0])
+    if remove_channel_width:
+        uv_obj.channel_width = None
+
+    if uneven_freqs and remove_channel_width:
+        with pytest.raises(
+            ValueError,
+            match="channel_width cannot be determined because frequencies are not "
+                "equally spaced."):
+            pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
+        return
+    else:
+        pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
 
     with open(param_filename, 'r') as fhandle:
         param_dict = yaml.safe_load(fhandle)
@@ -513,6 +494,74 @@ def test_param_reader():
     hera_uv.reorder_blts("time", "baseline")
 
     assert uv_obj == hera_uv
+
+
+@pytest.mark.parametrize(
+    "subdict,error,msg",
+    [
+        (
+            {
+                'config_path': os.path.join(
+                    SIM_DATA_PATH, 'nonexistent_directory', 'nonexistent_file'
+                )
+            }, ValueError, "nonexistent_directory is not a directory"
+        ),
+        (
+            {
+                'config_path': os.path.join(SIM_DATA_PATH, "test_config"),
+                'telescope': {'array_layout': 'nonexistent_file'}
+            }, ValueError, "nonexistent_file from yaml does not exist"
+        ),
+        (
+            {
+                'config_path': os.path.join(SIM_DATA_PATH, "test_config"),
+                'telescope': {'telescope_config_name': 'nonexistent_file'}
+            }, ValueError, "telescope_config_name file from yaml does not exist"
+        ),
+        (
+            {
+                'telescope': {
+                    'telescope_config_name': os.path.join(
+                        SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_gaussnoshape.yaml'
+                    )
+                }
+            }, KeyError, "Missing shape parameter for gaussian beam"
+        ),
+        (
+            {
+                'telescope': {
+                    'telescope_config_name': os.path.join(
+                        SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nodiameter.yaml'
+                    )
+                }
+            }, KeyError, "Missing diameter for airy beam."
+        ),
+        (
+            {
+                'telescope': {
+                    'telescope_config_name': os.path.join(
+                        SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml'
+                    )
+                }
+            }, ValueError, "Undefined beam model"
+        ),
+    ]
+)
+def test_param_reader_errors(subdict, error, msg):
+    param_filename = os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml")
+
+    # Error conditions:
+    params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
+
+    for key, value in subdict.items():
+        if isinstance(value, dict):
+            for key2, value2 in value.items():
+                params_bad[key][key2] = value2
+        else:
+            params_bad[key] = value
+
+    with pytest.raises(error, match=msg):
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
 
 def test_tele_parser():

@@ -473,7 +473,7 @@ class SkyModelData:
             self.component_type = sky_in.component_type
             self.spectral_type = sky_in.spectral_type
             self.Ncomponents = sky_in.Ncomponents
-            if hasattr(sky_in, "get_lon_lat"):
+            if hasattr(sky_in, "get_lon_lat"):  # pragma: no cover
                 if sky_in.frame != "icrs":
                     sky_in.transform_to(ICRS)
                 sky_ra, sky_dec = sky_in.get_lon_lat()
@@ -641,7 +641,7 @@ class SkyModelData:
 
 
 def _sky_select_calc_rise_set(sky, source_params, telescope_lat_deg=None):
-    if hasattr(sky, "cut_nonrising"):
+    if hasattr(sky, "cut_nonrising"):  # pragma: no cover
 
         if telescope_lat_deg is not None:
             telescope_lat = Latitude(telescope_lat_deg * units.deg)
@@ -1458,7 +1458,7 @@ def initialize_uvdata_from_params(obs_params):
     uv_obj.spw_array = np.array([0])
     if uv_obj.channel_width is None:
         if uv_obj.Nfreqs == 1:
-            uv_obj.channel_width = 1.  # Hz
+            uv_obj.channel_width = np.asarray([1.0])  # Hz
         else:
             freq_deltas = np.diff(uv_obj.freq_array)
             if np.min(freq_deltas) == np.max(freq_deltas) or np.isclose(
@@ -1467,7 +1467,7 @@ def initialize_uvdata_from_params(obs_params):
                 rtol=uv_obj._freq_array.tols[0],
                 atol=uv_obj._freq_array.tols[1],
             ):
-                uv_obj.channel_width = np.ones(
+                uv_obj.channel_width = np.full(
                     (uv_obj.Nfreqs,), freq_deltas[0], dtype=float
                 )
             else:
