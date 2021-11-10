@@ -259,7 +259,8 @@ def test_input_uv_error():
 
 
 @pytest.mark.skipif('not pyuvsim.astropy_interface.hasmoon')
-def test_sim_on_moon():
+@pytest.mark.parametrize("future_shapes", [True, False])
+def test_sim_on_moon(future_shapes):
     from pyuvsim.astropy_interface import MoonLocation
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_tranquility_hex.yaml')
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
@@ -273,6 +274,8 @@ def test_sim_on_moon():
         time, array_location=tranquility_base, arrangement='zenith', Nsrcs=30, return_data=True
     )
     # Run simulation.
+    if not future_shapes:
+        uv_obj.use_current_array_shapes()
     uv_out = pyuvsim.uvsim.run_uvdata_uvsim(
         uv_obj, beam_list, beam_dict, catalog=sources, quiet=True
     )
