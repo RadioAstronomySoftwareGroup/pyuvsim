@@ -1374,12 +1374,18 @@ def initialize_uvdata_from_params(obs_params):
     # Use extra_keywords to pass along required paths for file history.
     extra_keywords = {}
     if 'obs_param_file' in param_dict:
-        extra_keywords['obs_param_file'] = param_dict['obs_param_file']
-        for key in ['telescope_config_name', 'array_layout']:
-            if key in tele_dict:
-                val = tele_dict[key]
-                if isinstance(val, str):
-                    extra_keywords[key] = val
+        extra_keywords['obsparam'] = param_dict['obs_param_file']
+        if (
+            'telescope_config_name' in tele_dict
+            and isinstance(tele_dict['telescope_config_name'], str)
+        ):
+            extra_keywords['telecfg'] = tele_dict['telescope_config_name']
+        if (
+            'array_layout' in tele_dict
+            and isinstance(tele_dict['array_layout'], str)
+        ):
+            extra_keywords['layout'] = tele_dict['array_layout']
+
     if "world" in tele_params:
         extra_keywords['world'] = tele_params.get('world')
     uvparam_dict['extra_keywords'] = extra_keywords
@@ -1456,25 +1462,6 @@ def initialize_uvdata_from_params(obs_params):
     uv_obj.instrument = uv_obj.telescope_name
 
     uv_obj.spw_array = np.array([0])
-    if uv_obj.channel_width is None:
-        if uv_obj.Nfreqs == 1:
-            uv_obj.channel_width = np.asarray([1.0])  # Hz
-        else:
-            freq_deltas = np.diff(uv_obj.freq_array)
-            if np.min(freq_deltas) == np.max(freq_deltas) or np.isclose(
-                np.min(freq_deltas),
-                np.max(freq_deltas),
-                rtol=uv_obj._freq_array.tols[0],
-                atol=uv_obj._freq_array.tols[1],
-            ):
-                uv_obj.channel_width = np.full(
-                    (uv_obj.Nfreqs,), freq_deltas[0], dtype=float
-                )
-            else:
-                raise ValueError(
-                    "channel_width cannot be determined because frequencies are not "
-                    "equally spaced."
-                )
     if uv_obj.Ntimes == 1:
         uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
     else:
