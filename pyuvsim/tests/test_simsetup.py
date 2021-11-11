@@ -402,18 +402,7 @@ def test_vot_catalog_error(key_pop, message):
 
 
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
-@pytest.mark.parametrize(
-    "remove_channel_width,single_freq,uneven_freqs",
-    [
-        (True, False, False),
-        (True, False, True),
-        (True, True, False),
-        (False, False, False),
-        (False, False, True),
-        (False, True, False)
-    ]
-)
-def test_param_reader(remove_channel_width, single_freq, uneven_freqs):
+def test_param_reader():
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml")
     hera_uv = UVData()
     hera_uv.read_uvfits(triangle_uvfits_file)
@@ -443,24 +432,7 @@ def test_param_reader(remove_channel_width, single_freq, uneven_freqs):
     new_beam_list.set_obj_mode()
     assert uv_obj.x_orientation == "east"
 
-    if uneven_freqs:
-        uv_obj.freq_array[-1] += 1
-        hera_uv.freq_array[-1] += 1
-    if single_freq:
-        uv_obj.select(freq_chans=[0])
-        hera_uv.select(freq_chans=[0])
-    if remove_channel_width:
-        uv_obj.channel_width = None
-
-    if uneven_freqs and remove_channel_width:
-        with pytest.raises(
-            ValueError,
-            match="channel_width cannot be determined because frequencies are not "
-                "equally spaced."):
-            pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
-        return
-    else:
-        pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
+    pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
 
     with open(param_filename, 'r') as fhandle:
         param_dict = yaml.safe_load(fhandle)
