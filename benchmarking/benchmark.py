@@ -1,8 +1,9 @@
 import os
 import re
-import h5py
-import yaml
 import socket
+
+import yaml
+import h5py
 import numpy as np
 from pyradiosky import write_healpix_hdf5
 
