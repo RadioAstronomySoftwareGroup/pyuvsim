@@ -82,6 +82,28 @@ def test_airy_beam_values(heratext_posfreq):
     assert np.allclose(interpolated_beam, expected_data)
 
 
+def test_interp_errors(heratext_posfreq):
+    diameter_m = 14.
+    beam = pyuvsim.AnalyticBeam('airy', diameter=diameter_m)
+    beam.peak_normalize()
+
+    az_vals, za_vals, freq_vals = heratext_posfreq
+
+    az_mesh, za_mesh = np.meshgrid(az_vals, za_vals)
+
+    with pytest.raises(
+        ValueError, match="az_array, za_array and freq_array must all be one dimensional."
+    ):
+        beam.interp(
+            az_array=az_mesh, za_array=za_mesh, freq_array=freq_vals
+        )
+
+    with pytest.raises(ValueError, match="az_array and za_array must have the same shape."):
+        beam.interp(
+            az_array=az_vals, za_array=za_vals[0:-1], freq_array=freq_vals
+        )
+
+
 def test_uv_beam_widths():
     # Check that the width of the Airy disk beam in UV space corresponds with the dish diameter.
     diameter_m = 25.0
