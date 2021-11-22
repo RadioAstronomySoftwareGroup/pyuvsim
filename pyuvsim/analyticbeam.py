@@ -125,6 +125,11 @@ class AnalyticBeam(object):
                 if az/za_arrays are not passed), shape: (Naxes_vec, Ncomponents_vec,
                 Npixels/(Naxis1, Naxis2) or az_array.size if az/za_arrays are passed)
         """
+        if az_array.ndim > 1 or za_array.ndim > 1 or freq_array.ndim > 1:
+            raise ValueError("az_array, za_array and freq_array must all be one dimensional.")
+
+        if az_array.shape != za_array.shape:
+            raise ValueError("az_array and za_array must have the same shape.")
 
         if self.type == 'uniform':
             interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=float)
