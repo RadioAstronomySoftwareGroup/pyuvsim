@@ -6,20 +6,9 @@
 import numpy as np
 import warnings
 from pyuvdata import UVBeam, parameter
-import functools
 
 from .analyticbeam import AnalyticBeam
 from . import mpi
-
-
-def consistent(method):
-    """Decorator for checking consistency before accessing a parameter."""
-    @functools.wraps(method)
-    def inner(self):
-        if not self.is_consistent:
-            self.check_consistency(force=True)
-
-    return inner
 
 
 class BeamList:
@@ -120,41 +109,121 @@ class BeamList:
         if check:
             self.check_consistency(force=force_check)
 
-            if self.x_orientation is None:
-                warnings.warn(
-                    "All polarized beams have x_orientation set to None. This will make it "
-                    "hard to interpret the polarizations of the simulated visibilities."
-                )
+    def check_consistency(self, force: bool = False):
+        """Check the consistency of all beams in the list.
 
-    @consistent
+        This checks basic parameters of the objects for consistency, eg. the ``beam_type``.
+        It is meant to be manually called by the user.
+
+        Parameters
+        ----------
+        force
+            Whether to force the consistency check even if the object is in string
+            mode. This wil convert to to object mode, perform the check, then
+            convert back.
+
+        Raises
+        ------
+        BeamConsistencyError
+            If any beam is inconsistent with the rest of the beams.
+        """
+        if self.string_mode:
+            if not force:
+                warnings.warn(
+                    "Cannot check consistency of a string-mode BeamList!"
+                )
+                return
+            else:
+                self.set_obj_mode(check=True)
+                self.set_str_mode()
+                return
+
+        if len(self) == 0:
+            return
+
+        def check_thing(item):
+            items = {i: getattr(b, item) for i, b in enumerate(self) if hasattr(b, item)}
+
+            if not items:
+                # If none of the beams has this item, move on.
+                return
+
+            min_index = min(items.keys())
+
+            for indx, thing in items.items():
+                if np.any(thing != items[min_index]):
+                    raise BeamConsistencyError(
+                        f"{item} of beam {indx+1} is not consistent with beam "
+                        f"{min_index+1}: {thing} vs. {items[min_index]}"
+                    )
+
+        check_thing('beam_type')
+        check_thing("x_orientation")
+
+        if self[0].beam_type == 'efield':
+            check_thing('Nfeeds')
+            check_thing('feed_array')
+
+        elif self[0].beam_type == 'power':
+            check_thing("Npols")
+            check_thing("polarization_array")
+
+        self.is_consistent = True
+
     @property
     def x_orientation(self):
-        """The x_orientation of all beams in list (if consistent)."""
-        return getattr(self._obj_beam_list[0], "x_orientation", None)
+        """The x_orientation of all beams in list (if consistent).
 
-    @consistent
+        Raises
+        ------
+        BeamConsistencyError
+            If the beams in the list are not consistent with each other.
+        """
+        if not self.is_consistent:
+            self.check_consistency(force=True)
+
+        if len(self) == 0:
+            return None
+
+        if self.string_mode:
+            # Can't get xorientation from beams in string mode.
+            # Convert to obj mode, get xorient, and then convert back.
+            self.set_obj_mode()
+            xorient = self.x_orientation
+            self.set_str_mode()
+            return xorient
+
+        for b in self:
+            if hasattr(b, 'x_orientation'):
+                xorient = b.x_orientation
+                break
+        else:
+            raise AttributeError("x_orientation not defined for this beam list.")
+
+        if xorient is None:
+            warnings.warn(
+                "All polarized beams have x_orientation set to None. This will make it "
+                "hard to interpret the polarizations of the simulated visibilities."
+            )
+
+        return xorient
+
     @property
     def beam_type(self):
-        """The beam_type of all beams in list (if consistent)."""
+        """The beam_type of all beams in list (if consistent).
+
+        Raises
+        ------
+        BeamConsistencyError
+            If the beams in the list are not consistent with each other.
+        """
+        if not self.is_consistent:
+            self.check_consistency(force=True)
+
+        if len(self) == 0:
+            return None
+
         return getattr(self._obj_beam_list[0], "beam_type", None)
-
-    @consistent
-    @property
-    def feed_array(self):
-        """The feed_array of all beams in list (if consistent)."""
-        return getattr(self._obj_beam_list[0], "feed_array", None)
-
-    @consistent
-    @property
-    def polarization_array(self):
-        """The polarization_array of all beams in list (if consistent)."""
-        return getattr(self._obj_beam_list[0], "polarization_array", None)
-
-    @consistent
-    @property
-    def Nfeeds(self):
-        """The Nfeeds of all beams in list (if consistent)."""
-        return getattr(self._obj_beam_list[0], "Nfeeds", None)
 
     def _scrape_uvb_params(self, beam_objs, strict=True):
         """
@@ -377,7 +446,7 @@ class BeamList:
         self._obj_beam_list = []
         self.string_mode = True
 
-    def set_obj_mode(self, use_shared_mem=False, check: bool = True):
+    def set_obj_mode(self, use_shared_mem: bool = False, check: bool = False):
         """
         Initialize AnalyticBeam and UVBeam objects from string representations.
 
@@ -385,6 +454,15 @@ class BeamList:
         dictionary. This overwrites any settings that may have been read from file.
 
         Sets :attr:`~.string_mode` to False.
+
+        Parameters
+        ----------
+        use_shared_mem
+            Whether to use shared memory for the beam data.
+        check
+            Whether to perform consistency checks on all the beams in the list after
+            conversion to object mode.
+
         """
         if self._str_beam_list != []:
             self._obj_beam_list = [self._str_to_obj(bstr, use_shared_mem=use_shared_mem)
@@ -395,68 +473,6 @@ class BeamList:
 
         if check:
             self.check_consistency()
-
-    def check_consistency(self, check_pols: bool = True, force: bool = False):
-        """Check the consistency of all beams in the list.
-
-        This checks basic parameters of the objects for consistency, eg. the ``beam_type``.
-        It is meant to be manually called by the user.
-
-        Parameters
-        ----------
-        check_pols
-            Whether to check polarization-related parameters.
-
-        Raises
-        ------
-        BeamConsistencyError
-            If any beam is inconsistent with the rest of the beams.
-        """
-        if self.string_mode:
-            if not force:
-                warnings.warn(
-                    "Cannot check consistency of a string-mode BeamList!"
-                )
-                return
-            else:
-                self.set_obj_mode(check=True)
-                self.set_str_mode()
-                return
-
-        b0 = self[0]
-
-        def check_thing(item, j):
-            beam = self[j]
-
-            if hasattr(b0, item) and not hasattr(beam, item):
-                raise BeamConsistencyError(f"beam {j+1} does not have {item} but beam 1 does")
-
-            if hasattr(beam, item) and not hasattr(b0, item):
-                raise BeamConsistencyError(f"beam {j+1} has {item} but beam 1 doesn't")
-
-            b00 = getattr(b0, item)
-            bjj = getattr(beam, item)
-
-            bad = np.any(b00 != bjj) if hasattr(b00, '__len__') else b00 != bjj
-            if bad:
-                raise BeamConsistencyError(
-                    f"{item} of beam {j+1} is not consistent with beam 1: {bjj} vs. {b00}"
-                )
-
-        for j in range(1, len(self)):
-            check_thing('beam_type', j)
-
-            if check_pols:
-                if b0.beam_type == 'efield':
-                    check_thing('Nfeeds', j)
-                    check_thing('feed_array', j)
-
-                elif b0.beam_type == 'power':
-                    check_thing("polarization_array", j)
-
-                check_thing("x_orientation", j)
-
-        self.is_consistent = True
 
 
 class BeamConsistencyError(Exception):
