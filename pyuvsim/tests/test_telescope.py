@@ -9,7 +9,7 @@ import pyuvdata.tests as uvtest
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-
+from pyuvsim.telescope import BeamConsistencyError
 
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 
@@ -174,7 +174,7 @@ def test_no_overwrite(beam_objs):
 
 def test_beamlist_errors(beam_objs):
     newbeams = copy.deepcopy(beam_objs)
-    beamlist = pyuvsim.BeamList(newbeams)
+    beamlist = pyuvsim.BeamList(newbeams, check=False)
 
     # Try to make a BeamList with a mixture of strings and objects.
     newlist = copy.deepcopy(beamlist._obj_beam_list)
@@ -189,10 +189,8 @@ def test_beamlist_errors(beam_objs):
 
     # test error on beams with different x_orientation
     newbeams[0].x_orientation = None
-    with pytest.raises(
-        ValueError, match="UVBeam x_orientations do not match among beams in list."
-    ):
-        pyuvsim.BeamList(newbeams)
+    with pytest.raises(BeamConsistencyError):
+        pyuvsim.BeamList(newbeams, check=True)
 
     # test warning on beams with different x_orientation
     newbeams[0].x_orientation = None
@@ -219,9 +217,7 @@ def test_beamlist_consistency(beam_objs):
     # Does check, but raises no error
     pyuvsim.BeamList(newbeams[:2])
 
-    with pytest.raises(pyuvsim.BeamConsistencyError):
-        # Raises because analytic beams have no Nfeeds
-        pyuvsim.BeamList(newbeams[:3])
+    pyuvsim.BeamList(newbeams[:3])
 
 
 def test_beamlist_consistency_properties(beam_objs):
@@ -236,13 +232,12 @@ def test_beamlist_consistency_stringmode(beam_objs):
     beamlist.set_str_mode()
     beamlist.check_consistency(force=True)
     assert beamlist.string_mode
-    with pytest.warns(UserWarning) as record:
+    with uvtest.check_warnings(
+        UserWarning, match="Cannot check consistency of a string-mode BeamList!"
+    ):
         beamlist.check_consistency(force=False)
-        if not record:
-            pytest.fail("Expected a warning!")
 
     beamlist = pyuvsim.BeamList(newbeams[:3], check=False)
     beamlist.set_str_mode()
 
-    with pytest.raises(pyuvsim.BeamConsistencyError):
-        pyuvsim.BeamList(beamlist._str_beam_list, force_check=True)
+    pyuvsim.BeamList(beamlist._str_beam_list, check=True, force_check=True)
