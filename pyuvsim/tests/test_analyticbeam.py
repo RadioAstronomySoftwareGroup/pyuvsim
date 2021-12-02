@@ -118,12 +118,14 @@ def test_uv_beam_widths():
     Npix = 500
     zmax = np.radians(90)  # Degrees
     arr = np.arange(-N, N)
-    x, y = np.meshgrid(arr, arr)
-    r = np.sqrt(x ** 2 + y ** 2) / float(N)
-    zas = r * zmax
-    azs = np.arctan2(y, x)
-    interpolated_beam, interp_basis_vector = beam.interp(
-        az_array=np.array(azs), za_array=np.array(zas), freq_array=np.array(freq_vals)
+    x_arr, y_arr = np.meshgrid(arr, arr)
+    x_arr = x_arr.flatten()
+    y_arr = y_arr.flatten()
+    radius = np.sqrt(x_arr ** 2 + y_arr ** 2) / float(N)
+    zas = radius * zmax
+    azs = np.arctan2(y_arr, x_arr)
+    interpolated_beam, _ = beam.interp(
+        az_array=np.asarray(azs), za_array=np.asarray(zas), freq_array=np.array(freq_vals)
     )
 
     ebeam = interpolated_beam[0, 0, 1, :, :]
