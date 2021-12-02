@@ -198,7 +198,11 @@ class BeamList:
                 xorient = b.x_orientation
                 break
         else:
-            raise AttributeError("x_orientation not defined for this beam list.")
+            # None of the constituent beams has defined x_orientation.
+            # Here we return None, instead of raising an attribute error, to maintain
+            # backwards compatibility (pyuvsim access the beamlist.x_orientation without
+            # checking for its existence).
+            return None
 
         if xorient is None:
             warnings.warn(
