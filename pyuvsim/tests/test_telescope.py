@@ -241,3 +241,18 @@ def test_beamlist_consistency_stringmode(beam_objs):
     beamlist.set_str_mode()
 
     pyuvsim.BeamList(beamlist._str_beam_list, check=True, force_check=True)
+
+
+def test_empty_beamlist():
+    a = pyuvsim.BeamList(check=False)
+    assert a.x_orientation is None
+    assert a.beam_type is None
+
+
+def test_powerbeam_consistency(beam_objs):
+    newbeams = copy.deepcopy(beam_objs[:2])
+    for beam in newbeams:
+        beam.efield_to_power()
+
+    beamlist = pyuvsim.BeamList(newbeams)
+    beamlist.check_consistency()
