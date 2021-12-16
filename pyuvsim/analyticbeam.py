@@ -110,18 +110,30 @@ class AnalyticBeam(object):
 
         (similar to UVBeam.interp)
 
-        Args:
-            az_array: az values to evaluate at in radians (same length as za_array)
-                The azimuth here has the UVBeam convention: North of East(East=0, North=pi/2)
-            za_array: za values to evaluate at in radians (same length as az_array)
-            freq_array: frequency values to evaluate at
-            reuse_spline: Does nothing for analytic beams. Here for compatibility with UVBeam.
+        Parameters
+        ----------
+        az_array : array-like of float
+            Azimuth values to evaluate at in radians. Should be a 1D array with the same
+            length as `za_array`. The azimuth here has the UVBeam convention:
+            North of East (East=0, North=pi/2)
+        za_array : array-like of float
+            Zenith angle values to evaluate at in radians. Should be a 1D array with the
+            same length as `az_array`.
+        freq_array : array-like of float
+            Frequency values to evaluate at in Hz. Should be a 1D array.
+        reuse_spline : bool
+            Unused. Here for compatibility with UVBeam.
+        spline_opts : dict
+            Unused. Here for compatibility with UVBeam.
 
-        Returns:
-            an array of beam values, shape (Naxes_vec, Nspws, Nfeeds or Npols,
+        Returns
+        -------
+        array-like of float
+            Array of beam values, shape (Naxes_vec, Nspws, Nfeeds or Npols,
                 Nfreqs or freq_array.size if freq_array is passed,
                 Npixels/(Naxis1, Naxis2) or az_array.size if az/za_arrays are passed)
-            an array of interpolated basis vectors (or self.basis_vector_array
+        array-like of float
+            Array of interpolated basis vectors (or self.basis_vector_array
                 if az/za_arrays are not passed), shape: (Naxes_vec, Ncomponents_vec,
                 Npixels/(Naxis1, Naxis2) or az_array.size if az/za_arrays are passed)
         """
