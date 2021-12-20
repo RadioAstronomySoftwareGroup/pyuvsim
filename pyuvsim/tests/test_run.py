@@ -5,6 +5,7 @@
 import os
 import sys
 import resource
+import copy
 
 import yaml
 import pytest
@@ -18,7 +19,7 @@ import pyuvsim
 from pyuvsim.astropy_interface import Time
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.analyticbeam import c_ms
-
+from pyuvsim.telescope import BeamList
 
 pytest.importorskip('mpi4py')  # noqa
 
@@ -142,6 +143,20 @@ def test_analytic_diffuse(model, tmpdir):
     uvw_lam = uv_out.uvw_array * uv_out.freq_array[0] / c_ms
     ana = soln(uvw_lam, **params)
     assert np.allclose(ana / 2, dat, atol=1e-2)
+
+
+def test_powerbeam_sim(cst_beam):
+    new_cst = copy.deepcopy(cst_beam)
+    new_cst.freq_interp_kind = 'nearest'  # otherwise we get an error about freq interpolation
+    new_cst.efield_to_power()
+    beams = BeamList([new_cst] * 4)
+    cfg = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
+    input_uv, _, _ = pyuvsim.simsetup.initialize_uvdata_from_params(cfg)
+    sky_model, _ = pyuvsim.simsetup.initialize_catalog_from_params(cfg, return_recarray=False)
+    sky_model = pyuvsim.simsetup.SkyModelData(sky_model)
+
+    with pytest.raises(ValueError, match="Beam type must be efield!"):
+        pyuvsim.run_uvdata_uvsim(input_uv, beams, catalog=sky_model)
 
 
 @pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")

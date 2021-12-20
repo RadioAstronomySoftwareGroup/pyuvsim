@@ -130,7 +130,8 @@ class BeamList:
         if self.string_mode:
             if not force:
                 warnings.warn(
-                    "Cannot check consistency of a string-mode BeamList!"
+                    "Cannot check consistency of a string-mode BeamList! Set force=True"
+                    " to force consistency checking."
                 )
                 return
             else:
