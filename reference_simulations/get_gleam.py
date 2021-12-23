@@ -11,8 +11,8 @@ This is required for running reference sim 1.4.
 import os
 import sys
 
-print ("This script is deprecated and will be removed in the future.")
-print ("Please used scripts/download_gleam.py in pyradiosky instead.")
+print("This script is deprecated and will be removed in the future.")
+print("Please used scripts/download_gleam.py in pyradiosky instead.")
 
 try:
     from astroquery.vizier import Vizier
