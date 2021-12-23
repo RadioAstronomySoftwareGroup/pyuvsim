@@ -191,7 +191,7 @@ def test_beamlist_errors(beam_objs):
     newbeams[0].x_orientation = None
     with pytest.raises(
         BeamConsistencyError,
-        match='x_orientation of beam 1 is not consistent with beam 2'
+        match='x_orientation of beam 2 is not consistent with beam 1'
     ):
         pyuvsim.BeamList(newbeams, check=True)
 
