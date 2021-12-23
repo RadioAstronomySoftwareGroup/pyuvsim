@@ -138,9 +138,6 @@ Example `obsparam` configuration files may be found in the `reference_simulation
 mpirun -n 4 python scripts/run_param_pyuvsim.py reference_simulations/first_generation/obsparam_ref_1.1.yaml
 ```
 
-If you have not installed pyuvsim and want to run directly on the development code, you might need to point `PYTHONPATH` to the appropriate root pyuvsim directory to avoid Module not found errors.
-
-
 ## Documentation
 Documentation on how to run simulations and developer API documentation is hosted on [ReadTheDocs](https://pyuvsim.readthedocs.io).
 
