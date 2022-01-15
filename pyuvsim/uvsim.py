@@ -2,6 +2,12 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
+"""
+The primary machinery of pyuvsim.
+
+The UVTask and UVEngine classes and the functions that actually run the simulation.
+"""
+
 import numpy as np
 import yaml
 import warnings
@@ -26,10 +32,54 @@ __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata
 
 
 class UVTask:
-    # holds all the information necessary to calculate a visibility for a set of sources at a
-    # single (t, f, bl)
+    """
+    An object to hold all the information to calculate a visibility for a set of sources.
+
+    Parmeters
+    ---------
+    sources : :class:~`simsetup.SkyModelData`
+        The sources to include in the visibility.
+    time : astropy Time object or float
+        Time at which to calculate the visibility, either an astropy Time object or a
+        float in Julian Day (will be converted to a Time object using `format='jd'`).
+    freq : astropy Quantity or float
+        Frequency at which to calculate the visibility, either an astropy Quantity with
+        units compatible with Hz or a float in Hz (will be converted to an astropy
+        Quantity with units of Hz)
+    baseline : :class:~`baseline.Baseline`
+        The baseline to calculate the visibility for.
+    telescope : :class:~`telescope.Telescope`
+        The telescope object this visibility belongs to, which carries the telescope
+        location and beam information.
+    freq_i : int
+        Frequency index for this visibility's source coherency.
+
+    Attributes
+    ----------
+    sources : :class:~`simsetup.SkyModelData`
+        The sources to include in the visibility.
+    time : astropy Time object
+        Time at which to calculate the visibility.
+    freq : astropy Quantity
+        Frequency at which to calculate the visibility.
+    baseline : :class:~`baseline.Baseline`
+        The baseline to calculate the visibility for.
+    telescope : :class:~`telescope.Telescope`
+        The telescope object this visibility belongs to.
+    freq_i : int
+        Frequency index for this visibility's source coherency. Always `0` for flat
+        spectrum sources, otherwise should be the index of `freq` in the full frequency
+        array for this simulation.
+    uvdata_index : tuple of int
+        Indexes for this visibility location in the uvdata data_array, length 3 giving
+        (blt_index, 0, frequency_index), where the zero index is for the old spw axis.
+    visibility_vector : ndarray of complex
+        The calculated visibility, shape (4,) ordered as [xx, yy, xy, yx].
+
+    """
 
     def __init__(self, sources, time, freq, baseline, telescope, freq_i=0):
+        """Initialize UVTask."""
         self.time = time
         self.freq = freq
         self.sources = sources  # SkyModel object
@@ -47,6 +97,15 @@ class UVTask:
             self.freq_i = 0
 
     def __eq__(self, other):
+        """
+        Test for equality between two UVTask objects.
+
+        Parameters
+        ----------
+        other : :class:`UVTask`
+            The other
+
+        """
         return (np.isclose(self.time.jd, other.time.jd, atol=1e-4)
                 and np.isclose(self.freq.value, other.freq.value, atol=1e-4)
                 and (self.sources == other.sources)
@@ -56,6 +115,15 @@ class UVTask:
                 and (self.telescope == other.telescope))
 
     def __gt__(self, other):
+        """
+        Check if this UVTask has a larger `uvdata_index` than another one.
+
+        Parameters
+        ----------
+        other : :class:`UVTask`
+            The other
+
+        """
         blti0, fi0 = self.uvdata_index
         blti1, fi1 = other.uvdata_index
         if self.baseline == other.baseline:
@@ -65,6 +133,15 @@ class UVTask:
         return self.baseline > other.baseline
 
     def __ge__(self, other):
+        """
+        Check if this UVTask has a larger or equal `uvdata_index` than another one.
+
+        Parameters
+        ----------
+        other : :class:`UVTask`
+            The other
+
+        """
         blti0, fi0 = self.uvdata_index
         blti1, fi1 = other.uvdata_index
         if self.baseline == other.baseline:
@@ -74,15 +151,84 @@ class UVTask:
         return self.baseline >= other.baseline
 
     def __lt__(self, other):
+        """
+        Check if this UVTask has a smaller `uvdata_index` than another one.
+
+        Parameters
+        ----------
+        other : :class:`UVTask`
+            The other
+
+        """
         return not self.__ge__(other)
 
     def __le__(self, other):
+        """
+        Check if this UVTask has a smaller or equal `uvdata_index` than another one.
+
+        Parameters
+        ----------
+        other : :class:`UVTask`
+            The other
+
+        """
         return not self.__gt__(other)
 
 
 class UVEngine:
+    """
+    The object where the visibility calculations actually take place.
+
+    Parameters
+    ----------
+    task : :class:UVTask
+        The task to do the calculations for.
+    reuse_spline : bool
+        Option to reuse the spline in the beam interpolation to save time.
+    update_positions : bool
+        Flag indicating that positions need to be updated (when time or source changes).
+    update beams : bool
+        Flag indicating that beams need to be updated (when time, sources, frequency,
+        or beam pair changes).
+
+    Attributes
+    ----------
+    reuse_spline : bool
+        Option to reuse the spline in the beam interpolation to save time.
+    update_positions : bool
+        Flag indicating that positions need to be updated (when time or source changes).
+    update_local_coherency : bool
+        Flag indicating that local coherencies need to be updated (when time or source changes).
+    update beams : bool
+        Flag indicating that beams need to be updated (when time, sources, frequency,
+        or beam pair changes).
+    sources : :class:~`simsetup.SkyModelData`
+        The sources to include in the visibility.
+    current_time : astropy Time object
+        Time for the current calculation.
+    current_freq : astropy Quantity
+        Frequency for the current calculation, units compatible with Hz.
+    current_beam_pair : 2-tuple of ints
+        Tuple containing the beam ids for the current calculation.
+    beam1_jones : array_like of float
+        Jones matricies for the first beam for each source location, shape
+        (2,2, Ncomponents). The first axis is feed, the second axis is vector component
+        on the sky in az/za.
+    beam2_jones : array_like of float
+        Jones matricies for the second beam for each source location, shape
+        (2,2, Ncomponents). The first axis is feed, the second axis is vector component
+        on the sky in az/za.
+    local_coherency : array_like of float
+        Source local coherencies in alt/az basis, shape (2, 2, Nfreqs, Ncomponents).
+    apparent_coherency : array_like of float
+        Source apparent coherencies (including the beam response), shape
+        (2, 2, Nfreqs, Ncomponents).
+    task :  :class:UVTask
+        The task currently being calculated.
+    """
 
     def __init__(self, task=None, update_positions=True, update_beams=True, reuse_spline=True):
+        """Create a new UVEngine object."""
         self.reuse_spline = reuse_spline  # Reuse spline fits in beam interpolation
         self.update_positions = update_positions
         self.update_beams = update_beams
@@ -100,6 +246,15 @@ class UVEngine:
             self.set_task(task)
 
     def set_task(self, task):
+        """
+        Set the task for the Engine.
+
+        Parameters
+        ----------
+        task : :class:UVTask
+            The task to do the calculations for.
+
+        """
         self.task = task
 
         # These flags control whether quantities can be re-used from the last task:
@@ -117,7 +272,6 @@ class UVEngine:
         else:
             self.update_beams = False
             self.update_positions = False
-            self.update_beams = False
             self.update_local_coherency = False
 
         if not self.current_freq == task.freq.to('Hz').value:
@@ -132,8 +286,7 @@ class UVEngine:
         self.sources = task.sources
 
     def apply_beam(self):
-        """ Set apparent coherency from jones matrices and source coherency. """
-
+        """Set apparent coherency from jones matrices and source coherency."""
         beam1_id, beam2_id = self.current_beam_pair
 
         sources = self.task.sources
@@ -174,7 +327,7 @@ class UVEngine:
         )
 
     def make_visibility(self):
-        """ Visibility contribution from a set of source components """
+        """Calculate visibility contribution from a set of source components."""
         assert (isinstance(self.task.freq, Quantity))
         srcs = self.task.sources
         time = self.task.time
@@ -205,14 +358,27 @@ def _make_task_inds(Nblts, Nfreqs, Nsrcs, rank, Npus):
     """
     Make iterators defining task and sources computed on rank.
 
-       Three options ---
-           (1) Npus < Nbltf -- Split by Nbltf, split sources in the task loop for memory's sake.
-           (2) Nbltf < Npus and Nsrcs > Npus -- Split by Nsrcs only
-           (3) (Nsrcs, Nbltf) < Npus -- Split by Nbltf
-       - Split by instrument axes here.
-       - Within the task loop, decide on source chunks and make skymodels on the fly.
-    """
+    The splitting depends on the relative sizes of the axes and the number of processing
+    units. There are three possible ways the splitting is done:
 
+        - if Npus < Nbltf -- Split by Nbltf, split sources in the task loop for memory's sake.
+        - if Nbltf < Npus and Nsrcs > Npus -- Split by Nsrcs only
+        - if (Nsrcs, Nbltf) < Npus -- Split by Nbltf
+
+    Parameters
+    ----------
+    Nblts : int
+        Number of blts included in the sim.
+    Nfreqs :  int
+        Number of frequencies included in the sim.
+    Nsrcs : int
+        Number of sources included in the sim.
+    rank : int
+        mpi rank.
+    Npus : int
+        Number of processing units.
+
+    """
     Nbltf = Nblts * Nfreqs
 
     split_srcs = False
@@ -234,26 +400,26 @@ def _make_task_inds(Nblts, Nfreqs, Nsrcs, rank, Npus):
 
 def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_parts=1):
     """
-    Generates UVTask objects.
+    Generate UVTask objects.
 
     Parameters
     ----------
-    task_ids: range
+    task_ids : range
         Task indices in the full flattened meshgrid of parameters.
-    input_uv: :class:~`pyuvdata.UVData`
+    input_uv : :class:~`pyuvdata.UVData`
         UVData object to be filled with data.
-    catalog: :class:~`simsetup.SkyModelData`
+    catalog : :class:~`simsetup.SkyModelData`
         Source components.
-    beam_list: :class:~`pyuvsim.BeamList
+    beam_list : :class:~`pyuvsim.BeamList
         BeamList carrying beam model (in object mode).
-    beam_dict: dict
+    beam_dict : dict
         Map of antenna numbers to index in beam_list.
 
     Yields
     ------
         Iterable of UVTask objects.
-    """
 
+    """
     # The task_ids refer to tasks on the flattened meshgrid.
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object.")
@@ -385,8 +551,15 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
 
 
 def _check_ntasks_valid(Ntasks_tot):
-    """Check that the size of the task array won't overflow the gather."""
+    """
+    Check that the size of the task array won't overflow the gather.
 
+    Parameters
+    ----------
+    Ntasks_tot : int
+        Number of total tasks.
+
+    """
     # Found experimentally, this is the limit on the number of tasks
     # that can be gathered with MPI.
     MAX_NTASKS_GATHER = 10226018
@@ -406,22 +579,24 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
 
     Parameters
     ----------
-    input_uv: `:class:~pyuvdata.UVData` instance
+    input_uv : `:class:~pyuvdata.UVData` instance
         Provides baseline/time/frequency information.
-    beam_list: list
+    beam_list : list
         A list of UVBeam and/or AnalyticBeam identifier strings.
-    beam_dict: dictionary, optional
+    beam_dict : dictionary, optional
         {`antenna_name` : `beam_id`}, where `beam_id` is an index in the beam_list.
         This is used to assign beams to antennas. Default: All antennas get the 0th
         beam in the `beam_list`.
-    catalog: :class:~`simsetup.SkyModelData`
+    catalog : :class:~`simsetup.SkyModelData`
         Immutable source parameters.
-    quiet: bool
+    quiet : bool
         Do not print anything.
 
     Returns
     -------
-    :class:~`pyuvdata.UVData` instance containing simulated visibilities.
+    :class:~`pyuvdata.UVData`
+        instance containing simulated visibilities.
+
     """
     if mpi is None:
         raise ImportError("You need mpi4py to use the uvsim module. "
@@ -604,18 +779,19 @@ def run_uvsim(params, return_uv=False, quiet=False):
 
     Parameters
     ----------
-    params: str
+    params : str
         Path to a parameter yaml file.
-    return_uv: bool
+    return_uv : bool
         If true, do not write results to file and return uv_out. (Default False)
-    quiet: bool
+    quiet : bool
         If True, do not print anything to stdout. (Default False)
 
     Returns
     -------
-    uv_out: `pyuvdata.UVData`
+    uv_out : `pyuvdata.UVData`
         Finished simulation results.
         Returned only if return_uv is True.
+
     """
     if mpi is None:
         raise ImportError("You need mpi4py to use the uvsim module. "
