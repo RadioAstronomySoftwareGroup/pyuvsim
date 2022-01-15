@@ -1,6 +1,7 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+"""Definition of Antenna objects, to describe a single interferometric element."""
 
 import astropy.units as units
 import numpy as np
@@ -13,24 +14,37 @@ from .telescope import BeamList
 
 class Antenna:
     """
-    Defines an object that can return a Jones matrix and has a specified
-    location, name, and number.
+    Describe a single interferometric element.
 
     One of these defined for each antenna in the array.
+
+    Parameters
+    ----------
+    name :  str
+        Name of this antenna.
+    number : int
+        Number of this antenna.
+    enu_position : array like of float
+        Position of this antenna in meters in the East, North, Up frame centered on the
+        telescope location.
+    beam_id : int
+        Index of the beam for this antenna from array.beam_list.
+
     """
 
     def __init__(self, name, number, enu_position, beam_id):
+        """Initialize this antenna."""
         self.name = name
         self.number = number
-        # ENU position in meters relative to the telescope_location
         self.pos_enu = enu_position * units.m
-        # index of beam for this antenna from array.beam_list
         self.beam_id = beam_id
 
     def get_beam_jones(self, array, source_alt_az, frequency, reuse_spline=True,
                        interpolation_function=None, freq_interp_kind=None):
         """
-        2x2 array of Efield vectors in Az/Alt
+        Calculate the jones matrix for this antenna in the direction of sources.
+
+        A 2 x 2 x Nsources array of Efield vectors in Az/Alt.
 
         Parameters
         ----------
@@ -53,9 +67,9 @@ class Antenna:
             UVBeam objects.
         Returns
         -------
-        jones_matrix : (2,2) ndarray, dtype float
-            The first axis is feed, the second axis is vector component
-            on the sky in az/za.
+        jones_matrix : array like of float
+            Jones matricies for each source location, shape (2,2, Ncomponents). The
+            first axis is feed, the second axis is vector component on the sky in az/za.
         """
         # get_direction_jones needs to be defined on UVBeam
         # 2x2 array of Efield vectors in alt/az
@@ -114,18 +128,23 @@ class Antenna:
         return jones_matrix
 
     def __eq__(self, other):
+        """Test for equality of objects."""
         return ((self.name == other.name)
                 and np.allclose(self.pos_enu.to('m').value, other.pos_enu.to('m').value, atol=1e-3)
                 and (self.beam_id == other.beam_id))
 
     def __gt__(self, other):
+        """Test for larger antenna number."""
         return (self.number > other.number)
 
     def __ge__(self, other):
+        """Test for larger or equal antenna number."""
         return (self.number >= other.number)
 
     def __lt__(self, other):
+        """Test for smaller antenna number."""
         return not self.__ge__(other)
 
     def __le__(self, other):
+        """Test for smaller or equal antenna number."""
         return not self.__gt__(other)
