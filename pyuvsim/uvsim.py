@@ -581,8 +581,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
     ----------
     input_uv : `:class:~pyuvdata.UVData` instance
         Provides baseline/time/frequency information.
-    beam_list : list
-        A list of UVBeam and/or AnalyticBeam identifier strings.
+    beam_list : :class:~`pyuvsim.BeamList
+        BeamList carrying beam models.
     beam_dict : dictionary, optional
         {`antenna_name` : `beam_id`}, where `beam_id` is an index in the beam_list.
         This is used to assign beams to antennas. Default: All antennas get the 0th

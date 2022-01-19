@@ -1,6 +1,7 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+"""MPI setup."""
 
 import numpy as np
 import sys
@@ -27,8 +28,7 @@ INT_MAX = 2**31 - 1
 
 
 def set_mpi_excepthook(mpi_comm):
-    """Kill the whole job on an uncaught python exception"""
-
+    """Kill the whole job on an uncaught python exception."""
     def mpi_excepthook(exctype, value, traceback):  # pragma: no cover
         sys.__excepthook__(exctype, value, traceback)
         sys.stderr.flush()
@@ -39,6 +39,8 @@ def set_mpi_excepthook(mpi_comm):
 
 def start_mpi(block_nonroot_stdout=True):
     """
+    Initialize MPI if not already initialized and do setup.
+
     Check if MPI has already been initialized. If so, just set the communicators,
     Npus, and rank variables.
 
@@ -78,15 +80,16 @@ def shared_mem_bcast(arr, root=0):
 
     Parameters
     ----------
-    arr: ndarray
+    arr : ndarray
         Data to be shared.
-    root: int
+    root : int
         Root rank on COMM_WORLD, from which data will be broadcast.
 
     Notes
     -----
     Data will be duplicated once per node, but will be shared among
     processes on each node.
+
     """
     nbytes = 0
     itemsize = 0
@@ -135,8 +138,15 @@ def quantity_shared_bcast(obj, root=0):
 
     The value array will be in shared memory, but the handle to it on each process
     will be a Quantity, Angle, Latitude, Longitude, etc.
-    """
 
+    Parameters
+    ----------
+    obj : astropy Quantity or derived class
+        Object to be shared.
+    root : int
+        Root rank on COMM_WORLD, from which data will be broadcast.
+
+    """
     unit = None
     sclass = None
     value = None
@@ -160,26 +170,26 @@ def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
 
     Parameters
     ----------
-    comm: mpi4py.MPI.Intracomm
+    comm : mpi4py.MPI.Intracomm
         MPI communicator to use.
-    objs: objects
+    objs : objects
         Data to gather from all processes.
-    root: int
+    root : int
         Rank of process to receive the data.
-    return_split_info: bool
+    return_split_info : bool
         On root process, also a return a dictionary describing
         how the data were split. Used for testing.
-    MAX_BYTES: int
+    MAX_BYTES : int
         Maximum bytes per chunk.
         Defaults to the INT_MAX of 32 bit integers. Used for testing.
 
     Returns
     -------
-    list of objects:
+    list of objects
         Length Npus list, such that the n'th entry is the data gathered from
         the n'th process.
         This is only filled on the root process. Other processes get None.
-    dict:
+    dict
         If return_split_info, the root process also gets a dictionary containing:
         - ranges: A list of tuples, giving the start and end byte of each chunk.
         - MAX_BYTES: The size limit that was used.
@@ -189,6 +199,7 @@ def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
     Running this on MPI.COMM_WORLD means that every process gets a full copy of
     `objs`, potentially using up available memory. This function is currently used
     to send large data once to each node, to be put in shared memory.
+
     """
     bufsize = None
     nopickle = False
@@ -253,31 +264,31 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
 
     Parameters
     ----------
-    comm: mpi4py.MPI.Intracomm
+    comm : mpi4py.MPI.Intracomm
         MPI communicator to use.
-    objs: objects
+    objs : objects
         Data to gather from all processes.
-    root: int
+    root : int
         Rank of process to receive the data.
-    return_split_info: bool
+    return_split_info : bool
         On root process, also a return a dictionary describing
         how the data were split.
-    MAX_BYTES: int
+    MAX_BYTES : int
         Maximum bytes per chunk.
         Defaults to the INT_MAX of 32 bit integers. Used for testing.
 
     Returns
     -------
-    list of objects:
+    list of objects
         Length Npus, such that the n'th entry is the data gathered from
         the n'th process.
         This is only filled on the root process. Other processes get None.
-    dict:
+    dict
         If return_split_info, the root process also gets a dictionary containing:
         - ranges: A list of tuples, giving the start and end byte of each chunk.
         - MAX_BYTES: The size limit that was used.
-    """
 
+    """
     # The limit is on the integer describing the number of bytes gathered.
     sbuf = dumps(objs)
     bytesize = len(sbuf)
@@ -343,12 +354,20 @@ class Counter:
     Adapted from the mpi4py nxtval-mpi3.py demo.
     https://github.com/mpi4py/mpi4py/blob/master/demo/nxtval/nxtval-mpi3.py
 
+    Parameters
+    ----------
+    comm : TODO: Fill this out.
+    count_rank : TODO: Fill this out.
+
+
     Notes
     -----
     Must be initialized on all processes.
+
     """
 
     def __init__(self, comm=None, count_rank=0):
+        """Initialize counter."""
         self.count_rank = count_rank
         if comm is None:
             comm = world_comm.Dup()
@@ -366,9 +385,18 @@ class Counter:
         comm.Barrier()
 
     def free(self):
+        """Free counter."""
         self.win.Free()
 
     def next(self, increment=1):
+        """
+        TODO: Fill this out.
+
+        Parameters
+        ----------
+        increment : TODO: Fill this out.
+
+        """
         incr = _array('i', [increment])
         nval = _array('i', [0])
         self.win.Lock(self.count_rank)
@@ -379,6 +407,7 @@ class Counter:
         return nval[0]
 
     def current_value(self):
+        """TODO: Fill this out."""
         self.win.Lock(self.count_rank)
         nval = _array('i', [0])
         self.win.Get([nval, 1, MPI.INT], self.count_rank)
@@ -392,18 +421,16 @@ def get_max_node_rss(return_per_node=False):
 
     Parameters
     ----------
-
     return_per_node : bool (optional)
         Return the total memory on the node to each rank on
         that node. (Default is False)
 
     Returns
     -------
-
     max_mem : float
         Maximum memory usage in GiB across the job.
-    """
 
+    """
     # On linux, getrusage returns in kiB
     # On Mac systems, getrusage returns in B
     scale = 1.0
@@ -420,29 +447,20 @@ def get_max_node_rss(return_per_node=False):
 
 
 def get_rank():
-    """
-    Current rank on COMM_WORLD
-
-    """
+    """Get current rank on COMM_WORLD."""
     return rank
 
 
 def get_Npus():
-    """
-    Number of MPI processes.
-    """
+    """Get number of MPI processes."""
     return Npus
 
 
 def get_comm():
-    """
-    world_comm, the communicator for all PUs
-    """
+    """Get world_comm, the communicator for all PUs."""
     return world_comm
 
 
 def get_node_comm():
-    """
-    node_comm : Communicator for all PUs on current node.
-    """
+    """Get node_comm, the Communicator for all PUs on current node."""
     return node_comm

@@ -1,7 +1,16 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+"""
+Functions for setting up simulations based on input config files.
 
+This provides a configuration interface of human-readable yaml and csv files to specify
+all the required simulation parameters. This configuration interface is used by other
+simulators as well.
+
+This module contains methods to create configuration files from :class:~`pyuvdata.UVData`
+objects and empty :class:~`pyuvdata.UVData` objects from configuration files.
+"""
 import ast
 import copy
 import os
@@ -33,6 +42,7 @@ try:
     from .mpi import get_rank
 except ImportError:
     def get_rank():
+        """Mock to prevent import errors."""
         return 0
 
     mpi = None
@@ -40,8 +50,19 @@ from .utils import check_file_exists_and_increment
 
 
 def _parse_layout_csv(layout_csv):
-    """ Interpret the layout csv file """
+    """
+    Interpret the layout csv file.
 
+    Columns in the file provide, in order from left to right, the antenna name, antenna number,
+    a beam ID number, and the antenna positions relative to the telescope location in
+    east, north, up (ENU) in meters. See docs/parameter_files.rst for more details.
+
+    Parameters
+    ----------
+    layout_csv : str
+        Filename of a layout csv.
+
+    """
     with open(layout_csv, 'r') as fhandle:
         header = fhandle.readline()
 
@@ -71,6 +92,28 @@ def _parse_layout_csv(layout_csv):
 
 
 def _write_layout_csv(filepath, antpos_enu, antenna_names, antenna_numbers, beam_ids=None):
+    """
+    Write a layout csv file.
+
+    Columns in the file provide, in order from left to right, the antenna name, antenna number,
+    a beam ID number, and the antenna positions relative to the telescope location in
+    east, north, up (ENU) in meters. See docs/parameter_files.rst for more details.
+
+    Parameters
+    ----------
+    filepath : str
+        Filename to save the file to.
+    antpos_enu : array_like of float
+        East, North, Up positions of antennas in meters relative to the telescope location.
+    antenna_names : array_like of str
+        Names of antennas.
+    antenna_numbers : array_like of int
+        Antenna numbers.
+    beam_ids : array_like of int
+        Beam ID numbers to associate each antenna with a beam from a BeamList object.
+        Defaults to all zeros (all antennas have the same beam) if nothing is passed in.
+
+    """
     col_width = max(len(name) for name in antenna_names)
     header = ("{:" + str(col_width) + "} {:8} {:8} {:10} {:10} {:10}\n").format(
         "Name", "Number", "BeamID", "E", "N", "U"
@@ -91,8 +134,15 @@ def _write_layout_csv(filepath, antpos_enu, antenna_names, antenna_numbers, beam
 
 
 def _config_str_to_dict(config_str):
-    """ Read yaml file and add paths to dictionary """
+    """
+    Read a yaml file into a dictionary, also add the file path info to the dictionary.
 
+    Parameters
+    ----------
+    config_str : str
+        Filename of a configuration yaml file to read.
+
+    """
     with open(config_str, 'r') as pfile:
         param_dict = yaml.safe_load(pfile)
 
@@ -104,7 +154,7 @@ def _config_str_to_dict(config_str):
 
 
 def _set_lsts_on_uvdata(uv_obj):
-
+    """Set the LSTs on a UVData object, with handling for MoonLocations."""
     # If the telescope location is a MoonLocation,
     # then uv_obj.extra_keywords['world'] == 'moon'.
     world = uv_obj.extra_keywords.get('world', 'earth')
@@ -126,7 +176,38 @@ def _set_lsts_on_uvdata(uv_obj):
 def _create_catalog_diffuse(
     map_nside, diffuse_model, diffuse_params, time, localframe, array_location
 ):
+    """
+    Make a SkyModel object from an analog diffuse map function.
 
+    Only used for internal testing, should not be called by users.
+
+    Parameters
+    ----------
+    map_nside : int
+        HEALPix nside of desired map.
+    diffuse_model : str
+        Name of diffuse model.
+    diffuse_params : dict
+        Dictionary of parameters corresponding to the `diffuse_model`.
+    time : astropy Time object
+        Time to use in creating map (to assign RA/Decs based on Alt/Az).
+    array_location : astropy EarthLocation or MoonLocation
+        Location to use in creating map (to assign RA/Decs based on Alt/Az).
+
+    Returns
+    -------
+    catalog : class:`pyradiosky.SkyModel`
+        SkyModel object containing the diffuse map.
+    icrs_coord : astropy SkyCoord
+        Astropy SkyCoord object containing the coordinates for the pixels in ICRS.
+    alts :  array_like of float
+        Altitudes of the pixels in radians.
+    azs :  array_like of float
+        Azimuths of the pixels in radians.
+    fluxes : array_like of float
+        Brightness temperature of the pixels in K.
+
+    """
     # Make the map, calculate AltAz positions of pixels, evaluate the model.
     npix = 12 * map_nside**2
     pixinds = np.arange(npix)
@@ -170,6 +251,36 @@ def _create_catalog_diffuse(
 
 
 def _create_catalog_discrete(Nsrcs, alts, azs, fluxes, time, localframe, array_location):
+    """
+    Make a SkyModel object from a set of point sources.
+
+    Only used for internal testing, should not be called by users.
+
+    Parameters
+    ----------
+    Nsrcs : int
+        Number of sources
+    alts :  array_like of float
+        Altitudes or Latitudes (depending on localframe) of the sources in radians.
+    azs :  array_like of float
+        Azimuths or Longitues (depending on localframe) of the sources in radians.
+    fluxes : array_like of float
+        Brightnesses of the sources in Jy.
+    time : astropy Time object
+        Time to use in defining the positions.
+    localframe : astropy BaseCoordinateFrame class or str
+        Frame that the source positions are defined in (e.g. altaz or ICRS)
+    array_location : astropy EarthLocation or MoonLocation
+        Location to use in defining the positions.
+
+    Returns
+    -------
+    catalog : class:`pyradiosky.SkyModel`
+        SkyModel object containing the diffuse map.
+    icrs_coord : astropy SkyCoord
+        Astropy SkyCoord object containing the coordinates for the sources in ICRS.
+
+    """
     source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
                             obstime=time, frame=localframe, location=array_location)
     icrs_coord = source_coord.transform_to('icrs')
@@ -217,6 +328,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     arrangement: str
         Point source pattern (default = 1 source at zenith).
         Accepted arrangements:
+
         * `triangle`:  Three point sources forming a triangle around the zenith
         * `cross`: An asymmetric cross
         * `zenith`: Some number of sources placed at the zenith.
@@ -262,8 +374,8 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     Notes
     -----
     Generating diffuse models requires the `analytic_diffuse` and `astropy_healpix` modules.
-    """
 
+    """
     if isinstance(time, float):
         time = Time(time, scale='utc', format='jd')
 
@@ -437,6 +549,7 @@ class SkyModelData:
     ----------
     sky_in: :class:~`pyradiosky.SkyModel`
         A valid SkyModel object.
+
     """
 
     Ncomponents = None
@@ -462,6 +575,7 @@ class SkyModelData:
                      'ra', 'dec', 'reference_frequency', 'spectral_index', 'hpx_inds']
 
     def __init__(self, sky_in=None):
+        """Initialize SkyModelData."""
         # Collect relevant attributes.
         if sky_in is not None:
             if sky_in.name is not None:
@@ -528,6 +642,7 @@ class SkyModelData:
         -----
         If inds is a range object, this method will avoid copying data in numpy arrays,
         such that the returned SkyModelData object carries views into the current object's arrays.
+
         """
         new_sky = SkyModelData()
 
@@ -566,8 +681,15 @@ class SkyModelData:
 
     def share(self, root=0):
         """
-        Share across MPI processes. (requires mpi4py to use).
+        Share across MPI processes (requires mpi4py to use).
+
         All attributes are put in shared memory.
+
+        Parameters
+        ----------
+        root : int
+            Root rank on COMM_WORLD, from which data will be broadcast.
+
         """
         if mpi is None:
             raise ImportError("You need mpi4py to use this method. "
@@ -600,10 +722,10 @@ class SkyModelData:
 
         Parameters
         ----------
-        inds: range or index array
+        inds : range or index array
             Indices to select along the component axis.
-        """
 
+        """
         if inds is not None:
             obj = self.subselect(inds)
             return obj.get_skymodel()
@@ -641,6 +763,17 @@ class SkyModelData:
 
 
 def _sky_select_calc_rise_set(sky, source_params, telescope_lat_deg=None):
+    """
+    Apply flux and non-rising source cuts, calculate rise and set lsts.
+
+    Parameters
+    ----------
+    source_params : dict
+        Dict specifying flux cut and horizon buffer parameters.
+    telescope_lat_deg : float
+        Latitude of telescope in degrees, used for horizon calculations.
+
+    """
     if hasattr(sky, "cut_nonrising"):  # pragma: no cover
 
         if telescope_lat_deg is not None:
@@ -701,6 +834,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
         Source catalog filled with data.
     source_list_name: str
             Catalog identifier for metadata.
+
     """
     if input_uv is not None and not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
@@ -830,6 +964,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
 
 
 def _construct_beam_list(beam_ids, telconfig):
+    """Construct BeamList."""
     beam_list = []
     for beamID in beam_ids:
         beam_model = telconfig['beam_paths'][beamID]
@@ -946,6 +1081,7 @@ def parse_telescope_params(tele_params, config_path=''):
         a :class:`pyuvsim.AnalyticBeam`.
     beam_dict : dict
         Antenna numbers to beam indices
+
     """
     tele_params = copy.deepcopy(tele_params)
     # check for telescope config
@@ -1066,13 +1202,15 @@ def parse_frequency_params(freq_params):
 
     Returns
     -------
-    dict:
+    dict
         Dictionary of UVData parameters related to frequency:
+
             * `channel_width`: (dtype float, ndarray, shape=(Nfreqs)) Frequency channel
               widths in Hz
             * `Nfreqs`: (int) Number of frequencies
             * `freq_array`: (dtype float, ndarray, shape=(Nfreqs)) Frequency channel
               centers in Hz
+
     """
     freq_keywords = ['freq_array', 'start_freq', 'end_freq', 'Nfreqs', 'channel_width', 'bandwidth']
     fa, sf, ef, nf, cw, bw = [fk in freq_params for fk in freq_keywords]
@@ -1174,12 +1312,14 @@ def parse_time_params(time_params):
 
     Returns
     -------
-    dict:
+    dict
         Dictionary of UVData parameters related to time:
+
             * `integration_time`: (float) Time array spacing in seconds.
             * `Ntimes`: (int) Number of times
             * `start_time`: (float) Starting time in Julian Date
             * `time_array`: (dtype float, ndarray, shape=(Ntimes,)) Time step centers in JD.
+
     """
     return_dict = {}
 
@@ -1284,16 +1424,17 @@ def freq_array_to_params(freq_array):
 
     Parameters
     ----------
-    freq_array: array of float
+    freq_array : array of float
         Frequencies in Hz.
 
     Returns
     -------
-    dict:
+    dict
         Dictionary of frequency parameters consistent with freq_array.
         (channel_width, Nfreqs, bandwidth, start_freq, end_freq)
         See pyuvsim documentation for details:
         https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#frequency
+
     """
     freq_array = np.asarray(freq_array).ravel()
 
@@ -1322,16 +1463,17 @@ def time_array_to_params(time_array):
 
     Parameters
     ----------
-    time_array: array of float
+    time_array : array of float
         Julian dates.
 
     Returns
     -------
-    dict:
+    dict
         Dictionary of time parameters consistent with time_array.
         (integration_time, Ntimes, duration_days, start_time, end_times)
         See pyuvsim documentation for details:
         https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#time
+
     """
     time_array = np.asarray(time_array)
     Ntimes_uniq = np.unique(time_array).size
@@ -1377,12 +1519,13 @@ def initialize_uvdata_from_params(obs_params):
 
     Returns
     -------
-    uv_obj: :class:~`pyuvdata.UVData`
+    uv_obj : :class:~`pyuvdata.UVData`
         Initialized UVData object.
-    beam_list: :class:~`pyuvsim.BeamList`
+    beam_list : :class:~`pyuvsim.BeamList`
         List of beam specifiers as strings.
-    beam_dict: dict
+    beam_dict : dict
         Map of antenna numbers to index in beam_list.
+
     """
     uvparam_dict = {}  # Parameters that will go into UVData
     if isinstance(obs_params, str):
@@ -1539,9 +1682,10 @@ def initialize_uvdata_from_params(obs_params):
 
 
 def _complete_uvdata(uv_in, inplace=False):
-    """Fill out all required parameters of a :class:~`pyuvdata.UVData` object such that
-    it passes the :func:~`pyuvdata.UVData.check()`.
+    """
+    Fill out all required parameters of a :class:~`pyuvdata.UVData` object.
 
+    Ensure that it passes the :func:~`pyuvdata.UVData.check()`.
     This will overwrite existing data in `uv_in`!
 
     Parameters
@@ -1554,7 +1698,8 @@ def _complete_uvdata(uv_in, inplace=False):
     Returns
     -------
     :class:~`pyuvdata.UVData` : filled/completed object (if `inplace` is `True`, it is
-        the modified input)
+        the modified input). With zeroed data_array, no flags and nsample_array of all ones.
+
     """
     if not inplace:
         uv_obj = copy.deepcopy(uv_in)
@@ -1591,7 +1736,7 @@ def initialize_uvdata_from_keywords(
         antenna_nums=None, antenna_names=None, polarization_array=None, no_autos=False,
         redundant_threshold=None, write_files=True, path_out=None, complete=False, **kwargs):
     """
-    Setup a UVData object from keyword arguments.
+    Initialize a UVData object from keyword arguments.
 
     Optionally, write out the configuration to YAML and CSV files such that
     `initialize_uvdata_from_params` will produce the same UVData object.
@@ -1660,9 +1805,11 @@ def initialize_uvdata_from_keywords(
 
     Returns
     -------
-    UVData object with zeroed data_array
-    """
+    :class:~`pyuvdata.UVData`
+        Initialized based on keywords, with a zeroed data_array, no flags and
+        nsample_array of all ones.
 
+    """
     arrfile = antenna_layout_filepath is not None
     outfile = output_layout_filename is not None
 
@@ -1815,13 +1962,13 @@ def uvdata_to_telescope_config(
 
     Notes
     -----
-    The generate files are, briefly:
+    The generate files are, briefly (see docs/parameter_files.rst for details):
         * telescope_config: YAML file with telescope_location and telescope_name
             The beam list is spoofed, since that information cannot be found in a UVData object.
         * layout_csv: tab separated value file giving ENU antenna positions.
             Beam ID is spoofed as well.
-    """
 
+    """
     if telescope_config_name is None:
         telescope_config_path = \
             check_file_exists_and_increment(
@@ -1866,10 +2013,9 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
                           layout_csv_name='', catalog='mock', path_out='.'):
     """
     Extract simulation configuration settings from uvfits.
-    Make parameter files
 
     When used with `uvdata_to_telescope_config`, this will produce all the necessary
-    configuration yaml and csv file  to make an "empty" UVData object comparable to
+    configuration yaml and csv file to make an "empty" UVData object comparable to
     the argument `uvdata_in`. The generated file will match `uvdata_in` in frequency, time,
     antenna positions, and uvw coordinates.
 
@@ -1887,8 +2033,8 @@ def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name=
         Path to catalog file. Defaults to 'mock'.
     path_out: str
         Where to put config files.
-    """
 
+    """
     if param_filename is None:
         param_filename = check_file_exists_and_increment(os.path.join(path_out, 'obsparam.yaml'))
         param_filename = os.path.basename(param_filename)

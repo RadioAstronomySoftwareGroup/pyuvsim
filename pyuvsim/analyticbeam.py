@@ -1,6 +1,7 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+"""Definition of Analytic Beam objects."""
 
 import warnings
 
@@ -14,6 +15,8 @@ c_ms = speed_of_light.to('m/s').value
 
 def diameter_to_sigma(diam, freqs):
     """
+    Find the sigma that gives a beam with similar to an Airy disk.
+
     Find the stddev of a gaussian with fwhm equal to that of
     an Airy disk's main lobe for a given diameter.
 
@@ -31,7 +34,6 @@ def diameter_to_sigma(diam, freqs):
         with FWHM equal to that of an Airy disk's main lobe for an aperture
         with the given diameter.
     """
-
     wavelengths = c_ms / freqs
 
     scalar = 2.2150894  # Found by fitting a Gaussian to an Airy disk function
@@ -50,6 +52,7 @@ class AnalyticBeam:
     from data.
 
     Supported types include:
+
         * Uniform beam: Unit response from all directions.
         * Airy: An Airy disk pattern (the 2D Fourier transform of a circular aperture of
           width given by `diameter`)
@@ -73,11 +76,13 @@ class AnalyticBeam:
         Scale gaussian beam width as a power law with frequency.
     ref_freq: float
         If set, this sets the reference frequency for the beam width power law.
+
     """
 
     supported_types = ['uniform', 'gaussian', 'airy']
 
     def __init__(self, type, sigma=None, diameter=None, spectral_index=0.0, ref_freq=None):
+        """Initialize an Analytic Beam."""
         if type in self.supported_types:
             self.type = type
         else:
@@ -101,13 +106,11 @@ class AnalyticBeam:
         self.beam_type = 'efield'
 
     def peak_normalize(self):
+        """Do nothing, mocks a UVBeam method."""
         pass
 
     def efield_to_power(self):
-        """
-        Tell interp to return values corresponding with a power beam.
-        """
-
+        """Tell interp to return values corresponding with a power beam."""
         self.beam_type = 'power'
         pol_strings = ['XX', 'XY', 'YX', 'YY']
         self.polarization_array = np.array([uvutils.polstr2num(ps.upper()) for ps in pol_strings])
@@ -116,7 +119,7 @@ class AnalyticBeam:
         """
         Evaluate the primary beam at given positions and frequencies.
 
-        (similar to UVBeam.interp)
+        (mocks UVBeam.interp, but these are analytic, so no interpolation is done.)
 
         Parameters
         ----------
@@ -141,8 +144,8 @@ class AnalyticBeam:
                 Nfreqs or freq_array.size if freq_array is passed,
                 Npixels/(Naxis1, Naxis2) or az_array.size if az/za_arrays are passed)
         interp_basis_vectors: None
-            Currently returns None. In UVBeam, this is the set of basis vectors for the electric
-            field component values.
+            Currently returns None. In UVBeam, this is the set of basis vectors for the
+            electric field component values.
 
         Notes
         -----
@@ -211,6 +214,7 @@ class AnalyticBeam:
         return interp_data, interp_basis_vector
 
     def __eq__(self, other):
+        """Define equality for Analytic Beams."""
         if not isinstance(other, self.__class__):
             return False
         if self.type == 'gaussian':
