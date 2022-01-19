@@ -2,9 +2,7 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-"""
-Use the line profiler when requested.
-"""
+"""Use the line profiler when requested."""
 
 import atexit
 from inspect import isclass, isfunction
@@ -22,6 +20,7 @@ try:
     from line_profiler import LineProfiler
 except ImportError:
     def LineProfiler():
+        """Mock to fix imports."""
         return None
 
 default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params',
@@ -39,7 +38,7 @@ prof = None
 def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_profile.out',
                  dump_raw=False):
     """
-    Applies a line profiler to the listed functions, wherever they appear in pyuvsim.
+    Apply a line profiler to the listed functions, wherever they appear in pyuvsim.
 
     Places a LineProfiler object in the module namespace, and registers its dumping/printing
     functions to run at the end.
@@ -69,7 +68,6 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
         saving profiler data to file.
 
     """
-
     global prof
 
     if outfile_prefix.endswith(".out"):
@@ -117,4 +115,5 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
 
 
 def get_profiler():  # pragma: nocover
+    """Get the profiler."""
     return prof

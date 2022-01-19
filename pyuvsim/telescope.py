@@ -1,6 +1,7 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+"""Definition of Telescope objects, for metadata common to all antennas in an array."""
 
 import numpy as np
 import warnings
@@ -8,42 +9,6 @@ from pyuvdata import UVBeam, parameter
 
 from .analyticbeam import AnalyticBeam
 from . import mpi
-
-
-class Telescope:
-    """
-    Container for data common to all antennas in the array.
-
-    Defines the location and name of the observing site, and holds the list
-    of beam objects used by the array.
-    """
-
-    def __init__(self, telescope_name, telescope_location, beam_list):
-        # telescope location (EarthLocation object)
-        self.location = telescope_location
-        self.name = telescope_name
-
-        # list of UVBeam objects, length of number of unique beams
-        self.beam_list = beam_list
-
-    def __eq__(self, other):
-        this_vector_loc = np.array([self.location.x.to('m').value,
-                                    self.location.y.to('m').value,
-                                    self.location.z.to('m').value])
-        other_vector_loc = np.array([other.location.x.to('m').value,
-                                     other.location.y.to('m').value,
-                                     other.location.z.to('m').value])
-        Nbeams_self = len(self.beam_list)
-        Nbeams_other = len(other.beam_list)
-        if Nbeams_self == Nbeams_other:
-            return (
-                np.allclose(this_vector_loc, other_vector_loc, atol=1e-3)
-                and np.all(
-                    [self.beam_list[bi] == other.beam_list[bi] for bi in range(Nbeams_self)]
-                )
-                and self.name == other.name
-            )
-        return False
 
 
 class BeamList:
@@ -103,7 +68,7 @@ class BeamList:
     string_mode = True
 
     def __init__(self, beam_list=None, uvb_params=None):
-
+        """Initialize a BeamList."""
         self.uvb_params = {'freq_interp_kind': 'cubic',
                            'interpolation_function': 'az_za_simple'}
         self.spline_interp_opts = None
@@ -170,8 +135,8 @@ class BeamList:
         Notes
         -----
         If beam_objs has strings in it, this will simply return an empty dict.
-        """
 
+        """
         new_pars = {}
         for bm in beam_objs:
             if isinstance(bm, UVBeam):
@@ -206,15 +171,17 @@ class BeamList:
                     setattr(bm, key, val)
 
     def __len__(self):
+        """Define the length of a BeamList."""
         # Note that only one of these lists has nonzero length at a given time.
         return len(self._obj_beam_list) + len(self._str_beam_list)
 
     def __iter__(self):
-        # Get the list as an iterable.
+        """Get the list as an iterable."""
         lst = self._str_beam_list if self.string_mode else self._obj_beam_list
         return (be for be in lst)
 
     def __getitem__(self, ind):
+        """Get a particular beam from the list."""
         if self.string_mode:
             return self._str_beam_list[ind]
         return self._obj_beam_list[ind]
@@ -252,6 +219,7 @@ class BeamList:
             self._scrape_uvb_params(self._obj_beam_list, strict=False)
 
     def __eq__(self, other):
+        """Define BeamList equality."""
         if self.string_mode:
             return self._str_beam_list == other._str_beam_list
         return self._obj_beam_list == other._obj_beam_list
@@ -277,7 +245,7 @@ class BeamList:
             raise err
 
     def _str_to_obj(self, beam_model, use_shared_mem=False):
-        # Convert beam strings to objects.
+        """Convert beam strings to objects."""
         if isinstance(beam_model, (AnalyticBeam, UVBeam)):
             return beam_model
         if beam_model.startswith('analytic'):
@@ -314,8 +282,7 @@ class BeamList:
         return uvb
 
     def _obj_to_str(self, beam_model):
-        # Convert beam objects to strings that may generate them.
-
+        """Convert beam objects to strings that may generate them."""
         if isinstance(beam_model, str):
             return beam_model
         if isinstance(beam_model, AnalyticBeam):
@@ -387,3 +354,51 @@ class BeamList:
         self._set_params_on_uvbeams(self._obj_beam_list)
         self._str_beam_list = []
         self.string_mode = False
+
+
+class Telescope:
+    """
+    Container for data common to all antennas in the array.
+
+    Defines the location and name of the observing site, and holds the list
+    of beam objects used by the array.
+
+    Parameters
+    ----------
+    telescope_name : str
+        Name of the telescope.
+    telescope_location : astropy EarthLocation object or MoonLocation
+        Location of the telescope.
+    beam_list : :class:~`pyuvsim.BeamList
+        BeamList carrying beam models.
+
+    """
+
+    def __init__(self, telescope_name, telescope_location, beam_list):
+        """Initialize a Telescope."""
+        # telescope location (EarthLocation object)
+        self.location = telescope_location
+        self.name = telescope_name
+
+        # list of UVBeam objects, length of number of unique beams
+        self.beam_list = beam_list
+
+    def __eq__(self, other):
+        """Define Telescope equality."""
+        this_vector_loc = np.array([self.location.x.to('m').value,
+                                    self.location.y.to('m').value,
+                                    self.location.z.to('m').value])
+        other_vector_loc = np.array([other.location.x.to('m').value,
+                                     other.location.y.to('m').value,
+                                     other.location.z.to('m').value])
+        Nbeams_self = len(self.beam_list)
+        Nbeams_other = len(other.beam_list)
+        if Nbeams_self == Nbeams_other:
+            return (
+                np.allclose(this_vector_loc, other_vector_loc, atol=1e-3)
+                and np.all(
+                    [self.beam_list[bi] == other.beam_list[bi] for bi in range(Nbeams_self)]
+                )
+                and self.name == other.name
+            )
+        return False

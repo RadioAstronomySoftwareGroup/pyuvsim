@@ -28,9 +28,13 @@ except ImportError:
     hasmoon = False
 
     class MoonLocation:
+        """Mock MoonLocation so that imports pass."""
+
         pass
 
     class LunarTopo:
+        """Mock LunarTopo so that imports pass."""
+
         pass
 
 for obj in [SkyCoord, MoonLocation, LunarTopo, Time]:

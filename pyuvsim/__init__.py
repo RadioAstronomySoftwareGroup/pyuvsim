@@ -1,6 +1,7 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+"""Define namespace."""
 from setuptools_scm import get_version
 from pathlib import Path
 from pkg_resources import get_distribution, DistributionNotFound

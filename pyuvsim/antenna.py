@@ -24,7 +24,7 @@ class Antenna:
         Name of this antenna.
     number : int
         Number of this antenna.
-    enu_position : array like of float
+    enu_position : array_like of float
         Position of this antenna in meters in the East, North, Up frame centered on the
         telescope location.
     beam_id : int
@@ -67,7 +67,7 @@ class Antenna:
             UVBeam objects.
         Returns
         -------
-        jones_matrix : array like of float
+        jones_matrix : array_like of float
             Jones matricies for each source location, shape (2,2, Ncomponents). The
             first axis is feed, the second axis is vector component on the sky in az/za.
         """

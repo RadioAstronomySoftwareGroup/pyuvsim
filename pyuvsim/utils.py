@@ -1,6 +1,8 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+"""Define various utility functions."""
+
 
 import os
 import sys
@@ -14,6 +16,7 @@ from . import __version__
 
 
 def get_version_string():
+    """Get the current version string for pyuvsim."""
     return ('Simulated with pyuvsim version: ' + __version__ + '.')
 
 
@@ -29,6 +32,7 @@ class progsteps:
     """
 
     def __init__(self, maxval=None):
+        """Initialize."""
         self.t0 = pytime.time()
         if maxval is None:
             raise ValueError("Maximum value is needed.")
@@ -48,6 +52,7 @@ class progsteps:
         ----------
         count : int
             Current value of counter
+
         """
         if count >= self.curval + self.step:
             doprint = False
@@ -64,6 +69,7 @@ class progsteps:
                     str(timedelta(seconds=self.remain))), flush=True)
 
     def finish(self):
+        """Finalize the progress steps info."""
         self.update(self.maxval)
 
 
@@ -83,6 +89,7 @@ def altaz_to_zenithangle_azimuth(altitude, azimuth):
         In radians
     azimuth: float or array of float
         In radians in uvbeam convention: North of East(East=0, North=pi/2)
+
     """
     input_alt = np.asarray(altitude)
     input_az = np.asarray(azimuth)
@@ -120,6 +127,7 @@ def zenithangle_azimuth_to_altaz(zenith_angle, azimuth):
         Altitude in radians
     azimuth: array of float
         In radians in astropy convention: East of North (N=0, E=pi/2)
+
     """
     input_za = np.array(zenith_angle)
     input_az = np.array(azimuth)
@@ -141,7 +149,15 @@ def zenithangle_azimuth_to_altaz(zenith_angle, azimuth):
 
 
 def strip_extension(filepath, ext=None):
-    """ Remove extension from file. """
+    """
+    Remove extension from file.
+
+    Parameters
+    ----------
+    ext : str
+        Extenstion to remove. If not specified, only 'uvfits', 'uvh5', 'yaml' extensions
+        are removed.
+    """
     if '.' not in filepath:
         return filepath, ''
     file_list = filepath.split('.')
@@ -157,8 +173,16 @@ def strip_extension(filepath, ext=None):
 
 def check_file_exists_and_increment(filepath, extension=None):
     """
-        Given filepath (path + filename), check if it exists. If so, add a _1
-        at the end, if that exists add a _2, and so on.
+    Check for a file and increment the name if it does to ensure a unique name.
+
+    Given filepath (path + filename), check if it exists. If so, add a _1
+    at the end, if that exists add a _2, and so on.
+
+    Parameters
+    ----------
+    extension : str
+        File extension, to be removed before modifying the filename and then added back.
+
     """
     base_filepath, ext = strip_extension(filepath, extension)
     bf_list = base_filepath.split('_')
@@ -197,6 +221,7 @@ def write_uvdata(
     Returns
     -------
         File path, if return_filename is True
+
     """
     if 'filing' in param_dict.keys():
         param_dict = param_dict['filing']
@@ -276,12 +301,13 @@ def write_uvdata(
 
 def get_avail_memory():
     """
-    Method for estimating the virtual memory available (in bytes).
+    Estimate the virtual memory available (in bytes).
 
     This gives the available memory on the current node to a running process.
 
     If this is not called from within a SLURM task, it will estimate
     using psutils methods.
+
     """
     slurm_key = 'SLURM_MEM_PER_NODE'
     if slurm_key in os.environ:
@@ -292,13 +318,14 @@ def get_avail_memory():
 
 def iter_array_split(part_index, N, M):
     """
-    Returns an iterator giving the indices of `part` below:
-        part = np.array_split(np.arange(N), M)[part_index]
+    Return an iterator giving the indices of part of an array.
+
+    part = np.array_split(np.arange(N), M)[part_index]
 
     This mimics the behavior of numpy.array_split without having to make
     the whole array that will be split.
-    """
 
+    """
     Neach_section, extras = divmod(N, M)
     if part_index < extras:
         length = Neach_section + 1
@@ -314,8 +341,9 @@ def iter_array_split(part_index, N, M):
 
 def estimate_skymodel_memory_usage(Ncomponents, Nfreqs):
     """
-    Estimate the memory footprint of a SkyModel by summing the sizes
-    of the data types that go into SkyModel.
+    Estimate the memory footprint of a SkyModel.
+
+    By summing the sizes of the data types that go into SkyModel.
 
     This aims to anticipate the full memory required to handle a SkyModel
     class in simulation, accounting for its attributes as well as
@@ -333,8 +361,8 @@ def estimate_skymodel_memory_usage(Ncomponents, Nfreqs):
     -------
     mem_est : float
         Estimate of memory usage in bytes
-    """
 
+    """
     base_float = [1.5]    # A float
     base_bool = [True]
     base_str = ["source_name"]
