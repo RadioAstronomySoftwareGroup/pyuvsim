@@ -351,18 +351,25 @@ class Counter:
     """
     A basic parallelized counter class.
 
-    Adapted from the mpi4py nxtval-mpi3.py demo.
-    https://github.com/mpi4py/mpi4py/blob/master/demo/nxtval/nxtval-mpi3.py
+    The current value of the counter is kept in a shared memory window
+    accessible from all processes.
 
     Parameters
     ----------
-    comm : TODO: Fill this out.
-    count_rank : TODO: Fill this out.
-
+    comm : :class:~`mpi4py.MPI.Intracomm`
+        MPI communicator over which to define counter.
+        Default: MPI.COMM_WORLD
+    count_rank : int
+        Which rank on the communicator should hold the shared memory window.
+        Default: 0
 
     Notes
     -----
     Must be initialized on all processes.
+
+    Adapted from the mpi4py nxtval-mpi3.py demo.
+    https://github.com/mpi4py/mpi4py/blob/master/demo/nxtval/nxtval-mpi3.py
+
 
     """
 
@@ -390,11 +397,12 @@ class Counter:
 
     def next(self, increment=1):
         """
-        TODO: Fill this out.
+        Add to the counter and return new value.
 
         Parameters
         ----------
-        increment : TODO: Fill this out.
+        increment : int
+            Step size to take. Default: 1
 
         """
         incr = _array('i', [increment])
@@ -407,7 +415,7 @@ class Counter:
         return nval[0]
 
     def current_value(self):
-        """TODO: Fill this out."""
+        """Get current value of counter."""
         self.win.Lock(self.count_rank)
         nval = _array('i', [0])
         self.win.Get([nval, 1, MPI.INT], self.count_rank)
