@@ -1,24 +1,24 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
-
 import numpy as np
 import resource
 import time
-import pytest
 import sys
 
-pytest.importorskip('mpi4py')  # noqa
-import mpi4py
-mpi4py.rc.initialize = False  # noqa
-from mpi4py import MPI
-from astropy import units
+import pytest
+from astropy import units  # noqa
 from astropy.coordinates import Latitude, Longitude
-
-import pyuvsim
-from pyuvsim import mpi
-from pyuvsim.astropy_interface import Time
 import pyradiosky
+
+pytest.importorskip('mpi4py')
+import mpi4py   # noqa
+mpi4py.rc.initialize = False  # noqa
+from mpi4py import MPI  # noqa
+
+import pyuvsim  # noqa
+from pyuvsim import mpi  # noqa
+from pyuvsim.astropy_interface import Time  # noqa
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -112,13 +112,13 @@ def test_mpi_counter(count_rank):
     count.free()
 
 
-@pytest.mark.parametrize('MAX_BYTES', [mpi.INT_MAX, 100])
-def test_big_gather(MAX_BYTES, fake_tasks):
+@pytest.mark.parametrize('max_bytes', [mpi.INT_MAX, 100])
+def test_big_gather(max_bytes, fake_tasks):
 
     objs = fake_tasks
     n_tasks = len(objs)
     result, split_info = mpi.big_gather(
-        mpi.world_comm, objs, root=0, return_split_info=True, MAX_BYTES=MAX_BYTES
+        mpi.world_comm, objs, root=0, return_split_info=True, MAX_BYTES=max_bytes
     )
     if mpi.rank == 0:
         assert all(objs[ii].freq_i == ii for ii in range(n_tasks))
@@ -131,20 +131,20 @@ def test_big_gather(MAX_BYTES, fake_tasks):
     if mpi.rank == 0:
         assert result2 == result
 
-        assert split_info['MAX_BYTES'] == MAX_BYTES
-        if MAX_BYTES < 200:
+        assert split_info['MAX_BYTES'] == max_bytes
+        if max_bytes < 200:
             assert len(split_info['ranges']) > 1
 
 
 @pytest.mark.parallel(3)
-@pytest.mark.parametrize('MAX_BYTES', [mpi.INT_MAX, 100])
-def test_big_bcast(MAX_BYTES, fake_tasks):
+@pytest.mark.parametrize('max_bytes', [mpi.INT_MAX, 100])
+def test_big_bcast(max_bytes, fake_tasks):
 
     objs = fake_tasks
     n_tasks = len(objs)
 
     result, split_info = mpi.big_bcast(
-        mpi.world_comm, objs, root=0, return_split_info=True, MAX_BYTES=MAX_BYTES
+        mpi.world_comm, objs, root=0, return_split_info=True, MAX_BYTES=max_bytes
     )
 
     if mpi.rank == 0:
@@ -157,8 +157,8 @@ def test_big_bcast(MAX_BYTES, fake_tasks):
 
     if mpi.rank == 0:
         assert result2 == result
-        assert split_info['MAX_BYTES'] == MAX_BYTES
-        if MAX_BYTES < 200:
+        assert split_info['MAX_BYTES'] == max_bytes
+        if max_bytes < 200:
             assert len(split_info['ranges']) > 1
 
 

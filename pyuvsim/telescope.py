@@ -68,7 +68,6 @@ class BeamList:
     string_mode = True
 
     def __init__(self, beam_list=None, uvb_params=None):
-        """Initialize a BeamList."""
         self.uvb_params = {'freq_interp_kind': 'cubic',
                            'interpolation_function': 'az_za_simple'}
         self.spline_interp_opts = None
@@ -315,10 +314,7 @@ class BeamList:
         Any UVBeams in the list must have the path to their beamfits files
         stored as 'beam_path' in the `extra_keywords` dictionary.
 
-        Sets
-        ----
-        string_mode : bool
-            Sets to True
+        Sets :attr:`~.string_mode` to True.
 
         Raises
         ------
@@ -340,13 +336,10 @@ class BeamList:
         """
         Initialize AnalyticBeam and UVBeam objects from string representations.
 
-        For any UVBeams, additional attributes will be set by the BeamList.uvb_params
+        For any UVBeams, additional attributes will be set by the :class:`BeamList.uvb_params`
         dictionary. This overwrites any settings that may have been read from file.
 
-        Sets
-        ----
-        string_mode : bool
-            Sets to False
+        Sets :attr:`~.string_mode` to False.
         """
         if not self._str_beam_list == []:
             self._obj_beam_list = [self._str_to_obj(bstr, use_shared_mem=use_shared_mem)
@@ -367,15 +360,14 @@ class Telescope:
     ----------
     telescope_name : str
         Name of the telescope.
-    telescope_location : astropy EarthLocation object or MoonLocation
+    telescope_location : :class:`astropy.coordinates.EarthLocation` or lunarsky.MoonLocation
         Location of the telescope.
-    beam_list : :class:~`pyuvsim.BeamList
+    beam_list : :class:~`pyuvsim.BeamList`
         BeamList carrying beam models.
 
     """
 
     def __init__(self, telescope_name, telescope_location, beam_list):
-        """Initialize a Telescope."""
         # telescope location (EarthLocation object)
         self.location = telescope_location
         self.name = telescope_name

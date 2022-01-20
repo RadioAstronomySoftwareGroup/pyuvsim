@@ -374,7 +374,6 @@ class Counter:
     """
 
     def __init__(self, comm=None, count_rank=0):
-        """Initialize counter."""
         self.count_rank = count_rank
         if comm is None:
             comm = world_comm.Dup()
@@ -395,7 +394,7 @@ class Counter:
         """Free counter."""
         self.win.Free()
 
-    def next(self, increment=1):
+    def next(self, increment=1):  # noqa this is shadowing a built in. Maybe should be changed?
         """
         Add to the counter and return new value.
 
@@ -429,9 +428,9 @@ def get_max_node_rss(return_per_node=False):
 
     Parameters
     ----------
-    return_per_node : bool (optional)
+    return_per_node : bool
         Return the total memory on the node to each rank on
-        that node. (Default is False)
+        that node.
 
     Returns
     -------
@@ -459,7 +458,7 @@ def get_rank():
     return rank
 
 
-def get_Npus():
+def get_Npus():  # noqa should be lower case
     """Get number of MPI processes."""
     return Npus
 

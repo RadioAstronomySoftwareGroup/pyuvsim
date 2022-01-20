@@ -5,7 +5,8 @@
 """
 The primary machinery of pyuvsim.
 
-The UVTask and UVEngine classes and the functions that actually run the simulation.
+The :class:`~UVTask` and :class:`~UVEngine` classes and the functions that actually run
+the simulation.
 """
 
 import numpy as np
@@ -35,14 +36,14 @@ class UVTask:
     """
     An object to hold all the information to calculate a visibility for a set of sources.
 
-    Parmeters
-    ---------
+    Parameters
+    ----------
     sources : :class:~`simsetup.SkyModelData`
         The sources to include in the visibility.
-    time : astropy Time object or float
+    time : :class:`astropy.time.Time` object or float
         Time at which to calculate the visibility, either an astropy Time object or a
         float in Julian Day (will be converted to a Time object using `format='jd'`).
-    freq : astropy Quantity or float
+    freq : :class:`astropy.units.Quantity` or float
         Frequency at which to calculate the visibility, either an astropy Quantity with
         units compatible with Hz or a float in Hz (will be converted to an astropy
         Quantity with units of Hz)
@@ -58,9 +59,9 @@ class UVTask:
     ----------
     sources : :class:~`simsetup.SkyModelData`
         The sources to include in the visibility.
-    time : astropy Time object
+    time : :class:`astropy.time.Time`
         Time at which to calculate the visibility.
-    freq : astropy Quantity
+    freq : :class:`astropy.units.Quantity`
         Frequency at which to calculate the visibility.
     baseline : :class:~`baseline.Baseline`
         The baseline to calculate the visibility for.
@@ -79,7 +80,6 @@ class UVTask:
     """
 
     def __init__(self, sources, time, freq, baseline, telescope, freq_i=0):
-        """Initialize UVTask."""
         self.time = time
         self.freq = freq
         self.sources = sources  # SkyModel object
@@ -181,7 +181,7 @@ class UVEngine:
 
     Parameters
     ----------
-    task : :class:UVTask
+    task : :class:`~UVTask`
         The task to do the calculations for.
     reuse_spline : bool
         Option to reuse the spline in the beam interpolation to save time.
@@ -204,9 +204,9 @@ class UVEngine:
         or beam pair changes).
     sources : :class:~`simsetup.SkyModelData`
         The sources to include in the visibility.
-    current_time : astropy Time object
+    current_time : :class:`astropy.time.Time`
         Time for the current calculation.
-    current_freq : astropy Quantity
+    current_freq : :class:`astropy.units.Quantity`
         Frequency for the current calculation, units compatible with Hz.
     current_beam_pair : 2-tuple of ints
         Tuple containing the beam ids for the current calculation.
@@ -223,12 +223,11 @@ class UVEngine:
     apparent_coherency : array_like of float
         Source apparent coherencies (including the beam response), shape
         (2, 2, Nfreqs, Ncomponents).
-    task :  :class:UVTask
+    task :  :class:`~UVTask`
         The task currently being calculated.
     """
 
     def __init__(self, task=None, update_positions=True, update_beams=True, reuse_spline=True):
-        """Create a new UVEngine object."""
         self.reuse_spline = reuse_spline  # Reuse spline fits in beam interpolation
         self.update_positions = update_positions
         self.update_beams = update_beams
