@@ -4,7 +4,7 @@ Full class list and documentation
 Primary Beams
 -------------
 
-Simulations may be run using pyuvdata UVBeam objects or AnalyticBeam objects.
+Simulations may be run using :class:`pyuvdata.UVBeam` objects or :class:`pyuvsim.AnalyticBeam` objects.
 
 
 .. autoclass:: pyuvsim.AnalyticBeam

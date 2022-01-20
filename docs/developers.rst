@@ -6,7 +6,7 @@ The Radio Astronomy Software Group welcomes contributions from anyone. Full cont
 This page discusses more specific points to help developers contribute to ``pyuvsim``.
 
 Computing Resources
-------------------
+-------------------
 
 Instrument simulation is a computationally-demanding task, and ``pyuvsim`` is designed to run a brute-force calculation that requires much computing power. There is a continual effort to improve in performance, but for the foreseeable future the best results can be obtained using large, distributed computing clusters.
 

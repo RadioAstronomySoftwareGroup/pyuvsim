@@ -134,14 +134,15 @@ def shared_mem_bcast(arr, root=0):
 
 def quantity_shared_bcast(obj, root=0):
     """
-    Broadcast to shared memory for classes derived from astropy.units.Quantity.
+    Broadcast to shared memory for classes derived from :class:`astropy.units.Quantity`.
 
     The value array will be in shared memory, but the handle to it on each process
-    will be a Quantity, Angle, Latitude, Longitude, etc.
+    will be a :class:`astropy.units.Quantity`, :class:`astropy.coordinates.Angle`,
+    :class:`astropy.coordinates.Latitude`, :class:`astropy.coordinates.Longitude`, etc.
 
     Parameters
     ----------
-    obj : astropy Quantity or derived class
+    obj : :class:`astropy.units.Quantity` or derived class
         Object to be shared.
     root : int
         Root rank on COMM_WORLD, from which data will be broadcast.
@@ -356,7 +357,7 @@ class Counter:
 
     Parameters
     ----------
-    comm : :class:~`mpi4py.MPI.Intracomm`
+    comm : mpi4py.MPI.Intracomm
         MPI communicator over which to define counter.
         Default: MPI.COMM_WORLD
     count_rank : int

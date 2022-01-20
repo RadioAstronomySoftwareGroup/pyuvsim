@@ -362,7 +362,7 @@ class Telescope:
         Name of the telescope.
     telescope_location : :class:`astropy.coordinates.EarthLocation` or lunarsky.MoonLocation
         Location of the telescope.
-    beam_list : :class:~`pyuvsim.BeamList`
+    beam_list : :class:`pyuvsim.BeamList`
         BeamList carrying beam models.
 
     """

@@ -14,12 +14,12 @@ class Baseline:
 
     Parameters
     ----------
-    antenna1, antenna2 : :class:~`pyuvsim.Antenna`
+    antenna1, antenna2 : :class:`pyuvsim.Antenna`
         The two antennas that make up this baseline.
 
     Attributes
     ----------
-    antenna1, antenna2 : :class:~`pyuvsim.Antenna`
+    antenna1, antenna2 : :class:`pyuvsim.Antenna`
         The two antennas that make up this baseline.
     enu : array_like of float
         The vector pointing from antenna1 to antenna2 in ENU coordinates
