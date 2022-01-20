@@ -217,14 +217,26 @@ def test_gleam_catalog():
     gleam_param_filename = os.path.join(
         SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml'
     )
-    with uvtest.check_warnings(
-        UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."
-    ):
-        gleam_catalog = (
-            pyuvsim.simsetup.initialize_catalog_from_params(
-                gleam_param_filename, return_recarray=False
-            )[0]
-        )
+
+    warn_messages = ["No spectral_type specified for GLEAM, using 'flat'."]
+    warnings = [UserWarning]
+    # The try/except can be removed once we require pyuvdata > 2.2.6
+    try:
+        with uvtest.check_warnings(warnings, match=warn_messages):
+            gleam_catalog = (
+                pyuvsim.simsetup.initialize_catalog_from_params(
+                    gleam_param_filename, return_recarray=False
+                )[0]
+            )
+    except AssertionError:
+        warn_messages += ["distutils Version classes are deprecated."] * 8
+        warnings += [DeprecationWarning] * 8
+        with uvtest.check_warnings(warnings, match=warn_messages):
+            gleam_catalog = (
+                pyuvsim.simsetup.initialize_catalog_from_params(
+                    gleam_param_filename, return_recarray=False
+                )[0]
+            )
 
     # flux cuts applied
     assert gleam_catalog.Ncomponents == 23
@@ -376,10 +388,25 @@ def test_vot_catalog_warns(key_pop, message):
     param_dict['config_path'] = os.path.dirname(vot_param_filename)
     param_dict["sources"].pop(key_pop)
 
-    with uvtest.check_warnings(UserWarning, match=message):
-        vot_catalog2 = (
-            pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
-        )
+    warn_messages = [message]
+    warnings = [UserWarning]
+    # The try/except can be removed once we require pyuvdata > 2.2.6
+    try:
+        with uvtest.check_warnings(warnings, match=warn_messages):
+            vot_catalog2 = (
+                pyuvsim.simsetup.initialize_catalog_from_params(
+                    param_dict, return_recarray=False
+                )[0]
+            )
+    except AssertionError:
+        warn_messages += ["distutils Version classes are deprecated."] * 8
+        warnings += [DeprecationWarning] * 8
+        with uvtest.check_warnings(warnings, match=warn_messages):
+            vot_catalog2 = (
+                pyuvsim.simsetup.initialize_catalog_from_params(
+                    param_dict, return_recarray=False
+                )[0]
+            )
 
     assert vot_catalog == vot_catalog2
 
