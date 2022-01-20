@@ -8,8 +8,8 @@ This provides a configuration interface of human-readable yaml and csv files to 
 all the required simulation parameters. This configuration interface is used by other
 simulators as well.
 
-This module contains methods to create configuration files from :class:~`pyuvdata.UVData`
-objects and empty :class:~`pyuvdata.UVData` objects from configuration files.
+This module contains methods to create configuration files from :class:`pyuvdata.UVData`
+objects and empty :class:`pyuvdata.UVData` objects from configuration files.
 """
 import ast
 import copy
@@ -156,7 +156,7 @@ def _config_str_to_dict(config_str):
 
 
 def _set_lsts_on_uvdata(uv_obj):
-    """Set the LSTs on a :class:~`pyuvdata.UVData` object, with handling for MoonLocations."""
+    """Set the LSTs on a :class:`pyuvdata.UVData` object, with handling for MoonLocations."""
     # If the telescope location is a MoonLocation,
     # then uv_obj.extra_keywords['world'] == 'moon'.
     world = uv_obj.extra_keywords.get('world', 'earth')
@@ -357,7 +357,8 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     rseed: int
         If using the random configuration, pass in a RandomState seed.
     return_data: bool
-        If True, return a :class:`~SkyModelData` object instead of :class:`pyradiosky.SkyModel`.
+        If True, return a :class:`~.SkyModelData` object instead of
+        :class:`pyradiosky.SkyModel`.
     diffuse_model: str
         If arrangement is 'diffuse', name of the diffuse model to generate.
         See documentation in `analytic_diffuse.models` for details.
@@ -369,7 +370,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
 
     Returns
     -------
-    class:`pyradiosky.SkyModel` or class:`~SkyModelData`
+    :class:`pyradiosky.SkyModel` or :class:`~.SkyModelData`
         The catalog, as either a SkyModel or a SkyModelData (if `return_data` is True)
     dict
         A dictionary of keywords used to define the catalog.
@@ -550,7 +551,7 @@ class SkyModelData:
 
     Parameters
     ----------
-    sky_in: :class:~`pyradiosky.SkyModel`
+    sky_in: :class:`pyradiosky.SkyModel`
         A valid SkyModel object.
 
     """
@@ -824,7 +825,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
     ----------
     obs_params: str or dict
         Either an obsparam file name or a dictionary of parameters.
-    input_uv: :class:~`pyuvdata.UVData`
+    input_uv: :class:`pyuvdata.UVData`
         Used to set location for mock catalogs and for horizon cuts.
     return_recarray: bool
         Return a recarray instead of a :class:`pyradiosky.SkyModel` instance.
@@ -1063,7 +1064,7 @@ def parse_telescope_params(tele_params, config_path=''):
     -------
     param_dict : dict
         Parameters related to the telescope and antenna layout, to be included in the
-        :class:~`pyuvdata.UVData` object.
+        :class:`pyuvdata.UVData` object.
 
         * `Nants_data`: Number of antennas
         * `Nants_telescope`: Number of antennas
@@ -1205,7 +1206,7 @@ def parse_frequency_params(freq_params):
     Returns
     -------
     dict
-        Dictionary of :class:~`pyuvdata.UVData` parameters related to frequency:
+        Dictionary of :class:`pyuvdata.UVData` parameters related to frequency:
 
             * `channel_width`: (dtype float, ndarray, shape=(Nfreqs)) Frequency channel
               widths in Hz
@@ -1315,7 +1316,7 @@ def parse_time_params(time_params):
     Returns
     -------
     dict
-        Dictionary of :class:~`pyuvdata.UVData` parameters related to time:
+        Dictionary of :class:`pyuvdata.UVData` parameters related to time:
 
             * `integration_time`: (float) Time array spacing in seconds.
             * `Ntimes`: (int) Number of times
@@ -1500,13 +1501,13 @@ def time_array_to_params(time_array):
 
 def initialize_uvdata_from_params(obs_params):
     """
-    Construct a :class:~`pyuvdata.UVData` object from parameters in a valid yaml file.
+    Construct a :class:`pyuvdata.UVData` object from parameters in a valid yaml file.
 
     Sufficient information must be provided by the parameters to define time and frequency arrays
     and verify the channel widths and time steps. This will error if insufficient or incompatible
     parameters are defined.
 
-    The parameter dictionary may contain any valid :class:~`pyuvdata.UVData` attributes as well.
+    The parameter dictionary may contain any valid :class:`pyuvdata.UVData` attributes as well.
 
     If the polarization array is not specified, it defaults to (XX, XY, YX, YY).
 
@@ -1514,13 +1515,13 @@ def initialize_uvdata_from_params(obs_params):
     ----------
     obs_params : dict or str
         Either an obs_param file name or a dictionary of parameters read in.
-        Additional :class:~`pyuvdata.UVData` parameters may be passed in through here.
+        Additional :class:`pyuvdata.UVData` parameters may be passed in through here.
 
     Returns
     -------
-    uv_obj : :class:~`pyuvdata.UVData`
+    uv_obj : :class:`pyuvdata.UVData`
         Initialized UVData object.
-    beam_list : :class:~`pyuvsim.BeamList`
+    beam_list : :class:`pyuvsim.BeamList`
         List of beam specifiers as strings.
     beam_dict : dict
         Map of antenna numbers to index in beam_list.
@@ -1682,21 +1683,21 @@ def initialize_uvdata_from_params(obs_params):
 
 def _complete_uvdata(uv_in, inplace=False):
     """
-    Fill out all required parameters of a :class:~`pyuvdata.UVData` object.
+    Fill out all required parameters of a :class:`pyuvdata.UVData` object.
 
-    Ensure that it passes the :func:~`pyuvdata.UVData.check()`.
+    Ensure that it passes the :func:`pyuvdata.UVData.check()`.
     This will overwrite existing data in `uv_in`!
 
     Parameters
     ----------
-    uv_in : :class:~`pyuvdata.UVData` instance
+    uv_in : :class:`pyuvdata.UVData` instance
         Usually an incomplete object, containing only metadata.
     inplace : bool, optional
         Whether to perform the filling on the passed object, or a copy.
 
     Returns
     -------
-    :class:~`pyuvdata.UVData` : filled/completed object (if `inplace` is `True`, it is
+    :class:`pyuvdata.UVData` : filled/completed object (if `inplace` is `True`, it is
         the modified input). With zeroed data_array, no flags and nsample_array of all ones.
 
     """
@@ -1735,10 +1736,10 @@ def initialize_uvdata_from_keywords(
         antenna_nums=None, antenna_names=None, polarization_array=None, no_autos=False,
         redundant_threshold=None, write_files=True, path_out=None, complete=False, **kwargs):
     """
-    Initialize a :class:~`pyuvdata.UVData` object from keyword arguments.
+    Initialize a :class:`pyuvdata.UVData` object from keyword arguments.
 
     Optionally, write out the configuration to YAML and CSV files such that
-    :func:`~initialize_uvdata_from_params` will produce the same :class:~`pyuvdata.UVData` object.
+    :func:`~initialize_uvdata_from_params` will produce the same :class:`pyuvdata.UVData` object.
 
     Parameters
     ----------
@@ -1797,14 +1798,14 @@ def initialize_uvdata_from_keywords(
         Path in which to place generated configuration files, if write_files is True.
         Defaults to current directory.
     complete : bool (optional)
-        Whether to fill out the :class:~`pyuvdata.UVData` object with its requisite
+        Whether to fill out the :class:`pyuvdata.UVData` object with its requisite
         data arrays, and check if it's all consistent.
     kwargs : dictionary
-        Any additional valid :class:~`pyuvdata.UVData` attribute to assign to object.
+        Any additional valid :class:`pyuvdata.UVData` attribute to assign to object.
 
     Returns
     -------
-    :class:~`pyuvdata.UVData`
+    :class:`pyuvdata.UVData`
         Initialized based on keywords, with a zeroed data_array, no flags and
         nsample_array of all ones.
 
@@ -1935,7 +1936,7 @@ def uvdata_to_telescope_config(
         uvdata_in, beam_filepath, layout_csv_name=None, telescope_config_name=None,
         return_names=False, path_out='.'):
     """
-    Make telescope parameter files from a :class:~`pyuvdata.UVData` object.
+    Make telescope parameter files from a :class:`pyuvdata.UVData` object.
 
     Makes both a telescope_config file and a layout_csv file:
 

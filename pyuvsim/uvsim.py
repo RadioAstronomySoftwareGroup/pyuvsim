@@ -38,7 +38,7 @@ class UVTask:
 
     Parameters
     ----------
-    sources : :class:~`simsetup.SkyModelData`
+    sources : :class:`pyuvsim.simsetup.SkyModelData`
         The sources to include in the visibility.
     time : :class:`astropy.time.Time` object or float
         Time at which to calculate the visibility, either an astropy Time object or a
@@ -47,9 +47,9 @@ class UVTask:
         Frequency at which to calculate the visibility, either an astropy Quantity with
         units compatible with Hz or a float in Hz (will be converted to an astropy
         Quantity with units of Hz)
-    baseline : :class:~`baseline.Baseline`
+    baseline : :class:`pyuvsim.Baseline`
         The baseline to calculate the visibility for.
-    telescope : :class:~`telescope.Telescope`
+    telescope : :class:`pyuvsim.Telescope`
         The telescope object this visibility belongs to, which carries the telescope
         location and beam information.
     freq_i : int
@@ -57,15 +57,15 @@ class UVTask:
 
     Attributes
     ----------
-    sources : :class:~`simsetup.SkyModelData`
+    sources : :class:`pyuvsim.simsetup.SkyModelData`
         The sources to include in the visibility.
     time : :class:`astropy.time.Time`
         Time at which to calculate the visibility.
     freq : :class:`astropy.units.Quantity`
         Frequency at which to calculate the visibility.
-    baseline : :class:~`baseline.Baseline`
+    baseline : :class:`pyuvsim.Baseline`
         The baseline to calculate the visibility for.
-    telescope : :class:~`telescope.Telescope`
+    telescope : :class:`pyuvsim.Telescope`
         The telescope object this visibility belongs to.
     freq_i : int
         Frequency index for this visibility's source coherency. Always `0` for flat
@@ -202,7 +202,7 @@ class UVEngine:
     update beams : bool
         Flag indicating that beams need to be updated (when time, sources, frequency,
         or beam pair changes).
-    sources : :class:~`simsetup.SkyModelData`
+    sources : :class:`pyuvsim.simsetup.SkyModelData`
         The sources to include in the visibility.
     current_time : :class:`astropy.time.Time`
         Time for the current calculation.
@@ -250,7 +250,7 @@ class UVEngine:
 
         Parameters
         ----------
-        task : :class:UVTask
+        task : :class:`UVTask`
             The task to do the calculations for.
 
         """
@@ -405,11 +405,11 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     ----------
     task_ids : range
         Task indices in the full flattened meshgrid of parameters.
-    input_uv : :class:~`pyuvdata.UVData`
+    input_uv : :class:`pyuvdata.UVData`
         UVData object to be filled with data.
-    catalog : :class:~`simsetup.SkyModelData`
+    catalog : :class:`pyuvsim.simsetup.SkyModelData`
         Source components.
-    beam_list : :class:~`pyuvsim.BeamList
+    beam_list : :class:`pyuvsim.BeamList`
         BeamList carrying beam model (in object mode).
     beam_dict : dict
         Map of antenna numbers to index in beam_list.
@@ -578,22 +578,22 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
 
     Parameters
     ----------
-    input_uv : `:class:~pyuvdata.UVData` instance
+    input_uv : :class:`pyuvdata.UVData` instance
         Provides baseline/time/frequency information.
-    beam_list : :class:~`pyuvsim.BeamList
+    beam_list : :class:`pyuvsim.BeamList`
         BeamList carrying beam models.
     beam_dict : dictionary, optional
         {`antenna_name` : `beam_id`}, where `beam_id` is an index in the beam_list.
         This is used to assign beams to antennas. Default: All antennas get the 0th
         beam in the `beam_list`.
-    catalog : :class:~`simsetup.SkyModelData`
+    catalog : :class:`pyuvsim.simsetup.SkyModelData`
         Immutable source parameters.
     quiet : bool
         Do not print anything.
 
     Returns
     -------
-    :class:~`pyuvdata.UVData`
+    :class:`pyuvdata.UVData`
         instance containing simulated visibilities.
 
     """
