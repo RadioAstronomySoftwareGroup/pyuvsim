@@ -1,15 +1,20 @@
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2022 Radio Astronomy Software Group
+# Licensed under the 3-clause BSD License
+"""
+Estimate scalings on different axes from profiling data.
 
+NB:
+    This script cannot tell the difference between lines that are
+    hit once and axes with length 1.
+    It is only useful for jobs where the number of MPI processes is smaller
+    than each simulation axis.
+
+"""
 import numpy as np
 import line_profiler as lp
 import sys
 import os
-
-# Estimate scalings on different axes from profiling data.
-
-# NB -- This script cannot tell the difference between lines that are
-#          hit once and axes with length 1.
-#       It is only useful for jobs where the number of MPI processes is smaller
-#       than each simulation axis.
 
 
 def _func_times(timings, Nlist, dt=1e-6):

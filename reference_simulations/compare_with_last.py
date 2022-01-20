@@ -2,9 +2,12 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2020 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+"""
+Compare a run of a reference sim with the reference run.
 
-# Compare the visibilities in a given set of simulation outputs to the corresponding
-# values in a reference set.
+Compare the visibilities in a given set of simulation outputs to the corresponding
+values in a reference set.
+"""
 
 import glob
 import warnings

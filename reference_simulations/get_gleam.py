@@ -1,7 +1,12 @@
 #!/bin/env python
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2022 Radio Astronomy Software Group
+# Licensed under the 3-clause BSD License
+"""
+Download the gleam catalog as a VOTable from Vizier.
 
-# Downloads the gleam catalog as a VOTable from Vizier
-# This is required for running reference sim 1.4.
+This is required for running reference sim 1.4.
+"""
 
 import os
 import sys

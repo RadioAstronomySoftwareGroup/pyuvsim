@@ -1,3 +1,7 @@
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2022 Radio Astronomy Software Group
+# Licensed under the 3-clause BSD License
+"""Utility functions for benchmarking."""
 import os
 import re
 import socket
@@ -16,15 +20,16 @@ def settings_setup(settings_file, outdir=None):
 
     Parameters
     ----------
-    settings_file: str
+    settings_file : str
         Path to settings yaml file
-    outdir: str
+    outdir : str
         Output file directory (optional)
 
     Returns
     -------
-    settings: dict
+    settings : dict
         Dictionary of configuration and output file parameters.
+
     """
     with open(settings_file, 'r') as yfile:
         settings = yaml.safe_load(yfile)
@@ -52,16 +57,16 @@ def settings_setup(settings_file, outdir=None):
 
 def make_benchmark_configuration(settings_dict):
     """
-    Setup configuration files and directories for benchmarking simulation.
+    Make configuration files and directories for benchmarking simulation.
 
     Creates input/output directories and configuration files for a benchmarking simulation.
 
     Parameters
     ----------
-    settings_dict: dict
+    settings_dict : dict
         Dictionary of parameters from benchmark.settings_setup
-    """
 
+    """
     confdir = settings_dict['config_dir']
     outdir = settings_dict['data_out']
     Nside = settings_dict['Nside']
@@ -191,10 +196,10 @@ def make_jobscript(settings_dict):
 
     Parameters
     ----------
-    settings_dict: dict
+    settings_dict : dict
         Dictionary of parameters from benchmark.settings_setup
-    """
 
+    """
     mem = settings_dict['MemoryLimit']
     walltime = settings_dict['walltime']
     Ncpus_per_task = settings_dict['Ncpus_per_task']
@@ -225,12 +230,12 @@ def update_runlog(settings_dict, logfile='BENCHMARKS.log'):
 
     Parameters
     ----------
-    settings_dict: dict
+    settings_dict : dict
         Dictionary of parameters from benchmark.settings_setup
-    logfile: str
+    logfile : str
         Name of log file (Default: BENCHMARKS.log)
-    """
 
+    """
     meta_file = settings_dict['profile_path'] + "_meta.out"
 
     data_file = os.path.join(settings_dict['data_out'], 'benchmark.uvh5')
@@ -266,8 +271,8 @@ def update_runlog(settings_dict, logfile='BENCHMARKS.log'):
 
     with open(meta_file, 'r') as mfile:
         lines = mfile.readlines()
-    lines = (l.split() for l in lines)
-    meta = {l[0]: '-'.join(l[1:]) for l in lines}
+    lines = (line.split() for line in lines)
+    meta = {line[0]: '-'.join(line[1:]) for line in lines}
 
     results = [
         meta['Date/Time'],

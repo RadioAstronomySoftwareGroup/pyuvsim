@@ -1,6 +1,8 @@
 #!/bin/env python
-
-# Make plots of profiling results under different constraints:
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2022 Radio Astronomy Software Group
+# Licensed under the 3-clause BSD License
+"""Make plots of profiling results under different constraints."""
 
 import sys
 
@@ -33,11 +35,11 @@ handles, labels = [], []
 ymin, ymax = np.min(dat['Runtime_Seconds']), np.max(dat['Runtime_Seconds'])
 ymax *= 1.20
 for nni in range(len(NNodes)):
-    condN = (dat['NNodes'] == NNodes[nni])
+    cond_n = (dat['NNodes'] == NNodes[nni])
     for bi in range(len(beams)):
-        condB = (dat['Beam'] == beams[bi])
+        cond_b = (dat['Beam'] == beams[bi])
         for nc in range(len(Ncpus)):
-            inds = np.where(condN & condB & (dat['NProcs'] == Ncpus[nc]))
+            inds = np.where(cond_n & cond_b & (dat['NProcs'] == Ncpus[nc]))
             if len(inds[0]) == 0:
                 continue
             axes[bi].scatter(
@@ -52,12 +54,13 @@ for nni in range(len(NNodes)):
         axes[bi].set_ylim([ymin, ymax])
 
 
-def f(m, c):
+def plot_handles(m, c):
+    """Get some plot handles."""
     return plt.plot([], [], marker=m, color=c, ls="none")[0]
 
 
-colhandles = [f("s", colors[i]) for i in range(len(Ncpus))]
-markhandles = [f(markers[i], "k") for i in range(len(NNodes))]
+colhandles = [plot_handles("s", colors[i]) for i in range(len(Ncpus))]
+markhandles = [plot_handles(markers[i], "k") for i in range(len(NNodes))]
 
 collabels = map('{:d} cpus'.format, Ncpus.tolist())
 marklabels = map('{:d} nodes'.format, NNodes.tolist())
@@ -69,11 +72,11 @@ fig2, axes = plt.subplots(nrows=1, ncols=len(beams))
 ymin, ymax = np.min(dat['MaxRSS_GB']), np.max(dat['MaxRSS_GB'])
 ymax *= 1.20
 for nni in range(len(NNodes)):
-    condN = (dat['NNodes'] == NNodes[nni])
+    cond_n = (dat['NNodes'] == NNodes[nni])
     for bi in range(len(beams)):
-        condB = (dat['Beam'] == beams[bi])
+        cond_b = (dat['Beam'] == beams[bi])
         for nc in range(len(Ncpus)):
-            inds = np.where(condN & condB & (dat['NProcs'] == Ncpus[nc]))
+            inds = np.where(cond_n & cond_b & (dat['NProcs'] == Ncpus[nc]))
             if len(inds[0]) == 0:
                 continue
             axes[bi].scatter(
