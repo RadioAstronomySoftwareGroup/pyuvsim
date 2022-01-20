@@ -248,12 +248,30 @@ def test_gleam_catalog():
     param_dict["sources"].pop("min_flux")
     param_dict["sources"].pop("max_flux")
 
-    with uvtest.check_warnings(
-        UserWarning, match="No spectral_type specified for GLEAM, using 'flat'."
-    ):
-        gleam_catalog = (
-            pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
-        )
+    warn_messages = ["No spectral_type specified for GLEAM, using 'flat'."]
+    warnings = [UserWarning]
+    # The try/except can be removed once we require pyuvdata > 2.2.6
+    try:
+        with uvtest.check_warnings(
+            warnings, match=warn_messages
+        ):
+            gleam_catalog = (
+                pyuvsim.simsetup.initialize_catalog_from_params(
+                    param_dict, return_recarray=False
+                )[0]
+            )
+    except AssertionError:
+        warn_messages += ["distutils Version classes are deprecated."] * 8
+        warnings += [DeprecationWarning] * 8
+        with uvtest.check_warnings(
+            warnings, match=warn_messages
+        ):
+            gleam_catalog = (
+                pyuvsim.simsetup.initialize_catalog_from_params(
+                    param_dict, return_recarray=False
+                )[0]
+            )
+
     assert gleam_catalog.Ncomponents == 50
 
 
