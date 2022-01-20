@@ -19,7 +19,7 @@ except ImportError:
 try:
     from line_profiler import LineProfiler
 except ImportError:
-    def LineProfiler():
+    def LineProfiler():  # noqa
         """Mock to fix imports."""
         return None
 

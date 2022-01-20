@@ -1,14 +1,14 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
-"""Definition of Baseline objects, to describe a pair of Antennas."""
+"""Definition of Baseline objects, to describe a pair of :class:`~Antenna` objects."""
 
 import numpy as np
 
 
 class Baseline:
     """
-    Defines a single pair of Antenna objects with useful methods.
+    Defines a single pair of :class:`~Antenna` objects with useful methods.
 
     Defines the means for calculating their uvw coordinates, and comparing them.
 
@@ -31,7 +31,6 @@ class Baseline:
     """
 
     def __init__(self, antenna1, antenna2):
-        """Initialize the baseline."""
         self.antenna1 = antenna1
         self.antenna2 = antenna2
         self.enu = antenna2.pos_enu - antenna1.pos_enu

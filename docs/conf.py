@@ -175,3 +175,15 @@ def build_custom_docs(app):
 
 def setup(app):
     app.connect('builder-inited', build_custom_docs)
+
+# -- Options for intersphinx extension ---------------------------------------
+
+
+# Example configuration for intersphinx: refer to the Python standard library.
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3/", None),
+    "pyuvdata": ("https://pyuvdata.readthedocs.io/en/latest/", None),
+    "pyradiosky": ("https://pyradiosky.readthedocs.io/en/latest", None),
+    "astropy": ("https://docs.astropy.org/en/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+}

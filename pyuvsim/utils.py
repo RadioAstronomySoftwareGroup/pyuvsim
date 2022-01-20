@@ -20,7 +20,7 @@ def get_version_string():
     return ('Simulated with pyuvsim version: ' + __version__ + '.')
 
 
-class progsteps:
+class progsteps:  # noqa This should be named with CapWords convention
     """
     Similar to a progress bar, this prints a percentage of task completion.
 
@@ -32,7 +32,6 @@ class progsteps:
     """
 
     def __init__(self, maxval=None):
-        """Initialize."""
         self.t0 = pytime.time()
         if maxval is None:
             raise ValueError("Maximum value is needed.")
@@ -341,7 +340,7 @@ def iter_array_split(part_index, N, M):
 
 def estimate_skymodel_memory_usage(Ncomponents, Nfreqs):
     """
-    Estimate the memory footprint of a SkyModel.
+    Estimate the memory footprint of a :class:`pyradiosky.SkyModel`.
 
     By summing the sizes of the data types that go into SkyModel.
 
@@ -355,7 +354,7 @@ def estimate_skymodel_memory_usage(Ncomponents, Nfreqs):
         Number of source components.
     Nfreqs : int
         Number of frequencies per source component.
-        (size of SkyModel.freq_array)
+        (size of :attr:`pyradiosky.SkyModel.freq_array`)
 
     Returns
     -------

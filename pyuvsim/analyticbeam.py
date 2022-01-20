@@ -15,21 +15,21 @@ c_ms = speed_of_light.to('m/s').value
 
 def diameter_to_sigma(diam, freqs):
     """
-    Find the sigma that gives a beam with similar to an Airy disk.
+    Find the sigma that gives a beam width similar to an Airy disk.
 
     Find the stddev of a gaussian with fwhm equal to that of
     an Airy disk's main lobe for a given diameter.
 
     Parameters
     ----------
-    diam: float
+    diam : float
         Antenna diameter in meters
-    freqs: array
+    freqs : array
         Frequencies in Hz
 
     Returns
     -------
-    sigma: float
+    sigma : float
         The standard deviation in zenith angle radians for a Gaussian beam
         with FWHM equal to that of an Airy disk's main lobe for an aperture
         with the given diameter.
@@ -47,7 +47,7 @@ class AnalyticBeam:
     """
     Calculate Jones matrices from analytic functions.
 
-    This provides similar functionality to pyuvdata.UVBeam, but its "interp" method
+    This provides similar functionality to :class:`pyuvdata.UVBeam`, but the :meth:`~.interp` method
     evaluates the function at given azimuths and zenith angles, instead of interpolating
     from data.
 
@@ -67,24 +67,23 @@ class AnalyticBeam:
 
     Parameters
     ----------
-    type: str, {'uniform', 'airy', 'gaussian'}
+    type : str, {'uniform', 'airy', 'gaussian'}
         Beam type to use.
-    sigma: float
+    sigma : float
         standard deviation [radians] for gaussian beam.
         When spectral index is set, this represents the FWHM at the ref_freq.
-    spectral_index: float
+    spectral_index : float
         Scale gaussian beam width as a power law with frequency.
-    ref_freq: float
+    ref_freq : float
         If set, this sets the reference frequency for the beam width power law.
 
     """
 
     supported_types = ['uniform', 'gaussian', 'airy']
 
-    def __init__(self, type, sigma=None, diameter=None, spectral_index=0.0, ref_freq=None):
-        """Initialize an Analytic Beam."""
-        if type in self.supported_types:
-            self.type = type
+    def __init__(self, type_, sigma=None, diameter=None, spectral_index=0.0, ref_freq=None):
+        if type_ in self.supported_types:
+            self.type = type_
         else:
             raise ValueError('type not recognized')
 
@@ -106,26 +105,26 @@ class AnalyticBeam:
         self.beam_type = 'efield'
 
     def peak_normalize(self):
-        """Do nothing, mocks a UVBeam method."""
+        """Do nothing, mocks the :meth:`pyuvdata.UVBeam.peak_normalize` method."""
         pass
 
     def efield_to_power(self):
-        """Tell interp to return values corresponding with a power beam."""
+        """Tell :meth:`~.interp` to return values corresponding with a power beam."""
         self.beam_type = 'power'
         pol_strings = ['XX', 'XY', 'YX', 'YY']
         self.polarization_array = np.array([uvutils.polstr2num(ps.upper()) for ps in pol_strings])
 
     def interp(self, az_array, za_array, freq_array, reuse_spline=None, spline_opts=None):
         """
-        Evaluate the primary beam at given positions and frequencies.
+        Evaluate the primary beam at given sky coordinates and frequencies.
 
-        (mocks UVBeam.interp, but these are analytic, so no interpolation is done.)
+        (mocks :meth:`pyuvdata.UVBeam.interp`, but these are analytic, so no interpolation is done.)
 
         Parameters
         ----------
         az_array : array-like of float
             Azimuth values to evaluate at in radians. Should be a 1D array with the same
-            length as `za_array`. The azimuth here has the UVBeam convention:
+            length as `za_array`. The azimuth here has the :class:`pyuvdata.UVBeam` convention:
             North of East (East=0, North=pi/2)
         za_array : array-like of float
             Zenith angle values to evaluate at in radians. Should be a 1D array with the
@@ -133,23 +132,24 @@ class AnalyticBeam:
         freq_array : array-like of float
             Frequency values to evaluate at in Hz. Should be a 1D array.
         reuse_spline : bool
-            Unused. Here for compatibility with UVBeam.
+            Unused. Here for compatibility with :meth:`pyuvdata.UVBeam.interp`.
         spline_opts : dict
-            Unused. Here for compatibility with UVBeam.
+            Unused. Here for compatibility with :meth:`pyuvdata.UVBeam.interp`.
 
         Returns
         -------
-        beam_vals: array-like of float
+        beam_vals : array-like of float
             Array of beam values, shape (Naxes_vec, Nspws, Nfeeds or Npols,
                 Nfreqs or freq_array.size if freq_array is passed,
                 Npixels/(Naxis1, Naxis2) or az_array.size if az/za_arrays are passed)
-        interp_basis_vectors: None
-            Currently returns None. In UVBeam, this is the set of basis vectors for the
-            electric field component values.
+        interp_basis_vectors : None
+            Currently returns None. In :meth:`pyuvdata.UVBeam.interp`, this is the set
+            of basis vectors for the electric field component values.
 
         Notes
         -----
-        See pyuvdata.UVBeam.interp documentation for more details on the returned data.
+        See :meth:`pyuvdata.UVBeam.interp` documentation for more details on the returned data.
+
         """
         if az_array.ndim > 1 or za_array.ndim > 1 or freq_array.ndim > 1:
             raise ValueError("az_array, za_array and freq_array must all be one dimensional.")

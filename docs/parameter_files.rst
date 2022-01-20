@@ -1,5 +1,5 @@
 Parameter and configuration Files
-===================================
+=================================
 
 When running simulations from yaml and csv files, there are four configuration files
 that must be used.
@@ -206,11 +206,11 @@ Telescope Configuration
 
     - uniform = The same response in all directions. No additional parameters.
     - gaussian = Gaussian function shaped beam. Requires either an antenna diameter
-    (in meters) or a standard deviation sigma (in radians). This standard deviation sets
-    the width of the beam in zenith angle. Note that defining gaussian beams via `sigma`
-        will be deprecated in the future.
+      (in meters) or a standard deviation sigma (in radians). This standard deviation sets
+      the width of the beam in zenith angle. Note that defining gaussian beams via `sigma`
+      will be deprecated in the future.
     - airy = Airy disk (ie, diffraction pattern of a circular aperture). Requires an
-    antenna diameter.
+      antenna diameter.
 
     Note that beams defined with an antenna diameter will be chromatic (their widths on
     the sky will change with frequency).
@@ -258,17 +258,13 @@ Sources
       * ``table_name`` : The name of the table to use from the file (required).
       * ``id_column`` : The name of the column to use for the source IDs (required).
       * ``flux_columns`` : One or a list of columns to use for the source fluxes
-       (a list for fluxes at multiple frequencies) (required).
+        (a list for fluxes at multiple frequencies) (required).
       * ``ra_column`` : The name of the column to use for the source RAs (recommended, defaults to ``RAJ2000``).
       * ``dec_column`` : The name of the column to use for the source Decs (recommended, defaults to ``DEJ2000``).
 
     Alternatively, you can specify a ``mock`` and provide the ``mock_arrangement``
-        keyword to specify which mock catalog to generate. Available options are shown
-        in the ``create_mock_catalog`` docstring:
-
-    .. module:: pyuvsim
-
-    .. autofunction:: create_mock_catalog
+    keyword to specify which mock catalog to generate. Available options are shown
+    in the :func:`pyuvsim.simsetup.create_mock_catalog` docstring.
 
     Flux limits can be made by providing the keywords ``min_flux`` and ``max_flux``.
     These specify the min/max stokes I flux to choose from the catalog.

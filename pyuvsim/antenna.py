@@ -28,12 +28,11 @@ class Antenna:
         Position of this antenna in meters in the East, North, Up frame centered on the
         telescope location.
     beam_id : int
-        Index of the beam for this antenna from array.beam_list.
+        Index of the beam for this antenna from :class:`~BeamList`.
 
     """
 
     def __init__(self, name, number, enu_position, beam_id):
-        """Initialize this antenna."""
         self.name = name
         self.number = number
         self.pos_enu = enu_position * units.m
@@ -57,23 +56,21 @@ class Antenna:
         frequency : float or Quantity
             Frequency. Assumed to be Hz if float.
         reuse_spline : bool
-            Option to keep and reuse interpolation splines in UVBeam.
+            Option to keep and reuse interpolation splines in :class:`pyuvdata.UVBeam`.
         interpolation_function: str
-            Set the angular interpolation function on the UVBeam.
-            See UVBeam.interp for options.
+            Set the angular interpolation function on the :class:`pyuvdata.UVBeam`.
+            See :meth:`pyuvdata.UVBeam.interp` for options.
         freq_interp_kind : str
-            Interpolation method for frequencies.
-            Note -- This overrides whatever method may be set on the
-            UVBeam objects.
+            Interpolation method for frequencies. Note -- This overrides whatever method
+            may be set on the :class:`pyuvdata.UVBeam` objects.
+
         Returns
         -------
         jones_matrix : array_like of float
             Jones matricies for each source location, shape (2,2, Ncomponents). The
             first axis is feed, the second axis is vector component on the sky in az/za.
-        """
-        # get_direction_jones needs to be defined on UVBeam
-        # 2x2 array of Efield vectors in alt/az
 
+        """
         # convert to UVBeam az/za convention
         source_za, source_az = simutils.altaz_to_zenithangle_azimuth(
             source_alt_az[0], source_alt_az[1]

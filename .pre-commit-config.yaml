@@ -1,4 +1,4 @@
-exclude: '(^docs/conf.py|^user_data/External_tables/*|^pyuvsim/data/.+uvfits|^pyuvsim/data/.+uvbeam|^pyuvsim/data/.+hdf5|^pyuvsim/data/.+npz|^pyuvsim/data/.+vot|^benchmarking.+log)'
+exclude: '(^docs/conf.py|^user_data/External_tables/|^pyuvsim/data/.+uvfits|^pyuvsim/data/.+uvbeam|^pyuvsim/data/.+hdf5|^pyuvsim/data/.+npz|^pyuvsim/data/.+vot|^benchmarking.+log)'
 
 repos:
     - repo: git://github.com/pre-commit/pre-commit-hooks
@@ -24,8 +24,8 @@ repos:
               - flake8-comprehensions
               - flake8-docstrings
               - flake8-pytest
-              # - flake8-rst-docstrings
-              # - pep8-naming
+              - flake8-rst-docstrings
+              - pep8-naming
 
     # - repo: https://github.com/psf/black
     #   rev: 19.10b0
