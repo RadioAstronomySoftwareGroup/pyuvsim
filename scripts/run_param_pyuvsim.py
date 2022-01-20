@@ -2,7 +2,7 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
-
+"""Run a pyuvsim simulation from a parameter file."""
 import argparse
 import os
 import time as pytime

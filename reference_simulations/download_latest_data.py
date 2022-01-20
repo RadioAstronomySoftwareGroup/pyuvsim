@@ -2,6 +2,11 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2020 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+"""
+Download the reference simulation data.
+
+Optionally download the inputs.
+"""
 
 import requests
 import os

@@ -1,8 +1,7 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
-
-"""Summarize profiling results in a table, given a set of directories"""
+"""Summarize profiling results in a table, given a set of directories."""
 
 import subprocess
 import sys
@@ -64,6 +63,7 @@ for ent in filedat:
 
 
 def hms2sec(hms):
+    """Convert hour, minute, seconds to seconds."""
     h, m, s = map(float, hms.split(":"))
     return h * 60. ** 2 + m * 60. + s
 

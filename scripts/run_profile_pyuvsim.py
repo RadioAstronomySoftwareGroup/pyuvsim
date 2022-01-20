@@ -2,6 +2,7 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+"""Run a pyuvsim simulation for profiling purposes."""
 
 import argparse
 import yaml
@@ -116,10 +117,10 @@ if rank == 0:
 
 uv_out = uvsim.run_uvdata_uvsim(input_uv, beam_list, beam_dict=beam_dict, catalog=catalog)
 
-memory_usage_GB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
+memory_usage_gb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
 comm.Barrier()
 
-memory_usage_GB = comm.gather(memory_usage_GB, root=0)
+memory_usage_gb = comm.gather(memory_usage_gb, root=0)
 
 if rank == 0:
     elapsed_time_sec = pytime.time() - t0
@@ -127,7 +128,7 @@ if rank == 0:
     with open(args.time_out, 'w') as timefile:
         timefile.write(str(elapsed_time_sec))
 
-    memory_usage_GB = np.min(memory_usage_GB)
-    print('Mem_usage: ' + str(memory_usage_GB))
+    memory_usage_gb = np.min(memory_usage_gb)
+    print('Mem_usage: ' + str(memory_usage_gb))
     with open(args.mem_out, 'w') as memfile:
-        memfile.write(str(memory_usage_GB))
+        memfile.write(str(memory_usage_gb))

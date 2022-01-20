@@ -1,7 +1,11 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+"""
+Generate a test pattern based on ascii characters.
 
+Place test pattern above given location on a given date.
+"""
 import argparse
 import sys
 
@@ -13,20 +17,9 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, Angle, EarthLocation
 from astropy.time import Time
 
-"""
-Generate a test pattern based on ascii characters. place
-test pattern above given location on a given date.
-Input:
-    -t --textstring
-    -d spacing between sources
-    -n how many sources high should a character be?
-    -j julian date
-    -l lat,lon in degrees
-"""
-
 
 def removeallspaces(s):
-    "remove all spaces"
+    """Remove all spaces."""
     return ''.join([c for c in s if c != ' '])
 
 

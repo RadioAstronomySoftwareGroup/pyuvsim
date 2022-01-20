@@ -1,5 +1,8 @@
 #!/bin/env python
-# Script to setup/run benchmarking jobs.
+# -*- mode: python; coding: utf-8 -*
+# Copyright (c) 2022 Radio Astronomy Software Group
+# Licensed under the 3-clause BSD License
+"""Script to setup/run benchmarking jobs."""
 
 import argparse
 import os
