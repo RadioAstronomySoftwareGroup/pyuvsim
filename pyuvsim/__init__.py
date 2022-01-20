@@ -5,6 +5,7 @@
 from setuptools_scm import get_version
 from pathlib import Path
 from pkg_resources import get_distribution, DistributionNotFound
+import warnings
 
 from .branch_scheme import branch_scheme
 
@@ -22,6 +23,11 @@ except (LookupError, ImportError):
     except DistributionNotFound:  # pragma: nocover
         # package is not installed
         pass
+
+# Filter distutils Deprecation Warning from pyuvdata
+# (can be removed when we require pyuvdata > 2.2.6)
+# needs to be done before the imports to work properly
+warnings.filterwarnings("ignore", message="distutils Version classes are deprecated")
 
 from .profiling import *  # noqa
 from .uvsim import *  # noqa
