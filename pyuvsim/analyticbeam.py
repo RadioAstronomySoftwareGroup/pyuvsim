@@ -57,6 +57,7 @@ class AnalyticBeam:
         * Airy: An Airy disk pattern (the 2D Fourier transform of a circular aperture of
           width given by `diameter`)
         * Gaussian: A peak-normalized gaussian function.
+
             * If given a `diameter`, then this makes a chromatic beam with FWHMs
               matching an equivalent Airy disk beam at each frequency.
             * If given a `sigma`, this makes an achromatic beam with standard deviation

@@ -40,8 +40,10 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
     """
     Apply a line profiler to the listed functions, wherever they appear in pyuvsim.
 
-    Places a LineProfiler object in the module namespace, and registers its dumping/printing
-    functions to run at the end.
+    Places a LineProfiler object in the module namespace, and registers its
+    dumping/printing functions to run at the end. When the Python environment closes,
+    the profiler functions print_stats (and dump_stats, if dump_raw is True) will
+    execute, saving profiler data to file.
 
     Parameters
     ----------
@@ -57,15 +59,6 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
             Axis sizes go to <outfile_prefix>_axes.npz
     dump_raw: bool
         Write out a pickled LineStats object to <outfile_name>.lprof (Default False)
-
-    Sets
-    ----
-    prof : LineProfiler
-        An instance of LineProfiler in the module namespace.
-    exit functions:
-        When the Python environment closes, the profiler functions
-        print_stats (and dump_stats, if dump_raw is True) will execute,
-        saving profiler data to file.
 
     """
     global prof

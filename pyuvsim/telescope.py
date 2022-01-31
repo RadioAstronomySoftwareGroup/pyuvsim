@@ -31,7 +31,6 @@ class BeamList:
     ----------
     string_mode : bool
         Is True if the beams are represented as strings, False if they're objects
-
     uvb_params : dict
         Set of additional attributes to set on UVBeam objects.
 
@@ -42,9 +41,7 @@ class BeamList:
         beam_list consists of objects, then the BeamList will be initialized in
         object mode with string_mode == False. If beam_list consists of strings,
         the BeamList will be initialized in string mode.
-
         Passing in a mixture of strings and objects will error.
-
     uvb_params : dict (optional)
         Options to set uvb_params, overriding settings from passed-in UVBeam objects.
 
