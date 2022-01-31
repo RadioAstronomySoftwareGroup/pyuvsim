@@ -32,7 +32,7 @@ test_reqs = (
         "pytest-cov",
     ]
 )
-doc_reqs = ["sphinx", "pypandoc"]
+doc_reqs = ["sphinx", "pypandoc", "sphinx_rtd_theme==0.5.2"]
 
 setup_args = {
     'name': 'pyuvsim',
