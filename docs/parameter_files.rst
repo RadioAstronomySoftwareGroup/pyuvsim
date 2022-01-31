@@ -4,9 +4,9 @@ Parameter and configuration Files
 When running simulations from yaml and csv files, there are four configuration files
 that must be used.
 
-The outermost parameter file is the `obsparam_*.yaml`, which is parsed by
-``initialize_uvdata_from_params`` into a UVdata object, a source list, a beam dictionary,
-and a beam list.
+The outermost parameter file is the ``obsparam_*.yaml``, which is parsed by
+:func:`pyuvsim.simsetup.initialize_uvdata_from_params` into a :class:`pyuvdata.UVData` object,
+a beam dictionary, and a :class:`pyuvsim.BeamList` object.
 
 The antenna layout and telescope config yaml files determine the full properties of the
 array, including location, beam models, layout, and naming.
@@ -14,8 +14,8 @@ array, including location, beam models, layout, and naming.
 The catalog text files give point source lists.
 
 
-These files contain overall simulation parameters.
-Passed into ``run_param_pyuvsim.py``
+These files contain overall simulation parameters. See :doc:`usage` for details on how
+these are passed into a simulation.
 
 .. code-block:: yaml
     :caption: Example obsparam yaml file
@@ -163,9 +163,9 @@ Telescope Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^
 
     Under the telescope section, the keywords ``array_layout`` and ``telescope_config_name``
-        give paths to, respectively, the array layout text file and the telescope metadata
-        configuration yaml file. These path may either be absolute or specified relative
-        to the location of the obsparam yaml file.
+    give paths to, respectively, the array layout text file and the telescope metadata
+    configuration yaml file. These path may either be absolute or specified relative
+    to the location of the obsparam yaml file.
 
     Example array layout with four antennas:
 
@@ -255,6 +255,7 @@ Sources
     as one of: ``flat``, ``subband`` or ``spectral_index``. If not specified it defaults to ``flat``.
 
     If the catalog is a different VO table file, several other keywords are required or recommended:
+
       * ``table_name`` : The name of the table to use from the file (required).
       * ``id_column`` : The name of the column to use for the source IDs (required).
       * ``flux_columns`` : One or a list of columns to use for the source fluxes

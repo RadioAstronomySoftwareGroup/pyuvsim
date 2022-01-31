@@ -28,7 +28,7 @@ Enabling Profiling
 The ``line_profiler`` module provides runtime estimates on a line by line basis. It is built into ``pyuvsim`` to work within the MPI framework using the functions in ``pyuvsim.profiling``. To run a simulation with profiling enabled, run the command ``profiling.set_profiler()`` before starting ``run_uvsim()``. This function can be passed a list of functions you wish to profile (by name), as well as which rank to return data for (it will only profile one MPI rank at a time!).
 
 Generating Config Files from Data
-=================================
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The scripts ``uvfits_to_telescope_config.py`` and ``uvfits_to_config.py`` are provided for convenience. These will accept the path to any valid uvfits file as input, along with output file name options, and will generate telescope layout, telescope configuration, and an obsparam file for a simulation with the same time, frequency, and baseline structure as the data file.
 
@@ -36,7 +36,7 @@ Note that the generated configuration files will still need to be given paths to
 
 
 Parallelization
-===============
+^^^^^^^^^^^^^^^
 
 Given ``Npus`` MPI processes, and ``Nsrcs``, ``Nbls``, ``Ntimes``, ``Nfreqs`` sources, baselines, times, and frequencies (respectively), the choice of splitting the various axes goes like this:
 

@@ -150,11 +150,13 @@ Documentation on how to run simulations and developer API documentation is hoste
 ```
 pytest
 ```
-You can alternatively run ```python -m pytest pyuvsim``` or ```python setup.py test```.
+You can alternatively run `python -m pytest pyuvsim` or `python setup.py test`.
 You will need to have all dependencies installed.
 
-Some tests are run in parallel using the mpi4py module. Those tests have a decorator ``pytest.mark.parallel(n)``` where ```n``` is an integer giving the number
-of parallel processes to run the test on. To temporarily disable parallel tests, run pytest with the option ```--nompi```.
+Some tests are run in parallel using the mpi4py module. Those tests have a decorator
+`pytest.mark.parallel(n)` where `n` is an integer giving the number
+of parallel processes to run the test on. To temporarily disable parallel tests,
+run pytest with the option `--nompi`.
 
 ## Where to find Support
 
