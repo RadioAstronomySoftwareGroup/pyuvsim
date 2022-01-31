@@ -15,4 +15,4 @@ dependencies:
   - psutil
   - pip:
     - pyradiosky>=0.1.2
-    - sphinx_rtd_theme>=1.0.0
+    - sphinx_rtd_theme==0.5.2
