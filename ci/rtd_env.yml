@@ -9,8 +9,10 @@ dependencies:
   - pip
   - pyyaml
   - setuptools_scm
+  - sphinx>=4.3.0
   - conda-forge::pyuvdata>=2.1.5
   - conda-forge::pypandoc
   - psutil
   - pip:
     - pyradiosky>=0.1.2
+    - sphinx_rtd_theme>=1.0.0
