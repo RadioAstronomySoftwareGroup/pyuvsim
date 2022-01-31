@@ -163,6 +163,7 @@ texinfo_documents = [
 
 napoleon_use_rtype = False
 napoleon_use_param = False
+napoleon_custom_sections = [("Attributes", "params_style")]
 
 
 def build_custom_docs(app):
