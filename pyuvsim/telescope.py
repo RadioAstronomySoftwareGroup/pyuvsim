@@ -110,7 +110,8 @@ class BeamList:
             self.check_consistency(force=force_check)
 
     def check_consistency(self, force: bool = False):
-        """Check the consistency of all beams in the list.
+        """
+        Check the consistency of all beams in the list.
 
         This checks basic parameters of the objects for consistency, eg. the ``beam_type``.
         It is meant to be manually called by the user.
@@ -126,6 +127,7 @@ class BeamList:
         ------
         BeamConsistencyError
             If any beam is inconsistent with the rest of the beams.
+
         """
         if self.string_mode:
             if not force:
@@ -173,12 +175,14 @@ class BeamList:
 
     @property
     def x_orientation(self):
-        """The x_orientation of all beams in list (if consistent).
+        """
+        Return the x_orientation of all beams in list (if consistent).
 
         Raises
         ------
         BeamConsistencyError
             If the beams in the list are not consistent with each other.
+
         """
         if not self.is_consistent:
             self.check_consistency(force=True)
@@ -215,12 +219,14 @@ class BeamList:
 
     @property
     def beam_type(self):
-        """The beam_type of all beams in list (if consistent).
+        """
+        Return the beam_type of all beams in list (if consistent).
 
         Raises
         ------
         BeamConsistencyError
             If the beams in the list are not consistent with each other.
+
         """
         if not self.is_consistent:
             self.check_consistency(force=True)
@@ -304,6 +310,7 @@ class BeamList:
 
         Converts objects to strings if in object mode,
         or vice versa if in string mode.
+
         """
         if self.string_mode:
             # If value is a string, then _scrape_uvb_params returns an empty dictionary.
@@ -346,6 +353,7 @@ class BeamList:
 
         Converts objects to strings if in object mode,
         or vice versa if in string mode.
+
         """
         if self.string_mode:
             self._str_beam_list.append('')
@@ -442,6 +450,7 @@ class BeamList:
         ValueError:
             If any UVBeam objects lack a "beam_path" keyword in the "extra_keywords"
             attribute, specifying the path to the beamfits file that generates it.
+
         """
         if self._obj_beam_list != []:
             # Convert object beams to string definitions
@@ -481,6 +490,8 @@ class BeamList:
 
 
 class BeamConsistencyError(Exception):
+    """An Exception class to mark inconsistencies among beams in a BeamList."""
+
     pass
 
 
