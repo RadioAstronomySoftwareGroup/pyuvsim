@@ -11,6 +11,12 @@ from .analyticbeam import AnalyticBeam
 from . import mpi
 
 
+class BeamConsistencyError(Exception):
+    """An Exception class to mark inconsistencies among beams in a BeamList."""
+
+    pass
+
+
 class BeamList:
     """
     A container for the set of beam models and related parameters.
@@ -44,19 +50,17 @@ class BeamList:
         Passing in a mixture of strings and objects will error.
     uvb_params : dict (optional)
         Options to set uvb_params, overriding settings from passed-in UVBeam objects.
-
-    check
+    check : bool
         Whether to perform a consistency check on the beams (i.e. asserting that several
         of their defining parameters are the same for all beams in the list).
-
-    force_check
+    force_check : bool
         The consistency check is only possible for object-beams (not string mode). If
         `force_check` is True, it will convert beams to object-mode to force the check
         to run (then convert back to string mode).
 
     Raises
     ------
-    ValueError :
+    ValueError
         For an invalid beam_list (mix of strings and objects).
 
     Notes
@@ -406,8 +410,7 @@ class BeamList:
 
     @classmethod
     def _obj_to_str(cls, beam_model):
-        # Convert beam objects to strings that may generate them.
-
+        """Convert beam objects to strings that may generate them."""
         if isinstance(beam_model, str):
             return beam_model
         if isinstance(beam_model, AnalyticBeam):
@@ -486,12 +489,6 @@ class BeamList:
 
         if check:
             self.check_consistency()
-
-
-class BeamConsistencyError(Exception):
-    """An Exception class to mark inconsistencies among beams in a BeamList."""
-
-    pass
 
 
 class Telescope:

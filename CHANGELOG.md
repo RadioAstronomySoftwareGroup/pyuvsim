@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- New `check_consistency` method for `BeamList` objects.
 - Ability to simulate UVData objects where Nblts != Nbls * Ntimes. Currently only supported with direct `run_uvdata_uvsim` calls.
 
 ### Fixed
@@ -11,7 +12,6 @@
 ## [1.2.1] - 2021-10-13
 
 ### Added
-- New `check_consistency` method for `BeamList` objects.
 - Support for writing out measurement set files.
 - Support for unit tests parallelized with MPI.
 - Require that future changes not drastically increase runtime for current capabilities.
