@@ -118,7 +118,7 @@ class BeamList:
 
         Parameters
         ----------
-        force
+        force : bool
             Whether to force the consistency check even if the object is in string
             mode. This wil convert to to object mode, perform the check, then
             convert back.
@@ -245,7 +245,6 @@ class BeamList:
         beam_objs : list
             If any UVBeams are found in this list, they will be scraped
             for relevant parameters.
-
         strict : bool
             If True, will raise an error if the UVBeams in beam_objs
             have conflicting parameters.
@@ -471,9 +470,9 @@ class BeamList:
 
         Parameters
         ----------
-        use_shared_mem
+        use_shared_mem : bool
             Whether to use shared memory for the beam data.
-        check
+        check : bool
             Whether to perform consistency checks on all the beams in the list after
             conversion to object mode.
 
