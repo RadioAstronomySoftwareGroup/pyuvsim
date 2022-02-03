@@ -408,8 +408,7 @@ class BeamList:
         uvb.extra_keywords['beam_path'] = path
         return uvb
 
-    @classmethod
-    def _obj_to_str(cls, beam_model):
+    def _obj_to_str(self, beam_model):
         """Convert beam objects to strings that may generate them."""
         if isinstance(beam_model, str):
             return beam_model
@@ -417,7 +416,7 @@ class BeamList:
             btype = beam_model.type
 
             bm_str = 'analytic_' + btype
-            for abbrv, full in cls._float_params.items():
+            for abbrv, full in self._float_params.items():
                 val = getattr(beam_model, full)
                 if val is not None:
                     bm_str += '_' + abbrv + '=' + str(val)

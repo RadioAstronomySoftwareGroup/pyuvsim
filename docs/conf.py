@@ -164,7 +164,7 @@ texinfo_documents = [
 napoleon_use_rtype = False
 napoleon_use_param = False
 napoleon_custom_sections = [("Attributes", "params_style")]
-
+autodoc_typehints = 'both'
 
 def build_custom_docs(app):
     sys.path.append(os.getcwd())
