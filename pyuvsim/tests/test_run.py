@@ -11,8 +11,11 @@ import yaml
 import pytest
 import numpy as np
 from astropy import units
+import pyuvdata
 from pyuvdata import UVData
+import pyuvdata.utils as uvutils
 import pyuvdata.tests as uvtest
+import pyradiosky
 from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
 
 import pyuvsim
@@ -69,6 +72,10 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
         uv_new.read_uvfits(ofilepath)
 
     uv_new.unphase_to_drift(use_ant_pos=True)
+
+    assert uvutils._check_history_version(uv_new.history, pyradiosky.__version__)
+    assert uvutils._check_history_version(uv_new.history, pyuvdata.__version__)
+    assert uvutils._check_history_version(uv_new.history, pyuvsim.__version__)
 
     # Reset parts that will deviate
     uv_new.history = uv_ref.history
