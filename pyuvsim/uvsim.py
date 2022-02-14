@@ -819,6 +819,7 @@ def run_uvsim(params, return_uv=False, quiet=False):
         skydata, source_list_name = simsetup.initialize_catalog_from_params(
             params, input_uv, return_recarray=False
         )
+        pyradiosky_version_string = skydata.pyradiosky_version_str
         print(f"UVData initialization took {(Time.now() - start).to('minute'):.3f}")
         start = Time.now()
         skydata = simsetup.SkyModelData(skydata)
@@ -858,6 +859,9 @@ def run_uvsim(params, return_uv=False, quiet=False):
         history += (' Based on config files: ' + obs_param_file + ', '
                     + telescope_config_file + ', ' + antenna_location_file)
         history += ' Npus = ' + str(mpi.Npus) + '.'
+
+        # add pyradiosky version
+        history += pyradiosky_version_string
 
         # add pyuvdata version info
         history += uv_out.pyuvdata_version_str
