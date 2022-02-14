@@ -56,7 +56,7 @@ these are passed into a simulation.
       end_time: 2457458.175168105
       duration_hours: 0.0276
     select: # limit which baselines are simulated. Use any UVData.select keywords (except polarizations) and/or redundant_threshold
-      bls: [(1, 2), (3, 4), (5, 6)]
+      bls: '[(1, 2), (3, 4), (5, 6)]'
       ant_str: 'cross'
       antenna_nums: [1, 7, 9, 15]
       redundant_threshold: 0.1 # redundancy threshold in meters. Only simulate one baseline per redundant group
@@ -286,6 +286,9 @@ Select
     Specify keywords to select which baselines to simulate. The selection is done by
     UVData.select, so it can accept any keyword that function accepts, except ones that
     affect polarization because pyuvsim computes all polarizations.
+
+    Note that if using the ``bls`` parameter for selecting, which specifies a list of
+    baseline tuples, the list needs to be wrapped in a string in the obsparam yaml file.
 
     In addition to the UVData.select keywords, a ``redundant_threshold`` parameter can
     be specified. If it is present, only one baseline from each set of redundant
