@@ -868,5 +868,3 @@ def run_uvsim(params, return_uv=False, quiet=False):
 
     if return_uv:
         return uv_out
-
-    comm.Barrier()
