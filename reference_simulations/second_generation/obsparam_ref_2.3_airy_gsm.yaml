@@ -7,7 +7,7 @@ freq:
   channel_width: 80000.0
   start_freq: 100000000.0
 sources:
-  catalog: 'catalog_files/healpix_gsm_shell.hdf5'
+  catalog: '../catalog_files/healpix_gsm_shell.hdf5'
 telescope:
   array_layout: 'telescope_config/mwa_nocore_layout.csv'
   telescope_config_name: 'telescope_config/mwa88_nocore_config_airy.yaml'

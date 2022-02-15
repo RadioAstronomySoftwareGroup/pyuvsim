@@ -7,7 +7,7 @@ freq:
   channel_width: 1000000.0
   start_freq: 100000000.0
 sources:
-  catalog: "catalog_files/two_distant_points_2458178.5.txt"
+  catalog: "../catalog_files/two_distant_points_2458178.5.txt"
 telescope:
   array_layout: telescope_config/baseline_lite.csv
   telescope_config_name: telescope_config/bl_lite_airy.yaml

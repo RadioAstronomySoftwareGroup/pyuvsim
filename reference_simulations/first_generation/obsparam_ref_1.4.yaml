@@ -7,7 +7,7 @@ freq:
   channel_width: 80000.0
   start_freq: 100000000.0
 sources:
-  catalog: "catalog_files/gleam.vot"  #Note : Too large to share on github
+  catalog: "../catalog_files/gleam.vot"  #Note : Too large to share on github
 telescope:
   array_layout: telescope_config/5km_triangle_layout.csv
   telescope_config_name: telescope_config/5km_triangle_config.yaml

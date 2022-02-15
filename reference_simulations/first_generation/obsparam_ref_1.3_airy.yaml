@@ -8,7 +8,7 @@ freq:
   start_freq:  50016000.0
   end_freq:   249984000.0
 sources:
-  catalog: "catalog_files/letter_R_12pt_2458098.38824015.txt"
+  catalog: "../catalog_files/letter_R_12pt_2458098.38824015.txt"
 telescope:
   array_layout: telescope_config/baseline_lite.csv
   telescope_config_name: telescope_config/bl_lite_airy.yaml
