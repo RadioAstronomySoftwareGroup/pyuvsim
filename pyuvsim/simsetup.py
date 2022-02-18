@@ -978,7 +978,7 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
     # If the filename parameter doesn't exist on the sky object
     # (because of an older version of pyradiosky) or if it is None (e.g. for mock skies)
     # add the source_list_name to the object so it can be put in the UVData history later
-    if not hasattr(sky, "filename") or sky.filename is None:
+    if getattr(sky, "filename", None) is None:
         sky.filename = source_list_name
 
     if return_recarray:
