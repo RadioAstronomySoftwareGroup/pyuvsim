@@ -553,9 +553,15 @@ class SkyModelData:
     ----------
     sky_in: :class:`pyradiosky.SkyModel`
         A valid SkyModel object.
+    filename : str or list of str, optional
+        The filename (or other string identifier) of the input catalog. This overrides
+        the filename set on the sky_in object (if it has one). If not set, this defaults
+        to the filename set on the sky_in object (if it has one)
 
     """
 
+    filename = None
+    pyradiosky_version_str = None
     Ncomponents = None
     component_type = None
     spectral_type = None
@@ -578,7 +584,7 @@ class SkyModelData:
     put_in_shared = ['stokes_I', 'stokes_Q', 'stokes_U', 'stokes_V', 'polarized',
                      'ra', 'dec', 'reference_frequency', 'spectral_index', 'hpx_inds']
 
-    def __init__(self, sky_in=None):
+    def __init__(self, sky_in=None, filename=None):
         # Collect relevant attributes.
         if sky_in is not None:
             if sky_in.name is not None:
@@ -626,6 +632,16 @@ class SkyModelData:
                 self.reference_frequency = sky_in.reference_frequency.to("Hz").value
             if sky_in._spectral_index.required:
                 self.spectral_index = sky_in.spectral_index
+
+            self.pyradiosky_version_str = sky_in.pyradiosky_version_str
+        if filename is not None:
+            if isinstance(filename, str):
+                filename_use = [filename]
+            else:
+                filename_use = filename
+            self.filename = filename_use
+        elif hasattr(sky_in, "filename"):
+            self.filename = sky_in.filename
 
     def subselect(self, inds):
         """
@@ -759,6 +775,10 @@ class SkyModelData:
         else:
             other['name'] = self.name
 
+        empty_sky = pyradiosky.SkyModel()
+        if hasattr(empty_sky, "filname"):
+            other["filename"] = self.filename
+
         return pyradiosky.SkyModel(
             ra=ra_use, dec=dec_use, stokes=stokes_use,
             spectral_type=self.spectral_type, **other
@@ -829,14 +849,13 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
         Used to set location for mock catalogs and for horizon cuts.
     return_recarray: bool
         Return a recarray instead of a :class:`pyradiosky.SkyModel` instance.
-        Default is True.
 
     Returns
     -------
     skydata: numpy.recarray or :class:`pyradiosky.SkyModel`
         Source catalog filled with data.
     source_list_name: str
-            Catalog identifier for metadata.
+        Catalog identifier for metadata.
 
     """
     if input_uv is not None and not isinstance(input_uv, UVData):
@@ -955,10 +974,15 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
         sky, source_params, telescope_lat_deg=telescope_lat_deg
     )
 
-    # Make SkyModelData to share it.
+    # If the filename parameter doesn't exist on the sky object
+    # (because of an older version of pyradiosky) or if it is None (e.g. for mock skies)
+    # add the source_list_name to the object so it can be put in the UVData history later
+    if not hasattr(sky, "filename") or sky.filename is None:
+        sky.filename = source_list_name
+
     if return_recarray:
         warnings.warn("initialize_catalog_from_params will return a SkyModel instance, not "
-                      "a recarray, by default in the future. Set keyword "
+                      "a recarray, by default in version 1.3. Set keyword "
                       "`return_recarray=True` to ensure recarray is returned.",
                       PendingDeprecationWarning)
         sky = sky.to_recarray()
@@ -1620,7 +1644,7 @@ def initialize_uvdata_from_params(obs_params):
     uv_obj.ant_1_array, uv_obj.ant_2_array = uv_obj.baseline_to_antnums(uv_obj.baseline_array)
 
     # add other required metadata to allow select to work without errors
-    # these will all be overwritten in uvsim.complete_uvdata, so it's ok to hardcode them here
+    # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
 
     _set_lsts_on_uvdata(uv_obj)
     uv_obj.set_uvws_from_antenna_positions()
