@@ -776,7 +776,8 @@ class SkyModelData:
             other['name'] = self.name
 
         empty_sky = pyradiosky.SkyModel()
-        if hasattr(empty_sky, "filname"):
+        if hasattr(empty_sky, "filename"):  # pragma: nocover
+            # this only works for very new versions of pyradiosky
             other["filename"] = self.filename
 
         return pyradiosky.SkyModel(
