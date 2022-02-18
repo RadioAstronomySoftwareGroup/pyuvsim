@@ -1435,13 +1435,19 @@ def test_skymodeldata(component_type, cat_with_some_pols):
     # Test that SkyModelData class can properly recreate a SkyModel and subselect.
     if component_type == 'point':
         sky = cat_with_some_pols
+        filename_use = "mock_with_pol"
     else:
         pytest.importorskip('astropy_healpix')
         path = os.path.join(SKY_DATA_PATH, 'healpix_disk.skyh5')
         sky = pyradiosky.SkyModel()
         sky.read_skyh5(path)
+        filename_use = ["healpix_disk"]
 
-    smd = pyuvsim.simsetup.SkyModelData(sky)
+    smd = pyuvsim.simsetup.SkyModelData(sky, filename=filename_use)
+    if isinstance(filename_use, str):
+        assert smd.filename == [filename_use]
+    else:
+        assert smd.filename == filename_use
 
     if hasattr(sky, "get_lon_lat"):
         sky_ra, sky_dec = sky.get_lon_lat()

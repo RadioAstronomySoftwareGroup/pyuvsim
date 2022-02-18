@@ -76,6 +76,10 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     assert uvutils._check_history_version(uv_new.history, pyradiosky.__version__)
     assert uvutils._check_history_version(uv_new.history, pyuvdata.__version__)
     assert uvutils._check_history_version(uv_new.history, pyuvsim.__version__)
+    assert uvutils._check_history_version(uv_new.history, paramfile)
+    assert uvutils._check_history_version(uv_new.history, 'triangle_bl_layout.csv')
+    assert uvutils._check_history_version(uv_new.history, '28m_triangle_10time_10chan.yaml')
+    assert uvutils._check_history_version(uv_new.history, "Npus =")
 
     # Reset parts that will deviate
     uv_new.history = uv_ref.history
@@ -288,6 +292,16 @@ def test_sim_on_moon(future_shapes):
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     param_dict['select'] = {'redundant_threshold': 0.1}
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+
+    # set the filename to make sure it ends up in the history,
+    # remove the parameter file info from extra_keywords
+    uv_obj.filename = ["moon_sim"]
+    uv_obj._filename.form = (1,)
+    uv_obj.extra_keywords.pop('obsparam')
+    uv_obj.extra_keywords.pop('telecfg')
+    uv_obj.extra_keywords.pop('layout')
+    uv_obj.check()
+
     uv_obj.select(times=uv_obj.time_array[0])
     tranquility_base = MoonLocation.from_selenocentric(*uv_obj.telescope_location, 'meter')
 
@@ -301,5 +315,11 @@ def test_sim_on_moon(future_shapes):
     uv_out = pyuvsim.uvsim.run_uvdata_uvsim(
         uv_obj, beam_list, beam_dict, catalog=sources, quiet=True
     )
+    assert uvutils._check_history_version(uv_out.history, pyradiosky.__version__)
+    assert uvutils._check_history_version(uv_out.history, pyuvdata.__version__)
+    assert uvutils._check_history_version(uv_out.history, pyuvsim.__version__)
+    assert uvutils._check_history_version(uv_out.history, uv_obj.filename[0])
+    assert uvutils._check_history_version(uv_out.history, "Npus =")
+
     assert np.allclose(uv_out.data_array[:, :, 0], 0.5)
     assert uv_out.extra_keywords['world'] == 'moon'

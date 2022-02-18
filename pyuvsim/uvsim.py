@@ -779,14 +779,13 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         history = simutils.get_version_string()
         if catalog.filename is not None:
             history += ' Sources from source list(s): [' + ', '.join(catalog.filename) + '].'
-        if 'obs_param_file' in input_uv.extra_keywords:
-            obs_param_file = input_uv.extra_keywords['obs_param_file']
-            telescope_config_file = input_uv.extra_keywords['telescope_config_name']
-            antenna_location_file = input_uv.extra_keywords['array_layout']
+        if 'obsparam' in input_uv.extra_keywords:
+            obs_param_file = input_uv.extra_keywords['obsparam']
+            telescope_config_file = input_uv.extra_keywords['telecfg']
+            antenna_location_file = input_uv.extra_keywords['layout']
             history += (' Based on config files: ' + obs_param_file + ', '
                         + telescope_config_file + ', ' + antenna_location_file)
         elif uv_container.filename is not None:
-            assert False
             history += ' Based on uvdata file(s): [' + ', '.join(uv_container.filename) + '].'
         history += ' Npus = ' + str(mpi.Npus) + '.'
 
@@ -839,7 +838,7 @@ def run_uvsim(params, return_uv=False, quiet=False):
     if rank == 0:
         start = Time.now()
         input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(params)
-        skydata, source_list_name = simsetup.initialize_catalog_from_params(
+        skydata, _ = simsetup.initialize_catalog_from_params(
             params, input_uv, return_recarray=False
         )
         print(f"UVData initialization took {(Time.now() - start).to('minute'):.3f}")
