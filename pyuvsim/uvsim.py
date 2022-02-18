@@ -775,6 +775,29 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
                 "The output UVData object will have (time, baseline) ordering."
             )
 
+        # Updating file history.
+        history = simutils.get_version_string()
+        if catalog.filename is not None:
+            history += ' Sources from source list(s): [' + ', '.join(catalog.filename) + '].'
+        if 'obs_param_file' in input_uv.extra_keywords:
+            obs_param_file = input_uv.extra_keywords['obs_param_file']
+            telescope_config_file = input_uv.extra_keywords['telescope_config_name']
+            antenna_location_file = input_uv.extra_keywords['array_layout']
+            history += (' Based on config files: ' + obs_param_file + ', '
+                        + telescope_config_file + ', ' + antenna_location_file)
+        elif uv_container.filename is not None:
+            assert False
+            history += ' Based on uvdata file(s): [' + ', '.join(uv_container.filename) + '].'
+        history += ' Npus = ' + str(mpi.Npus) + '.'
+
+        # add pyradiosky version
+        history += catalog.pyradiosky_version_str
+
+        # add pyuvdata version info
+        history += uv_container.pyuvdata_version_str
+
+        uv_container.history = history
+
         return uv_container
 
 
@@ -819,7 +842,6 @@ def run_uvsim(params, return_uv=False, quiet=False):
         skydata, source_list_name = simsetup.initialize_catalog_from_params(
             params, input_uv, return_recarray=False
         )
-        pyradiosky_version_string = skydata.pyradiosky_version_str
         print(f"UVData initialization took {(Time.now() - start).to('minute'):.3f}")
         start = Time.now()
         skydata = simsetup.SkyModelData(skydata)
@@ -843,30 +865,6 @@ def run_uvsim(params, return_uv=False, quiet=False):
                 param_dict = yaml.safe_load(pfile)
         else:
             param_dict = params
-
-        if 'obs_param_file' in input_uv.extra_keywords:
-            obs_param_file = input_uv.extra_keywords['obs_param_file']
-            telescope_config_file = input_uv.extra_keywords['telescope_config_name']
-            antenna_location_file = input_uv.extra_keywords['array_layout']
-        else:
-            obs_param_file = ''
-            telescope_config_file = ''
-            antenna_location_file = ''
-
-        # Updating file history.
-        history = simutils.get_version_string()
-        history += ' Sources from source list: ' + source_list_name + '.'
-        history += (' Based on config files: ' + obs_param_file + ', '
-                    + telescope_config_file + ', ' + antenna_location_file)
-        history += ' Npus = ' + str(mpi.Npus) + '.'
-
-        # add pyradiosky version
-        history += pyradiosky_version_string
-
-        # add pyuvdata version info
-        history += uv_out.pyuvdata_version_str
-
-        uv_out.history = history
 
         simutils.write_uvdata(uv_out, param_dict, dryrun=return_uv)
 
