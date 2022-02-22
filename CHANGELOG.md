@@ -2,7 +2,11 @@
 
 ## [Unreleased]
 
+## [1.2.2] - 2022-02-22
+
 ### Added
+- Ensure that the version numbers for pyuvsim, pyradiosky and pyuvdata are written to
+the history of the output UVData files.
 - New `check_consistency` method for `BeamList` objects.
 - Ability to simulate UVData objects where Nblts != Nbls * Ntimes. Currently only supported with direct `run_uvdata_uvsim` calls.
 
