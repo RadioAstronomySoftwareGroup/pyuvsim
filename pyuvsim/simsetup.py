@@ -233,7 +233,7 @@ def _create_catalog_diffuse(
 
     stokes *= units.K
 
-    if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):  # pragma: no cover
+    if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):
         catalog = pyradiosky.SkyModel(
             stokes=stokes,
             nside=map_nside,
@@ -293,7 +293,7 @@ def _create_catalog_discrete(Nsrcs, alts, azs, fluxes, time, localframe, array_l
 
     stokes *= units.Jy
 
-    if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):  # pragma: no cover
+    if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):
         catalog = pyradiosky.SkyModel(
             name=names,
             ra=icrs_coord.ra,
@@ -596,7 +596,7 @@ class SkyModelData:
             self.component_type = sky_in.component_type
             self.spectral_type = sky_in.spectral_type
             self.Ncomponents = sky_in.Ncomponents
-            if hasattr(sky_in, "get_lon_lat"):  # pragma: no cover
+            if hasattr(sky_in, "get_lon_lat"):
                 if sky_in.frame != "icrs":
                     sky_in.transform_to(ICRS)
                 sky_ra, sky_dec = sky_in.get_lon_lat()
@@ -776,8 +776,8 @@ class SkyModelData:
             other['name'] = self.name
 
         empty_sky = pyradiosky.SkyModel()
-        if hasattr(empty_sky, "filename"):  # pragma: nocover
-            # this only works for very new versions of pyradiosky
+        if hasattr(empty_sky, "filename"):
+            # this only works for pyradiosky >= 0.1.3
             other["filename"] = self.filename
 
         return pyradiosky.SkyModel(
@@ -798,7 +798,7 @@ def _sky_select_calc_rise_set(sky, source_params, telescope_lat_deg=None):
         Latitude of telescope in degrees, used for horizon calculations.
 
     """
-    if hasattr(sky, "cut_nonrising"):  # pragma: no cover
+    if hasattr(sky, "cut_nonrising"):
 
         if telescope_lat_deg is not None:
             telescope_lat = Latitude(telescope_lat_deg * units.deg)
