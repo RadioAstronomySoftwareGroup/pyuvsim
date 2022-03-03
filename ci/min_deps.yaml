@@ -16,4 +16,4 @@ dependencies:
   - setuptools_scm
   - psutil
   - pip:
-    - pyradiosky=0.1.2
+    - pyradiosky==0.1.2
