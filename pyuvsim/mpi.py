@@ -48,7 +48,6 @@ def start_mpi(block_nonroot_stdout=True):
     ----------
     block_nonroot_stdout : bool
         Redirect stdout on nonzero ranks to /dev/null, for cleaner output.
-        Default True.
 
     """
     global world_comm, node_comm, rank_comm, rank, Npus

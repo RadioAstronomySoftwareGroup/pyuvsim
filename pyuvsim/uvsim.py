@@ -572,7 +572,14 @@ def _check_ntasks_valid(Ntasks_tot):
         )
 
 
-def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=False):
+def run_uvdata_uvsim(
+    input_uv,
+    beam_list,
+    beam_dict=None,
+    catalog=None,
+    quiet=False,
+    block_nonroot_stdout=True
+):
     """
     Run uvsim from UVData object.
 
@@ -590,6 +597,8 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         Immutable source parameters.
     quiet : bool
         Do not print anything.
+    block_nonroot_stdout : bool
+        Redirect stdout on nonzero ranks to /dev/null, for cleaner output.
 
     Returns
     -------
@@ -603,7 +612,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
                           "or pip install pyuvsim[all] if you also want the "
                           "line_profiler installed.")
 
-    mpi.start_mpi()
+    mpi.start_mpi(block_nonroot_stdout=block_nonroot_stdout)
     rank = mpi.get_rank()
     comm = mpi.get_comm()
     Npus = mpi.get_Npus()
@@ -800,7 +809,7 @@ def run_uvdata_uvsim(input_uv, beam_list, beam_dict=None, catalog=None, quiet=Fa
         return uv_container
 
 
-def run_uvsim(params, return_uv=False, quiet=False):
+def run_uvsim(params, return_uv=False, quiet=False, block_nonroot_stdout=True):
     """
     Run a simulation off of an obsparam yaml file.
 
@@ -812,6 +821,8 @@ def run_uvsim(params, return_uv=False, quiet=False):
         If true, do not write results to file and return uv_out. (Default False)
     quiet : bool
         If True, do not print anything to stdout. (Default False)
+    block_nonroot_stdout : bool
+        Redirect stdout on nonzero ranks to /dev/null, for cleaner output.
 
     Returns
     -------
@@ -826,7 +837,7 @@ def run_uvsim(params, return_uv=False, quiet=False):
                           "or pip install pyuvsim[all] if you also want the "
                           "line_profiler installed.")
 
-    mpi.start_mpi()
+    mpi.start_mpi(block_nonroot_stdout=block_nonroot_stdout)
     rank = mpi.get_rank()
     comm = mpi.get_comm()
 

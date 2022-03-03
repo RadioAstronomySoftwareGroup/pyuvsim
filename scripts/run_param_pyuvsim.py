@@ -16,6 +16,11 @@ parser = argparse.ArgumentParser(
 parser.add_argument('paramsfile', type=str, help='Parameter yaml file.', default=None)
 parser.add_argument('--profile', type=str, help='Time profiling output file name.')
 parser.add_argument('--quiet', action='store_true', help='Suppress stdout printing.')
+parser.add_argument(
+    '--keep_nonroot_stdout',
+    action='store_true',
+    help='Do not eedirect stdout on nonzero ranks to /dev/null.'
+)
 parser.add_argument('--raw_profile', help='Also save pickled LineStats data for line profiling.',
                     action='store_true')
 
@@ -32,7 +37,11 @@ if not os.path.isdir(os.path.dirname(args.paramsfile)):
 
 t0 = pytime.time()
 
-pyuvsim.uvsim.run_uvsim(args.paramsfile, quiet=args.quiet)
+block_nonroot_stdout = not args.keep_nonroot_stdout
+
+pyuvsim.uvsim.run_uvsim(
+    args.paramsfile, quiet=args.quiet, block_nonroot_stdout=block_nonroot_stdout
+)
 
 if args.profile:
     dt = pytime.time() - t0
