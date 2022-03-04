@@ -3,19 +3,19 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - astropy=4.0
+  - astropy>=4.0
   - astropy-healpix
   - coverage
   - line_profiler
-  - mpi4py=3.0.0
-  - numpy=1.15
+  - mpi4py>=3.0.0
+  - numpy>=1.15
   - pip
   - psutil
-  - python-casacore=3.1.0
+  - python-casacore>=3.1.0
   - pytest
   - pytest-cov
   - pyuvdata=2.1.5
-  - pyyaml=5.1
+  - pyyaml>=5.1
   - scipy
   - setuptools_scm
   - pip:
