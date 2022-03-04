@@ -10,10 +10,10 @@ dependencies:
   - pip
   - pytest
   - pytest-cov
-  - pyuvdata=2.1.5
+  - pyuvdata>=2.1.5
   - pyyaml>=5.1
   - scipy
   - setuptools_scm
   - psutil
   - pip:
-    - pyradiosky==0.1.2
+    - pyradiosky>=0.1.2
