@@ -295,8 +295,10 @@ def test_sim_on_moon(future_shapes):
 
     # set the filename to make sure it ends up in the history,
     # remove the parameter file info from extra_keywords
-    uv_obj.filename = ["moon_sim"]
-    uv_obj._filename.form = (1,)
+    if hasattr(uv_obj, "filename"):
+        # only exists in pyuvdata >= 2.2.5
+        uv_obj.filename = ["moon_sim"]
+        uv_obj._filename.form = (1,)
     uv_obj.extra_keywords.pop('obsparam')
     uv_obj.extra_keywords.pop('telecfg')
     uv_obj.extra_keywords.pop('layout')
@@ -318,7 +320,8 @@ def test_sim_on_moon(future_shapes):
     assert uvutils._check_history_version(uv_out.history, pyradiosky.__version__)
     assert uvutils._check_history_version(uv_out.history, pyuvdata.__version__)
     assert uvutils._check_history_version(uv_out.history, pyuvsim.__version__)
-    assert uvutils._check_history_version(uv_out.history, uv_obj.filename[0])
+    if hasattr(uv_obj, "filename"):
+        assert uvutils._check_history_version(uv_out.history, uv_obj.filename[0])
     assert uvutils._check_history_version(uv_out.history, "Npus =")
 
     assert np.allclose(uv_out.data_array[:, :, 0], 0.5)
