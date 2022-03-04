@@ -794,7 +794,7 @@ def run_uvdata_uvsim(
             antenna_location_file = input_uv.extra_keywords['layout']
             history += (' Based on config files: ' + obs_param_file + ', '
                         + telescope_config_file + ', ' + antenna_location_file)
-        elif uv_container.filename is not None:
+        elif hasattr(uv_container, "filename") and uv_container.filename is not None:
             history += ' Based on uvdata file(s): [' + ', '.join(uv_container.filename) + '].'
         history += ' Npus = ' + str(mpi.Npus) + '.'
 
