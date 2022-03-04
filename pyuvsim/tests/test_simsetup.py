@@ -9,6 +9,7 @@ import shutil
 import numpy as np
 import pytest
 import yaml
+from packaging import version  # packaging is installed with setuptools
 from astropy import units
 from astropy.coordinates import Angle, SkyCoord, EarthLocation, Latitude, Longitude
 from pyuvdata import UVBeam, UVData
@@ -1506,6 +1507,22 @@ def test_skymodeldata_pol_select(inds, cat_with_some_pols):
     full_q[..., smd.polarized] = smd.stokes_Q
 
     assert np.all(full_q[..., inds] == test_q[..., inds])
+
+
+@pytest.mark.skipif(
+    version.parse(pyradiosky.__version__) < version.parse("0.1.3"),
+    reason="requires pyradiosky 0.1.3 or higher"
+)
+def test_skymodeldata_non_icrs(cat_with_some_pols):
+    ra, dec = cat_with_some_pols.get_lon_lat()
+    gcrs_coord = SkyCoord(ra, dec, frame="gcrs")
+    icrs_coord = gcrs_coord.transform_to("icrs")
+
+    cat_with_some_pols.frame = "gcrs"
+    smd = pyuvsim.simsetup.SkyModelData(cat_with_some_pols)
+
+    assert np.allclose(icrs_coord.ra.deg, smd.ra)
+    assert np.allclose(icrs_coord.dec.deg, smd.dec)
 
 
 @pytest.mark.parametrize('inds', [range(30), range(5)])
