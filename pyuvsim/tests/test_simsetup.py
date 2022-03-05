@@ -147,7 +147,8 @@ def test_mock_diffuse_maps(model, hera_loc, apollo_loc, location):
 
 
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
-def test_catalog_from_params():
+@pytest.mark.parametrize("horizon_buffer", [True, False])
+def test_catalog_from_params(horizon_buffer):
     # Pass in parameter dictionary as dict
     hera_uv = UVData()
     hera_uv.read_uvfits(triangle_uvfits_file)
@@ -163,6 +164,8 @@ def test_catalog_from_params():
         'Nsrcs': 5,
         'time': hera_uv.time_array[0]
     }
+    if horizon_buffer:
+        source_dict["horizon_buffer"] = 0.04364
     with uvtest.check_warnings(
         [UserWarning, PendingDeprecationWarning, DeprecationWarning],
         match=[
@@ -173,7 +176,7 @@ def test_catalog_from_params():
     ):
         pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
 
-    catalog_uv, srclistname = pyuvsim.simsetup.initialize_catalog_from_params(
+    catalog_uv, _ = pyuvsim.simsetup.initialize_catalog_from_params(
         {'sources': source_dict}, hera_uv, return_recarray=False
     )
     source_dict['array_location'] = arrloc
