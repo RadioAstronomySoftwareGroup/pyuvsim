@@ -19,7 +19,7 @@ parser.add_argument('--quiet', action='store_true', help='Suppress stdout printi
 parser.add_argument(
     '--keep_nonroot_stdout',
     action='store_true',
-    help='Do not eedirect stdout on nonzero ranks to /dev/null.'
+    help='Do not redirect stdout on nonzero ranks to /dev/null.'
 )
 parser.add_argument('--raw_profile', help='Also save pickled LineStats data for line profiling.',
                     action='store_true')
