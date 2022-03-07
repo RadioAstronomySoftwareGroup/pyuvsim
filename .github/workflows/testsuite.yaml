@@ -80,7 +80,7 @@ jobs:
 
       - name: Install
         run: |
-          pip install .
+          pip install --no-deps .
 
       - name: Run Tests
         run: |
@@ -129,7 +129,7 @@ jobs:
 
       - name: Install
         run: |
-          pip install .
+          pip install --no-deps .
 
       - name: Run Tests
         run: |
@@ -177,7 +177,7 @@ jobs:
 
       - name: Install
         run: |
-          pip install .
+          pip install --no-deps .
 
       - name: Run Tests
         run: |
