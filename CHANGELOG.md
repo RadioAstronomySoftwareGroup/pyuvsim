@@ -5,6 +5,12 @@
 ## [1.2.2] - 2022-02-22
 
 ### Added
+- A `return_beams` parameter to `simsetup.initialize_uvdata_from_params` to allow beam
+information to be returned. Currently defaults to True, will default to False starting
+in version 1.4.
+- A `return_catname` parameter to `simsetup.initialize_catalog_from_params` to allow
+the catalog name to be returned. Currently defaults to True, will default to False
+starting in version 1.4.
 - Ensure that the version numbers for pyuvsim, pyradiosky and pyuvdata are written to
 the history of the output UVData files.
 - New `check_consistency` method for `BeamList` objects.
