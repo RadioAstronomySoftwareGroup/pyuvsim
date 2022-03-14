@@ -73,7 +73,9 @@ def uvobj_beams_srcs():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     param_dict['select'] = {'redundant_threshold': 0.1}
-    uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
+        param_dict, return_beams=True
+    )
     assert uv_obj.future_array_shapes
 
     # Add more beams to the list.
@@ -108,7 +110,9 @@ def uvdata_two_redundant_bls_triangle_sources():
     # A uvdata object, beam list, beam dict, and source array.
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
+        param_dict, return_beams=True
+    )
     pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
 
     uv_obj.select(freq_chans=[0], antenna_nums=[0, 1, 2], inplace=True)
