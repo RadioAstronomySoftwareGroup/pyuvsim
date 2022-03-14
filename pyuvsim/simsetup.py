@@ -836,7 +836,77 @@ def _sky_select_calc_rise_set(sky, source_params, telescope_lat_deg=None):
     return sky
 
 
-def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=True):
+def _read_pyradiosky_file(filename, source_params):
+    """
+    Read in a pyradiosky catalog file.
+
+    Parameters
+    ----------
+    filename : str
+        File to read in.
+    source_params : dict
+        Dictionary specifying options to pyradiosky read methods.
+
+    Returns:
+    --------
+    :class:`pyradiosky.SkyModel`
+        SkyModel object based on filename
+
+    """
+    sky = pyradiosky.SkyModel()
+
+    if filename.endswith("txt"):
+        sky.read_text_catalog(filename)
+    elif filename.endswith('vot'):
+        if 'gleam' in filename:
+            if "spectral_type" in source_params:
+                spectral_type = source_params["spectral_type"]
+            else:
+                warnings.warn("No spectral_type specified for GLEAM, using 'flat'.")
+                spectral_type = "flat"
+            sky.read_gleam_catalog(
+                filename, spectral_type=spectral_type
+            )
+        else:
+            vo_params = {}
+            required_params = ["table_name", "id_column", "flux_columns"]
+            warn_params = {"ra_column": "RAJ2000", "dec_column": "DEJ2000"}
+            for param in required_params:
+                if param not in source_params:
+                    raise ValueError(f"No {param} specified for {filename}.")
+                vo_params[param] = source_params[param]
+            for param, default in warn_params.items():
+                if param not in source_params:
+                    warnings.warn(
+                        f"No {param} specified for {filename}, using default: {default}."
+                    )
+                    vo_params[param] = default
+                else:
+                    vo_params[param] = source_params[param]
+
+            vo_params["reference_frequency"] = None
+            sky.read_votable_catalog(filename, **vo_params)
+    elif filename.endswith('skyh5'):
+        sky.read_skyh5(filename)
+    elif filename.endswith('hdf5'):
+        # In principal, this could either be a skyh5 or an old-style healvis hdf5 file
+        # Try skyh5 first, if that doesn't work, use the old method
+        try:
+            sky.read_skyh5(filename)
+        except ValueError:
+            sky.read_healpix_hdf5(filename)
+    else:
+        raise ValueError(
+            "The file extension is not recognized as a valid one for SkyModel objects. "
+            "Expected extensions include: '.txt', '.vot', '.skyh5' and '.hdf5'."
+        )
+
+    return sky
+
+
+def initialize_catalog_from_params(
+    obs_params, input_uv=None, return_recarray=True, return_catname=None
+):
     """
     Make catalog from parameter file specifications.
 
@@ -850,15 +920,26 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
         Used to set location for mock catalogs and for horizon cuts.
     return_recarray: bool
         Return a recarray instead of a :class:`pyradiosky.SkyModel` instance.
+    return_catname: bool
+        Return the catalog name. Defaults to True currently but will default to False
+        in version 1.4.
 
     Returns
     -------
     skydata: numpy.recarray or :class:`pyradiosky.SkyModel`
         Source catalog filled with data.
     source_list_name: str
-        Catalog identifier for metadata.
+        Catalog identifier for metadata. Only returned if return_catname is True.
 
     """
+    if return_catname is None:
+        warnings.warn(
+            "The return_catname parameter currently defaults to True, but starting in"
+            "version 1.4 it will default to False.",
+            DeprecationWarning
+        )
+        return_catname = True
+
     if input_uv is not None and not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
 
@@ -915,56 +996,11 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
         mock_keyvals = [str(key) + str(val) for key, val in mock_keywords.items()]
         source_list_name = 'mock_' + "_".join(mock_keyvals)
     elif isinstance(catalog, str):
-        source_list_name = os.path.basename(catalog)
-        sky = pyradiosky.SkyModel()
         if not os.path.isfile(catalog):
             catalog = os.path.join(param_dict['config_path'], catalog)
 
-        if catalog.endswith("txt"):
-            sky.read_text_catalog(catalog)
-        elif catalog.endswith('vot'):
-            if 'gleam' in catalog:
-                if "spectral_type" in source_params:
-                    spectral_type = source_params["spectral_type"]
-                else:
-                    warnings.warn("No spectral_type specified for GLEAM, using 'flat'.")
-                    spectral_type = "flat"
-                sky.read_gleam_catalog(
-                    catalog, spectral_type=spectral_type
-                )
-            else:
-                vo_params = {}
-                required_params = ["table_name", "id_column", "flux_columns"]
-                warn_params = {"ra_column": "RAJ2000", "dec_column": "DEJ2000"}
-                for param in required_params:
-                    if param not in source_params:
-                        raise ValueError(f"No {param} specified for {catalog}.")
-                    vo_params[param] = source_params[param]
-                for param, default in warn_params.items():
-                    if param not in source_params:
-                        warnings.warn(
-                            f"No {param} specified for {catalog}, using default: {default}."
-                        )
-                        vo_params[param] = default
-                    else:
-                        vo_params[param] = source_params[param]
-
-                vo_params["reference_frequency"] = None
-                sky.read_votable_catalog(catalog, **vo_params)
-        elif catalog.endswith('skyh5'):
-            sky.read_skyh5(catalog)
-        elif catalog.endswith('hdf5'):
-            # In principal, this could either be a skyh5 or an old-style healvis hdf5 file
-            # Try skyh5 first, if that doesn't work, use the old method
-            try:
-                sky.read_skyh5(catalog)
-            except ValueError:
-                sky.read_healpix_hdf5(catalog)
-        else:
-            raise ValueError(
-                "The file extension is not recognized as a valid one for SkyModel objects. "
-                "Expected extensions include: '.txt', '.vot', '.skyh5' and '.hdf5'."
-            )
+        source_list_name = os.path.basename(catalog)
+        sky = _read_pyradiosky_file(catalog, source_params)
 
     if input_uv is not None:
         telescope_lat_deg = input_uv.telescope_location_lat_lon_alt_degrees[0]
@@ -988,7 +1024,10 @@ def initialize_catalog_from_params(obs_params, input_uv=None, return_recarray=Tr
                       PendingDeprecationWarning)
         sky = sky.to_recarray()
 
-    return sky, source_list_name
+    if return_catname:
+        return sky, source_list_name
+    else:
+        return sky
 
 
 def _construct_beam_list(beam_ids, telconfig):
@@ -1524,7 +1563,7 @@ def time_array_to_params(time_array):
     return tdict
 
 
-def initialize_uvdata_from_params(obs_params):
+def initialize_uvdata_from_params(obs_params, return_beams=None):
     """
     Construct a :class:`pyuvdata.UVData` object from parameters in a valid yaml file.
 
@@ -1541,17 +1580,29 @@ def initialize_uvdata_from_params(obs_params):
     obs_params : dict or str
         Either an obs_param file name or a dictionary of parameters read in.
         Additional :class:`pyuvdata.UVData` parameters may be passed in through here.
+    return_beams : bool
+        Option to return the beam_list and beam_dict. Currently defaults to True, but
+        will default to False starting in version 1.4.
 
     Returns
     -------
     uv_obj : :class:`pyuvdata.UVData`
         Initialized UVData object.
     beam_list : :class:`pyuvsim.BeamList`
-        List of beam specifiers as strings.
+        List of beam specifiers as strings, only returned if return_beams is True.
     beam_dict : dict
-        Map of antenna numbers to index in beam_list.
+        Map of antenna numbers to index in beam_list, only returned if return_beams is
+        True.
 
     """
+    if return_beams is None:
+        warnings.warn(
+            "The return_beams parameter currently defaults to True, but starting in"
+            "version 1.4 it will default to False.",
+            DeprecationWarning
+        )
+        return_beams = True
+
     uvparam_dict = {}  # Parameters that will go into UVData
     if isinstance(obs_params, str):
         param_dict = _config_str_to_dict(obs_params)  # Container for received settings.
@@ -1703,7 +1754,10 @@ def initialize_uvdata_from_params(obs_params):
     uv_obj.reorder_blts(order="time", minor_order="baseline")
     uv_obj.check()
 
-    return uv_obj, beam_list, beam_dict
+    if return_beams:
+        return uv_obj, beam_list, beam_dict
+    else:
+        return uv_obj
 
 
 def _complete_uvdata(uv_in, inplace=False):
@@ -1949,7 +2003,7 @@ def initialize_uvdata_from_keywords(
 
     param_dict['obs_param_file'] = os.path.basename(output_yaml_filename)
     param_dict['telescope'].update(layout_params)
-    uv_obj, _, _ = initialize_uvdata_from_params(param_dict)
+    uv_obj = initialize_uvdata_from_params(param_dict, return_beams=False)
 
     if complete:
         _complete_uvdata(uv_obj, inplace=True)

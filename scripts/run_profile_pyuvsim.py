@@ -63,7 +63,9 @@ if rank == 0:
     params['time']['Ntimes'] = args.Ntimes
     params['sources'] = {'catalog': 'mock'}
 
-    input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(params)
+    input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(
+        params, return_beams=True
+    )
 
     if input_uv.Nbls < args.Nbls:
         raise ValueError('Cannot profile for more than {} baselines, requeted {}'.format(
@@ -104,7 +106,7 @@ if rank == 0:
     params['sources'].update(**mock_keywords)
 
     # Catalog setup
-    catalog, _ = simsetup.initialize_catalog_from_params(params)
+    catalog = simsetup.initialize_catalog_from_params(params, return_catname=False)
 
 comm = mpi.world_comm
 input_uv = comm.bcast(input_uv, root=0)

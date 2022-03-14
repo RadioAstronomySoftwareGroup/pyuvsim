@@ -848,9 +848,11 @@ def run_uvsim(params, return_uv=False, quiet=False, block_nonroot_stdout=True):
 
     if rank == 0:
         start = Time.now()
-        input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(params)
-        skydata, _ = simsetup.initialize_catalog_from_params(
-            params, input_uv, return_recarray=False
+        input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(
+            params, return_beams=True
+        )
+        skydata = simsetup.initialize_catalog_from_params(
+            params, input_uv, return_recarray=False, return_catname=False
         )
         print(f"UVData initialization took {(Time.now() - start).to('minute'):.3f}")
         start = Time.now()

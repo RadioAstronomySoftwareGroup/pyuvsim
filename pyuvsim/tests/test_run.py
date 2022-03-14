@@ -164,8 +164,10 @@ def test_powerbeam_sim(cst_beam):
     new_cst.efield_to_power()
     beams = BeamList([new_cst] * 4)
     cfg = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
-    input_uv, _, _ = pyuvsim.simsetup.initialize_uvdata_from_params(cfg)
-    sky_model, _ = pyuvsim.simsetup.initialize_catalog_from_params(cfg, return_recarray=False)
+    input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(cfg, return_beams=False)
+    sky_model = pyuvsim.simsetup.initialize_catalog_from_params(
+        cfg, return_recarray=False, return_catname=False
+    )
     sky_model = pyuvsim.simsetup.SkyModelData(sky_model)
 
     with pytest.raises(ValueError, match="Beam type must be efield!"):
@@ -298,7 +300,9 @@ def test_sim_on_moon(future_shapes):
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_tranquility_hex.yaml')
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     param_dict['select'] = {'redundant_threshold': 0.1}
-    uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
+        param_dict, return_beams=True
+    )
 
     # set the filename to make sure it ends up in the history,
     # remove the parameter file info from extra_keywords

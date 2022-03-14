@@ -155,7 +155,9 @@ def test_catalog_from_params(horizon_buffer):
 
     source_dict = {}
     with pytest.raises(KeyError, match='No catalog defined.'):
-        pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            {'sources': source_dict}, return_catname=False
+        )
 
     arrloc = '{:.7f},{:.7f},{:.7f}'.format(*hera_uv.telescope_location_lat_lon_alt_degrees)
     source_dict = {
@@ -167,51 +169,54 @@ def test_catalog_from_params(horizon_buffer):
     if horizon_buffer:
         source_dict["horizon_buffer"] = 0.04364
     with uvtest.check_warnings(
-        [UserWarning, PendingDeprecationWarning, DeprecationWarning],
+        [UserWarning, PendingDeprecationWarning, DeprecationWarning, DeprecationWarning],
         match=[
             "No array_location specified. Defaulting to the HERA site.",
             "initialize_catalog_from_params will return a SkyModel instance",
             "recarray flux columns will no longer be labeled",
+            "The return_catname parameter currently defaults to True, but starting in"
+            "version 1.4 it will default to False.",
         ]
     ):
         pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
 
-    catalog_uv, _ = pyuvsim.simsetup.initialize_catalog_from_params(
-        {'sources': source_dict}, hera_uv, return_recarray=False
+    catalog_uv = pyuvsim.simsetup.initialize_catalog_from_params(
+        {'sources': source_dict}, hera_uv, return_recarray=False, return_catname=False
     )
     source_dict['array_location'] = arrloc
     del source_dict['time']
 
     with pytest.raises(TypeError, match="input_uv must be UVData object"):
-        pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict},
-                                                        input_uv='not_uvdata')
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            {'sources': source_dict}, input_uv='not_uvdata', return_catname=False)
 
     with pytest.raises(ValueError, match="input_uv must be supplied if using mock catalog"):
-        pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            {'sources': source_dict}, return_catname=False
+        )
 
     with uvtest.check_warnings(
         UserWarning,
         match="No julian date given for mock catalog. Defaulting to first time step."
     ):
-        catalog_str, srclistname2 = pyuvsim.simsetup.initialize_catalog_from_params(
-            {'sources': source_dict}, hera_uv, return_recarray=False
+        catalog_str = pyuvsim.simsetup.initialize_catalog_from_params(
+            {'sources': source_dict},
+            hera_uv,
+            return_recarray=False,
+            return_catname=False
         )
     assert np.all(catalog_str == catalog_uv)
 
 
 def test_vot_catalog():
     vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
-    vot_catalog = (
-        pyuvsim.simsetup.initialize_catalog_from_params(
-            vot_param_filename, return_recarray=False
-        )[0]
+    vot_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+        vot_param_filename, return_recarray=False, return_catname=False
     )
 
     txt_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
-    txt_catalog = (
-        pyuvsim.simsetup.initialize_catalog_from_params(
-            txt_param_filename, return_recarray=False
-        )[0]
+    txt_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+        txt_param_filename, return_recarray=False, return_catname=False
     )
 
     assert vot_catalog == txt_catalog
@@ -227,19 +232,15 @@ def test_gleam_catalog():
     # The try/except can be removed once we require pyuvdata > 2.2.6
     try:
         with uvtest.check_warnings(warnings, match=warn_messages):
-            gleam_catalog = (
-                pyuvsim.simsetup.initialize_catalog_from_params(
-                    gleam_param_filename, return_recarray=False
-                )[0]
+            gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+                gleam_param_filename, return_recarray=False, return_catname=False
             )
     except AssertionError:
         warn_messages += ["distutils Version classes are deprecated."] * 8
         warnings += [DeprecationWarning] * 8
         with uvtest.check_warnings(warnings, match=warn_messages):
-            gleam_catalog = (
-                pyuvsim.simsetup.initialize_catalog_from_params(
-                    gleam_param_filename, return_recarray=False
-                )[0]
+            gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+                gleam_param_filename, return_recarray=False, return_catname=False
             )
 
     # flux cuts applied
@@ -259,10 +260,8 @@ def test_gleam_catalog():
         with uvtest.check_warnings(
             warnings, match=warn_messages
         ):
-            gleam_catalog = (
-                pyuvsim.simsetup.initialize_catalog_from_params(
-                    param_dict, return_recarray=False
-                )[0]
+            gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+                param_dict, return_recarray=False, return_catname=False
             )
     except AssertionError:
         warn_messages += ["distutils Version classes are deprecated."] * 8
@@ -270,10 +269,8 @@ def test_gleam_catalog():
         with uvtest.check_warnings(
             warnings, match=warn_messages
         ):
-            gleam_catalog = (
-                pyuvsim.simsetup.initialize_catalog_from_params(
-                    param_dict, return_recarray=False
-                )[0]
+            gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+                param_dict, return_recarray=False, return_catname=False
             )
 
     assert gleam_catalog.Ncomponents == 50
@@ -304,11 +301,10 @@ def test_skyh5_catalog(tmp_path):
     with open(param_filename, 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)
 
-    skyh5_catalog = (
-        pyuvsim.simsetup.initialize_catalog_from_params(
-            param_filename, return_recarray=False
-        )[0]
+    skyh5_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+        param_filename, return_recarray=False, return_catname=False
     )
+
     assert skyh5_catalog.Ncomponents == 50
 
     # test works with `hdf5` extension:
@@ -319,10 +315,8 @@ def test_skyh5_catalog(tmp_path):
     with open(param_filename, 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)
 
-    hdf5_catalog = (
-        pyuvsim.simsetup.initialize_catalog_from_params(
-            param_filename, return_recarray=False
-        )[0]
+    hdf5_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+        param_filename, return_recarray=False, return_catname=False
     )
     assert hdf5_catalog == skyh5_catalog
 
@@ -336,7 +330,7 @@ def test_skyh5_catalog(tmp_path):
 
     with pytest.raises(ValueError, match="The file extension is not recognized as a valid one"):
         pyuvsim.simsetup.initialize_catalog_from_params(
-            param_filename, return_recarray=False
+            param_filename, return_recarray=False, return_catname=False
         )
 
 
@@ -349,8 +343,8 @@ def test_healpix_catalog():
 
     params = {'sources': {'catalog': path}}
     hpx_sky = pyuvsim.simsetup.initialize_catalog_from_params(
-        params, return_recarray=False
-    )[0]
+        params, return_recarray=False, return_catname=False
+    )
     assert hpx_sky == sky
 
 
@@ -367,8 +361,8 @@ def test_healpix_hdf5_catalog():
 
     params = {'sources': {'catalog': path}}
     hpx_sky = pyuvsim.simsetup.initialize_catalog_from_params(
-        params, return_recarray=False
-    )[0]
+        params, return_recarray=False, return_catname=False
+    )
     assert hpx_sky == sky
 
 
@@ -387,8 +381,8 @@ def test_gleam_catalog_spectral_type(spectral_type):
     param_dict["sources"]["spectral_type"] = spectral_type
 
     gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-        param_dict, return_recarray=False
-    )[0]
+        param_dict, return_recarray=False, return_catname=False
+    )
     assert gleam_catalog.spectral_type == spectral_type
     assert gleam_catalog.Ncomponents == 50
 
@@ -400,10 +394,8 @@ def test_gleam_catalog_spectral_type(spectral_type):
 def test_vot_catalog_warns(key_pop, message):
     vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
 
-    vot_catalog = (
-        pyuvsim.simsetup.initialize_catalog_from_params(
-            vot_param_filename, return_recarray=False
-        )[0]
+    vot_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+        vot_param_filename, return_recarray=False, return_catname=False
     )
     with open(vot_param_filename, 'r') as pfile:
         param_dict = yaml.safe_load(pfile)
@@ -415,19 +407,15 @@ def test_vot_catalog_warns(key_pop, message):
     # The try/except can be removed once we require pyuvdata > 2.2.6
     try:
         with uvtest.check_warnings(warnings, match=warn_messages):
-            vot_catalog2 = (
-                pyuvsim.simsetup.initialize_catalog_from_params(
-                    param_dict, return_recarray=False
-                )[0]
+            vot_catalog2 = pyuvsim.simsetup.initialize_catalog_from_params(
+                param_dict, return_recarray=False, return_catname=False
             )
     except AssertionError:
         warn_messages += ["distutils Version classes are deprecated."] * 8
         warnings += [DeprecationWarning] * 8
         with uvtest.check_warnings(warnings, match=warn_messages):
-            vot_catalog2 = (
-                pyuvsim.simsetup.initialize_catalog_from_params(
-                    param_dict, return_recarray=False
-                )[0]
+            vot_catalog2 = pyuvsim.simsetup.initialize_catalog_from_params(
+                param_dict, return_recarray=False, return_catname=False
             )
 
     assert vot_catalog == vot_catalog2
@@ -447,7 +435,9 @@ def test_vot_catalog_error(key_pop, message):
     param_dict["sources"].pop(key_pop)
 
     with pytest.raises(ValueError, match=message):
-        pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            param_dict, return_recarray=False, return_catname=False
+        )
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
@@ -478,7 +468,30 @@ def test_param_reader():
     beam_dict = {'ANT1': 0, 'ANT2': 1, 'ANT3': 2, 'ANT4': 3}
 
     # Check default configuration
-    uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_filename)
+    with uvtest.check_warnings(
+        [
+            DeprecationWarning,
+            UserWarning,
+            UserWarning,
+            PendingDeprecationWarning,
+            PendingDeprecationWarning
+        ],
+        match=[
+            "The return_beams parameter currently defaults to True, but starting in"
+            "version 1.4 it will default to False.",
+            "Cannot check consistency of a string-mode BeamList! Set force=True to "
+            "force consistency checking.",
+            "Cannot check consistency of a string-mode BeamList! Set force=True to "
+            "force consistency checking.",
+            "chromatic gaussian beams will not be supported in the future. Define your "
+            "gaussian beam by a dish diameter from now on.",
+            "chromatic gaussian beams will not be supported in the future. Define your "
+            "gaussian beam by a dish diameter from now on.",
+        ]
+    ):
+        uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(
+            param_filename
+        )
     new_beam_list.set_obj_mode()
     assert uv_obj.x_orientation == "east"
 
@@ -589,7 +602,7 @@ def test_param_reader_errors(subdict, error, msg):
             params_bad[key] = value
 
     with pytest.raises(error, match=msg):
-        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad, return_beams=False)
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
@@ -857,11 +870,11 @@ def test_single_freq_array_to_params(times_and_freqs):
 def test_param_select_cross():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     # test only keeping cross pols
     param_dict['select'] = {'ant_str': 'cross'}
-    uv_obj_cross, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv_obj_cross = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
     uv_obj_cross2 = uv_obj_full.select(ant_str='cross', inplace=False)
 
     assert uv_obj_cross == uv_obj_cross2
@@ -871,11 +884,11 @@ def test_param_select_cross():
 def test_param_select_bls():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     # test only keeping certain baselines
     param_dict['select'] = {'bls': '[(40, 41), (42, 43), (44, 45)]'}  # Test as string
-    uv_obj_bls, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv_obj_bls = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     uv_obj_bls2 = uv_obj_full.select(
         bls=[(40, 41), (42, 43), (44, 45)], inplace=False
@@ -884,7 +897,7 @@ def test_param_select_bls():
     assert uv_obj_bls == uv_obj_bls2
 
     param_dict['object_name'] = 'foo'
-    uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
     assert uv_obj_full.object_name == 'foo'
 
 
@@ -892,11 +905,11 @@ def test_param_select_bls():
 def test_param_select_redundant():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj_full, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     # test only keeping one baseline per redundant group
     param_dict['select'] = {'redundant_threshold': 0.1}
-    uv_obj_red, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv_obj_red = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
     uv_obj_red2 = uv_obj_full.compress_by_redundancy(tol=0.1, inplace=False)
     uv_obj_red.history, uv_obj_red2.history = '', ''
 
@@ -1066,7 +1079,7 @@ def test_uvfits_to_config():
 
     orig_param_dict = copy.deepcopy(
         param_dict)  # The parameter dictionary gets modified in the function below.
-    uv1, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv1 = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
     # Generate parameters from new uvfits and compare with old.
     path, telescope_config, layout_fname = \
         pyuvsim.simsetup.uvdata_to_telescope_config(
@@ -1198,8 +1211,8 @@ def test_keyword_param_loop(tmpdir):
         path_out=path_out, antenna_layout_filepath=layout_fname, output_yaml_filename=obsparam_fname
     )
 
-    uv2, _, _ = pyuvsim.simsetup.initialize_uvdata_from_params(
-        os.path.join(path_out, obsparam_fname))
+    uv2 = pyuvsim.simsetup.initialize_uvdata_from_params(
+        os.path.join(path_out, obsparam_fname), return_beams=False)
 
     uv2.extra_keywords = {}
     uvd.extra_keywords = {}  # These will not match
@@ -1270,7 +1283,9 @@ def test_direct_fname():
     )
 
     # This should now run without errors
-    pyuvsim.simsetup.initialize_uvdata_from_params("param_100times_1.5days_triangle.yaml")
+    pyuvsim.simsetup.initialize_uvdata_from_params(
+        "param_100times_1.5days_triangle.yaml", return_beams=False
+    )
 
     os.remove("28m_triangle_10time_10chan.yaml")
     os.remove("param_100times_1.5days_triangle.yaml")
@@ -1341,7 +1356,7 @@ def test_moon_lsts():
 
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_tranquility_hex.yaml')
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(param_dict)
+    uv_obj = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
     assert 'world' in uv_obj.extra_keywords.keys()
     assert uv_obj.extra_keywords['world'] == 'moon'
 
