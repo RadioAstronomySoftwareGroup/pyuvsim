@@ -92,6 +92,7 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
 
 
 @pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize('model', ['monopole', 'cosza', 'quaddome', 'monopole-nonflat'])
 def test_analytic_diffuse(model, tmpdir):
     # Generate the given model and simulate for a few baselines.
@@ -156,6 +157,7 @@ def test_analytic_diffuse(model, tmpdir):
     assert np.allclose(ana / 2, dat, atol=1e-2)
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_powerbeam_sim(cst_beam):
     new_cst = copy.deepcopy(cst_beam)
     new_cst.freq_interp_kind = 'nearest'  # otherwise we get an error about freq interpolation
@@ -171,6 +173,7 @@ def test_powerbeam_sim(cst_beam):
 
 
 @pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_run_paramdict_uvsim():
     # Running a simulation from parameter dictionary.
     params = pyuvsim.simsetup._config_str_to_dict(
@@ -182,6 +185,7 @@ def test_run_paramdict_uvsim():
 
 @pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
 @pytest.mark.filterwarnings("ignore:No julian date given for mock catalog")
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_run_nsky_parts(capsys):
     # there parameters were hand picked and fine-tuned to create nsky_parts = 2
     #  this test feels very wonky just to ensure the nsky_parts is printed
@@ -207,6 +211,7 @@ def test_run_nsky_parts(capsys):
     del os.environ["SLURM_MEM_PER_NODE"]
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize(
     "spectral_type",
     ["flat", "subband", "spectral_index"])
@@ -223,6 +228,7 @@ def test_run_gleam_uvsim(spectral_type):
 
 @pytest.mark.filterwarnings("ignore:The reference_frequency is aliased as `frequency`")
 @pytest.mark.filterwarnings("ignore:recarray flux columns will no longer be labeled")
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize(
     "spectral_type",
     ["subband", "spectral_index"])
@@ -284,6 +290,7 @@ def test_input_uv_error():
         pyuvsim.run_uvdata_uvsim(None, None)
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.skipif('not pyuvsim.astropy_interface.hasmoon')
 @pytest.mark.parametrize("future_shapes", [True, False])
 def test_sim_on_moon(future_shapes):

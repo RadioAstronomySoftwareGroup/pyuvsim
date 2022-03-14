@@ -145,6 +145,7 @@ def test_string_mode(beam_objs):
 
 
 @pytest.mark.filterwarnings('ignore:Achromatic gaussian')
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_comparison(beam_objs):
     beamlist = pyuvsim.BeamList(beam_objs)
     beamlist.set_str_mode()
@@ -252,6 +253,7 @@ def test_empty_beamlist():
     assert a.beam_type is None
 
 
+@pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
 def test_powerbeam_consistency(beam_objs):
     newbeams = copy.deepcopy(beam_objs[:2])
     for beam in newbeams:

@@ -13,6 +13,7 @@ import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_jones_set_spline(cst_beam, hera_loc):
     # Run get_beam_jones with spline options.
     array_location = hera_loc

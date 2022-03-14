@@ -712,6 +712,7 @@ def test_source_splitting():
     pyuvsim.mpi.Npus_node = 1
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_quantity_reuse(uvobj_beams_srcs):
     # Check that the right quantities on the UVEngine are changed when
     # the time/frequency/antenna pair change.
@@ -768,6 +769,7 @@ def test_quantity_reuse(uvobj_beams_srcs):
             assert srcpos_changed and locoh_changed
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_update_flags(uvobj_beams_srcs):
     # Ensure that the right update flags are set when certain
     # task attributes change.
@@ -838,6 +840,7 @@ def test_overflow_check():
         pyuvsim.uvsim._check_ntasks_valid(should_fail)
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_fullfreq_check(uvobj_beams_srcs):
     # Check that the task iter will error if 'spectral_type' is 'full'
     # and the frequencies on the catalog do not match the simulation's.
@@ -921,6 +924,7 @@ def test_run_mpierr():
             pyuvsim.run_uvdata_uvsim(UVData(), ['beamlist'])
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("order", [("bda",), ("baseline", "time"), ("ant2", "time")])
 def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
     pytest.importorskip('mpi4py')
@@ -949,6 +953,7 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
     )
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("order", [("bda",), ("baseline", "time"), ("ant2", "time")])
 def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
     pytest.importorskip('mpi4py')
@@ -969,6 +974,7 @@ def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
     assert out_uv.blt_order == ("time", "baseline")
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources):
     pytest.importorskip('mpi4py')
     uvdata_linear, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
