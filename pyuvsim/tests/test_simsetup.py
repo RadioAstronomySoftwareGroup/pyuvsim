@@ -450,6 +450,7 @@ def test_vot_catalog_error(key_pop, message):
         pyuvsim.simsetup.initialize_catalog_from_params(param_dict, return_recarray=False)[0]
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
 def test_param_reader():
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml")
@@ -522,6 +523,7 @@ def test_param_reader():
     assert uv_obj == hera_uv
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize(
     "subdict,error,msg",
     [
@@ -590,6 +592,7 @@ def test_param_reader_errors(subdict, error, msg):
         pyuvsim.simsetup.initialize_uvdata_from_params(params_bad)
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_tele_parser():
     """
     Check a variety of cases not already tested by param reader
@@ -850,6 +853,7 @@ def test_single_freq_array_to_params(times_and_freqs):
     assert fdict['start_freq'] == freqs
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_param_select_cross():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
@@ -863,6 +867,7 @@ def test_param_select_cross():
     assert uv_obj_cross == uv_obj_cross2
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_param_select_bls():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_mwa_nocore.yaml')
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
@@ -883,6 +888,7 @@ def test_param_select_bls():
     assert uv_obj_full.object_name == 'foo'
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_param_select_redundant():
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
@@ -898,6 +904,7 @@ def test_param_select_redundant():
     assert uv_obj_red.Nbls < uv_obj_full.Nbls
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize('case', np.arange(6))
 def test_uvdata_keyword_init(case, tmpdir):
     base_kwargs = {
@@ -1021,6 +1028,7 @@ def test_uvdata_keyword_init(case, tmpdir):
         os.remove(obsparam_fname)
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_uvfits_to_config():
     """
         Loopback test of reading parameters from uvfits file, generating uvfits file, and reading
@@ -1171,6 +1179,7 @@ def test_mock_catalog_error():
         pyuvsim.create_mock_catalog(time, 'invalid_catalog_name')
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_keyword_param_loop(tmpdir):
     # Check that yaml/csv files made by intialize_uvdata_from_keywords will work
     # on their own.
@@ -1198,6 +1207,7 @@ def test_keyword_param_loop(tmpdir):
     assert uv2 == uvd
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_multi_analytic_beams(tmpdir):
     # Test inline definitions of beam attributes.
     # eg. (in beam configuration file):
@@ -1244,6 +1254,7 @@ def test_multi_analytic_beams(tmpdir):
         assert beam_list[bid] == expected[bid]
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_direct_fname():
     shutil.copyfile(
         os.path.join(SIM_DATA_PATH, "test_config", "28m_triangle_10time_10chan.yaml"),
@@ -1266,6 +1277,7 @@ def test_direct_fname():
     os.remove("triangle_bl_layout.csv")
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_beamlist_init_errors():
     telescope_config_name = os.path.join(SIM_DATA_PATH, 'bl_lite_mixed.yaml')
     with open(telescope_config_name, 'r') as yf:
@@ -1297,6 +1309,7 @@ def test_beamlist_init_errors():
     assert beam_list.spline_interp_opts is not None
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_beamlist_init():
     telescope_config_name = os.path.join(SIM_DATA_PATH, 'bl_lite_mixed.yaml')
     with open(telescope_config_name, 'r') as yf:
@@ -1321,6 +1334,7 @@ def test_beamlist_init():
     assert beam_list[5].diameter == 12
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_moon_lsts():
     # Check that setting lsts for a Moon simulation works as expected.
     pytest.importorskip('lunarsky')
