@@ -24,4 +24,4 @@ dependencies:
   - pip:
     - pyradiosky>=0.1.2
     - lunarsky
-    - git+git://github.com/aelanman/analytic_diffuse
+    - git+https://github.com/aelanman/analytic_diffuse
