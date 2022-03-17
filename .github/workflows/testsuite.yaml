@@ -71,7 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@master
         with:
-         fetch-depth: 1
+          fetch-depth: 1
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2.0.0
         with:
@@ -119,7 +119,7 @@ jobs:
     steps:
       - uses: actions/checkout@master
         with:
-         fetch-depth: 1
+          fetch-depth: 1
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2.0.0
         with:
@@ -189,7 +189,7 @@ jobs:
 
       - name: Install
         run: |
-          pip install .
+          pip install --no-deps .
 
       - name: Run Tests
         run: |
