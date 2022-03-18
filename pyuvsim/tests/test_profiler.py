@@ -24,6 +24,7 @@ def profdata_dir_setup(tmpdir):
     return outpath
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_profiler(tmpdir):
     line_profiler = pytest.importorskip('line_profiler')
     outpath = profdata_dir_setup(tmpdir)
