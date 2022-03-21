@@ -208,21 +208,40 @@ def test_catalog_from_params(horizon_buffer):
     assert np.all(catalog_str == catalog_uv)
 
 
-def test_vot_catalog():
+@pytest.mark.parametrize("use_filetype", [True, False])
+def test_vot_catalog(use_filetype):
+    filetype = None
+
     vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
+    if use_filetype:
+        filetype = "vot"
     vot_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-        vot_param_filename, return_recarray=False, return_catname=False
+        vot_param_filename, return_recarray=False, filetype=filetype, return_catname=False
     )
 
+    if use_filetype:
+        filetype = "text"
     txt_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
     txt_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-        txt_param_filename, return_recarray=False, return_catname=False
+        txt_param_filename, return_recarray=False, filetype=filetype, return_catname=False
     )
 
     assert vot_catalog == txt_catalog
 
 
-def test_gleam_catalog():
+def test_vot_catalog_errors():
+    vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
+    with pytest.raises(
+        ValueError,
+        match="Invalid filetype. Filetype options are:"
+    ):
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            vot_param_filename, return_recarray=False, filetype="foo", return_catname=False
+        )
+
+
+@pytest.mark.parametrize("filetype", ["gleam", None])
+def test_gleam_catalog(filetype):
     gleam_param_filename = os.path.join(
         SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml'
     )
@@ -233,14 +252,14 @@ def test_gleam_catalog():
     try:
         with uvtest.check_warnings(warnings, match=warn_messages):
             gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-                gleam_param_filename, return_recarray=False, return_catname=False
+                gleam_param_filename, return_recarray=False, filetype=filetype, return_catname=False
             )
     except AssertionError:
         warn_messages += ["distutils Version classes are deprecated."] * 8
         warnings += [DeprecationWarning] * 8
         with uvtest.check_warnings(warnings, match=warn_messages):
             gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-                gleam_param_filename, return_recarray=False, return_catname=False
+                gleam_param_filename, return_recarray=False, filetype=filetype, return_catname=False
             )
 
     # flux cuts applied
@@ -261,7 +280,7 @@ def test_gleam_catalog():
             warnings, match=warn_messages
         ):
             gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-                param_dict, return_recarray=False, return_catname=False
+                param_dict, return_recarray=False, filetype=filetype, return_catname=False
             )
     except AssertionError:
         warn_messages += ["distutils Version classes are deprecated."] * 8
@@ -270,13 +289,15 @@ def test_gleam_catalog():
             warnings, match=warn_messages
         ):
             gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-                param_dict, return_recarray=False, return_catname=False
+                param_dict, return_recarray=False, filetype=filetype, return_catname=False
             )
 
     assert gleam_catalog.Ncomponents == 50
 
 
-def test_skyh5_catalog(tmp_path):
+@pytest.mark.parametrize("use_filetype", [True, False])
+def test_skyh5_catalog(use_filetype, tmp_path):
+    filetype = None
     gleam_filename = os.path.join(
         SIM_DATA_PATH, 'gleam_50srcs.vot'
     )
@@ -301,14 +322,18 @@ def test_skyh5_catalog(tmp_path):
     with open(param_filename, 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)
 
+    if use_filetype:
+        filetype = "skyh5"
     skyh5_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-        param_filename, return_recarray=False, return_catname=False
+        param_filename, return_recarray=False, filetype=filetype, return_catname=False
     )
 
     assert skyh5_catalog.Ncomponents == 50
 
     # test works with `hdf5` extension:
     hdf5_file = os.path.join(tmp_path, 'gleam.hdf5')
+    if use_filetype:
+        filetype = "hdf5"
     skyobj.write_skyh5(hdf5_file, clobber=True)
 
     param_dict['sources']['catalog'] = hdf5_file
@@ -316,22 +341,31 @@ def test_skyh5_catalog(tmp_path):
         yaml.dump(param_dict, yfile, default_flow_style=False)
 
     hdf5_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-        param_filename, return_recarray=False, return_catname=False
+        param_filename, return_recarray=False, filetype=filetype, return_catname=False
     )
     assert hdf5_catalog == skyh5_catalog
 
     # test error with unknown extension
     h5_file = os.path.join(tmp_path, 'gleam.h5')
-    skyobj.write_skyh5(hdf5_file, clobber=True)
+    skyobj.write_skyh5(h5_file, clobber=True)
 
     param_dict['sources']['catalog'] = h5_file
     with open(param_filename, 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)
 
-    with pytest.raises(ValueError, match="The file extension is not recognized as a valid one"):
-        pyuvsim.simsetup.initialize_catalog_from_params(
+    if use_filetype:
+        param_dict['sources']['filetype'] = "skyh5"
+        with open(param_filename, 'w') as yfile:
+            yaml.dump(param_dict, yfile, default_flow_style=False)
+        h5_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
             param_filename, return_recarray=False, return_catname=False
         )
+        assert h5_catalog == skyh5_catalog
+    else:
+        with pytest.raises(ValueError, match="The file extension is not recognized as a valid one"):
+            pyuvsim.simsetup.initialize_catalog_from_params(
+                param_filename, return_recarray=False, return_catname=False
+            )
 
 
 @pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
