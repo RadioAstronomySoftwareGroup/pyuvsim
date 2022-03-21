@@ -836,7 +836,7 @@ def _sky_select_calc_rise_set(sky, source_params, telescope_lat_deg=None):
     return sky
 
 
-def _read_pyradiosky_file(filename, source_params):
+def _read_pyradiosky_file(filename, source_params, filetype=None):
     """
     Read in a pyradiosky catalog file.
 
@@ -846,6 +846,9 @@ def _read_pyradiosky_file(filename, source_params):
         File to read in.
     source_params : dict
         Dictionary specifying options to pyradiosky read methods.
+    filetype : str
+        One of ['skyh5', 'gleam', 'vot', 'text', 'hdf5'] or None.
+        If None, the code attempts to guess what the file type is.
 
     Returns:
     --------
@@ -855,40 +858,56 @@ def _read_pyradiosky_file(filename, source_params):
     """
     sky = pyradiosky.SkyModel()
 
-    if filename.endswith("txt"):
-        sky.read_text_catalog(filename)
-    elif filename.endswith('vot'):
-        if 'gleam' in filename:
-            if "spectral_type" in source_params:
-                spectral_type = source_params["spectral_type"]
+    allowed_filetypes = ['skyh5', 'gleam', 'vot', 'text', 'hdf5']
+    if filetype is not None:
+        if filetype not in allowed_filetypes:
+            raise ValueError(f"Invalid filetype. Filetype options are: {allowed_filetypes}")
+    else:
+        if filename.endswith("txt"):
+            filetype = "text"
+        elif filename.endswith('vot'):
+            if "gleam" in filename.lower():
+                filetype = "gleam"
             else:
-                warnings.warn("No spectral_type specified for GLEAM, using 'flat'.")
-                spectral_type = "flat"
-            sky.read_gleam_catalog(
-                filename, spectral_type=spectral_type
-            )
-        else:
-            vo_params = {}
-            required_params = ["table_name", "id_column", "flux_columns"]
-            warn_params = {"ra_column": "RAJ2000", "dec_column": "DEJ2000"}
-            for param in required_params:
-                if param not in source_params:
-                    raise ValueError(f"No {param} specified for {filename}.")
-                vo_params[param] = source_params[param]
-            for param, default in warn_params.items():
-                if param not in source_params:
-                    warnings.warn(
-                        f"No {param} specified for {filename}, using default: {default}."
-                    )
-                    vo_params[param] = default
-                else:
-                    vo_params[param] = source_params[param]
+                filetype = "vot"
+        elif filename.endswith("skyh5"):
+            filetype = "skyh5"
+        elif filename.endswith("hdf5"):
+            filetype = "hdf5"
 
-            vo_params["reference_frequency"] = None
-            sky.read_votable_catalog(filename, **vo_params)
-    elif filename.endswith('skyh5'):
+    if filetype == "text":
+        sky.read_text_catalog(filename)
+    elif filetype == "gleam":
+        if "spectral_type" in source_params:
+            spectral_type = source_params["spectral_type"]
+        else:
+            warnings.warn("No spectral_type specified for GLEAM, using 'flat'.")
+            spectral_type = "flat"
+        sky.read_gleam_catalog(
+            filename, spectral_type=spectral_type
+        )
+    elif filetype == "vot":
+        vo_params = {}
+        required_params = ["table_name", "id_column", "flux_columns"]
+        warn_params = {"ra_column": "RAJ2000", "dec_column": "DEJ2000"}
+        for param in required_params:
+            if param not in source_params:
+                raise ValueError(f"No {param} specified for {filename}.")
+            vo_params[param] = source_params[param]
+        for param, default in warn_params.items():
+            if param not in source_params:
+                warnings.warn(
+                    f"No {param} specified for {filename}, using default: {default}."
+                )
+                vo_params[param] = default
+            else:
+                vo_params[param] = source_params[param]
+
+        vo_params["reference_frequency"] = None
+        sky.read_votable_catalog(filename, **vo_params)
+    elif filetype == "skyh5":
         sky.read_skyh5(filename)
-    elif filename.endswith('hdf5'):
+    elif filetype == "hdf5":
         # In principal, this could either be a skyh5 or an old-style healvis hdf5 file
         # Try skyh5 first, if that doesn't work, use the old method
         try:
@@ -905,7 +924,7 @@ def _read_pyradiosky_file(filename, source_params):
 
 
 def initialize_catalog_from_params(
-    obs_params, input_uv=None, return_recarray=True, return_catname=None
+    obs_params, input_uv=None, return_recarray=True, filetype=None, return_catname=None
 ):
     """
     Make catalog from parameter file specifications.
@@ -920,6 +939,9 @@ def initialize_catalog_from_params(
         Used to set location for mock catalogs and for horizon cuts.
     return_recarray: bool
         Return a recarray instead of a :class:`pyradiosky.SkyModel` instance.
+    filetype : str
+        One of ['skyh5', 'gleam', 'vot', 'text', 'hdf5'] or None.
+        If None, the code attempts to guess what the file type is.
     return_catname: bool
         Return the catalog name. Defaults to True currently but will default to False
         in version 1.4.
@@ -999,8 +1021,12 @@ def initialize_catalog_from_params(
         if not os.path.isfile(catalog):
             catalog = os.path.join(param_dict['config_path'], catalog)
 
+        if filetype is None:
+            if "filetype" in source_params:
+                filetype = source_params["filetype"]
+
         source_list_name = os.path.basename(catalog)
-        sky = _read_pyradiosky_file(catalog, source_params)
+        sky = _read_pyradiosky_file(catalog, source_params, filetype=filetype)
 
     if input_uv is not None:
         telescope_lat_deg = input_uv.telescope_location_lat_lon_alt_degrees[0]
