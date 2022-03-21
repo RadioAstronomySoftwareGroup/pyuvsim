@@ -1047,8 +1047,10 @@ def initialize_catalog_from_params(
         warnings.warn("initialize_catalog_from_params will return a SkyModel instance, not "
                       "a recarray, by default in version 1.3. Set keyword "
                       "`return_recarray=True` to ensure recarray is returned.",
-                      PendingDeprecationWarning)
-        sky = sky.to_recarray()
+                      DeprecationWarning)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            sky = sky.to_recarray()
 
     if return_catname:
         return sky, source_list_name
