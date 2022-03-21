@@ -37,7 +37,8 @@ these are passed into a simulation.
           1.0064e+08, 1.0072e+08]
       bandwidth: 800000.0
     sources:
-      catalog: '../pyuvsim/data/gleam_50srcs.vot'   # Path to catalog file (txt, vot, hdf5, etc.) readable with pyradiosky.
+      catalog: '../pyuvsim/data/gleam_50srcs.vot' # Path to catalog file (txt, vot, hdf5, etc.) readable with pyradiosky.
+      filetype : "gleam" # optionally specify the catalog filetype (skyh5, gleam, vot, text, hdf5). If not specified, the code attempt to guess the type.
       spectral_type: flat # If using the GLEAM catalog, specify the spectral type (flat, subband or spectral_index). Defaults to flat.
       table_name: single  # Required for non-GLEAM VO table files
       id_column: name  # Required for non-GLEAM VO table files
@@ -234,11 +235,11 @@ Telescopes on the Moon
 
 Sources
 ^^^^^^^
-    Specify the path to a text catalog file via ``catalog``. The path can be given as an
-    absolute path or relative to the location of the obsparam. This catalog should be
-    readable with `pyradiosky`.
+    Specify the path to a catalog file via ``catalog``. The path can be given as an
+    absolute path or relative to the location of the obsparam. This catalog can be any
+    file type that is readable with `pyradiosky`.
 
-    An example catalog file:
+    An example text catalog file:
 
     .. literalinclude:: ../pyuvsim/data/mock_catalog_heratext_2458098.27471265.txt
         :lines: 1-5
@@ -252,7 +253,8 @@ Sources
         * ``Frequency``: A reference frequency for the given flux. This will be used for spectral modeling.
 
     If the catalog is a GLEAM VO table file, optionally specify the ``spectral_type``
-    as one of: ``flat``, ``subband`` or ``spectral_index``. If not specified it defaults to ``flat``.
+    as one of: ``flat``, ``subband`` or ``spectral_index``. If not specified it defaults
+    to ``flat``.
 
     If the catalog is a different VO table file, several other keywords are required or recommended:
 
@@ -262,6 +264,9 @@ Sources
         (a list for fluxes at multiple frequencies) (required).
       * ``ra_column`` : The name of the column to use for the source RAs (recommended, defaults to ``RAJ2000``).
       * ``dec_column`` : The name of the column to use for the source Decs (recommended, defaults to ``DEJ2000``).
+
+    Optionally specify the ``filetype`` as one of ['skyh5', 'gleam', 'vot', 'text', 'hdf5'].
+    If this is not specified, the code attempts to guess what file type it is.
 
     Alternatively, you can specify a ``mock`` and provide the ``mock_arrangement``
     keyword to specify which mock catalog to generate. Available options are shown
