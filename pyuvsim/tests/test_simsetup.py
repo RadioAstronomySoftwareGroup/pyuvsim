@@ -169,11 +169,10 @@ def test_catalog_from_params(horizon_buffer):
     if horizon_buffer:
         source_dict["horizon_buffer"] = 0.04364
     with uvtest.check_warnings(
-        [UserWarning, PendingDeprecationWarning, DeprecationWarning, DeprecationWarning],
+        [UserWarning, DeprecationWarning, DeprecationWarning],
         match=[
             "No array_location specified. Defaulting to the HERA site.",
             "initialize_catalog_from_params will return a SkyModel instance",
-            "recarray flux columns will no longer be labeled",
             "The return_catname parameter currently defaults to True, but starting in"
             "version 1.4 it will default to False.",
         ]
