@@ -53,7 +53,7 @@ class Antenna:
         """
         Calculate the jones matrix for this antenna in the direction of sources.
 
-        A 2 x 2 x Nsources array of Efield vectors in Az/Alt.
+        A Nfeeds x 2 x Nsources array of Efield vectors in Az/Alt.
 
         Parameters
         ----------
@@ -82,7 +82,7 @@ class Antenna:
         Returns
         -------
         jones_matrix : array_like of float
-            Jones matricies for each source location, shape (2,2, Ncomponents). The
+            Jones matricies for each source location, shape (Nfeeds,2, Ncomponents). The
             first axis is feed, the second axis is vector component on the sky in az/za.
 
         """
@@ -137,17 +137,14 @@ class Antenna:
         interp_data = bi.compute_response(**interp_kwargs)
 
         Ncomponents = source_za.shape[-1]
-
+        Nfeeds = interp_data.shape[1]
         # interp_data has shape:
         #   (Naxes_vec, Nfeeds, 1 (freq),  Ncomponents (source positions))
-        jones_matrix = np.zeros((2, 2, Ncomponents), dtype=complex)
+        jones_matrix = np.zeros((Nfeeds, 2, Ncomponents), dtype=complex)
 
         # first axis is feed, second axis is theta, phi (opposite order of beam!)
-        jones_matrix[0, 0] = interp_data[1, 0, 0, :]
-        jones_matrix[1, 1] = interp_data[0, 1, 0, :]
-        jones_matrix[0, 1] = interp_data[0, 0, 0, :]
-        jones_matrix[1, 0] = interp_data[1, 1, 0, :]
-
+        jones_matrix[:, 0] = interp_data[1, :, 0, :]
+        jones_matrix[:, 1] = interp_data[0, :, 0, :]
         return jones_matrix
 
     def __eq__(self, other):
