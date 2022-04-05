@@ -71,7 +71,7 @@ following packages before installing `pyuvsim`:
 
 Required:
 
-* astropy>=4.0
+* astropy>=5.0.4
 * numpy>=1.15
 * psutil
 * pyradiosky>=0.1.0
