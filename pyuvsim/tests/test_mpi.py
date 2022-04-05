@@ -47,7 +47,7 @@ def fake_tasks():
 
 
 def test_mpi_version():
-    assert MPI.VERSION == 3
+    assert MPI.VERSION >= 3
 
 
 @pytest.mark.parallel(2)
