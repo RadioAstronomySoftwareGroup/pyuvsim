@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - astropy>=4.0
+  - astropy>=5.0.4
   - astropy-healpix
   - coverage
   - line_profiler

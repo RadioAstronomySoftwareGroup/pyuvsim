@@ -48,7 +48,7 @@ setup_args = {
     'use_scm_version': {'local_scheme': branch_scheme},
     'include_package_data': True,
     'install_requires': [
-        'astropy>=4.0',
+        'astropy>=5.0.4',
         'numpy>=1.15',
         'psutil',
         'pyradiosky>=0.1.2',
@@ -71,9 +71,9 @@ setup_args = {
     'classifiers': ['Development Status :: 5 - Production/Stable',
                     'Intended Audience :: Science/Research',
                     'License :: OSI Approved :: BSD License',
-                    "Programming Language :: Python :: 3.7",
                     "Programming Language :: Python :: 3.8",
                     "Programming Language :: Python :: 3.9",
+                    "Programming Language :: Python :: 3.10",
                     'Topic :: Scientific/Engineering :: Astronomy'],
 }
 

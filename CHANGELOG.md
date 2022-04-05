@@ -18,6 +18,10 @@ the history of the output UVData files.
 - New `check_consistency` method for `BeamList` objects.
 - Ability to simulate UVData objects where Nblts != Nbls * Ntimes. Currently only supported with direct `run_uvdata_uvsim` calls.
 
+## Changed
+- Updated the astropy requirement to >= 5.0.4
+- Dropped support for python 3.7
+
 ### Fixed
 - Input `uvdata.blt_order` forced to be (time, baseline) before a simulation is run. Attempts to reorder output uvdata object if input ordering was different.
 
