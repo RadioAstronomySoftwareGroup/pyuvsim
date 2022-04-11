@@ -115,7 +115,15 @@ class AnalyticBeam:
         pol_strings = ['XX', 'XY', 'YX', 'YY']
         self.polarization_array = np.array([uvutils.polstr2num(ps.upper()) for ps in pol_strings])
 
-    def interp(self, az_array, za_array, freq_array, reuse_spline=None, spline_opts=None):
+    def interp(
+        self,
+        az_array,
+        za_array,
+        freq_array,
+        reuse_spline=None,
+        spline_opts=None,
+        check_azza_domain=None
+    ):
         """
         Evaluate the primary beam at given sky coordinates and frequencies.
 
@@ -135,6 +143,8 @@ class AnalyticBeam:
         reuse_spline : bool
             Unused. Here for compatibility with :meth:`pyuvdata.UVBeam.interp`.
         spline_opts : dict
+            Unused. Here for compatibility with :meth:`pyuvdata.UVBeam.interp`.
+        check_azza_domain : dict
             Unused. Here for compatibility with :meth:`pyuvdata.UVBeam.interp`.
 
         Returns

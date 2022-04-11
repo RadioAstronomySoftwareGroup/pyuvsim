@@ -577,6 +577,7 @@ def run_uvdata_uvsim(
     beam_list,
     beam_dict=None,
     catalog=None,
+    beam_interp_check=True,
     quiet=False,
     block_nonroot_stdout=True
 ):
@@ -595,6 +596,12 @@ def run_uvdata_uvsim(
         beam in the `beam_list`.
     catalog : :class:`pyuvsim.simsetup.SkyModelData`
         Immutable source parameters.
+    beam_interp_check :  bool
+        Option to enable checking that the source positions are within the area covered
+        by the beam. If the beam covers the full sky horizon to horizon this checking
+        is turned off by default.
+        Setting this to False can speed up simulations but if sources are simulated
+        outside the beam area the response will be incorrect.
     quiet : bool
         Do not print anything.
     block_nonroot_stdout : bool
@@ -662,6 +669,10 @@ def run_uvdata_uvsim(
 
     if beam_list.beam_type != 'efield':
         raise ValueError("Beam type must be efield!")
+
+    if not beam_interp_check:
+        # check that all the beams cover the full sky
+        pass  # remove this, just added so the commit was allowed
 
     # Estimating required memory to decide how to split source array.
     mem_avail = (simutils.get_avail_memory()
