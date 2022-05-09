@@ -49,6 +49,15 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
     uv_ref.unphase_to_drift(use_ant_pos=True)
     uv_ref.reorder_blts("time", minor_order="baseline")
+    # This is an old file with the bug that added one to the
+    # antenna numbers for uvfits files. Fix them (if pyuvdata is recent)
+    if np.min(np.union1d(uv_ref.ant_1_array, uv_ref.ant_2_array)) > 0:
+        uv_ref.ant_1_array = uv_ref.ant_1_array - 1
+        uv_ref.ant_2_array = uv_ref.ant_2_array - 1
+        uv_ref.antenna_numbers = uv_ref.antenna_numbers - 1
+        uv_ref.baseline_array = uv_ref.antnums_to_baseline(
+            uv_ref.ant_1_array, uv_ref.ant_2_array
+        )
 
     # set the x_orientation
     uv_ref.x_orientation = "east"
