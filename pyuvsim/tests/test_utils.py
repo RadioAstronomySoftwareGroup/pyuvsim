@@ -6,7 +6,10 @@ import os
 
 import numpy as np
 import pytest
+from packaging import version  # packaging is installed with setuptools
+import pyuvdata
 from pyuvdata import UVData
+import pyuvdata.tests as uvtest
 
 from pyuvsim import utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -221,6 +224,25 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         uv2.vis_units = uv.vis_units
 
     assert uv2 == uv
+
+
+@pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
+def test_write_fix_autos(tmpdir):
+    uv = UVData()
+    uv.read_uvfits(triangle_uvfits_file)
+    uv.set_lsts_from_time_array()
+
+    auto_screen = uv.ant_1_array == uv.ant_2_array
+    uv.data_array[auto_screen] += 1e-11 * complex(0, 1)
+
+    ofname = str(tmpdir.join('test_file'))
+    filing_dict = {'outfile_name': ofname}
+
+    if version.parse(pyuvdata.__version__) >= version.parse("2.2.7"):
+        with uvtest.check_warnings(
+            UserWarning, match="Fixing auto-correlations to be be real-only"
+        ):
+            simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='uvh5')
 
 
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")

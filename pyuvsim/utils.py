@@ -11,6 +11,8 @@ from datetime import timedelta
 
 import numpy as np
 import psutil
+from packaging import version  # packaging is installed with setuptools
+import pyuvdata
 
 from . import __version__
 
@@ -200,6 +202,7 @@ def write_uvdata(
     return_filename=False,
     dryrun=False,
     out_format=None,
+    fix_autos=True,
 ):
     """
     Parse output file information from parameters and write uvfits to file.
@@ -216,6 +219,10 @@ def write_uvdata(
         (Default false) Don't write to file.
     out_format : Str
         (Default uvfits) Write as uvfits/miriad/uvh5/ms
+    fix_autos : bool
+        If auto-correlations with imaginary values are found, fix those values so
+        that they are real-only in data_array. This is only passed if the pyuvdata
+        version is >= 2.2.7.
 
     Returns
     -------
@@ -263,14 +270,24 @@ def write_uvdata(
     if noclobber:
         outfile_name = check_file_exists_and_increment(outfile_name)
 
+    if version.parse(pyuvdata.__version__) >= version.parse("2.2.7"):
+        write_kwargs = {'fix_autos': fix_autos}
+    else:
+        write_kwargs = {}
+
     print('Outfile path: ', outfile_name, flush=True)
     if not dryrun:
         if out_format == 'uvfits':
-            uv_obj.write_uvfits(outfile_name, force_phase=True, spoof_nonessential=True)
+            uv_obj.write_uvfits(
+                outfile_name,
+                force_phase=True,
+                spoof_nonessential=True,
+                **write_kwargs,
+            )
         elif out_format == 'miriad':
-            uv_obj.write_miriad(outfile_name, clobber=not noclobber)
+            uv_obj.write_miriad(outfile_name, clobber=not noclobber, **write_kwargs)
         elif out_format == 'uvh5':
-            uv_obj.write_uvh5(outfile_name, clobber=not noclobber)
+            uv_obj.write_uvh5(outfile_name, clobber=not noclobber, **write_kwargs)
         elif out_format == 'ms':
             try:
                 import casacore.tables  # noqa
@@ -286,7 +303,7 @@ def write_uvdata(
                 uv_obj.antenna_diameters, dtype=np.float64
             )
             try:
-                uv_obj.write_ms(outfile_name, clobber=not noclobber)
+                uv_obj.write_ms(outfile_name, clobber=not noclobber, **write_kwargs)
             except AttributeError as err:  # pragma: no cover
                 raise AttributeError(
                     "Writing measurement sets requires pyuvdata version >= 2.2.2"

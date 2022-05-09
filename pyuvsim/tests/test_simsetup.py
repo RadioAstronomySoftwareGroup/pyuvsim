@@ -479,6 +479,16 @@ def test_param_reader():
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml")
     hera_uv = UVData()
     hera_uv.read_uvfits(triangle_uvfits_file)
+    # This is an old file with the bug that added one to the
+    # antenna numbers for uvfits files. Fix them (if pyuvdata is recent)
+    if np.min(np.union1d(hera_uv.ant_1_array, hera_uv.ant_2_array)) > 0:
+        hera_uv.ant_1_array = hera_uv.ant_1_array - 1
+        hera_uv.ant_2_array = hera_uv.ant_2_array - 1
+        hera_uv.antenna_numbers = hera_uv.antenna_numbers - 1
+        hera_uv.baseline_array = hera_uv.antnums_to_baseline(
+            hera_uv.ant_1_array, hera_uv.ant_2_array
+        )
+
     hera_uv.use_future_array_shapes()
     # set missing x_orientation
     hera_uv.x_orientation = "east"
