@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+### Added
+- Added a `return_beams` parameter to the `initialize_uvdata_from_params` function to
+have it return the beam list and dict. Defaults to True currently, but will default to
+False starting in version 1.4.
+- Added a `return_catname` parameter to the initialize_catalog_from_params function to
+have it return the catalog name. Defaults to True currently, but will default to False
+starting in version 1.4.
+- An option to the `run_param_pyuvsim.py` script and the `run_uvsim` and
+`run_uvdata_uvsim` functions to allow users to keep the output from nonzero ranks for
+debugging purposes.
+
+### Changed
+- Fix auto visibilities to be real on file write-out by default if the pyuvdata
+version is 2.2.7 or greater.
+- Updated the astropy requirement to >= 5.0.4
+- Dropped support for python 3.7
+
 ## [1.2.2] - 2022-02-22
 
 ### Added
