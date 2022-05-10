@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.2.2] - 2022-05-10
+
 ### Added
 - Added a `return_beams` parameter to the `initialize_uvdata_from_params` function to
 have it return the beam list and dict. Defaults to True currently, but will default to
