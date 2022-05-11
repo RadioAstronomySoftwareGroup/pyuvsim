@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [1.2.2] - 2022-05-10
+## [1.2.3] - 2022-05-10
 
 ### Added
 - Added a `return_beams` parameter to the `initialize_uvdata_from_params` function to
