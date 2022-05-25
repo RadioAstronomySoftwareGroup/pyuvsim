@@ -861,7 +861,9 @@ def run_uvdata_uvsim(
         return uv_container
 
 
-def run_uvsim(params, return_uv=False, quiet=False, block_nonroot_stdout=True):
+def run_uvsim(
+    params, return_uv=False, beam_interp_check=None, quiet=False, block_nonroot_stdout=True,
+):
     """
     Run a simulation off of an obsparam yaml file.
 
@@ -871,6 +873,14 @@ def run_uvsim(params, return_uv=False, quiet=False, block_nonroot_stdout=True):
         Path to a parameter yaml file.
     return_uv : bool
         If true, do not write results to file and return uv_out. (Default False)
+    beam_interp_check :  bool
+        Option to enable checking that the source positions are within the area covered
+        by the beam. If the beam covers the full sky horizon to horizon this checking
+        is turned off by default, otherwise it is turned on.
+        Setting this to False can speed up simulations but if sources are simulated
+        outside the beam area the response will be incorrect.
+        This keyword only applies to beams that are regularly gridded in azimuth and
+        zenith angle.
     quiet : bool
         If True, do not print anything to stdout. (Default False)
     block_nonroot_stdout : bool
@@ -918,7 +928,12 @@ def run_uvsim(params, return_uv=False, quiet=False, block_nonroot_stdout=True):
 
     start = Time.now()
     uv_out = run_uvdata_uvsim(
-        input_uv, beam_list, beam_dict=beam_dict, catalog=skydata, quiet=quiet
+        input_uv,
+        beam_list,
+        beam_dict=beam_dict,
+        catalog=skydata,
+        quiet=quiet,
+        beam_interp_check=beam_interp_check,
     )
     if rank == 0:
         print(f"Run uvdata uvsim took {(Time.now() - start).to('minute'):.3f}")
