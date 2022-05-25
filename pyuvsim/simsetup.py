@@ -1827,9 +1827,6 @@ def _complete_uvdata(uv_in, inplace=False):
 
     uv_obj.extra_keywords = {}
 
-    # this should not be necessary, but is because of a bug in pyuvdata.
-    # it can be removed after we require pyuvdata > 2.2.4
-    uv_obj._set_future_array_shapes()
     uv_obj.check()
 
     return uv_obj

@@ -52,7 +52,7 @@ setup_args = {
         'numpy>=1.15',
         'psutil',
         'pyradiosky>=0.1.2',
-        'pyuvdata>=2.1.5',
+        'pyuvdata>=2.2.8',
         'pyyaml',
         'scipy',
         'setuptools_scm',

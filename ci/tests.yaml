@@ -14,7 +14,7 @@ dependencies:
   - python-casacore>=3.1.0
   - pytest
   - pytest-cov
-  - pyuvdata>=2.1.5
+  - pyuvdata>=2.2.8
   - pyyaml>=5.1
   - scipy
   - setuptools_scm

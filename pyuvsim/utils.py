@@ -11,8 +11,6 @@ from datetime import timedelta
 
 import numpy as np
 import psutil
-from packaging import version  # packaging is installed with setuptools
-import pyuvdata
 
 from . import __version__
 
@@ -221,8 +219,7 @@ def write_uvdata(
         (Default uvfits) Write as uvfits/miriad/uvh5/ms
     fix_autos : bool
         If auto-correlations with imaginary values are found, fix those values so
-        that they are real-only in data_array. This is only passed if the pyuvdata
-        version is >= 2.2.7.
+        that they are real-only in data_array.
 
     Returns
     -------
@@ -270,11 +267,6 @@ def write_uvdata(
     if noclobber:
         outfile_name = check_file_exists_and_increment(outfile_name)
 
-    if version.parse(pyuvdata.__version__) >= version.parse("2.2.7"):
-        write_kwargs = {'fix_autos': fix_autos}
-    else:
-        write_kwargs = {}
-
     print('Outfile path: ', outfile_name, flush=True)
     if not dryrun:
         if out_format == 'uvfits':
@@ -282,12 +274,12 @@ def write_uvdata(
                 outfile_name,
                 force_phase=True,
                 spoof_nonessential=True,
-                **write_kwargs,
+                fix_autos=fix_autos,
             )
         elif out_format == 'miriad':
-            uv_obj.write_miriad(outfile_name, clobber=not noclobber, **write_kwargs)
+            uv_obj.write_miriad(outfile_name, clobber=not noclobber, fix_autos=fix_autos)
         elif out_format == 'uvh5':
-            uv_obj.write_uvh5(outfile_name, clobber=not noclobber, **write_kwargs)
+            uv_obj.write_uvh5(outfile_name, clobber=not noclobber, fix_autos=fix_autos)
         elif out_format == 'ms':
             try:
                 import casacore.tables  # noqa
@@ -297,17 +289,7 @@ def write_uvdata(
                     "casacore is not installed but is required for measurement set "
                     "functionality"
                 ) from error
-            # force the antenna diameters to a double to avoid an error in write_ms
-            # this can be removed when we require pyuvdata>=2.2.5
-            uv_obj.antenna_diameters = np.asarray(
-                uv_obj.antenna_diameters, dtype=np.float64
-            )
-            try:
-                uv_obj.write_ms(outfile_name, clobber=not noclobber, **write_kwargs)
-            except AttributeError as err:  # pragma: no cover
-                raise AttributeError(
-                    "Writing measurement sets requires pyuvdata version >= 2.2.2"
-                ) from err
+            uv_obj.write_ms(outfile_name, clobber=not noclobber, fix_autos=fix_autos)
         else:
             raise ValueError(
                 "Invalid output format. Options are 'uvfits', 'uvh5', 'miriad' or 'ms'.")

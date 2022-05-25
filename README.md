@@ -75,7 +75,7 @@ Required:
 * numpy>=1.15
 * psutil
 * pyradiosky>=0.1.0
-* pyuvdata>=2.1.5
+* pyuvdata>=2.2.8
 * pyyaml>=5.1
 * scipy>1.0.1
 * setuptools_scm

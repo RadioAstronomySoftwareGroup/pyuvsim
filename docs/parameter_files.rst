@@ -199,9 +199,8 @@ Telescope Configuration
     `freq_interp_kind` sets the type of frequency interpolation for all UVBeam objects
     defined in the beam list (see documentation on UVBeam for options).
 
-    When used with version of pyuvdata >= 2.0.1, the `spline_interp_opts` keyword lets
-    the user set the order on the angular interpolating polynomial spline function. By default,
-    it is cubic.
+    The `spline_interp_opts` keyword lets the user set the order on the angular
+    interpolating polynomial spline function. By default, it is cubic.
 
     Analytic beams may require additional parameters.
 
