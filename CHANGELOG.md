@@ -7,6 +7,9 @@
 the check that the beam covers the interpolation location to be turned off. The default
 behavior is to turn off the check if the beam covers the full sky horizon to horizon.
 
+### Changed
+- Require pyuvdata >= 2.2.8
+
 ## [1.2.3] - 2022-05-10
 
 ### Added
