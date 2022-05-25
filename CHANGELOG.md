@@ -2,13 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+- A new parameter, `beam_interp_check`, to `run_uvsim` and `run_uvdata_uvsim` to allow
+the check that the beam covers the interpolation location to be turned off. The default
+behavior is to turn off the check if the beam covers the full sky horizon to horizon.
+
 ## [1.2.3] - 2022-05-10
 
 ### Added
 - Added a `return_beams` parameter to the `initialize_uvdata_from_params` function to
 have it return the beam list and dict. Defaults to True currently, but will default to
 False starting in version 1.4.
-- Added a `return_catname` parameter to the initialize_catalog_from_params function to
+- Added a `return_catname` parameter to the `initialize_catalog_from_params` function to
 have it return the catalog name. Defaults to True currently, but will default to False
 starting in version 1.4.
 - An option to the `run_param_pyuvsim.py` script and the `run_uvsim` and
