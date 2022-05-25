@@ -16,7 +16,7 @@ import astropy.units as units
 from astropy.coordinates import EarthLocation
 from astropy.units import Quantity
 from astropy.constants import c as speed_of_light
-from pyuvdata import UVData
+from pyuvdata import UVData, UVBeam
 
 from . import mpi
 from . import simsetup
@@ -284,8 +284,20 @@ class UVEngine:
         self.current_freq = task.freq.to("Hz").value
         self.sources = task.sources
 
-    def apply_beam(self):
-        """Set apparent coherency from jones matrices and source coherency."""
+    def apply_beam(self, beam_interp_check=True):
+        """
+        Set apparent coherency from jones matrices and source coherency.
+
+        beam_interp_check :  bool
+            Option to enable checking that the source positions are within the area
+            covered by the beam. If all the az/za beams cover the full sky horizon to
+            horizon this checking is turned off by default in `run_uvdata_uvsim`,
+            otherwise it is turned on.
+            Setting this to False can speed up simulations but if sources are simulated
+            outside the beam area the response will be incorrect.
+            This keyword only applies to beams that are regularly gridded in azimuth and
+            zenith angle.
+        """
         beam1_id, beam2_id = self.current_beam_pair
 
         sources = self.task.sources
@@ -298,16 +310,22 @@ class UVEngine:
             self.local_coherency = sources.coherency_calc()
 
         self.beam1_jones = baseline.antenna1.get_beam_jones(
-            self.task.telescope, sources.alt_az[..., sources.above_horizon],
-            self.task.freq, reuse_spline=self.reuse_spline
+            self.task.telescope,
+            sources.alt_az[..., sources.above_horizon],
+            self.task.freq,
+            reuse_spline=self.reuse_spline,
+            beam_interp_check=beam_interp_check,
         )
 
         if beam1_id == beam2_id:
             self.beam2_jones = np.copy(self.beam1_jones)
         else:
             self.beam2_jones = baseline.antenna2.get_beam_jones(
-                self.task.telescope, sources.alt_az[..., sources.above_horizon],
-                self.task.freq, reuse_spline=self.reuse_spline
+                self.task.telescope,
+                sources.alt_az[..., sources.above_horizon],
+                self.task.freq,
+                reuse_spline=self.reuse_spline,
+                beam_interp_check=beam_interp_check,
             )
 
         # coherency is a 2x2 matrix
@@ -572,12 +590,30 @@ def _check_ntasks_valid(Ntasks_tot):
         )
 
 
+def _check_all_azza_beams_full_sky(beam_list):
+    all_azza_full_sky = True
+    for beam in beam_list:
+        if isinstance(beam, UVBeam) and beam.pixel_coordinate_system == "az_za":
+            # regular gridding is enforced in UVBeam checking, so can use first diff
+            axis1_diff = np.diff(beam.axis1_array)[0]
+            axis2_diff = np.diff(beam.axis2_array)[0]
+            max_axis_diff = np.max([axis1_diff, axis2_diff])
+            if not (
+                np.max(beam.axis2_array) >= np.pi / 2. - max_axis_diff * 2.0
+                and np.min(beam.axis1_array) <= max_axis_diff * 2.0
+                and np.max(beam.axis1_array) >= 2. * np.pi - max_axis_diff * 2.0
+            ):
+                all_azza_full_sky = False
+                break
+    return all_azza_full_sky
+
+
 def run_uvdata_uvsim(
     input_uv,
     beam_list,
     beam_dict=None,
     catalog=None,
-    beam_interp_check=True,
+    beam_interp_check=None,
     quiet=False,
     block_nonroot_stdout=True
 ):
@@ -599,9 +635,11 @@ def run_uvdata_uvsim(
     beam_interp_check :  bool
         Option to enable checking that the source positions are within the area covered
         by the beam. If the beam covers the full sky horizon to horizon this checking
-        is turned off by default.
+        is turned off by default, otherwise it is turned on.
         Setting this to False can speed up simulations but if sources are simulated
         outside the beam area the response will be incorrect.
+        This keyword only applies to beams that are regularly gridded in azimuth and
+        zenith angle.
     quiet : bool
         Do not print anything.
     block_nonroot_stdout : bool
@@ -670,9 +708,12 @@ def run_uvdata_uvsim(
     if beam_list.beam_type != 'efield':
         raise ValueError("Beam type must be efield!")
 
-    if not beam_interp_check:
+    if beam_interp_check is None:
         # check that all the beams cover the full sky
-        pass  # remove this, just added so the commit was allowed
+        if _check_all_azza_beams_full_sky(beam_list):
+            beam_interp_check = False
+        else:
+            beam_interp_check = True
 
     # Estimating required memory to decide how to split source array.
     mem_avail = (simutils.get_avail_memory()

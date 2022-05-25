@@ -38,8 +38,16 @@ class Antenna:
         self.pos_enu = enu_position * units.m
         self.beam_id = beam_id
 
-    def get_beam_jones(self, array, source_alt_az, frequency, reuse_spline=True,
-                       interpolation_function=None, freq_interp_kind=None):
+    def get_beam_jones(
+        self,
+        array,
+        source_alt_az,
+        frequency,
+        reuse_spline=True,
+        interpolation_function=None,
+        freq_interp_kind=None,
+        beam_interp_check=True,
+    ):
         """
         Calculate the jones matrix for this antenna in the direction of sources.
 
@@ -102,8 +110,13 @@ class Antenna:
         if isinstance(array.beam_list, BeamList):
             spline_opts = array.beam_list.spline_interp_opts
 
-        interp_kwargs = {'az_array' : source_az, 'za_array' : source_za,
-                         'freq_array' : freq, 'reuse_spline' : reuse_spline}
+        interp_kwargs = {
+            'az_array' : source_az,
+            'za_array' : source_za,
+            'freq_array' : freq,
+            'reuse_spline' : reuse_spline,
+            'check_azza_domain' : beam_interp_check,
+        }
 
         if spline_opts is not None:
             interp_kwargs['spline_opts'] = spline_opts
