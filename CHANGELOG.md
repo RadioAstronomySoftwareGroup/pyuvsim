@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- A check that the beam basis vectors are aligned with the azimuth and zenith angle in
+each pixel.
 - A new parameter, `beam_interp_check`, to `run_uvsim` and `run_uvdata_uvsim` to allow
 the check that the beam covers the interpolation location to be turned off. The default
 behavior is to turn off the check if the beam covers the full sky horizon to horizon.
