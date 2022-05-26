@@ -16,7 +16,7 @@ import astropy.units as units
 from astropy.coordinates import EarthLocation
 from astropy.units import Quantity
 from astropy.constants import c as speed_of_light
-from pyuvdata import UVData, UVBeam
+from pyuvdata import UVData
 
 from . import mpi
 from . import simsetup
@@ -590,24 +590,6 @@ def _check_ntasks_valid(Ntasks_tot):
         )
 
 
-def _check_all_azza_beams_full_sky(beam_list):
-    all_azza_full_sky = True
-    for beam in beam_list:
-        if isinstance(beam, UVBeam) and beam.pixel_coordinate_system == "az_za":
-            # regular gridding is enforced in UVBeam checking, so can use first diff
-            axis1_diff = np.diff(beam.axis1_array)[0]
-            axis2_diff = np.diff(beam.axis2_array)[0]
-            max_axis_diff = np.max([axis1_diff, axis2_diff])
-            if not (
-                np.max(beam.axis2_array) >= np.pi / 2. - max_axis_diff * 2.0
-                and np.min(beam.axis1_array) <= max_axis_diff * 2.0
-                and np.max(beam.axis1_array) >= 2. * np.pi - max_axis_diff * 2.0
-            ):
-                all_azza_full_sky = False
-                break
-    return all_azza_full_sky
-
-
 def run_uvdata_uvsim(
     input_uv,
     beam_list,
@@ -710,7 +692,7 @@ def run_uvdata_uvsim(
 
     if beam_interp_check is None:
         # check that all the beams cover the full sky
-        if _check_all_azza_beams_full_sky(beam_list):
+        if beam_list.check_all_azza_beams_full_sky():
             beam_interp_check = False
         else:
             beam_interp_check = True
