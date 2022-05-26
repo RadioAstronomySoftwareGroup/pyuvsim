@@ -898,10 +898,12 @@ def run_uvsim(
         skydata = simsetup.initialize_catalog_from_params(
             params, input_uv, return_recarray=False, return_catname=False
         )
-        print(f"UVData initialization took {(Time.now() - start).to('minute'):.3f}")
+        if not quiet:
+            print(f"UVData initialization took {(Time.now() - start).to('minute'):.3f}")
         start = Time.now()
         skydata = simsetup.SkyModelData(skydata)
-        print(f"Skymodel setup took {(Time.now() - start).to('minute'):.3f}")
+        if not quiet:
+            print(f"Skymodel setup took {(Time.now() - start).to('minute'):.3f}")
 
     input_uv = comm.bcast(input_uv, root=0)
     beam_list = comm.bcast(beam_list, root=0)
@@ -917,7 +919,7 @@ def run_uvsim(
         quiet=quiet,
         beam_interp_check=beam_interp_check,
     )
-    if rank == 0:
+    if rank == 0 and not quiet:
         print(f"Run uvdata uvsim took {(Time.now() - start).to('minute'):.3f}")
 
     if rank == 0:

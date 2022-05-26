@@ -201,6 +201,7 @@ def write_uvdata(
     dryrun=False,
     out_format=None,
     fix_autos=True,
+    quiet=False,
 ):
     """
     Parse output file information from parameters and write uvfits to file.
@@ -220,6 +221,8 @@ def write_uvdata(
     fix_autos : bool
         If auto-correlations with imaginary values are found, fix those values so
         that they are real-only in data_array.
+    quiet : bool
+        If True, do not print anything to stdout.
 
     Returns
     -------
@@ -267,7 +270,8 @@ def write_uvdata(
     if noclobber:
         outfile_name = check_file_exists_and_increment(outfile_name)
 
-    print('Outfile path: ', outfile_name, flush=True)
+    if not quiet:
+        print('Outfile path: ', outfile_name, flush=True)
     if not dryrun:
         if out_format == 'uvfits':
             uv_obj.write_uvfits(
