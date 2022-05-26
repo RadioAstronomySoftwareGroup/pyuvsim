@@ -172,7 +172,7 @@ def test_no_overwrite(beam_objs):
     beamlist = pyuvsim.BeamList(newbeams)
     assert beamlist.uvb_params['freq_interp_kind'] == 'cubic'
 
-    uvb = copy.deepcopy(newbeams[0])
+    uvb = newbeams[0].copy()
     uvb.freq_interp_kind = 'quintic'
 
     beamlist.append(uvb)
@@ -317,7 +317,7 @@ def test_empty_beamlist():
 
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
 def test_powerbeam_consistency(beam_objs):
-    newbeams = copy.deepcopy(beam_objs[:2])
+    newbeams = beam_objs[:2]
     for beam in newbeams:
         beam.efield_to_power()
 
@@ -328,7 +328,7 @@ def test_powerbeam_consistency(beam_objs):
 @pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
 def test_check_azza_full_sky(beam_objs):
-    beam = copy.deepcopy(beam_objs)
+    beam = beam_objs
 
     beamlist = pyuvsim.BeamList(beam)
     assert beamlist.check_all_azza_beams_full_sky()
