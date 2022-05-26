@@ -180,8 +180,10 @@ def test_no_overwrite(beam_objs):
     assert beamlist.uvb_params['freq_interp_kind'] == 'cubic'
 
 
+@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 def test_beamlist_errors(beam_objs):
-    beams = beam_objs
+    # make a copy to enable Telescope equality checking
+    beams = copy.deepcopy(beam_objs)
     beamlist = pyuvsim.BeamList(beams, check=False)
 
     # Try to make a BeamList with a mixture of strings and objects.
@@ -214,6 +216,7 @@ def test_beamlist_errors(beam_objs):
         pyuvsim.BeamList(beams).x_orientation
 
     # Compare Telescopes with beamlists of different lengths
+
     del beams[0]
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
