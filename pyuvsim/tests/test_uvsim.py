@@ -43,7 +43,11 @@ def multi_beams():
 
     try:
         beam4 = beam0.copy()
-        beam4.to_healpix(nside=8)
+        with uvtest.check_warnings(
+            UserWarning,
+            match="key beam_path in extra_keywords is longer than 8 characters.",
+        ):
+            beam4.to_healpix(nside=8)
         beam4.interpolation_function = 'healpix_simple'
         beams.append(beam4)
     except (ImportError, ModuleNotFoundError):
@@ -979,6 +983,7 @@ def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
     assert out_uv.blt_order == ("time", "baseline")
 
 
+@pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("cut_beam", [10, 85, 90])
 def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources, cut_beam):
