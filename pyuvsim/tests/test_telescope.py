@@ -265,6 +265,7 @@ def test_beam_basis_type(beam_objs):
 
 
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer")
+@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 def test_beam_basis_type_errors(beam_objs):
     beam_objs[0].pixel_coordinate_system = "orthoslant_zenith"
     beam_objs[0].check()
@@ -303,7 +304,7 @@ def test_beam_basis_type_errors(beam_objs):
     beamlist.set_str_mode()
     with pytest.raises(
         ValueError,
-        match="Cannot get beam basis type a string-mode BeamList."
+        match="Cannot get beam basis type from a string-mode BeamList."
     ):
         beamlist._get_beam_basis_type()
 

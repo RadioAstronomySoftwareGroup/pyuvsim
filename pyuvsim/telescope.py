@@ -118,7 +118,7 @@ class BeamList:
 
     def _get_beam_basis_type(self):
         if self.string_mode:
-            raise ValueError("Cannot get beam basis type a string-mode BeamList.")
+            raise ValueError("Cannot get beam basis type from a string-mode BeamList.")
 
         beam_basis = {}
         for index, bm in enumerate(self):
