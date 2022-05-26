@@ -19,14 +19,12 @@ herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 # Ignore warnings of pending sigma deprecation
 @pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 @pytest.fixture(scope='module')
-def beam_objs():
+def beam_objs_main():
     uvb = UVBeam()
     uvb.read_beamfits(herabeam_default)
     uvb.extra_keywords['beam_path'] = herabeam_default
 
-    uvb2 = UVBeam()
-    uvb2.read_beamfits(herabeam_default)
-    uvb2.extra_keywords['beam_path'] = herabeam_default
+    uvb2 = uvb.copy()
 
     beams = [uvb, uvb2]
 
@@ -39,6 +37,14 @@ def beam_objs():
     beams.append(pyuvsim.AnalyticBeam('gaussian', sigma=sigma,
                  ref_freq=ref_freq, spectral_index=alpha))
     return beams
+
+
+@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
+@pytest.fixture(scope='function')
+def beam_objs(beam_objs_main):
+    beams_copy = copy.deepcopy(beam_objs_main)
+
+    return beams_copy
 
 
 @pytest.mark.filterwarnings('ignore:Achromatic gaussian')
@@ -88,12 +94,11 @@ def test_convert_loop(beam_objs):
 @pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 def test_object_mode(beam_objs):
     beams = beam_objs
-    newbeams = copy.deepcopy(beams)
-    beamlist = pyuvsim.BeamList(newbeams)
+    beamlist = pyuvsim.BeamList(beams)
 
     beamlist[0].freq_interp_kind = 'cubic'
 
-    uvb = copy.deepcopy(newbeams[0])
+    uvb = copy.deepcopy(beams[0])
     uvb.freq_interp_kind = 'quartic'
 
     # Warn if inserted object mismatches.
@@ -122,11 +127,11 @@ def test_object_mode(beam_objs):
 
 @pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 def test_string_mode(beam_objs):
-    newbeams = copy.deepcopy(beam_objs)
-    beamlist = pyuvsim.BeamList(newbeams)
+    beams = beam_objs
+    beamlist = pyuvsim.BeamList(beams)
     beamlist.set_str_mode()
 
-    uvb = newbeams[0]
+    uvb = beams[0]
     uvb.freq_interp_kind = 'quartic'
 
     with pytest.raises(ValueError, match='UVBeam parameters do not'):
@@ -163,7 +168,7 @@ def test_comparison(beam_objs):
 def test_no_overwrite(beam_objs):
     # Ensure UVBeam keywords are not overwritten by BeamList.uvb_params
     # while in object mode.
-    newbeams = copy.deepcopy(beam_objs)
+    newbeams = beam_objs
     beamlist = pyuvsim.BeamList(newbeams)
     assert beamlist.uvb_params['freq_interp_kind'] == 'cubic'
 
@@ -176,8 +181,8 @@ def test_no_overwrite(beam_objs):
 
 
 def test_beamlist_errors(beam_objs):
-    newbeams = copy.deepcopy(beam_objs)
-    beamlist = pyuvsim.BeamList(newbeams, check=False)
+    beams = beam_objs
+    beamlist = pyuvsim.BeamList(beams, check=False)
 
     # Try to make a BeamList with a mixture of strings and objects.
     newlist = copy.deepcopy(beamlist._obj_beam_list)
@@ -191,50 +196,49 @@ def test_beamlist_errors(beam_objs):
         beamlist.append(beam_path)
 
     # test error on beams with different x_orientation
-    newbeams[0].x_orientation = None
+    beams[0].x_orientation = None
     with pytest.raises(
         BeamConsistencyError,
         match='x_orientation of beam 2 is not consistent with beam 1'
     ):
-        pyuvsim.BeamList(newbeams, check=True)
+        pyuvsim.BeamList(beams, check=True)
 
     # test warning on beams with different x_orientation
-    newbeams[0].x_orientation = None
-    newbeams[1].x_orientation = None
+    beams[0].x_orientation = None
+    beams[1].x_orientation = None
     with uvtest.check_warnings(
         UserWarning,
         match="All polarized beams have x_orientation set to None. This will make it "
         "hard to interpret the polarizations of the simulated visibilities.",
     ):
-        pyuvsim.BeamList(newbeams).x_orientation
+        pyuvsim.BeamList(beams).x_orientation
 
     # Compare Telescopes with beamlists of different lengths
-    del newbeams[0]
+    del beams[0]
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
-    tel0 = pyuvsim.Telescope('tel0', array_location, newbeams)
+    tel0 = pyuvsim.Telescope('tel0', array_location, beams)
     tel1 = pyuvsim.Telescope('tel1', array_location, beam_objs)
     assert tel0 != tel1
 
 
 def test_beamlist_consistency(beam_objs):
-    newbeams = copy.deepcopy(beam_objs)
 
     # Does check, but raises no error
-    pyuvsim.BeamList(newbeams[:2])
+    pyuvsim.BeamList(beam_objs[:2])
 
-    pyuvsim.BeamList(newbeams[:3])
+    pyuvsim.BeamList(beam_objs[:3])
 
 
 def test_beamlist_consistency_properties(beam_objs):
-    newbeams = copy.deepcopy(beam_objs)
-    beamlist = pyuvsim.BeamList(newbeams[:2])
-    assert beamlist.x_orientation == newbeams[0].x_orientation
+    beams = beam_objs
+    beamlist = pyuvsim.BeamList(beams[:2])
+    assert beamlist.x_orientation == beams[0].x_orientation
 
 
 def test_beamlist_consistency_stringmode(beam_objs):
-    newbeams = copy.deepcopy(beam_objs)
-    beamlist = pyuvsim.BeamList(newbeams[:2])
+    beams = beam_objs
+    beamlist = pyuvsim.BeamList(beams[:2])
     beamlist.set_str_mode()
     beamlist.check_consistency(force=True)
     assert beamlist.string_mode
@@ -243,10 +247,62 @@ def test_beamlist_consistency_stringmode(beam_objs):
     ):
         beamlist.check_consistency(force=False)
 
-    beamlist = pyuvsim.BeamList(newbeams[:3], check=False)
+    beamlist = pyuvsim.BeamList(beams[:3], check=False)
     beamlist.set_str_mode()
 
     pyuvsim.BeamList(beamlist._str_beam_list, check=True, force_check=True)
+
+
+def test_beam_basis_type(beam_objs):
+    beamlist = pyuvsim.BeamList(beam_objs)
+
+    basis_types = beamlist._get_beam_basis_type()
+
+    assert basis_types == {index: "az_za" for index in range(len(beam_objs))}
+
+
+@pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer")
+def test_beam_basis_type_errors(beam_objs):
+    beam_objs[0].pixel_coordinate_system = "orthoslant_zenith"
+    beam_objs[0].check()
+
+    beamlist = pyuvsim.BeamList(beam_objs, check=False)
+    with pytest.raises(
+        ValueError,
+        match="pyuvsim currently only supports UVBeams with 'az_za' or "
+            "'healpix' pixel coordinate systems."
+    ):
+        beamlist.check_consistency()
+
+    # test with non-orthogonal basis vectors
+    # first construct a beam with non-orthogonal basis vectors
+    new_basis_vecs = np.zeros_like(beam_objs[1].basis_vector_array)
+    new_basis_vecs[0, 0, :, :] = np.sqrt(0.5)
+    new_basis_vecs[0, 1, :, :] = np.sqrt(0.5)
+    new_basis_vecs[1, :, :, :] = beam_objs[1].basis_vector_array[1, :, :, :]
+    new_data = np.zeros_like(beam_objs[1].data_array)
+    # drop all the trailing colons in the slicing below
+    new_data[0] = np.sqrt(2) * beam_objs[1].data_array[0]
+    new_data[1] = beam_objs[1].data_array[1] - beam_objs[1].data_array[0]
+    beam_objs[1].basis_vector_array = new_basis_vecs
+    beam_objs[1].data_array = new_data
+    beam_objs[1].check()
+
+    beamlist = pyuvsim.BeamList(beam_objs[1:], check=False)
+    with pytest.raises(
+        ValueError,
+        match="pyuvsim currently only supports beams with basis vectors that"
+            "are aligned with the azimuth and zenith angle in each pixel."
+            "Work is in progress to add other basis vector systems."
+    ):
+        beamlist.check_consistency()
+
+    beamlist.set_str_mode()
+    with pytest.raises(
+        ValueError,
+        match="Cannot get beam basis type a string-mode BeamList."
+    ):
+        beamlist._get_beam_basis_type()
 
 
 def test_empty_beamlist():
