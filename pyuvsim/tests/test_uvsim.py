@@ -31,6 +31,7 @@ herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 def multi_beams():
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
+    beam0.extra_keywords['beam_path'] = herabeam_default
     beam0.freq_interp_kind = 'cubic'
     beam0.interpolation_function = 'az_za_simple'
     beam1 = pyuvsim.AnalyticBeam('uniform')
@@ -979,9 +980,19 @@ def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
-def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources):
+@pytest.mark.parametrize("cut_beam", [10, 85, 90])
+def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources, cut_beam):
     pytest.importorskip('mpi4py')
     uvdata_linear, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
+
+    beam_list[0] = multi_beams[0]
+    beam_list.set_obj_mode()
+
+    if cut_beam < 90:
+        # Downselect the beam to trigger interpolation checking
+        za_max = np.deg2rad(cut_beam)
+        za_inds_use = np.nonzero(beam_list[0].axis2_array <= za_max)[0]
+        beam_list[0].select(axis2_inds=za_inds_use)
 
     uvdata_linear.conjugate_bls("ant1<ant2")
 
@@ -990,7 +1001,6 @@ def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources):
     indices = np.nonzero(
         uvdata_linear.baseline_array == uvdata_linear.antnums_to_baseline(0, 2)
     )[0]
-    print(uvdata_linear.antnums_to_baseline(0, 2), indices)
     # discard half of them
     indices = indices[::2]
     blt_inds = np.delete(np.arange(uvdata_linear.Nblts), indices)
@@ -998,15 +1008,28 @@ def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources):
 
     assert uvdata_linear.Nblts != uvdata_linear.Nbls * uvdata_linear.Ntimes
 
-    out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
-        input_uv=uvdata_linear.copy(),
-        beam_list=beam_list,
-        beam_dict=beam_dict,
-        catalog=sky_model,
-    )
+    if cut_beam < 85:
+        # There's a source out at ~80 degrees
+        with pytest.raises(
+            ValueError,
+            match="at least one interpolation location is outside of the UVBeam"
+        ):
+            out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
+                input_uv=uvdata_linear.copy(),
+                beam_list=beam_list,
+                beam_dict=beam_dict,
+                catalog=sky_model,
+            )
+    else:
+        out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
+            input_uv=uvdata_linear.copy(),
+            beam_list=beam_list,
+            beam_dict=beam_dict,
+            catalog=sky_model,
+        )
 
-    assert np.allclose(
-        out_uv.get_data((0, 1)), out_uv.get_data((1, 2))
-    )
-    # make sure (0, 2) has fewer times
-    assert out_uv.get_data((0, 2)).shape == (out_uv.Ntimes // 2, out_uv.Nfreqs, out_uv.Npols)
+        assert np.allclose(
+            out_uv.get_data((0, 1)), out_uv.get_data((1, 2))
+        )
+        # make sure (0, 2) has fewer times
+        assert out_uv.get_data((0, 2)).shape == (out_uv.Ntimes // 2, out_uv.Nfreqs, out_uv.Npols)

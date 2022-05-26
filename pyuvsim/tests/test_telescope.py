@@ -1,6 +1,8 @@
 
 import os
 import copy
+
+import numpy as np
 from astropy.coordinates import EarthLocation
 
 import pytest
@@ -261,3 +263,20 @@ def test_powerbeam_consistency(beam_objs):
 
     beamlist = pyuvsim.BeamList(newbeams)
     beamlist.check_consistency()
+
+
+@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
+@pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
+def test_check_azza_full_sky(beam_objs):
+    beam = copy.deepcopy(beam_objs)
+
+    beamlist = pyuvsim.BeamList(beam)
+    assert beamlist.check_all_azza_beams_full_sky()
+
+    # Downselect a beam to a small sky area
+    za_max = np.deg2rad(10.0)
+    za_inds_use = np.nonzero(beam[0].axis2_array <= za_max)[0]
+    beam[0].select(axis2_inds=za_inds_use)
+
+    beamlist = pyuvsim.BeamList(beam)
+    assert not beamlist.check_all_azza_beams_full_sky()

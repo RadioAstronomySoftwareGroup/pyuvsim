@@ -177,6 +177,29 @@ class BeamList:
 
         self.is_consistent = True
 
+    def check_all_azza_beams_full_sky(self):
+        """
+        Check if all az_za UVBeams cover the full sky.
+
+        Used to decide whether to turn off checking that the beam covers the
+        interpolation location.
+        """
+        all_azza_full_sky = True
+        for beam in self:
+            if isinstance(beam, UVBeam) and beam.pixel_coordinate_system == "az_za":
+                # regular gridding is enforced in UVBeam checking, so can use first diff
+                axis1_diff = np.diff(beam.axis1_array)[0]
+                axis2_diff = np.diff(beam.axis2_array)[0]
+                max_axis_diff = np.max([axis1_diff, axis2_diff])
+                if not (
+                    np.max(beam.axis2_array) >= np.pi / 2. - max_axis_diff * 2.0
+                    and np.min(beam.axis1_array) <= max_axis_diff * 2.0
+                    and np.max(beam.axis1_array) >= 2. * np.pi - max_axis_diff * 2.0
+                ):
+                    all_azza_full_sky = False
+                    break
+        return all_azza_full_sky
+
     @property
     def x_orientation(self):
         """
