@@ -116,6 +116,36 @@ class BeamList:
         if check:
             self.check_consistency(force=force_check)
 
+    def _get_beam_basis_type(self):
+        if self.string_mode:
+            raise ValueError("Cannot get beam basis type a string-mode BeamList.")
+
+        beam_basis = {}
+        for index, bm in enumerate(self):
+            if isinstance(bm, UVBeam):
+                if bm.pixel_coordinate_system not in ["az_za", "healpix"]:
+                    raise ValueError(
+                        "pyuvsim currently only supports UVBeams with 'az_za' or "
+                        "'healpix' pixel coordinate systems."
+                    )
+                if (
+                    np.all(bm.basis_vector_array[0, 0] == 1)
+                    and np.all(bm.basis_vector_array[0, 1] == 0)
+                    and np.all(bm.basis_vector_array[1, 0] == 0)
+                    and np.all(bm.basis_vector_array[1, 1] == 1)
+                ):
+                    beam_basis[index] = "az_za"
+                else:
+                    raise ValueError(
+                        "pyuvsim currently only supports beams with basis vectors that"
+                        "are aligned with the azimuth and zenith angle in each pixel."
+                        "Work is in progress to add other basis vector systems."
+                    )
+            else:
+                # AnalyticBeams all have the az_za basis by construction
+                beam_basis[index] = "az_za"
+        return beam_basis
+
     def check_consistency(self, force: bool = False):
         """
         Check the consistency of all beams in the list.
@@ -320,33 +350,6 @@ class BeamList:
             if isinstance(bm, UVBeam):
                 for key, val in self.uvb_params.items():
                     setattr(bm, key, val)
-
-    def _get_beam_basis_type(self):
-        if self.string_mode:
-            raise ValueError("Cannot get beam basis type a string-mode BeamList.")
-
-        beam_basis = {}
-        for index, bm in enumerate(self):
-            if isinstance(bm, UVBeam):
-                if bm.pixel_coordinate_system not in ["az_za", "healpix"]:
-                    raise ValueError(
-                        "pyuvsim currently only supports UVBeams with 'az_za' or "
-                        "'healpix' pixel coordinate systems."
-                    )
-                if (
-                    np.all(bm.basis_vector_array[0, 0] == 1)
-                    and np.all(bm.basis_vector_array[0, 1] == 0)
-                    and np.all(bm.basis_vector_array[1, 0] == 0)
-                    and np.all(bm.basis_vector_array[1, 1] == 1)
-                ):
-                    beam_basis[index] = "az_za"
-                else:
-                    raise ValueError(
-                        "pyuvsim currently only supports beams with basis vectors that"
-                        "are aligned with the azimuth and zenith angle in each pixel."
-                        "Work is in progress to add other basis vector systems."
-                    )
-        return beam_basis
 
     def __len__(self):
         """Define the length of a BeamList."""
