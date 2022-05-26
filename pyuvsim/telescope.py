@@ -39,9 +39,6 @@ class BeamList:
         Is True if the beams are represented as strings, False if they're objects
     uvb_params : dict
         Set of additional attributes to set on UVBeam objects.
-    basis_type : list of str
-        List of beam basis types. Currently only "az_za" is allowed, but others will
-        come soon.
 
     Parameters
     ----------
