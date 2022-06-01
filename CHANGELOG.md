@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.2.4] - 2022-06-01
+
 ### Added
 - A check that the beam basis vectors are aligned with the azimuth and zenith angle in
 each pixel.
