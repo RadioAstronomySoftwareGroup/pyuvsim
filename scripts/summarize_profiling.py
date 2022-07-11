@@ -38,7 +38,7 @@ p = subprocess.Popen(
 )
 
 table = np.genfromtxt(p.stdout, dtype=None, names=True, comments='--', encoding=None)
-table['MaxRSS'] = map(lambda x: float(x[:-1]) * 1e3 / 1e9, table['MaxRSS'])
+table['MaxRSS'] = (float(x[:-1]) * 1e3 / 1e9 for x in table['MaxRSS'])
 
 dt = table.dtype.descr
 ind = dt.index(('MaxRSS', table.dtype['MaxRSS']))
