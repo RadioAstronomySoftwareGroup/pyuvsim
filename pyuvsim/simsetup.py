@@ -1211,7 +1211,11 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     telescope_location = np.array(telescope_location_latlonalt)
     telescope_location[0] *= np.pi / 180.
     telescope_location[1] *= np.pi / 180.  # Convert to radians
-    tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
+    if world == "moon":
+        mloc = MoonLocation.from_selenodetic(*telescope_location)
+        tele_params['telescope_location'] = mloc.mcmf.cartesian.xyz.to_value("m")
+    else:
+        tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
     telescope_name = tele_params['telescope_name']
 
     # get array layout
@@ -1251,10 +1255,14 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     return_dict['antenna_names'] = np.array(antnames.tolist())
     return_dict['antenna_numbers'] = np.array(antnums)
     antpos_enu = np.vstack((E, N, U)).T
-    lat, lon, alt = telescope_location
-    return_dict['antenna_positions'] = (
-        uvutils.ECEF_from_ENU(antpos_enu, latitude=lat, longitude=lon, altitude=alt)
-        - tele_params['telescope_location'])
+    if world == "moon":
+        ltop = LunarTopo(CartesianRepresentation(*antpos_enu.T, unit='m'), location=mloc)
+        apos_mcmf = ltop.transform_to(MCMF)
+        return_dict['antenna_positions'] = (apos_mcmf.cartesian.xyz.T - mloc.mcmf.cartesian.xyz).to_value("m")
+    else:
+        return_dict['antenna_positions'] = (
+            uvutils.ECEF_from_ENU(antpos_enu, *telescope_location)
+            - tele_params['telescope_location'])
     if world is not None:
         return_dict['world'] = world
 
