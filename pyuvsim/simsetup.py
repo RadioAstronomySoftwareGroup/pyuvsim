@@ -31,6 +31,7 @@ from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, AltAz
 import astropy.units as units
 import pyradiosky
 import tracemalloc
+import logging
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
@@ -56,6 +57,8 @@ except ImportError:
 
     mpi = None
 from .utils import check_file_exists_and_increment
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_layout_csv(layout_csv):
@@ -1630,7 +1633,7 @@ def time_array_to_params(time_array):
 def memlog(msg):
     """Print a message about memory usage."""
     c, p = tracemalloc.get_traced_memory()
-    print(f"{msg:>25}: {c / 1024**3:.2f} | {p/1024**3:.2f} GB")
+    logger.info(f"{msg:>25}: {c / 1024**3:.2f} | {p/1024**3:.2f} GB")
 
 
 def initialize_uvdata_from_params(obs_params, return_beams=None, reorder_kw=None):
@@ -1668,6 +1671,8 @@ def initialize_uvdata_from_params(obs_params, return_beams=None, reorder_kw=None
     if not tracemalloc.is_tracing():
         tracemalloc.start()
 
+    memlog("Start")
+
     if return_beams is None:
         warnings.warn(
             "The return_beams parameter currently defaults to True, but starting in"
@@ -1682,6 +1687,7 @@ def initialize_uvdata_from_params(obs_params, return_beams=None, reorder_kw=None
     else:
         param_dict = copy.deepcopy(obs_params)
 
+    memlog("After obsparam read")
     # Parse frequency structure
     freq_dict = param_dict['freq']
     uvparam_dict.update(parse_frequency_params(freq_dict))
@@ -1855,6 +1861,7 @@ def initialize_uvdata_from_params(obs_params, return_beams=None, reorder_kw=None
 
         if redundant_threshold is not None:
             uv_obj.compress_by_redundancy(tol=redundant_threshold)
+
     memlog("After Select")
 
     # we construct uvdata objects in (time, ant1) order
@@ -1866,7 +1873,7 @@ def initialize_uvdata_from_params(obs_params, return_beams=None, reorder_kw=None
     if reorder_kw:
         uv_obj.reorder_blts(**reorder_kw)
 
-    memlog("After Re-order BLTS=s")
+    memlog("After Re-order BLTS")
 
     uv_obj.check()
 
