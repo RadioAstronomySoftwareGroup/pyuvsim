@@ -1877,6 +1877,8 @@ def initialize_uvdata_from_params(obs_params, return_beams=None, reorder_kw=None
 
     uv_obj.check()
 
+    memlog("After Check")
+
     if return_beams:
         return uv_obj, beam_list, beam_dict
     else:
