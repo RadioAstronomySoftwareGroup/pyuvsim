@@ -1626,11 +1626,14 @@ def time_array_to_params(time_array):
 
     return tdict
 
-def memlog(msg):
-    c, p = tracemalloc.get_traced_memory()
-    print(f"{msg}: {c / 1024**3} | {p/1024**3} GB")
 
-def initialize_uvdata_from_params(obs_params, return_beams=None):
+def memlog(msg):
+    """Print a message about memory usage."""
+    c, p = tracemalloc.get_traced_memory()
+    print(f"{msg:>25}: {c / 1024**3:.2f} | {p/1024**3:.2f} GB")
+
+
+def initialize_uvdata_from_params(obs_params, return_beams=None, reorder_kw=None):
     """
     Construct a :class:`pyuvdata.UVData` object from parameters in a valid yaml file.
 
@@ -1694,7 +1697,7 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
         freq_range = (freq_array.min() - freq_buffer, freq_array.max() + freq_buffer)
     else:
         freq_range = None
-        
+
     tele_params, beam_list, beam_dict = parse_telescope_params(tele_dict, config_path=param_dict[
         'config_path'], freq_range=freq_range)
     uvparam_dict.update(tele_params)
@@ -1767,7 +1770,6 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
             setattr(uv_obj, k, uvparam_dict[k])
     memlog("After UVObj init")
 
-
     bls = np.array(
         [
             uv_obj.antnums_to_baseline(uv_obj.antenna_numbers[j], uv_obj.antenna_numbers[i])
@@ -1804,7 +1806,6 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
 
     uv_obj.set_uvws_from_antenna_positions()
     memlog("After Set UVWs")
-
 
     uv_obj.history = ''
 
@@ -1859,7 +1860,10 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
     # we construct uvdata objects in (time, ant1) order
     # but the simulator will force (time, baseline) later
     # so order this now so we don't get any warnings.
-    uv_obj.reorder_blts(order="time", minor_order="baseline")
+    reorder_kw = reorder_kw or {'order': 'time', 'minor_order': 'baseline'}
+    if reorder_kw:
+        uv_obj.reorder_blts(**reorder_kw)
+
     memlog("After Re-order BLTS=s")
 
     uv_obj.check()
