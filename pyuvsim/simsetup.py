@@ -1811,6 +1811,11 @@ def initialize_uvdata_from_params(
 
     # add other required metadata to allow select to work without errors
     # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
+    memlog("After Metadata")
+    logger.info(f"  Baseline Array: {uv_obj.baseline_array.nbytes / 1024**3:.2f} GB")
+    logger.info(f"      Time Array: {uv_obj.time_array.nbytes / 1024**3:.2f} GB")
+    logger.info(f"Integration Time: {uv_obj.integration_time.nbytes / 1024**3:.2f} GB")
+    logger.info(f"       Ant1Array: {uv_obj.ant_1_array.nbytes / 1024**3:.2f} GB")
 
     _set_lsts_on_uvdata(uv_obj)
     memlog("After Set LSTs")
