@@ -27,6 +27,10 @@ from astropy.coordinates import (ICRS, AltAz, Angle, EarthLocation, Latitude,
 from packaging import version  # packaging is installed with setuptools
 from pyuvdata import UVData
 from pyuvdata import utils as uvutils
+from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, AltAz, ICRS
+import astropy.units as units
+import pyradiosky
+import tracemalloc
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
@@ -1622,6 +1626,9 @@ def time_array_to_params(time_array):
 
     return tdict
 
+def memlog(msg):
+    c, p = tracemalloc.get_traced_memory()
+    print(f"{msg}: {c / 1024**3} | {p/1024**3} GB")
 
 def initialize_uvdata_from_params(obs_params, return_beams=None):
     """
@@ -1655,6 +1662,9 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
         True.
 
     """
+    if not tracemalloc.is_tracing():
+        tracemalloc.start()
+
     if return_beams is None:
         warnings.warn(
             "The return_beams parameter currently defaults to True, but starting in"
@@ -1673,6 +1683,7 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
     freq_dict = param_dict['freq']
     uvparam_dict.update(parse_frequency_params(freq_dict))
     freq_array = freq_dict['freq_array']
+    memlog("After Freq Array")
 
     # Parse telescope parameters
     tele_dict = param_dict['telescope']
@@ -1686,6 +1697,7 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
         'config_path'], freq_range=freq_range)
     uvparam_dict.update(tele_params)
     uvparam_dict["x_orientation"] = beam_list.x_orientation
+    memlog("After BeamList")
 
     # Use extra_keywords to pass along required paths for file history.
     extra_keywords = {}
@@ -1709,6 +1721,7 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
     # Parse time structure
     time_dict = param_dict['time']
     uvparam_dict.update(parse_time_params(time_dict))
+    memlog("After Time Dict")
 
     # There does not seem to be any way to get polarization_array into uvparam_dict, so
     # let's add it explicitly.
@@ -1750,6 +1763,8 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
             setattr(uv_obj, k, param_dict[k])
         if k in uvparam_dict:
             setattr(uv_obj, k, uvparam_dict[k])
+    memlog("After UVObj init")
+
 
     bls = np.array(
         [
@@ -1786,6 +1801,9 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
     # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
 
     uv_obj.set_uvws_from_antenna_positions()
+    memlog("After Set UVWs")
+
+
     uv_obj.history = ''
 
     uv_obj.vis_units = 'Jy'
@@ -1834,10 +1852,14 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
 
         if redundant_threshold is not None:
             uv_obj.compress_by_redundancy(tol=redundant_threshold)
+    memlog("After Select")
+
     # we construct uvdata objects in (time, ant1) order
     # but the simulator will force (time, baseline) later
     # so order this now so we don't get any warnings.
     uv_obj.reorder_blts(order="time", minor_order="baseline")
+    memlog("After Re-order BLTS=s")
+
     uv_obj.check()
 
     if return_beams:
