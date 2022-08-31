@@ -1688,7 +1688,7 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
     # Parse telescope parameters
     tele_dict = param_dict['telescope']
     uvparam_dict.update(tele_dict)
-    beamselect = tele_dict['select']
+    beamselect = tele_dict.pop('select', {})
     freq_buffer = beamselect.pop("freq_buffer", None)
     if freq_buffer:
         freq_range = (freq_array.min() - freq_buffer, freq_array.max() + freq_buffer)
