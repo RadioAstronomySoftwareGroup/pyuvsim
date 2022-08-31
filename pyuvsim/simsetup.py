@@ -1682,7 +1682,7 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
     # Parse frequency structure
     freq_dict = param_dict['freq']
     uvparam_dict.update(parse_frequency_params(freq_dict))
-    freq_array = freq_dict['freq_array']
+    freq_array = uvparam_dict['freq_array']
     memlog("After Freq Array")
 
     # Parse telescope parameters
