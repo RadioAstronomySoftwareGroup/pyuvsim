@@ -1637,7 +1637,7 @@ def memlog(msg):
 
 
 def initialize_uvdata_from_params(
-    obs_params, return_beams=None, reorder_kw=None, check_kw=None, set_uvws: bool = True
+    obs_params, return_beams=None, reorder_kw=None, check_kw=None
 ):
     """
     Construct a :class:`pyuvdata.UVData` object from parameters in a valid yaml file.
@@ -1813,8 +1813,9 @@ def initialize_uvdata_from_params(
     # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
 
     _set_lsts_on_uvdata(uv_obj)
-    if set_uvws:
-        uv_obj.set_uvws_from_antenna_positions()
+    memlog("After Set LSTs")
+
+    uv_obj.set_uvws_from_antenna_positions()
     memlog("After Set UVWs")
 
     uv_obj.history = ''
