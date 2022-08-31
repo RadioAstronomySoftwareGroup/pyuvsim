@@ -1158,7 +1158,7 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None):
 
             beam_list.append(beam_model)
 
-    select = telconfig['select']
+    select = telconfig.pop('select', {})
     if freq_range is not None:
         select['freq_range'] = freq_range
 
