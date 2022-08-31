@@ -1860,7 +1860,9 @@ def initialize_uvdata_from_params(obs_params, return_beams=None, reorder_kw=None
     # we construct uvdata objects in (time, ant1) order
     # but the simulator will force (time, baseline) later
     # so order this now so we don't get any warnings.
-    reorder_kw = reorder_kw or {'order': 'time', 'minor_order': 'baseline'}
+    if reorder_kw is None:
+        reorder_kw = {'order': 'time', 'minor_order': 'baseline'}
+
     if reorder_kw:
         uv_obj.reorder_blts(**reorder_kw)
 
