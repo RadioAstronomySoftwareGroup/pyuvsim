@@ -30,7 +30,6 @@ from pyuvdata import utils as uvutils
 from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, AltAz, ICRS
 import astropy.units as units
 import pyradiosky
-import tracemalloc
 import logging
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -1630,12 +1629,6 @@ def time_array_to_params(time_array):
     return tdict
 
 
-def memlog(msg):
-    """Print a message about memory usage."""
-    c, p = tracemalloc.get_traced_memory()
-    logger.info(f"{msg:>25}: {c / 1024**3:.2f} | {p/1024**3:.2f} GB")
-
-
 def initialize_uvdata_from_params(
     obs_params, return_beams=None, reorder_kw=None, check_kw=None
 ):
@@ -1670,10 +1663,7 @@ def initialize_uvdata_from_params(
         True.
 
     """
-    if not tracemalloc.is_tracing():
-        tracemalloc.start()
-
-    memlog("Start")
+    logger.info("Starting SimSetup")
 
     if return_beams is None:
         warnings.warn(
@@ -1689,12 +1679,13 @@ def initialize_uvdata_from_params(
     else:
         param_dict = copy.deepcopy(obs_params)
 
-    memlog("After obsparam read")
+    logger.info("Finished reading obsparams")
+
     # Parse frequency structure
     freq_dict = param_dict['freq']
     uvparam_dict.update(parse_frequency_params(freq_dict))
     freq_array = uvparam_dict['freq_array']
-    memlog("After Freq Array")
+    logger.info("Finished reading frequency info")
 
     # Parse telescope parameters
     tele_dict = param_dict['telescope']
@@ -1710,7 +1701,7 @@ def initialize_uvdata_from_params(
         'config_path'], freq_range=freq_range)
     uvparam_dict.update(tele_params)
     uvparam_dict["x_orientation"] = beam_list.x_orientation
-    memlog("After BeamList")
+    logger.info("Finished Setup of BeamList")
 
     # Use extra_keywords to pass along required paths for file history.
     extra_keywords = {}
@@ -1734,7 +1725,7 @@ def initialize_uvdata_from_params(
     # Parse time structure
     time_dict = param_dict['time']
     uvparam_dict.update(parse_time_params(time_dict))
-    memlog("After Time Dict")
+    logger.info("Finished Setup of Time Dict")
 
     # There does not seem to be any way to get polarization_array into uvparam_dict, so
     # let's add it explicitly.
@@ -1776,7 +1767,7 @@ def initialize_uvdata_from_params(
             setattr(uv_obj, k, param_dict[k])
         if k in uvparam_dict:
             setattr(uv_obj, k, uvparam_dict[k])
-    memlog("After UVObj init")
+    logger.info("Initialized UVData object")
 
     bls = np.array(
         [
@@ -1811,17 +1802,17 @@ def initialize_uvdata_from_params(
 
     # add other required metadata to allow select to work without errors
     # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
-    memlog("After Metadata")
+    logger.info("Set Metadata")
     logger.info(f"  Baseline Array: {uv_obj.baseline_array.nbytes / 1024**3:.2f} GB")
     logger.info(f"      Time Array: {uv_obj.time_array.nbytes / 1024**3:.2f} GB")
     logger.info(f"Integration Time: {uv_obj.integration_time.nbytes / 1024**3:.2f} GB")
     logger.info(f"       Ant1Array: {uv_obj.ant_1_array.nbytes / 1024**3:.2f} GB")
 
     _set_lsts_on_uvdata(uv_obj)
-    memlog("After Set LSTs")
+    logger.info("Set LSTs")
 
     uv_obj.set_uvws_from_antenna_positions()
-    memlog("After Set UVWs")
+    logger.info("Set UVWs")
 
     uv_obj.history = ''
 
@@ -1872,7 +1863,7 @@ def initialize_uvdata_from_params(
         if redundant_threshold is not None:
             uv_obj.compress_by_redundancy(tol=redundant_threshold)
 
-    memlog("After Select")
+    logger.info("After Select")
 
     # we construct uvdata objects in (time, ant1) order
     # but the simulator will force (time, baseline) later
@@ -1883,13 +1874,13 @@ def initialize_uvdata_from_params(
     if reorder_kw:
         uv_obj.reorder_blts(**reorder_kw)
 
-    memlog("After Re-order BLTS")
+    logger.info("After Re-order BLTS")
 
     if check_kw is None:
         check_kw = {}
     uv_obj.check(**check_kw)
 
-    memlog("After Check")
+    logger.info("After Check")
 
     if return_beams:
         return uv_obj, beam_list, beam_dict
