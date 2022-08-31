@@ -1182,7 +1182,8 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None):
     config_path : str
         Path to directory holding configuration and layout files.
     freq_buffer : float
-        If given, 
+        If given, select frequencies on reading the beam.
+
     Returns
     -------
     param_dict : dict
