@@ -87,7 +87,7 @@ class BeamList:
         self,
         beam_list=None,
         uvb_params=None,
-        select_params: dict[str: tuple[float, float]]=None,
+        select_params: dict[str: tuple[float, float]] = None,
         check: bool = True,
         force_check: bool = False
     ):
