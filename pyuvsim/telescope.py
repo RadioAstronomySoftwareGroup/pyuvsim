@@ -2,6 +2,7 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Definition of Telescope objects, for metadata common to all antennas in an array."""
+from __future__ import annotations
 
 import warnings
 
@@ -86,6 +87,7 @@ class BeamList:
         self,
         beam_list=None,
         uvb_params=None,
+        select_params: dict[str: tuple[float, float]]=None,
         check: bool = True,
         force_check: bool = False
     ):
@@ -122,7 +124,7 @@ class BeamList:
                 list_uvb_params = self._scrape_uvb_params(self._obj_beam_list, strict=False)
         self.uvb_params.update(list_uvb_params)
         self.uvb_params.update(uvb_params)    # Optional parameters for the UVBeam objects
-
+        self.select_params = select_params or {}
         self.is_consistent = False
         if check:
             self.check_consistency(force=force_check)
@@ -467,26 +469,20 @@ class BeamList:
 
         path = beam_model  # beam_model = path to beamfits
         uvb = UVBeam()
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore", "The shapes of several attributes will be changing"
-            )
-            if use_shared_mem and (mpi.world_comm is not None):
-                if mpi.rank == 0:
-                    uvb.read_beamfits(path)
-                    uvb.peak_normalize()
-                for key, attr in uvb.__dict__.items():
-                    if not isinstance(attr, parameter.UVParameter):
-                        continue
-                    if key == '_data_array':
-                        uvb.__dict__[key].value = mpi.shared_mem_bcast(attr.value, root=0)
-                    else:
-                        uvb.__dict__[key].value = mpi.world_comm.bcast(attr.value, root=0)
-                mpi.world_comm.Barrier()
-            else:
-                uvb.read_beamfits(path)
-        # always use future shapes
-        uvb.use_future_array_shapes()
+        if use_shared_mem and (mpi.world_comm is not None):
+            if mpi.rank == 0:
+                uvb.read_beamfits(path, **self.select_params)
+                uvb.peak_normalize()
+            for key, attr in uvb.__dict__.items():
+                if not isinstance(attr, parameter.UVParameter):
+                    continue
+                if key == '_data_array':
+                    uvb.__dict__[key].value = mpi.shared_mem_bcast(attr.value, root=0)
+                else:
+                    uvb.__dict__[key].value = mpi.world_comm.bcast(attr.value, root=0)
+            mpi.world_comm.Barrier()
+        else:
+            uvb.read_beamfits(path, **self.select_params)
         for key, val in self.uvb_params.items():
             setattr(uvb, key, val)
         uvb.extra_keywords['beam_path'] = path

@@ -1084,7 +1084,7 @@ def initialize_catalog_from_params(
         return sky
 
 
-def _construct_beam_list(beam_ids, telconfig):
+def _construct_beam_list(beam_ids, telconfig, freq_range=None):
     """Construct BeamList."""
     beam_list = []
     for beamID in beam_ids:
@@ -1154,7 +1154,11 @@ def _construct_beam_list(beam_ids, telconfig):
 
             beam_list.append(beam_model)
 
-    beam_list_obj = BeamList(beam_list=beam_list)
+    select = telconfig['select']
+    if freq_range is not None:
+        select['freq_range'] = freq_range
+
+    beam_list_obj = BeamList(beam_list=beam_list, select_params=select)
     if 'spline_interp_opts' in telconfig.keys():
         beam_list_obj.spline_interp_opts = telconfig['spline_interp_opts']
 
@@ -1165,7 +1169,7 @@ def _construct_beam_list(beam_ids, telconfig):
     return beam_list_obj
 
 
-def parse_telescope_params(tele_params, config_path=''):
+def parse_telescope_params(tele_params, config_path='', freq_range=None):
     """
     Parse the "telescope" section of obsparam.
 
@@ -1177,7 +1181,8 @@ def parse_telescope_params(tele_params, config_path=''):
         https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#telescope-configuration
     config_path : str
         Path to directory holding configuration and layout files.
-
+    freq_buffer : float
+        If given, 
     Returns
     -------
     param_dict : dict
@@ -1305,7 +1310,7 @@ def parse_telescope_params(tele_params, config_path=''):
         for a in which_ants:
             beam_dict[a] = beamID
 
-    beam_list = _construct_beam_list(np.unique(beam_ids), telconfig)
+    beam_list = _construct_beam_list(np.unique(beam_ids), telconfig, freq_range=freq_range)
 
     return return_dict, beam_list, beam_dict
 
@@ -1663,11 +1668,21 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
     else:
         param_dict = copy.deepcopy(obs_params)
 
+    # Parse frequency structure
+    freq_dict = param_dict['freq']
+    uvparam_dict.update(parse_frequency_params(freq_dict))
+    freq_array = freq_dict['freq_array']
+
     # Parse telescope parameters
     tele_dict = param_dict['telescope']
     uvparam_dict.update(tele_dict)
+    beamselect = tele_dict['select']
+    freq_buffer = beamselect.pop("freq_buffer", None)
+    if freq_buffer:
+        freq_range = (freq_array.min() - freq_buffer, freq_array.max() + freq_buffer)
+
     tele_params, beam_list, beam_dict = parse_telescope_params(tele_dict, config_path=param_dict[
-        'config_path'])
+        'config_path'], freq_range=freq_range)
     uvparam_dict.update(tele_params)
     uvparam_dict["x_orientation"] = beam_list.x_orientation
 
@@ -1689,10 +1704,6 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
     if "world" in tele_params:
         extra_keywords['world'] = tele_params.get('world')
     uvparam_dict['extra_keywords'] = extra_keywords
-
-    # Parse frequency structure
-    freq_dict = param_dict['freq']
-    uvparam_dict.update(parse_frequency_params(freq_dict))
 
     # Parse time structure
     time_dict = param_dict['time']
