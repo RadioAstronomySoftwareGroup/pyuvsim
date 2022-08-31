@@ -1636,7 +1636,9 @@ def memlog(msg):
     logger.info(f"{msg:>25}: {c / 1024**3:.2f} | {p/1024**3:.2f} GB")
 
 
-def initialize_uvdata_from_params(obs_params, return_beams=None, reorder_kw=None):
+def initialize_uvdata_from_params(
+    obs_params, return_beams=None, reorder_kw=None, check_kw=None, set_uvws: bool = True
+):
     """
     Construct a :class:`pyuvdata.UVData` object from parameters in a valid yaml file.
 
@@ -1810,7 +1812,9 @@ def initialize_uvdata_from_params(obs_params, return_beams=None, reorder_kw=None
     # add other required metadata to allow select to work without errors
     # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
 
-    uv_obj.set_uvws_from_antenna_positions()
+    _set_lsts_on_uvdata(uv_obj)
+    if set_uvws:
+        uv_obj.set_uvws_from_antenna_positions()
     memlog("After Set UVWs")
 
     uv_obj.history = ''
@@ -1875,7 +1879,9 @@ def initialize_uvdata_from_params(obs_params, return_beams=None, reorder_kw=None
 
     memlog("After Re-order BLTS")
 
-    uv_obj.check()
+    if check_kw is None:
+        check_kw = {}
+    uv_obj.check(**check_kw)
 
     memlog("After Check")
 
@@ -1885,7 +1891,7 @@ def initialize_uvdata_from_params(obs_params, return_beams=None, reorder_kw=None
         return uv_obj
 
 
-def _complete_uvdata(uv_in, inplace=False):
+def _complete_uvdata(uv_in, inplace=False, check_kw=None):
     """
     Fill out all required parameters of a :class:`pyuvdata.UVData` object.
 
@@ -1924,7 +1930,10 @@ def _complete_uvdata(uv_in, inplace=False):
 
     uv_obj.extra_keywords = {}
 
-    uv_obj.check()
+    if check_kw is not False:
+        if check_kw is None:
+            check_kw = {}
+        uv_obj.check(**check_kw)
 
     return uv_obj
 
