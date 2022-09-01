@@ -1782,9 +1782,10 @@ def initialize_uvdata_from_params(
     uv_obj.time_array = np.repeat(uv_obj.time_array, uv_obj.Nbls)
     uv_obj.integration_time = np.repeat(uv_obj.integration_time, uv_obj.Nbls * uv_obj.Ntimes)
     uv_obj.Nblts = uv_obj.Nbls * uv_obj.Ntimes
-
+    uv_obj.blt_order = ('time', 'ant1')
     uv_obj.ant_1_array, uv_obj.ant_2_array = uv_obj.baseline_to_antnums(uv_obj.baseline_array)
 
+    logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
     if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
 
         cat_id = uv_obj._add_phase_center(
@@ -1809,9 +1810,11 @@ def initialize_uvdata_from_params(
     logger.info(f"       Ant1Array: {uv_obj.ant_1_array.nbytes / 1024**3:.2f} GB")
 
     _set_lsts_on_uvdata(uv_obj)
+    logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
     logger.info("Set LSTs")
 
     uv_obj.set_uvws_from_antenna_positions()
+    logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
     logger.info("Set UVWs")
 
     uv_obj.history = ''
@@ -1871,9 +1874,13 @@ def initialize_uvdata_from_params(
     if reorder_kw is None:
         reorder_kw = {'order': 'time', 'minor_order': 'baseline'}
 
-    if reorder_kw:
+    if reorder_kw and reorder_kw != {
+        'order': uv_obj.blt_order[0],
+        'minor_order': uv_obj.blt_order[1]
+    }:
         uv_obj.reorder_blts(**reorder_kw)
 
+    logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
     logger.info("After Re-order BLTS")
 
     if check_kw is None:
@@ -1881,7 +1888,7 @@ def initialize_uvdata_from_params(
     uv_obj.check(**check_kw)
 
     logger.info("After Check")
-
+    logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
     if return_beams:
         return uv_obj, beam_list, beam_dict
     else:
