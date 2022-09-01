@@ -1730,7 +1730,7 @@ def initialize_uvdata_from_params(
     # There does not seem to be any way to get polarization_array into uvparam_dict, so
     # let's add it explicitly.
     if "polarization_array" in param_dict:
-        uvparam_dict['polarization_array'] = param_dict['polarization_array']
+        uvparam_dict['polarization_array'] = np.array(param_dict['polarization_array'])
 
     # Parse polarizations
     if uvparam_dict.get('polarization_array', None) is None:
