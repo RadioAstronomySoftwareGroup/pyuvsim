@@ -1771,7 +1771,7 @@ def initialize_uvdata_from_params(
 
     bls = np.array(
         [
-            uv_obj.antnums_to_baseline(uv_obj.antenna_numbers[j], uv_obj.antenna_numbers[i])
+            uv_obj.antnums_to_baseline(uv_obj.antenna_numbers[i], uv_obj.antenna_numbers[j])
             for i in range(0, uv_obj.Nants_data)
             for j in range(i, uv_obj.Nants_data)
         ]
