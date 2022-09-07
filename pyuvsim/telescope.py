@@ -56,6 +56,10 @@ class BeamList:
         Passing in a mixture of strings and objects will error.
     uvb_params : dict (optional)
         Options to set uvb_params, overriding settings from passed-in UVBeam objects.
+    select_params : dict (optional)
+        A dictionary that can contain parameters for selecting parts of the beam to
+        read. Example keys include ``freq_range`` and ``za_range``. Note that these
+        will only be used for beamfits format files.
     check : bool
         Whether to perform a consistency check on the beams (i.e. asserting that several
         of their defining parameters are the same for all beams in the list).

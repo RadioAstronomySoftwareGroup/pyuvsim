@@ -5,6 +5,14 @@
 ### Changed
 - Use future array shapes on UVBeam objects.
 - Require pyuvdata >= 2.2.10
+- Initial ordering of blt axis in `initialize_uvdata_from_params`
+  (unchanged output by default).
+
+
+### Added
+- `reorder_kw` option to `initialize_uvdata_from_params` function.
+- `check_kw` option to `initialize_uvdata_from_params` function.
+- `select:` parameter to obsparam file definition for `telescope:`.
 
 
 ## [1.2.4] - 2022-06-01

@@ -1187,7 +1187,7 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None):
         https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#telescope-configuration
     config_path : str
         Path to directory holding configuration and layout files.
-    freq_buffer : float
+    freq_range : float
         If given, select frequencies on reading the beam.
 
     Returns
@@ -1651,6 +1651,14 @@ def initialize_uvdata_from_params(
     return_beams : bool
         Option to return the beam_list and beam_dict. Currently defaults to True, but
         will default to False starting in version 1.4.
+    reorder_kw : dict (optional)
+        Keyword arguments to send to the ``uvdata.reorder_blts`` method at the end of
+        the setup process. Typical parameters include "order" and "minor_order". Default
+        values are ``order='time'`` and ``minor_order='baseline'``.
+    check_kw : dict (optional)
+        Keyword arguments to send to the ``uvdata.check()`` method at the end of the
+        setup process. Typical parameters include `run_check_acceptability` and
+        `check_extra`, which are both True by default.
 
     Returns
     -------
