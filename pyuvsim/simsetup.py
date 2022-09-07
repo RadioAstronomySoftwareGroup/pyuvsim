@@ -1737,13 +1737,16 @@ def initialize_uvdata_from_params(
 
     # There does not seem to be any way to get polarization_array into uvparam_dict, so
     # let's add it explicitly.
-    if "polarization_array" in param_dict:
+    if param_dict.get("polarization_array", None) is not None:
         uvparam_dict['polarization_array'] = np.array(param_dict['polarization_array'])
 
     # Parse polarizations
     if uvparam_dict.get('polarization_array', None) is None:
+        print("Doing this...")
         uvparam_dict['polarization_array'] = np.array([-5, -6, -7, -8])
+
     if 'Npols' not in uvparam_dict:
+        print("UVparam_dict: pol", uvparam_dict['polarization_array'])
         uvparam_dict['Npols'] = len(uvparam_dict['polarization_array'])
 
     if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
@@ -1779,7 +1782,7 @@ def initialize_uvdata_from_params(
 
     bls = np.array(
         [
-            uv_obj.antnums_to_baseline(uv_obj.antenna_numbers[i], uv_obj.antenna_numbers[j])
+            uv_obj.antnums_to_baseline(uv_obj.antenna_numbers[j], uv_obj.antenna_numbers[i])
             for i in range(0, uv_obj.Nants_data)
             for j in range(i, uv_obj.Nants_data)
         ]

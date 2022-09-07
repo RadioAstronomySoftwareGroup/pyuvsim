@@ -553,8 +553,10 @@ def test_param_reader():
 
     # the old object was written before ordering was enforced
     assert hera_uv.blt_order != uv_obj.blt_order
+    hera_uv.reorder_blts("time", "ant1")
     hera_uv.reorder_blts("time", "baseline")
 
+    uv_obj.reorder_blts("time", "baseline")
     # renumber/rename the phase centers so the equality check will pass.
     if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
         uv_obj._consolidate_phase_center_catalogs(other=hera_uv, ignore_name=True)
