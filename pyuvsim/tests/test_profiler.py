@@ -1,13 +1,13 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+import atexit
 import os
 import shutil
-import atexit
 
-from numpy import unique
 import pytest
 import pyuvdata.tests as uvtest
+from numpy import unique
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH

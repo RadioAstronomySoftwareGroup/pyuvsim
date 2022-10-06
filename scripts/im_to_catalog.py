@@ -14,7 +14,7 @@ import numpy as np
 import psutil
 import pylab as pl
 from astropy import units as u
-from astropy.coordinates import SkyCoord, Angle, EarthLocation
+from astropy.coordinates import Angle, EarthLocation, SkyCoord
 from astropy.time import Time
 
 

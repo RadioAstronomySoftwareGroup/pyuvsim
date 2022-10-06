@@ -11,6 +11,7 @@ This is required for running reference sim 1.4.
 import os
 import sys
 import warnings
+
 warnings.warn(
     "This script is deprecated. Use scripts/download_gleam.py in pyradiosky instead.",
     DeprecationWarning

@@ -6,7 +6,7 @@
 import argparse
 import os
 import time as pytime
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 
 import pyuvsim
 

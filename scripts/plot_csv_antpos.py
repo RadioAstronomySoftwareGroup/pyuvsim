@@ -15,7 +15,7 @@ enu = antpos[['e', 'n', 'u']]
 antnames = antpos['number']
 
 plt.scatter(enu['e'], enu['n'])
-for i, t in enumerate(enu):
+for i, _ in enumerate(enu):
     plt.annotate(antnames[i], (enu['e'][i], enu['n'][i]))
 
 plt.xlabel('East [m]')

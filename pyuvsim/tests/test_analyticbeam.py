@@ -5,23 +5,23 @@
 import os
 
 import numpy as np
+import pytest
 from astropy import units
 from astropy.coordinates import Angle, EarthLocation
-import pytest
 from pyuvdata import UVData
 from scipy.special import j1
 
 import pyuvsim
 import pyuvsim.utils as simutils
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.astropy_interface import Time
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 
 c_ms = pyuvsim.analyticbeam.c_ms
 
 
-@pytest.fixture
+@pytest.fixture()
 def heratext_posfreq():
     time = Time('2018-03-01 00:00:00', scale='utc')
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',

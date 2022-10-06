@@ -2,26 +2,26 @@
 # Copyright (c) 2020 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-import os
-import sys
-import resource
 import copy
+import os
+import resource
+import sys
 
-import yaml
-import pytest
 import numpy as np
-from astropy import units
-import pyuvdata
-from pyuvdata import UVData
-import pyuvdata.utils as uvutils
-import pyuvdata.tests as uvtest
 import pyradiosky
+import pytest
+import pyuvdata
+import pyuvdata.tests as uvtest
+import pyuvdata.utils as uvutils
+import yaml
+from astropy import units
 from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
+from pyuvdata import UVData
 
 import pyuvsim
+from pyuvsim.analyticbeam import c_ms
 from pyuvsim.astropy_interface import Time
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-from pyuvsim.analyticbeam import c_ms
 from pyuvsim.telescope import BeamList
 
 pytest.importorskip('mpi4py')  # noqa

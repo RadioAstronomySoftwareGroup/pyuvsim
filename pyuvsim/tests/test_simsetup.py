@@ -2,26 +2,26 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-import os
 import copy
+import os
 import shutil
 
 import numpy as np
-import pytest
-import yaml
-from packaging import version  # packaging is installed with setuptools
-from astropy import units
-from astropy.coordinates import Angle, SkyCoord, EarthLocation, Latitude, Longitude
-from pyuvdata import UVBeam, UVData
-import pyuvdata.tests as uvtest
 import pyradiosky
+import pytest
+import pyuvdata.tests as uvtest
+import yaml
+from astropy import units
+from astropy.coordinates import (Angle, EarthLocation, Latitude, Longitude,
+                                 SkyCoord)
+from packaging import version  # packaging is installed with setuptools
 from pyradiosky.data import DATA_PATH as SKY_DATA_PATH
+from pyuvdata import UVBeam, UVData
 
 import pyuvsim
 import pyuvsim.tests as simtest
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-
 from pyuvsim.astropy_interface import Time
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 
@@ -581,7 +581,7 @@ def test_param_reader():
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize(
-    "subdict,error,msg",
+    ("subdict", "error", "msg"),
     [
         (
             {
@@ -740,7 +740,7 @@ def test_freq_parser_freq_array(freq_array, channel_width):
 
 
 @pytest.mark.parametrize(
-    "freq_dict,msg",
+    ("freq_dict", "msg"),
     [
         ({'bandwidth': 5.0}, 'Either start or end frequency must be specified: bandwidth'),
         (
@@ -1149,7 +1149,7 @@ def test_uvfits_to_config():
 
 
 @pytest.mark.parametrize(
-    "arrangement,text_cat",
+    ("arrangement", "text_cat"),
     [
         ('cross', 'mock_cross_2458098.27471.txt'),
         ('hera_text', 'mock_hera_text_2458098.27471.txt'),
@@ -1435,6 +1435,7 @@ def test_mock_catalog_moon():
     # A mock catalog made with a MoonLocation.
     pytest.importorskip('lunarsky')
     import lunarsky
+
     from pyuvsim.astropy_interface import Time
 
     time = Time.now()

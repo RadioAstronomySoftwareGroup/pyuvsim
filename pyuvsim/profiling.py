@@ -5,12 +5,14 @@
 """Use the line profiler when requested."""
 
 import atexit
+import warnings
 from inspect import isclass, isfunction
 from itertools import chain
-import warnings
+
+import pyradiosky as _pyradiosky
 
 import pyuvsim as _pyuvsim
-import pyradiosky as _pyradiosky
+
 try:
     from . import mpi
 except ImportError:
@@ -101,8 +103,8 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
         if dump_raw:
             outfile_raw_name = outfile_prefix + ".lprof"
             atexit.register(prof.dump_stats, outfile_raw_name)
-        setattr(prof, 'rank', rank)     # Add "rank" as an attribute to the profiler.
-        setattr(prof, 'meta_file', outfile_prefix + '_meta.out')
+        prof.rank = rank  # Add "rank" as an attribute to the profiler.
+        prof.meta_file = outfile_prefix + '_meta.out'
 
         prof.enable_by_count()
 

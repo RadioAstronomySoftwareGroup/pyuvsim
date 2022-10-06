@@ -11,10 +11,11 @@ NB:
     than each simulation axis.
 
 """
-import numpy as np
-import line_profiler as lp
-import sys
 import os
+import sys
+
+import line_profiler as lp
+import numpy as np
 
 
 def _func_times(timings, Nlist, dt=1e-6):
@@ -22,7 +23,7 @@ def _func_times(timings, Nlist, dt=1e-6):
     for key, values in timings.items():
         if key[2] not in funcs_to_check:
             continue
-        for lnum, nhits, time in values:
+        for _, nhits, time in values:
             if nhits in Nlist:
                 ind = Nlist.index(nhits)
                 outarr[ind] += dt * time / nhits    # Time per hit.

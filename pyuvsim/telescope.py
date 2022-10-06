@@ -3,12 +3,13 @@
 # Licensed under the 3-clause BSD License
 """Definition of Telescope objects, for metadata common to all antennas in an array."""
 
-import numpy as np
 import warnings
+
+import numpy as np
 from pyuvdata import UVBeam, parameter
 
-from .analyticbeam import AnalyticBeam
 from . import mpi
+from .analyticbeam import AnalyticBeam
 
 
 class BeamConsistencyError(Exception):

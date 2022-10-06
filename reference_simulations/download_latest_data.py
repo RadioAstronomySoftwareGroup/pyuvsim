@@ -8,9 +8,10 @@ Download the reference simulation data.
 Optionally download the inputs.
 """
 
-import requests
-import os
 import argparse
+import os
+
+import requests
 
 # The google drive ID for the folder containing these files:
 # 14hH-zBhHGddVacc0ncqRWq7ofhGLWfND

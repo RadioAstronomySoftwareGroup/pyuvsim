@@ -3,15 +3,15 @@
 # Licensed under the 3-clause BSD License
 """MPI setup."""
 
-import numpy as np
+import atexit
+import resource
+import struct as _struct
 import sys
 from array import array as _array
-import struct as _struct
-import resource
-import atexit
-from pickle import loads, dumps
+from pickle import dumps, loads
 
 import mpi4py
+import numpy as np
 
 mpi4py.rc.initialize = False
 from mpi4py import MPI  # noqa

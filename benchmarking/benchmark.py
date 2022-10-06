@@ -6,9 +6,9 @@ import os
 import re
 import socket
 
-import yaml
 import h5py
 import numpy as np
+import yaml
 from pyradiosky import write_healpix_hdf5
 
 from pyuvsim.simsetup import _write_layout_csv, freq_array_to_params

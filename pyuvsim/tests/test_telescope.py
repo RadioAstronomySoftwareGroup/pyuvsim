@@ -1,13 +1,12 @@
 
-import os
 import copy
+import os
 
 import numpy as np
-from astropy.coordinates import EarthLocation
-
 import pytest
-from pyuvdata import UVBeam
 import pyuvdata.tests as uvtest
+from astropy.coordinates import EarthLocation
+from pyuvdata import UVBeam
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -40,7 +39,7 @@ def beam_objs_main():
 
 
 @pytest.mark.filterwarnings('ignore:Achromatic gaussian')
-@pytest.fixture(scope='function')
+@pytest.fixture()
 def beam_objs(beam_objs_main):
     beams_copy = copy.deepcopy(beam_objs_main)
 
@@ -148,7 +147,7 @@ def test_string_mode(beam_objs):
         new_pars = beamlist._scrape_uvb_params(beamlist._obj_beam_list, strict=True)
         assert new_pars == beamlist.uvb_params
     except ValueError:
-        assert False
+        pytest.fail("something went wrong with scraping uvb params")
 
 
 @pytest.mark.filterwarnings('ignore:Achromatic gaussian')

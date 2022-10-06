@@ -9,13 +9,12 @@ Compare the visibilities in a given set of simulation outputs to the correspondi
 values in a reference set.
 """
 
-import glob
-import warnings
 import argparse
+import glob
 import os
+import warnings
 
 from pyuvdata import UVData
-
 
 parser = argparse.ArgumentParser(
     description="A script to compare new data files (uvh5) to downloaded archived data."

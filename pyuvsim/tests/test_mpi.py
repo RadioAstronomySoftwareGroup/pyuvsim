@@ -1,18 +1,19 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
-import numpy as np
 import resource
-import time
 import sys
+import time
 
+import numpy as np
+import pyradiosky
 import pytest
 from astropy import units  # noqa
 from astropy.coordinates import Latitude, Longitude
-import pyradiosky
 
 pytest.importorskip('mpi4py')
-import mpi4py   # noqa
+import mpi4py  # noqa
+
 mpi4py.rc.initialize = False  # noqa
 from mpi4py import MPI  # noqa
 
@@ -22,7 +23,7 @@ from pyuvsim.astropy_interface import Time  # noqa
 
 
 @pytest.fixture(scope='module', autouse=True)
-def start_mpi():
+def _start_mpi():
     mpi.start_mpi(False)
 
 
@@ -73,7 +74,8 @@ def test_shared_mem():
     assert hex(id(sA)) != hex(id(A))
 
     # Shared array should be read-only
-    pytest.raises(ValueError, sA.itemset, 0, 3.0)
+    with pytest.raises(ValueError, match="assignment destination is read-only"):
+        sA.itemset(0, 3.0)
 
 
 def test_mem_usage():
@@ -104,7 +106,7 @@ def test_mpi_counter(count_rank):
     mpi.start_mpi()
     count = mpi.Counter(count_rank=count_rank)
     N = 20
-    for i in range(N):
+    for _ in range(N):
         count.next()
     mpi.world_comm.Barrier()
     if mpi.world_comm.rank == count_rank:

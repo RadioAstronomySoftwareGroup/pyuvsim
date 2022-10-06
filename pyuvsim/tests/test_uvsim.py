@@ -2,25 +2,26 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-import numpy as np
 import copy
 import itertools
 import os
 import warnings
 
 import astropy.constants as const
+import numpy as np
+import pyradiosky
+import pytest
+import pyuvdata.tests as uvtest
 import pyuvdata.utils as uvutils
 from astropy import units
-from astropy.coordinates import Angle, SkyCoord, EarthLocation, Longitude, Latitude
-import pytest
-from pyuvdata import UVData, UVBeam
-import pyuvdata.tests as uvtest
-import pyradiosky
+from astropy.coordinates import (Angle, EarthLocation, Latitude, Longitude,
+                                 SkyCoord)
+from pyuvdata import UVBeam, UVData
 
 import pyuvsim
 import pyuvsim.utils as simutils
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.astropy_interface import Time
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 EW_uvfits_10time10chan = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfits')
@@ -50,7 +51,7 @@ def multi_beams():
             beam4.to_healpix(nside=8)
         beam4.interpolation_function = 'healpix_simple'
         beams.append(beam4)
-    except (ImportError, ModuleNotFoundError):
+    except ImportError:
         pass
 
     return beams
@@ -72,7 +73,7 @@ def triangle_pos():
     return enu, uvw
 
 
-@pytest.fixture
+@pytest.fixture()
 def uvobj_beams_srcs():
     # A uvdata object, beam list, beam dict, and source array.
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
@@ -110,7 +111,7 @@ def uvobj_beams_srcs():
     return uv_obj, beam_list, beam_dict, sources
 
 
-@pytest.fixture
+@pytest.fixture()
 def uvdata_two_redundant_bls_triangle_sources():
     # A uvdata object, beam list, beam dict, and source array.
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
@@ -745,7 +746,7 @@ def test_quantity_reuse(uvobj_beams_srcs):
             return False
         return np.allclose(first, second)
 
-    for ti, task in enumerate(uvtask_list):
+    for task in uvtask_list:
         sky = task.sources
         prev_freq = engine.current_freq
         prev_time = engine.current_time
@@ -772,10 +773,12 @@ def test_quantity_reuse(uvobj_beams_srcs):
 
         # check that when time, freq, or beam pair changes, the relevant quantities also change.
         if (freq != prev_freq) or (time != prev_time) or (beampair != prev_beam_pair):
-            assert apcoh_changed and jones_changed
+            assert apcoh_changed
+            assert jones_changed
         if time != prev_time:
             # Note -- local_coherency will only change if the sources are polarized.
-            assert srcpos_changed and locoh_changed
+            assert srcpos_changed
+            assert locoh_changed
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
@@ -814,9 +817,9 @@ def test_update_flags(uvobj_beams_srcs):
             axes_covered[0] = axes_covered[0] or time_changed
             axes_covered[1] = axes_covered[1] or src_changed
 
-            assert (engine.update_positions
-                    and engine.update_local_coherency
-                    and engine.update_beams)
+            assert engine.update_positions
+            assert engine.update_local_coherency
+            assert engine.update_beams
 
         if antpair_changed or freq_changed:
             axes_covered[2] = axes_covered[2] or antpair_changed
