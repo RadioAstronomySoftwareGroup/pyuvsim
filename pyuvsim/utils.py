@@ -10,9 +10,9 @@ import time as pytime
 from datetime import timedelta
 
 import numpy as np
-from packaging import version  # packaging is installed with setuptools
 import psutil
 import pyuvdata
+from packaging import version  # packaging is installed with setuptools
 
 from . import __version__
 

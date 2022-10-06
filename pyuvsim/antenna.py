@@ -3,9 +3,10 @@
 # Licensed under the 3-clause BSD License
 """Definition of Antenna objects, to describe a single interferometric element."""
 
+import warnings
+
 import astropy.units as units
 import numpy as np
-import warnings
 from pyuvdata import UVBeam
 
 from . import utils as simutils
@@ -101,7 +102,7 @@ class Antenna:
             beam.interpolation_function = interpolation_function
 
         # UVBeams need an interpolation_function. If none is set, default to az_za_simple.
-        if isinstance(beam, UVBeam) and getattr(beam, 'interpolation_function') is None:
+        if isinstance(beam, UVBeam) and beam.interpolation_function is None:
             beam.interpolation_function = 'az_za_simple'
             warnings.warn("UVBeam interpolation_function is not set."
                           f" Defaulting to {beam.interpolation_function}.")

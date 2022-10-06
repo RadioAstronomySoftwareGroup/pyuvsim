@@ -4,23 +4,23 @@
 
 """Testing environment setup and teardown for pytest."""
 import os
-import warnings
 import pickle as pkl
 import re
-from subprocess import CalledProcessError, TimeoutExpired, check_output, DEVNULL
+import warnings
+from subprocess import (DEVNULL, CalledProcessError, TimeoutExpired,
+                        check_output)
 
 import pytest
-from _pytest.reports import TestReport
 from _pytest._code.code import ExceptionChainRepr
+from _pytest.reports import TestReport
+from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from astropy.utils import iers
-from astropy.coordinates import EarthLocation
 from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
 
-from pyuvsim.astropy_interface import hasmoon, MoonLocation
 from pyuvsim import mpi
-
+from pyuvsim.astropy_interface import MoonLocation, hasmoon
 
 issubproc = os.environ.get('TEST_IN_PARALLEL', 0)
 try:
@@ -36,8 +36,9 @@ def pytest_collection_modifyitems(session, config, items):
         return
     for ii, it in enumerate(items):
         if 'profiler' in it.name:
+            profiler_index = ii
             break
-    items.append(items.pop(ii))     # Move profiler tests to the end.
+    items.append(items.pop(profiler_index))     # Move profiler tests to the end.
 
 
 def pytest_configure(config):
@@ -64,7 +65,7 @@ def pytest_runtest_setup(item):
 @pytest.hookimpl(hookwrapper=True)
 def pytest_exception_interact(node, call, report):
     if issubproc:
-        from pyuvsim import mpi     # noqa
+        from pyuvsim import mpi  # noqa
         if report.failed:
             pth = f"/tmp/mpitest_{report.head_line}"
             try:
@@ -177,7 +178,7 @@ def pytest_runtest_makereport(item, call):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def setup_and_teardown_package():
+def _setup_and_teardown_package():
     # Do a calculation that requires a current IERS table. This will trigger
     # automatic downloading of the IERS table if needed, including trying the
     # mirror site in python 3 (but won't redownload if a current one exists).
@@ -197,7 +198,7 @@ def setup_and_teardown_package():
 
 
 @pytest.fixture(autouse=True)
-def ignore_deprecation():
+def _ignore_deprecation():
     warnings.filterwarnings('ignore', message='Achromatic gaussian beams will not be supported',
                             category=PendingDeprecationWarning)
     warnings.filterwarnings('ignore', message='"initialize_catalog_from_params will not return'

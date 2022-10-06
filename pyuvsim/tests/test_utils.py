@@ -6,10 +6,10 @@ import os
 
 import numpy as np
 import pytest
-from packaging import version  # packaging is installed with setuptools
 import pyuvdata
-from pyuvdata import UVData
 import pyuvdata.tests as uvtest
+from packaging import version  # packaging is installed with setuptools
+from pyuvdata import UVData
 
 from pyuvsim import utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH

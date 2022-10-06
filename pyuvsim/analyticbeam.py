@@ -7,8 +7,8 @@ import warnings
 
 import numpy as np
 import pyuvdata.utils as uvutils
-from scipy.special import j1
 from astropy.constants import c as speed_of_light
+from scipy.special import j1
 
 c_ms = speed_of_light.to('m/s').value
 

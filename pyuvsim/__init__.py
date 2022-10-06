@@ -2,12 +2,12 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Define namespace."""
-from setuptools_scm import get_version
 from pathlib import Path
-from pkg_resources import get_distribution, DistributionNotFound
+
+from pkg_resources import DistributionNotFound, get_distribution
+from setuptools_scm import get_version
 
 from .branch_scheme import branch_scheme
-
 
 try:  # pragma: nocover
     # get accurate version for developer installs
@@ -23,11 +23,11 @@ except (LookupError, ImportError):
         # package is not installed
         pass
 
-from .profiling import *  # noqa
-from .uvsim import *  # noqa
-from .simsetup import *  # noqa
 from .analyticbeam import *  # noqa
 from .antenna import *  # noqa
 from .baseline import *  # noqa
+from .profiling import *  # noqa
+from .simsetup import *  # noqa
 from .telescope import *  # noqa
 from .utils import *  # noqa
+from .uvsim import *  # noqa

@@ -4,10 +4,10 @@
 import os
 
 import numpy as np
-import yaml
-from astropy import units
 import pytest
 import pyuvdata.tests as uvtest
+import yaml
+from astropy import units
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -72,9 +72,9 @@ def test_jones_set_interp(cst_beam, hera_loc):
     assert beam.freq_interp_kind == 'linear'
     jones2 = antenna1.get_beam_jones(array, source_altaz, freq)
 
-    assert (np.all(jones2 == jones0)
-            and np.all(jones1 == jones)
-            and np.all(jones1 == jones0))
+    assert np.all(jones2 == jones0)
+    assert np.all(jones1 == jones)
+    assert np.all(jones1 == jones0)
 
 
 def test_set_interps(cst_beam, hera_loc):

@@ -5,17 +5,18 @@
 """Run a pyuvsim simulation for profiling purposes."""
 
 import argparse
-import yaml
-import numpy as np
 import os
-import sys
 import resource
+import sys
 import time as pytime
 
+import numpy as np
+import yaml
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+
 from pyuvsim import mpi, profiling, simsetup, uvsim
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 parser = argparse.ArgumentParser(description=("A command-line script "
                                               "to execute a pyuvsim simulation for"

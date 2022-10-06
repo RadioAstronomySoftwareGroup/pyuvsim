@@ -9,25 +9,23 @@ The :class:`~UVTask` and :class:`~UVEngine` classes and the functions that actua
 the simulation.
 """
 
+import warnings
+
+import astropy.units as units
 import numpy as np
 import yaml
-import warnings
-import astropy.units as units
+from astropy.constants import c as speed_of_light
 from astropy.coordinates import EarthLocation
 from astropy.units import Quantity
-from astropy.constants import c as speed_of_light
 from pyuvdata import UVData
 
-from . import mpi
-from . import simsetup
+from . import mpi, simsetup
 from . import utils as simutils
 from .antenna import Antenna
+from .astropy_interface import MoonLocation, Time, hasmoon
 from .baseline import Baseline
-from .telescope import Telescope
 from .simsetup import SkyModelData
-
-from .astropy_interface import MoonLocation, hasmoon, Time
-
+from .telescope import Telescope
 
 __all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim']
 
@@ -776,7 +774,7 @@ def run_uvdata_uvsim(
         print("Calculations Complete.", flush=True)
 
     # If profiling is active, save meta data:
-    from .profiling import prof     # noqa
+    from .profiling import prof  # noqa
     if hasattr(prof, 'meta_file'):  # pragma: nocover
         # Saving axis sizes on current rank (local) and for the whole job (global).
         # These lines are affected by issue 179 of line_profiler, so the nocover

@@ -20,7 +20,7 @@ if observing locations on the Moon are not used.
 """
 
 try:
-    from lunarsky import SkyCoord, MoonLocation, LunarTopo, Time
+    from lunarsky import LunarTopo, MoonLocation, SkyCoord, Time
     hasmoon = True
 except ImportError:
     from astropy.coordinates import SkyCoord

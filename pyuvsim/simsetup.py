@@ -17,18 +17,22 @@ import os
 import shutil
 import warnings
 
-import numpy as np
-import yaml
-from packaging import version  # packaging is installed with setuptools
-from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, AltAz, ICRS
 import astropy.units as units
-from pyuvdata import utils as uvutils, UVData
+import numpy as np
 import pyradiosky
+import yaml
+from astropy.coordinates import (ICRS, AltAz, Angle, EarthLocation, Latitude,
+                                 Longitude)
+from packaging import version  # packaging is installed with setuptools
+from pyuvdata import UVData
+from pyuvdata import utils as uvutils
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+
 from .analyticbeam import AnalyticBeam
+from .astropy_interface import LunarTopo, MoonLocation, SkyCoord, Time, hasmoon
 from .telescope import BeamList
-from .astropy_interface import SkyCoord, MoonLocation, Time, LunarTopo, hasmoon
+
 try:
     import astropy_healpix
 except ImportError:
