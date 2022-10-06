@@ -27,7 +27,7 @@ from pyuvsim.telescope import BeamList
 pytest.importorskip('mpi4py')  # noqa
 
 
-@pytest.fixture
+@pytest.fixture()
 def goto_tempdir(tmpdir):
     # Run test within temporary directory.
     newpath = str(tmpdir)
@@ -93,15 +93,16 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # Reset parts that will deviate
     uv_new.history = uv_ref.history
     uv_new.object_name = uv_ref.object_name
+    uv_ref.dut1 = uv_new.dut1
+    uv_ref.gst0 = uv_new.gst0
+    uv_ref.rdate = uv_new.rdate
 
-    # remove filename attribute to ensure equality
-    uv_new.filename = None
-    uv_ref.filename = None
     assert uv_new == uv_ref
 
 
 @pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
+@pytest.mark.filterwarnings("ignore:invalid value encountered in divide")
 @pytest.mark.parametrize('model', ['monopole', 'cosza', 'quaddome', 'monopole-nonflat'])
 def test_analytic_diffuse(model, tmpdir):
     # Generate the given model and simulate for a few baselines.

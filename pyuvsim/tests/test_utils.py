@@ -233,6 +233,8 @@ def test_write_fix_autos(tmpdir):
     uv.set_lsts_from_time_array()
 
     auto_screen = uv.ant_1_array == uv.ant_2_array
+    assert np.all(np.abs(uv.data_array[auto_screen]) == 0)
+    uv.data_array[auto_screen] = 1
     uv.data_array[auto_screen] += 1e-11 * complex(0, 1)
 
     ofname = str(tmpdir.join('test_file'))
