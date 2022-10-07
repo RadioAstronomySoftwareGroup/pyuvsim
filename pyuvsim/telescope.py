@@ -8,7 +8,11 @@ import warnings
 import numpy as np
 from pyuvdata import UVBeam, parameter
 
-from . import mpi
+try:
+    from . import mpi
+except ImportError:
+    mpi = None
+
 from .analyticbeam import AnalyticBeam
 
 

@@ -19,7 +19,11 @@ from astropy.coordinates import EarthLocation
 from astropy.units import Quantity
 from pyuvdata import UVData
 
-from . import mpi, simsetup
+try:
+    from . import mpi
+except ImportError:
+    mpi = None
+from . import simsetup
 from . import utils as simutils
 from .antenna import Antenna
 from .astropy_interface import MoonLocation, Time, hasmoon
