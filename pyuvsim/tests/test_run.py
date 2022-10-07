@@ -168,6 +168,7 @@ def test_analytic_diffuse(model, tmpdir):
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
+@pytest.mark.filterwarnings("ignore:Fixing auto polarization power beams")
 def test_powerbeam_sim(cst_beam):
     new_cst = copy.deepcopy(cst_beam)
     new_cst.freq_interp_kind = 'nearest'  # otherwise we get an error about freq interpolation

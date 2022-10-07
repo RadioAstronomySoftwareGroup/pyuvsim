@@ -315,6 +315,7 @@ def test_empty_beamlist():
 
 
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
+@pytest.mark.filterwarnings("ignore:Fixing auto polarization power beams")
 def test_powerbeam_consistency(beam_objs):
     newbeams = beam_objs[:2]
     for beam in newbeams:
