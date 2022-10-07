@@ -21,7 +21,7 @@ from pyuvdata import UVData
 
 try:
     from . import mpi
-except ImportError:
+except ImportError:  # pragma: no cover
     mpi = None
 from . import simsetup
 from . import utils as simutils
