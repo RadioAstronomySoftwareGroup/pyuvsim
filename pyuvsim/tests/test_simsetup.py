@@ -1448,7 +1448,8 @@ def test_mock_catalog_moon():
     assert ekwds['world'] == 'earth'
 
     # Simple check that the given lat/lon were interpreted differently in each call.
-    assert mmock != emock
+    # use not == rather than != to avoid a pyradiosky bug, fixed in v0.1.4
+    assert not mmock == emock
 
 
 @pytest.fixture(scope='module')
