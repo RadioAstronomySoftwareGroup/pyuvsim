@@ -12,6 +12,12 @@ import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.telescope import BeamConsistencyError
 
+try:
+    import mpi4py  # noqa
+    has_mpi = True
+except ImportError:
+    has_mpi = False
+
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 
 
@@ -158,6 +164,10 @@ def test_comparison(beam_objs):
 
     beamlist2 = pyuvsim.BeamList(beamlist._str_beam_list)
     assert beamlist == beamlist2
+
+    if not has_mpi:
+        with pytest.raises(ImportError, match="You need mpi4py to use shared memory"):
+            beamlist.set_obj_mode(use_shared_mem=True)
 
     beamlist.set_obj_mode()
     beamlist2.set_obj_mode()
