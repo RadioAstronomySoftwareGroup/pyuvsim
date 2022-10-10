@@ -449,6 +449,13 @@ class BeamList:
 
             return AnalyticBeam(model, **to_set)
 
+        if use_shared_mem and mpi is None:
+            raise ImportError(
+                "You need mpi4py to use shared memory. Either call this method with "
+                "use_shared_mem=False or install mpi4py. You can install it by running "
+                "pip install pyuvsim[sim] or pip install pyuvsim[all] if you also want "
+                "the line_profiler installed.")
+
         path = beam_model  # beam_model = path to beamfits
         uvb = UVBeam()
         if use_shared_mem and (mpi.world_comm is not None):
