@@ -13,6 +13,7 @@ objects and empty :class:`pyuvdata.UVData` objects from configuration files.
 """
 import ast
 import copy
+import logging
 import os
 import shutil
 import warnings
@@ -27,10 +28,6 @@ from astropy.coordinates import (ICRS, AltAz, Angle, EarthLocation, Latitude,
 from packaging import version  # packaging is installed with setuptools
 from pyuvdata import UVData
 from pyuvdata import utils as uvutils
-from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, AltAz, ICRS
-import astropy.units as units
-import pyradiosky
-import logging
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
