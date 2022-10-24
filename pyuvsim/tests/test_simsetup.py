@@ -21,6 +21,7 @@ from pyuvdata import UVBeam, UVData
 
 import pyuvsim
 import pyuvsim.tests as simtest
+from pyuvsim import simsetup
 from pyuvsim.astropy_interface import Time
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
@@ -1397,6 +1398,26 @@ def test_beamlist_init():
     assert beam_list[5].type == 'gaussian'
     assert beam_list[5].diameter == 12
 
+    print(beam_list[0].freq_array / 1e6)
+
+
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
+def test_beamlist_init_freqrange():
+    telescope_config_name = os.path.join(SIM_DATA_PATH, 'bl_lite_mixed.yaml')
+    with open(telescope_config_name, 'r') as yf:
+        telconfig = yaml.safe_load(yf)
+
+    telconfig['beam_paths'][0] = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
+
+    beam_list = pyuvsim.simsetup._construct_beam_list(
+        np.arange(6), telconfig, freq_range=(117e6, 148e6)
+    )
+    beam_list.set_obj_mode()
+
+    # How the beam attributes should turn out for this file:
+    assert isinstance(beam_list[0], UVBeam)
+    assert len(beam_list[0].freq_array[0]) == 2
+
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_moon_lsts():
@@ -1634,3 +1655,12 @@ def test_set_lsts_errors():
     uv0.extra_keywords['world'] = 'tatooine'
     with pytest.raises(ValueError, match="Invalid world tatooine."):
         pyuvsim.simsetup._set_lsts_on_uvdata(uv0)
+
+
+def test_simsetup_with_freq_buffer():
+    fl = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_diffuse_sky_freqbuf.yaml')
+
+    uvd, beams, _ = simsetup.initialize_uvdata_from_params(fl, return_beams=True)
+
+    beams.set_obj_mode()
+    assert beams[0].freq_array.max() < 101e6
