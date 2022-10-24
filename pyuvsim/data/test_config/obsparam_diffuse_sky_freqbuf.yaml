@@ -1,0 +1,22 @@
+filing:
+  outdir: '.'
+  outfile_name: 'sim_results.uvfits'
+freq:
+  Nfreqs: 1
+  bandwidth: 800000.0
+  start_freq: 100000000.0
+sources:
+  catalog: 'mock'
+  time: 2457458.1738949567
+  mock_arrangement: 'diffuse'
+  diffuse_model: 'monopole'
+  map_nside: 128
+telescope:
+  telescope_config_name: '28m_triangle_10time_10chan.yaml'
+  array_layout: 'triangle_bl_layout.csv'
+  select:
+    freq_buffer: 1000000.0  # Restrict beam to read frequencies within 1MHz of sim freqs.
+time:
+  Ntimes: 1
+  integration_time: 11.0
+  start_time: 2457458.1738949567
