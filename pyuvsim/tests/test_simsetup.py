@@ -1657,6 +1657,7 @@ def test_set_lsts_errors():
         pyuvsim.simsetup._set_lsts_on_uvdata(uv0)
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_simsetup_with_freq_buffer():
     fl = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_diffuse_sky_freqbuf.yaml')
 
