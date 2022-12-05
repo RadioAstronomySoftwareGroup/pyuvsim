@@ -113,7 +113,7 @@ def pytest_runtest_call(item):
 
         # If passing, do not run after this function.
         def blank_func(*args, **kwargs):
-            return True
+            return
         item.obj = blank_func
 
 
