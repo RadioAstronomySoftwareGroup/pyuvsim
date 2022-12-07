@@ -6,9 +6,7 @@ import os
 
 import numpy as np
 import pytest
-import pyuvdata
 import pyuvdata.tests as uvtest
-from packaging import version  # packaging is installed with setuptools
 from pyuvdata import UVData
 
 from pyuvsim import utils as simutils
@@ -166,12 +164,6 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     uv2 = UVData()
     uv2.read(expected_ofname)
 
-    # Depending on pyuvdata version the filename may exist
-    # munge the filename attribute
-    # This can be removed if we ever require pyuvdata>=2.2.1
-    if hasattr(uv2, "filename"):
-        uv2.filename = uv.filename
-
     if save_format == "ms":
         # MS adds some stuff to history & extra keywords
         uv2.history = uv.history
@@ -240,11 +232,10 @@ def test_write_fix_autos(tmpdir):
     ofname = str(tmpdir.join('test_file'))
     filing_dict = {'outfile_name': ofname}
 
-    if version.parse(pyuvdata.__version__) >= version.parse("2.2.7"):
-        with uvtest.check_warnings(
-            UserWarning, match="Fixing auto-correlations to be be real-only"
-        ):
-            simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='uvh5')
+    with uvtest.check_warnings(
+        UserWarning, match="Fixing auto-correlations to be be real-only"
+    ):
+        simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='uvh5')
 
 
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
