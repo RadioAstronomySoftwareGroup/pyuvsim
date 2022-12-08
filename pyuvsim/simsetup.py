@@ -1739,11 +1739,9 @@ def initialize_uvdata_from_params(
 
     # Parse polarizations
     if uvparam_dict.get('polarization_array', None) is None:
-        print("Doing this...")
         uvparam_dict['polarization_array'] = np.array([-5, -6, -7, -8])
 
     if 'Npols' not in uvparam_dict:
-        print("UVparam_dict: pol", uvparam_dict['polarization_array'])
         uvparam_dict['Npols'] = len(uvparam_dict['polarization_array'])
 
     if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
@@ -2224,7 +2222,7 @@ def uvdata_to_telescope_config(
     with open(os.path.join(path_out, telescope_config_name), 'w+') as yfile:
         yaml.dump(yaml_dict, yfile, default_flow_style=False)
 
-    print('Path: {}, telescope_config: {}, layout: {}'.format(
+    logger.info('Path: {}, telescope_config: {}, layout: {}'.format(
         path_out, telescope_config_name, layout_csv_name)
     )
 

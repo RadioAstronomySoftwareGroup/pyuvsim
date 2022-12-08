@@ -202,6 +202,11 @@ Telescope Configuration
     The `spline_interp_opts` keyword lets the user set the order on the angular
     interpolating polynomial spline function. By default, it is cubic.
 
+    The `select: freq_buffer` (optional) option allows for doing partial reading of a
+    UVBeam file. Only frequencies within `freq_buffer` of the min and max of the
+    simulated frequencies will be read during setup. This can help reduce peak memory
+    usage.
+
     Analytic beams may require additional parameters.
 
     - uniform = The same response in all directions. No additional parameters.
