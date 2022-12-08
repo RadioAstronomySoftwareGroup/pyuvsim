@@ -3,3 +3,5 @@ beam_paths:
   0: ../data/HERA_NicCST.uvbeam
 telescope_location: (-30.721527777777911, 21.428305555555557, 1073.0000000093132)
 telescope_name: HERA
+select:
+  freq_buffer: 1000000  # 1 MHz either side of simulated frequencies.
