@@ -1398,8 +1398,6 @@ def test_beamlist_init():
     assert beam_list[5].type == 'gaussian'
     assert beam_list[5].diameter == 12
 
-    print(beam_list[0].freq_array / 1e6)
-
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_beamlist_init_freqrange():

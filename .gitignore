@@ -113,3 +113,4 @@ docs/index.rst
 # exclude project specific files
 pyuvsim/GIT_INFO
 pyuvsim/data/temporary_test_data/*
+.vscode/
