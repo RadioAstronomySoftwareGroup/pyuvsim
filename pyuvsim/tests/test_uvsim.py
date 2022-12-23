@@ -65,7 +65,7 @@ def triangle_pos():
     hera_uv = UVData()
     hera_uv.read_uvfits(longbl_uvfits_file,
                         ant_str='cross')  # consists of a right triangle of baselines with w term
-    hera_uv.unphase_to_drift(use_ant_pos=True)
+    hera_uv.unproject_phase(use_ant_pos=True)
 
     enu = hera_uv.get_ENU_antpos()[0]
     uvw = hera_uv.uvw_array[:hera_uv.Nbls]
@@ -133,6 +133,9 @@ def uvdata_two_redundant_bls_triangle_sources():
     return uv_obj, beam_list, beam_dict, sources
 
 
+# This filter can be removed when lunarsky is updated to not trigger this
+# astropy deprecation warning.
+@pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 def test_visibility_single_zenith_source(cst_beam, hera_loc):
     """Test single zenith source."""
 
@@ -275,6 +278,9 @@ def test_redundant_baselines(cst_beam, hera_loc):
     assert np.allclose(visibility1, visibility2)
 
 
+# This filter can be removed when lunarsky is updated to not trigger this
+# astropy deprecation warning.
+@pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 @pytest.mark.parametrize('beam', multi_beams)
 def test_single_offzenith_source(beam, hera_loc):
     """Test single off-zenith source."""

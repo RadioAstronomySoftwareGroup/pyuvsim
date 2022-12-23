@@ -224,7 +224,14 @@ def _create_catalog_diffuse(
         frame = AltAz(location=array_location, obstime=time)
     hpix = astropy_healpix.HEALPix(nside=map_nside, frame=ICRS())
     icrs_coord = hpix.healpix_to_skycoord(pixinds)
-    source_coord = icrs_coord.transform_to(frame)
+    # This filter can be removed when lunarsky is updated to not trigger this
+    # astropy deprecation warning.
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="The get_frame_attr_names",
+        )
+        source_coord = icrs_coord.transform_to(frame)
 
     alts = source_coord.alt.rad
     azs = source_coord.az.rad
@@ -289,7 +296,14 @@ def _create_catalog_discrete(Nsrcs, alts, azs, fluxes, time, localframe, array_l
     """
     source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
                             obstime=time, frame=localframe, location=array_location)
-    icrs_coord = source_coord.transform_to('icrs')
+    # This filter can be removed when lunarsky is updated to not trigger this
+    # astropy deprecation warning.
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="The get_frame_attr_names",
+        )
+        icrs_coord = source_coord.transform_to('icrs')
 
     names = np.array(['src' + str(si) for si in range(Nsrcs)])
     stokes = np.zeros((4, 1, Nsrcs))
@@ -602,7 +616,14 @@ class SkyModelData:
             self.Ncomponents = sky_in.Ncomponents
             if hasattr(sky_in, "get_lon_lat"):
                 if sky_in.frame != "icrs":
-                    sky_in.transform_to(ICRS)
+                    # This filter can be removed when lunarsky is updated to not
+                    # trigger this astropy deprecation warning.
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings(
+                            "ignore",
+                            message="The get_frame_attr_names",
+                        )
+                        sky_in.transform_to(ICRS)
                 sky_ra, sky_dec = sky_in.get_lon_lat()
                 self.ra = sky_ra.deg
                 self.dec = sky_dec.deg
@@ -1687,19 +1708,21 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
     if 'Npols' not in uvparam_dict:
         uvparam_dict['Npols'] = len(uvparam_dict['polarization_array'])
 
-    if 'object_name' not in param_dict:
+    if 'cat_name' not in param_dict and "object_name" not in param_dict:
         tloc = EarthLocation.from_geocentric(*uvparam_dict['telescope_location'], unit='m')
         time = Time(uvparam_dict['time_array'][0], scale='utc', format='jd')
         src, _ = create_mock_catalog(time, arrangement='zenith', array_location=tloc)
         if 'sources' in param_dict:
             source_file_name = os.path.basename(param_dict['sources']['catalog'])
-            uvparam_dict['object_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(
+            uvparam_dict['cat_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(
                 source_file_name, src.ra.deg[0], src.dec.deg[0]
             )
         else:
-            uvparam_dict['object_name'] = 'Unspecified'
+            uvparam_dict['cat_name'] = 'unprojected'
+    elif "object_name" in param_dict:
+        uvparam_dict['cat_name'] = param_dict['object_name']
     else:
-        uvparam_dict['object_name'] = param_dict['object_name']
+        uvparam_dict['cat_name'] = param_dict['cat_name']
 
     uv_obj = UVData()
     uv_obj._set_future_array_shapes()
@@ -1727,14 +1750,20 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
 
     uv_obj.ant_1_array, uv_obj.ant_2_array = uv_obj.baseline_to_antnums(uv_obj.baseline_array)
 
+    cat_id = uv_obj._add_phase_center(
+        cat_name=uvparam_dict["cat_name"], cat_type="unprojected"
+    )
+    uv_obj.phase_center_id_array = np.full(uv_obj.Nblts, cat_id, dtype=int)
+
     # add other required metadata to allow select to work without errors
     # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
 
     _set_lsts_on_uvdata(uv_obj)
+    uv_obj._set_app_coords_helper()
+
     uv_obj.set_uvws_from_antenna_positions()
     uv_obj.history = ''
 
-    uv_obj._set_drift()
     uv_obj.vis_units = 'Jy'
 
     uv_obj.instrument = uv_obj.telescope_name
