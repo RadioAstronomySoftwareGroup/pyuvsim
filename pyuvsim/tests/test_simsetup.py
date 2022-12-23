@@ -111,6 +111,9 @@ def test_mock_diffuse_maps_errors():
             pyuvsim.simsetup.create_mock_catalog(Time.now(), arrangement='diffuse')
 
 
+# This filter can be removed when lunarsky is updated to not trigger this
+# astropy deprecation warning.
+@pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 @pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
 @pytest.mark.parametrize('model', [
                          ['monopole', {}],
@@ -493,7 +496,7 @@ def test_param_reader():
     # set missing x_orientation
     hera_uv.x_orientation = "east"
 
-    hera_uv.unphase_to_drift()
+    hera_uv.unproject_phase()
     hera_uv.telescope_name = 'HERA'
 
     beam0 = UVBeam()
@@ -576,6 +579,7 @@ def test_param_reader():
     assert hera_uv.blt_order != uv_obj.blt_order
     hera_uv.reorder_blts("time", "baseline")
 
+    uv_obj._consolidate_phase_center_catalogs(other=hera_uv, ignore_name=True)
     assert uv_obj == hera_uv
 
 
@@ -939,9 +943,14 @@ def test_param_select_bls():
     uv_obj_bls.history, uv_obj_bls2.history = '', ''
     assert uv_obj_bls == uv_obj_bls2
 
+    param_dict['cat_name'] = 'foo'
+    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    assert uv_obj_full.phase_center_catalog[0]["cat_name"] == 'foo'
+
+    param_dict.pop("cat_name")
     param_dict['object_name'] = 'foo'
     uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
-    assert uv_obj_full.object_name == 'foo'
+    assert uv_obj_full.phase_center_catalog[0]["cat_name"] == 'foo'
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
@@ -1172,6 +1181,9 @@ def test_mock_catalogs(arrangement, text_cat):
     assert np.all(radec_catalog == cat)
 
 
+# This filter can be removed when lunarsky is updated to not trigger this
+# astropy deprecation warning.
+@pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 def test_saved_mock_catalog():
     time = Time(2458098.27471265, scale='utc', format='jd')
     cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, 'random', Nsrcs=100, save=True)
@@ -1185,6 +1197,9 @@ def test_saved_mock_catalog():
     assert np.allclose(alts_reload, np.degrees(alt))
 
 
+# This filter can be removed when lunarsky is updated to not trigger this
+# astropy deprecation warning.
+@pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 @pytest.mark.parametrize('min_alt', [-20, 0, None, 50])
 def test_randsource_minalt(min_alt):
     time = Time(2458098.27471265, scale='utc', format='jd')
@@ -1200,6 +1215,9 @@ def test_randsource_minalt(min_alt):
     assert np.all(alt >= np.radians(min_alt))
 
 
+# This filter can be removed when lunarsky is updated to not trigger this
+# astropy deprecation warning.
+@pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 def test_randsource_distribution():
     # Check that random sources are uniformly distributed per solid angle
 

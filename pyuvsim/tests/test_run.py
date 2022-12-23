@@ -11,7 +11,6 @@ import numpy as np
 import pyradiosky
 import pytest
 import pyuvdata
-import pyuvdata.tests as uvtest
 import pyuvdata.utils as uvutils
 import yaml
 from astropy import units
@@ -39,6 +38,7 @@ def goto_tempdir(tmpdir):
     os.chdir(cwd)
 
 
+@pytest.mark.filterwarnings("ignore:antenna_diameters are not set")
 @pytest.mark.parametrize('paramfile', ['param_1time_1src_testcat.yaml',
                                        'param_1time_1src_testvot.yaml'])
 @pytest.mark.parallel(2)
@@ -46,7 +46,7 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # Test vot and txt catalogs for parameter simulation
     # Compare to reference files.
     uv_ref = UVData()
-    uv_ref.read_uvfits(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
+    uv_ref.read(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
     uv_ref.unphase_to_drift(use_ant_pos=True)
     uv_ref.reorder_blts("time", minor_order="baseline")
     # This is an old file with the bug that added one to the
@@ -77,10 +77,10 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     ofilepath = os.path.join(path, 'tempfile.uvfits')
 
     uv_new = UVData()
-    with uvtest.check_warnings(UserWarning, match='antenna_diameters is not set'):
-        uv_new.read_uvfits(ofilepath)
+    uv_new.read(ofilepath)
 
-    uv_new.unphase_to_drift(use_ant_pos=True)
+    uv_new.unproject_phase(use_ant_pos=True)
+    uv_new._consolidate_phase_center_catalogs(other=uv_ref)
 
     assert uvutils._check_history_version(uv_new.history, pyradiosky.__version__)
     assert uvutils._check_history_version(uv_new.history, pyuvdata.__version__)
