@@ -579,6 +579,7 @@ def test_param_reader():
     assert hera_uv.blt_order != uv_obj.blt_order
     hera_uv.reorder_blts("time", "baseline")
 
+    # renumber/rename the phase centers so the equality check will pass.
     uv_obj._consolidate_phase_center_catalogs(other=hera_uv, ignore_name=True)
     assert uv_obj == hera_uv
 

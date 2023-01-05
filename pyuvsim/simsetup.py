@@ -1759,6 +1759,7 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
     # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
 
     _set_lsts_on_uvdata(uv_obj)
+    # set the apparent coordinates on the object
     uv_obj._set_app_coords_helper()
 
     uv_obj.set_uvws_from_antenna_positions()
