@@ -34,7 +34,8 @@ def multi_beams():
     beam0.read_beamfits(herabeam_default)
     beam0.extra_keywords['beam_path'] = herabeam_default
     beam0.freq_interp_kind = 'cubic'
-    beam0.interpolation_function = 'az_za_simple'
+    if hasattr(beam0, "_interpolation_function"):
+        beam0.interpolation_function = 'az_za_simple'
     beam1 = pyuvsim.AnalyticBeam('uniform')
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
@@ -49,7 +50,8 @@ def multi_beams():
             match="key beam_path in extra_keywords is longer than 8 characters.",
         ):
             beam4.to_healpix(nside=8)
-        beam4.interpolation_function = 'healpix_simple'
+        if hasattr(beam4, "_interpolation_function"):
+            beam4.interpolation_function = 'healpix_simple'
         beams.append(beam4)
     except ImportError:
         pass
