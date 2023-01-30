@@ -90,8 +90,13 @@ class BeamList:
         force_check: bool = False
     ):
 
-        self.uvb_params = {'freq_interp_kind': 'cubic',
-                           'interpolation_function': 'az_za_simple'}
+        self.uvb_params = {'freq_interp_kind': 'cubic'}
+
+        # this can go away when we require pyuvdata version >= 2.2.13
+        empty_uvbeam = UVBeam()
+        if hasattr(empty_uvbeam, "_interpolation_function"):
+            self.uvb_params["interpolation_function"] = "az_za_simple"
+
         self.spline_interp_opts = None
         self._str_beam_list = []
         self._obj_beam_list = []

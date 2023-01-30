@@ -34,11 +34,13 @@ def pytest_collection_modifyitems(session, config, items):
 
     if len(items) <= 1:
         return
+    profiler_index = None
     for ii, it in enumerate(items):
         if 'profiler' in it.name:
             profiler_index = ii
             break
-    items.append(items.pop(profiler_index))     # Move profiler tests to the end.
+    if profiler_index is not None:
+        items.append(items.pop(profiler_index))     # Move profiler tests to the end.
 
 
 def pytest_configure(config):

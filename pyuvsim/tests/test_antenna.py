@@ -81,7 +81,8 @@ def test_set_interps(cst_beam, hera_loc):
     array_location = hera_loc
 
     beam = cst_beam.copy()
-    beam.interpolation_function = None
+    if hasattr(beam, "_interpolation_function"):
+        beam.interpolation_function = None
 
     beam_list = pyuvsim.BeamList([beam])
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 10, 0]), 0)
@@ -89,8 +90,15 @@ def test_set_interps(cst_beam, hera_loc):
     source_altaz = np.array([[0.0], [np.pi / 4.]])
     freq = 123e6 * units.Hz
 
+    if hasattr(beam, "_interpolation_function"):
+        warn_msg = "UVBeam interpolation_function is not set"
+        warn_type = UserWarning
+    else:
+        warn_msg = ""
+        warn_type = None
+
     with uvtest.check_warnings(
-        UserWarning, match="UVBeam interpolation_function is not set"
+        warn_type, match=warn_msg
     ):
         antenna1.get_beam_jones(array, source_altaz, freq)
 

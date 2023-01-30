@@ -102,7 +102,11 @@ class Antenna:
             beam.interpolation_function = interpolation_function
 
         # UVBeams need an interpolation_function. If none is set, default to az_za_simple.
-        if isinstance(beam, UVBeam) and beam.interpolation_function is None:
+        # this can go away when we require pyuvdata version >= 2.2.13
+        if (
+            isinstance(beam, UVBeam) and hasattr(beam, "_interpolation_function")
+            and beam.interpolation_function is None
+        ):
             beam.interpolation_function = 'az_za_simple'
             warnings.warn("UVBeam interpolation_function is not set."
                           f" Defaulting to {beam.interpolation_function}.")
