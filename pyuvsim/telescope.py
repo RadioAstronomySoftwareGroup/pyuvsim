@@ -108,7 +108,7 @@ class BeamList:
                 self._obj_beam_list[:] = beam_list[:]
                 for beam in self._obj_beam_list:
                     # always use future shapes
-                    if isinstance(beam, UVBeam):
+                    if isinstance(beam, UVBeam) and not beam.future_array_shapes:
                         beam.use_future_array_shapes()
                 self.string_mode = False
             else:
