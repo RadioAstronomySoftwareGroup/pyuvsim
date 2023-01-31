@@ -150,11 +150,12 @@ def test_mock_diffuse_maps(model, hera_loc, apollo_loc, location):
 
 
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 @pytest.mark.parametrize("horizon_buffer", [True, False])
 def test_catalog_from_params(horizon_buffer):
     # Pass in parameter dictionary as dict
-    hera_uv = UVData()
-    hera_uv.read_uvfits(triangle_uvfits_file)
+    hera_uv = UVData.from_file(triangle_uvfits_file)
+    hera_uv.use_future_array_shapes()
 
     source_dict = {}
     with pytest.raises(KeyError, match='No catalog defined.'):
@@ -478,10 +479,10 @@ def test_vot_catalog_error(key_pop, message):
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_param_reader():
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml")
-    hera_uv = UVData()
-    hera_uv.read_uvfits(triangle_uvfits_file)
+    hera_uv = UVData.from_file(triangle_uvfits_file)
     # This is an old file with the bug that added one to the
     # antenna numbers for uvfits files. Fix them (if pyuvdata is recent)
     if np.min(np.union1d(hera_uv.ant_1_array, hera_uv.ant_2_array)) > 0:
@@ -1095,6 +1096,7 @@ def test_uvdata_keyword_init(case, tmpdir):
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_uvfits_to_config():
     """
         Loopback test of reading parameters from uvfits file, generating uvfits file, and reading
@@ -1107,8 +1109,8 @@ def test_uvfits_to_config():
         os.makedirs(opath)  # Directory will be deleted when test completed.
 
     # Read uvfits file to params.
-    uv0 = UVData()
-    uv0.read_uvfits(longbl_uvfits_file)
+    uv0 = UVData.from_file(longbl_uvfits_file)
+    uv0.use_future_array_shapes()
 
     path, telescope_config, layout_fname = \
         pyuvsim.simsetup.uvdata_to_telescope_config(uv0, herabeam_default,
@@ -1632,10 +1634,11 @@ def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
     assert smd_copy.stokes_I.base is smd.stokes_I.base
 
 
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_set_lsts_errors():
     # Error cases on set_lsts function.
-    uv0 = UVData()
-    uv0.read_uvfits(longbl_uvfits_file)
+    uv0 = UVData.from_file(longbl_uvfits_file)
+    uv0.use_future_array_shapes()
     uv0.lst_array = None
 
     uv0.extra_keywords['world'] = 'moon'

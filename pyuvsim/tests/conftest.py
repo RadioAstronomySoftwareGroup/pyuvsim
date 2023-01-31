@@ -216,11 +216,16 @@ def cst_beam():
 
     cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
     beam_files = [os.path.join(DATA_PATH, 'NicCSTbeams', f) for f in cst_files]
-    beam.read_cst_beam(
-        beam_files, beam_type='efield', frequency=freqs,
-        telescope_name='HERA', feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-        model_name='E-field pattern - Rigging height 4.9m', model_version='1.0'
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", "The shapes of several attributes will be changing"
+        )
+        beam.read_cst_beam(
+            beam_files, beam_type='efield', frequency=freqs,
+            telescope_name='HERA', feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
+            model_name='E-field pattern - Rigging height 4.9m', model_version='1.0'
+        )
+    beam.use_future_array_shapes()
     beam.x_orientation = 'east'
     beam.freq_interp_kind = 'linear'
     if hasattr(beam, "_interpolation_function"):

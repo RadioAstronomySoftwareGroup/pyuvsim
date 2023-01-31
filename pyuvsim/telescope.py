@@ -106,6 +106,10 @@ class BeamList:
                 self.string_mode = True
             elif all(not isinstance(b, str) for b in beam_list):
                 self._obj_beam_list[:] = beam_list[:]
+                for beam in self._obj_beam_list:
+                    # always use future shapes
+                    if isinstance(beam, UVBeam):
+                        beam.use_future_array_shapes()
                 self.string_mode = False
             else:
                 raise ValueError("Invalid beam list: " + str(beam_list))
@@ -463,20 +467,26 @@ class BeamList:
 
         path = beam_model  # beam_model = path to beamfits
         uvb = UVBeam()
-        if use_shared_mem and (mpi.world_comm is not None):
-            if mpi.rank == 0:
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", "The shapes of several attributes will be changing"
+            )
+            if use_shared_mem and (mpi.world_comm is not None):
+                if mpi.rank == 0:
+                    uvb.read_beamfits(path)
+                    uvb.peak_normalize()
+                for key, attr in uvb.__dict__.items():
+                    if not isinstance(attr, parameter.UVParameter):
+                        continue
+                    if key == '_data_array':
+                        uvb.__dict__[key].value = mpi.shared_mem_bcast(attr.value, root=0)
+                    else:
+                        uvb.__dict__[key].value = mpi.world_comm.bcast(attr.value, root=0)
+                mpi.world_comm.Barrier()
+            else:
                 uvb.read_beamfits(path)
-                uvb.peak_normalize()
-            for key, attr in uvb.__dict__.items():
-                if not isinstance(attr, parameter.UVParameter):
-                    continue
-                if key == '_data_array':
-                    uvb.__dict__[key].value = mpi.shared_mem_bcast(attr.value, root=0)
-                else:
-                    uvb.__dict__[key].value = mpi.world_comm.bcast(attr.value, root=0)
-            mpi.world_comm.Barrier()
-        else:
-            uvb.read_beamfits(path)
+        # always use future shapes
+        uvb.use_future_array_shapes()
         for key, val in self.uvb_params.items():
             setattr(uvb, key, val)
         uvb.extra_keywords['beam_path'] = path

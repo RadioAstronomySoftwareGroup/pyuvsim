@@ -287,6 +287,7 @@ def test_input_uv_error():
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
+@pytest.mark.filterwarnings("ignore:This method will be removed in version 3.0")
 @pytest.mark.skipif('not pyuvsim.astropy_interface.hasmoon')
 @pytest.mark.parametrize("future_shapes", [True, False])
 def test_sim_on_moon(future_shapes):
