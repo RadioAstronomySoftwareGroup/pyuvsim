@@ -59,9 +59,9 @@ def test_uniform_beam(heratext_posfreq):
     interpolated_beam, interp_basis_vector = beam.interp(
         az_array=az_vals, za_array=za_vals, freq_array=freqs
     )
-    expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=float)
-    expected_data[1, 0, 0, :, :] = 1
-    expected_data[0, 0, 1, :, :] = 1
+    expected_data = np.zeros((2, 2, n_freqs, nsrcs), dtype=float)
+    expected_data[1, 0, :, :] = 1
+    expected_data[0, 1, :, :] = 1
     assert np.allclose(interpolated_beam, expected_data)
 
 
@@ -76,7 +76,7 @@ def test_airy_beam_values(heratext_posfreq):
         az_array=az_vals, za_array=za_vals, freq_array=freq_vals
     )
 
-    expected_data = np.zeros((2, 1, 2, 1, az_vals.size), dtype=float)
+    expected_data = np.zeros((2, 2, 1, az_vals.size), dtype=float)
     za_grid, f_grid = np.meshgrid(za_vals, freq_vals)
     xvals = diameter_m / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / c_ms
     airy_values = np.zeros_like(xvals)
@@ -84,8 +84,8 @@ def test_airy_beam_values(heratext_posfreq):
     ze = xvals == 0.
     airy_values[nz] = 2. * j1(xvals[nz]) / xvals[nz]
     airy_values[ze] = 1.
-    expected_data[1, 0, 0, :, :] = airy_values
-    expected_data[0, 0, 1, :, :] = airy_values
+    expected_data[1, 0, :, :] = airy_values
+    expected_data[0, 1, :, :] = airy_values
 
     assert np.allclose(interpolated_beam, expected_data)
 
@@ -136,7 +136,7 @@ def test_uv_beam_widths():
         az_array=np.asarray(azs), za_array=np.asarray(zas), freq_array=np.array(freq_vals)
     )
 
-    ebeam = interpolated_beam[0, 0, 1, :, :]
+    ebeam = interpolated_beam[0, 1, :, :]
     ebeam = ebeam.reshape(Nfreqs, Npix, Npix)
     beam_kern = np.fft.fft2(ebeam, axes=(1, 2))
     beam_kern = np.fft.fftshift(beam_kern, axes=(1, 2))
@@ -163,14 +163,14 @@ def test_achromatic_gaussian_beam(heratext_posfreq):
         az_array=np.array(az_vals), za_array=np.array(za_vals), freq_array=np.array(freq_vals)
     )
 
-    expected_data = np.zeros((2, 1, 2, n_freqs, nsrcs), dtype=float)
+    expected_data = np.zeros((2, 2, n_freqs, nsrcs), dtype=float)
     interp_zas = np.zeros((n_freqs, nsrcs), dtype=float)
     for f_ind in range(n_freqs):
         interp_zas[f_ind, :] = np.array(za_vals)
     gaussian_vals = np.exp(-(interp_zas ** 2) / (2 * sigma_rad ** 2))
 
-    expected_data[1, 0, 0, :, :] = gaussian_vals
-    expected_data[0, 0, 1, :, :] = gaussian_vals
+    expected_data[1, 0, :, :] = gaussian_vals
+    expected_data[0, 1, :, :] = gaussian_vals
 
     assert np.allclose(interpolated_beam, expected_data)
 
@@ -179,6 +179,7 @@ def test_achromatic_gaussian_beam(heratext_posfreq):
 # astropy deprecation warning.
 @pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 @pytest.mark.filterwarnings("ignore:UVW orientation appears to be flipped")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_gaussbeam_values():
     """
     Make the long-line point sources up to 10 degrees from zenith.
@@ -187,11 +188,12 @@ def test_gaussbeam_values():
     sigma = 0.05
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
+    hera_uv.use_future_array_shapes()
 
     array_location = EarthLocation.from_geocentric(
         *hera_uv.telescope_location, unit='m'
     )
-    freq = hera_uv.freq_array[0, 0] * units.Hz
+    freq = hera_uv.freq_array[0] * units.Hz
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
 
@@ -257,7 +259,7 @@ def test_chromatic_gaussian():
 
     vals, _ = A.interp(az, za, freqs)
 
-    vals = vals[0, 0, 1]
+    vals = vals[0, 1]
 
     for fi in range(Nfreqs):
         hwhm = za[np.argmin(np.abs(vals[fi] - 0.5))]
@@ -278,8 +280,8 @@ def test_power_analytic_beam():
         eb = pyuvsim.AnalyticBeam(b, diameter=diam)
         pb = pyuvsim.AnalyticBeam(b, diameter=diam)
         pb.efield_to_power()
-        evals = eb.interp(az, za, freqs)[0][0, 0, 1]
-        pvals = pb.interp(az, za, freqs)[0][0, 0, 0]
+        evals = eb.interp(az, za, freqs)[0][0, 1]
+        pvals = pb.interp(az, za, freqs)[0][0, 0]
         assert np.allclose(evals**2, pvals)
 
     # Ensure uniform beam works

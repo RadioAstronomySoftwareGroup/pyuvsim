@@ -98,8 +98,19 @@ class Antenna:
         if freq_interp_kind is not None:
             beam.freq_interp_kind = freq_interp_kind
 
+        interp_kwargs = {
+            'az_array' : source_az,
+            'za_array' : source_za,
+            'freq_array' : freq,
+            'reuse_spline' : reuse_spline,
+            'check_azza_domain' : beam_interp_check,
+        }
+
         if interpolation_function is not None:
-            beam.interpolation_function = interpolation_function
+            if hasattr(beam, "_interpolation_function"):
+                beam.interpolation_function = interpolation_function
+            else:
+                interp_kwargs["interpolation_function"] = interpolation_function
 
         # UVBeams need an interpolation_function. If none is set, default to az_za_simple.
         # this can go away when we require pyuvdata version >= 2.2.13
@@ -115,14 +126,6 @@ class Antenna:
         if isinstance(array.beam_list, BeamList):
             spline_opts = array.beam_list.spline_interp_opts
 
-        interp_kwargs = {
-            'az_array' : source_az,
-            'za_array' : source_za,
-            'freq_array' : freq,
-            'reuse_spline' : reuse_spline,
-            'check_azza_domain' : beam_interp_check,
-        }
-
         if spline_opts is not None:
             interp_kwargs['spline_opts'] = spline_opts
 
@@ -131,14 +134,14 @@ class Antenna:
         Ncomponents = source_za.shape[-1]
 
         # interp_data has shape:
-        #   (Naxes_vec, Nspws, Nfeeds, 1 (freq),  Ncomponents (source positions))
+        #   (Naxes_vec, Nfeeds, 1 (freq),  Ncomponents (source positions))
         jones_matrix = np.zeros((2, 2, Ncomponents), dtype=complex)
 
         # first axis is feed, second axis is theta, phi (opposite order of beam!)
-        jones_matrix[0, 0] = interp_data[1, 0, 0, 0, :]
-        jones_matrix[1, 1] = interp_data[0, 0, 1, 0, :]
-        jones_matrix[0, 1] = interp_data[0, 0, 0, 0, :]
-        jones_matrix[1, 0] = interp_data[1, 0, 1, 0, :]
+        jones_matrix[0, 0] = interp_data[1, 0, 0, :]
+        jones_matrix[1, 1] = interp_data[0, 1, 0, :]
+        jones_matrix[0, 1] = interp_data[0, 0, 0, :]
+        jones_matrix[1, 0] = interp_data[1, 1, 0, :]
 
         return jones_matrix
 

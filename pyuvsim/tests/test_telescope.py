@@ -1,6 +1,7 @@
 
 import copy
 import os
+import warnings
 
 import numpy as np
 import pytest
@@ -26,7 +27,12 @@ herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 @pytest.fixture(scope='module')
 def beam_objs_main():
     uvb = UVBeam()
-    uvb.read_beamfits(herabeam_default)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", "The shapes of several attributes will be changing"
+        )
+        uvb.read_beamfits(herabeam_default)
+    uvb.use_future_array_shapes()
     uvb.extra_keywords['beam_path'] = herabeam_default
 
     uvb2 = uvb.copy()

@@ -163,20 +163,20 @@ class AnalyticBeam:
             raise ValueError("az_array and za_array must have the same shape.")
 
         if self.type == 'uniform':
-            interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=float)
-            interp_data[1, 0, 0, :, :] = 1
-            interp_data[0, 0, 1, :, :] = 1
-            interp_data[1, 0, 1, :, :] = 0
-            interp_data[0, 0, 0, :, :] = 0
+            interp_data = np.zeros((2, 2, freq_array.size, az_array.size), dtype=float)
+            interp_data[1, 0, :, :] = 1
+            interp_data[0, 1, :, :] = 1
+            interp_data[1, 1, :, :] = 0
+            interp_data[0, 0, :, :] = 0
 
             # If beam_type == "power", we need to know the shape of "values"
-            values = interp_data[0, 0, 0]
+            values = interp_data[0, 0]
 
             interp_basis_vector = None
         elif self.type == 'gaussian':
             if (self.diameter is None) and (self.sigma is None):
                 raise ValueError("Dish diameter needed for gaussian beam -- units: meters")
-            interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=float)
+            interp_data = np.zeros((2, 2, freq_array.size, az_array.size), dtype=float)
             # gaussian beam only depends on Zenith Angle (symmetric is azimuth)
             # standard deviation of sigma is referring to the standard deviation of e-field beam!
             # copy along freq. axis
@@ -185,13 +185,13 @@ class AnalyticBeam:
             elif self.sigma is not None:
                 sigmas = self.sigma * (freq_array / self.ref_freq) ** self.spectral_index
             values = np.exp(-(za_array[np.newaxis, ...] ** 2) / (2 * sigmas[:, np.newaxis] ** 2))
-            interp_data[1, 0, 0, :, :] = values
-            interp_data[0, 0, 1, :, :] = values
+            interp_data[1, 0, :, :] = values
+            interp_data[0, 1, :, :] = values
             interp_basis_vector = None
         elif self.type == 'airy':
             if self.diameter is None:
                 raise ValueError("Dish diameter needed for airy beam -- units: meters")
-            interp_data = np.zeros((2, 1, 2, freq_array.size, az_array.size), dtype=float)
+            interp_data = np.zeros((2, 2, freq_array.size, az_array.size), dtype=float)
             za_grid, f_grid = np.meshgrid(za_array, freq_array)
             xvals = self.diameter / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / c_ms
             values = np.zeros_like(xvals)
@@ -199,8 +199,8 @@ class AnalyticBeam:
             ze = xvals == 0.
             values[nz] = 2. * j1(xvals[nz]) / xvals[nz]
             values[ze] = 1.
-            interp_data[1, 0, 0, :, :] = values
-            interp_data[0, 0, 1, :, :] = values
+            interp_data[1, 0, :, :] = values
+            interp_data[0, 1, :, :] = values
             interp_basis_vector = None
         else:
             raise ValueError('no interp for this type: {}'.format(self.type))
@@ -208,12 +208,12 @@ class AnalyticBeam:
         if self.beam_type == 'power':
             # Cross-multiplying feeds, adding vector components
             pairs = [(i, j) for i in range(2) for j in range(2)]
-            power_data = np.zeros((1, 1, 4) + values.shape, dtype=float)
+            power_data = np.zeros((1, 4) + values.shape, dtype=float)
             for pol_i, pair in enumerate(pairs):
-                power_data[:, :, pol_i] = ((interp_data[0, :, pair[0]]
-                                           * np.conj(interp_data[0, :, pair[1]]))
-                                           + (interp_data[1, :, pair[0]]
-                                           * np.conj(interp_data[1, :, pair[1]])))
+                power_data[:, pol_i] = (
+                    (interp_data[0, pair[0]] * np.conj(interp_data[0, pair[1]]))
+                    + (interp_data[1, pair[0]] * np.conj(interp_data[1, pair[1]]))
+                )
             interp_data = power_data
 
         return interp_data, interp_basis_vector

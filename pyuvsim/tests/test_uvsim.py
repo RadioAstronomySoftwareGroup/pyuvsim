@@ -31,7 +31,12 @@ herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 
 def multi_beams():
     beam0 = UVBeam()
-    beam0.read_beamfits(herabeam_default)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", "The shapes of several attributes will be changing"
+        )
+        beam0.read_beamfits(herabeam_default)
+    beam0.use_future_array_shapes()
     beam0.extra_keywords['beam_path'] = herabeam_default
     beam0.freq_interp_kind = 'cubic'
     if hasattr(beam0, "_interpolation_function"):
@@ -64,9 +69,13 @@ multi_beams = multi_beams()
 
 @pytest.fixture(scope='module')
 def triangle_pos():
-    hera_uv = UVData()
-    hera_uv.read_uvfits(longbl_uvfits_file,
-                        ant_str='cross')  # consists of a right triangle of baselines with w term
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", "The shapes of several attributes will be changing"
+        )
+        # consists of a right triangle of baselines with w term
+        hera_uv = UVData.from_file(longbl_uvfits_file, ant_str='cross')
+    hera_uv.use_future_array_shapes()
     hera_uv.unproject_phase(use_ant_pos=True)
 
     enu = hera_uv.get_ENU_antpos()[0]
@@ -343,10 +352,10 @@ def test_single_offzenith_source(beam, hera_loc):
         freq_array=np.array([freq.to_value('Hz')]))
 
     jones = np.zeros((2, 2, 1), dtype=np.complex64)
-    jones[0, 0] = interpolated_beam[1, 0, 0, 0, 0]
-    jones[1, 1] = interpolated_beam[0, 0, 1, 0, 0]
-    jones[1, 0] = interpolated_beam[1, 0, 1, 0, 0]
-    jones[0, 1] = interpolated_beam[0, 0, 0, 0, 0]
+    jones[0, 0] = interpolated_beam[1, 0, 0, 0]
+    jones[1, 1] = interpolated_beam[0, 1, 0, 0]
+    jones[1, 0] = interpolated_beam[1, 1, 0, 0]
+    jones[0, 1] = interpolated_beam[0, 0, 0, 0]
 
     beam_jones = antenna1.get_beam_jones(array, src_alt_az, freq)
     assert np.allclose(beam_jones, jones)
@@ -418,10 +427,10 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
         freq_array=np.array([freq.to_value('Hz')])
     )
     jones = np.zeros((2, 2, 1), dtype=np.complex64)
-    jones[0, 0] = interpolated_beam[1, 0, 0, 0, :]
-    jones[1, 1] = interpolated_beam[0, 0, 1, 0, :]
-    jones[1, 0] = interpolated_beam[1, 0, 1, 0, :]
-    jones[0, 1] = interpolated_beam[0, 0, 0, 0, :]
+    jones[0, 0] = interpolated_beam[1, 0, 0, :]
+    jones[1, 1] = interpolated_beam[0, 1, 0, :]
+    jones[1, 0] = interpolated_beam[1, 1, 0, :]
+    jones[0, 1] = interpolated_beam[0, 0, 0, :]
 
     uvw_wavelength_array = uvw_array * units.m / const.c * freq.to('1/s')
 
@@ -436,9 +445,10 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
 
 
 @pytest.mark.filterwarnings("ignore:UVW orientation appears to be flipped")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_file_to_tasks(cst_beam):
-    hera_uv = UVData()
-    hera_uv.read_uvfits(EW_uvfits_file)
+    hera_uv = UVData.from_file(EW_uvfits_file)
+    hera_uv.use_future_array_shapes()
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', Nsrcs=5, return_data=True)
 
@@ -514,15 +524,14 @@ def test_file_to_tasks(cst_beam):
     expected_task_list.sort()
     for idx, task in enumerate(uvtask_list):
         exp_task = expected_task_list[idx]
-        print(task.sources.freq_array)
-        print(exp_task.sources.freq_array)
         assert task == exp_task
 
 
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 @pytest.mark.filterwarnings("ignore:UVW orientation appears to be flipped")
 def test_gather():
-    hera_uv = UVData()
-    hera_uv.read_uvfits(EW_uvfits_file)
+    hera_uv = UVData.from_file(EW_uvfits_file)
+    hera_uv.use_future_array_shapes()
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_data=True)
 
@@ -560,10 +569,11 @@ def test_gather():
     assert np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3)
 
 
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_local_task_gen():
     # Confirm I get the same results looping over the task list as I do with the generator function.
-    hera_uv = UVData()
-    hera_uv.read_uvfits(EW_uvfits_10time10chan)
+    hera_uv = UVData.from_file(EW_uvfits_10time10chan)
+    hera_uv.use_future_array_shapes()
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, kwds = pyuvsim.create_mock_catalog(
@@ -673,12 +683,13 @@ def test_task_coverage():
         assert np.all(tasks[inds] == tasks_expected)
 
 
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_source_splitting():
     # Check that if the available memory is less than the expected size of the source catalog,
     # then the task iterator will loop over chunks of the source array.
     pytest.importorskip('mpi4py')
-    hera_uv = UVData()
-    hera_uv.read_uvfits(EW_uvfits_10time10chan)
+    hera_uv = UVData.from_file(EW_uvfits_10time10chan)
+    hera_uv.use_future_array_shapes()
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, kwds = pyuvsim.create_mock_catalog(
