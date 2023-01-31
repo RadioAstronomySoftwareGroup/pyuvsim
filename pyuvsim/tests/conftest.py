@@ -223,7 +223,8 @@ def cst_beam():
     )
     beam.x_orientation = 'east'
     beam.freq_interp_kind = 'linear'
-    beam.interpolation_function = 'az_za_simple'
+    if hasattr(beam, "_interpolation_function"):
+        beam.interpolation_function = 'az_za_simple'
     beam.peak_normalize()
     return beam
 
