@@ -170,12 +170,6 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     uv2.read(expected_ofname)
     uv2.use_future_array_shapes()
 
-    # Depending on pyuvdata version the filename may exist
-    # munge the filename attribute
-    # This can be removed if we ever require pyuvdata>=2.2.1
-    if hasattr(uv2, "filename"):
-        uv2.filename = uv.filename
-
     if save_format == "ms":
         # MS adds some stuff to history & extra keywords
         uv2.history = uv.history
