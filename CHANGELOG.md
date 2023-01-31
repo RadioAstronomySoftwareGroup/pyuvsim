@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+- Use future array shapes on UVBeam objects.
+- Require pyuvdata >= 2.2.10
+
+
 ## [1.2.4] - 2022-06-01
 
 ### Added
