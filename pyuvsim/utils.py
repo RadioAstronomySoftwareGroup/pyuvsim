@@ -11,8 +11,6 @@ from datetime import timedelta
 
 import numpy as np
 import psutil
-import pyuvdata
-from packaging import version  # packaging is installed with setuptools
 
 from . import __version__
 
@@ -276,14 +274,9 @@ def write_uvdata(
         print('Outfile path: ', outfile_name, flush=True)
     if not dryrun:
         if out_format == 'uvfits':
-            if version.parse(pyuvdata.__version__) >= version.parse("2.2.9"):
-                spoof_nonessential = False
-            else:
-                spoof_nonessential = True
             uv_obj.write_uvfits(
                 outfile_name,
                 force_phase=True,
-                spoof_nonessential=spoof_nonessential,
                 fix_autos=fix_autos,
             )
         elif out_format == 'miriad':
