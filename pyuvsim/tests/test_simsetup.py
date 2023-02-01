@@ -553,6 +553,8 @@ def test_param_reader():
 
     # renumber/rename the phase centers so the equality check will pass.
     uv_obj._consolidate_phase_center_catalogs(other=hera_uv, ignore_name=True)
+
+    hera_uv.flex_spw_id_array = np.full(hera_uv.Nfreqs, hera_uv.spw_array[0], dtype=int)
     assert uv_obj == hera_uv
 
 
