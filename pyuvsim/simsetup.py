@@ -1770,6 +1770,7 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
     uv_obj.instrument = uv_obj.telescope_name
 
     uv_obj.spw_array = np.array([0])
+    uv_obj.flex_spw_id_array = np.full(uv_obj.Nfreqs, uv_obj.spw_array[0], dtype=int)
     if uv_obj.Ntimes == 1:
         uv_obj.integration_time = np.ones_like(uv_obj.time_array, dtype=np.float64)  # Second
     else:
