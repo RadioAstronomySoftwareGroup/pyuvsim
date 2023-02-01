@@ -183,6 +183,10 @@ def test_visibility_single_zenith_source(cst_beam, hera_loc):
 
         engine = pyuvsim.UVEngine(task)
 
+        # clear source position info to cover update positions call in apply_beam
+        engine.task.sources.clear_time_position_specific_params()
+        engine.apply_beam()
+
         visibility = engine.make_visibility()
         assert np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3)
 
@@ -451,9 +455,11 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
 
 @pytest.mark.filterwarnings("ignore:UVW orientation appears to be flipped")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-def test_file_to_tasks(cst_beam):
+@pytest.mark.parametrize("future_shapes", [True, False])
+def test_file_to_tasks(cst_beam, future_shapes):
     hera_uv = UVData.from_file(EW_uvfits_file)
-    hera_uv.use_future_array_shapes()
+    if future_shapes:
+        hera_uv.use_future_array_shapes()
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
     sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', Nsrcs=5, return_data=True)
 
