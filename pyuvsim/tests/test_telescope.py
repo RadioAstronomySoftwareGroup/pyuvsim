@@ -22,8 +22,6 @@ except ImportError:
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
 
 
-# Ignore warnings of pending sigma deprecation
-@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 @pytest.fixture(scope='module')
 def beam_objs_main():
     uvb = UVBeam()
@@ -43,10 +41,16 @@ def beam_objs_main():
     diameter_m = 14.
     beams.append(pyuvsim.AnalyticBeam('airy', diameter=diameter_m))
     sigma = 0.03
-    beams.append(pyuvsim.AnalyticBeam('gaussian', sigma=sigma))
-    ref_freq, alpha = 100e6, -0.5
-    beams.append(pyuvsim.AnalyticBeam('gaussian', sigma=sigma,
-                 ref_freq=ref_freq, spectral_index=alpha))
+    # Ignore warnings of pending sigma deprecation
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", "Achromatic gaussian beams will not be supported in the future"
+        )
+        beams.append(pyuvsim.AnalyticBeam('gaussian', sigma=sigma))
+        ref_freq, alpha = 100e6, -0.5
+        beams.append(
+            pyuvsim.AnalyticBeam('gaussian', sigma=sigma, ref_freq=ref_freq, spectral_index=alpha)
+        )
     return beams
 
 
