@@ -245,11 +245,10 @@ def test_write_fix_autos(tmpdir):
     ofname = str(tmpdir.join('test_file'))
     filing_dict = {'outfile_name': ofname}
 
-    if version.parse(pyuvdata.__version__) >= version.parse("2.2.7"):
-        with uvtest.check_warnings(
-            UserWarning, match="Fixing auto-correlations to be be real-only"
-        ):
-            simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='uvh5')
+    with uvtest.check_warnings(
+        UserWarning, match="Fixing auto-correlations to be be real-only"
+    ):
+        simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='uvh5')
 
 
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
