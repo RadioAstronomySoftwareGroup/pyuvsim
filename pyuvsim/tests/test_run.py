@@ -14,6 +14,7 @@ import pyuvdata
 import pyuvdata.utils as uvutils
 import yaml
 from astropy import units
+from packaging import version  # packaging is installed with setuptools
 from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
 from pyuvdata import UVData
 
@@ -46,7 +47,28 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # Test vot and txt catalogs for parameter simulation
     # Compare to reference files.
     uv_ref = UVData()
-    uv_ref.read(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvh5'))
+    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+        # if we can, use the new file that has many things fixed
+        uv_ref.read(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvh5'))
+    else:
+        uv_ref.read(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
+        uv_ref.unphase_to_drift(use_ant_pos=True)
+        uv_ref.reorder_blts()
+        # This is an old file with the bug that added one to the
+        # antenna numbers for uvfits files. Fix them (if pyuvdata is recent)
+        if np.min(np.union1d(uv_ref.ant_1_array, uv_ref.ant_2_array)) > 0:
+            uv_ref.ant_1_array = uv_ref.ant_1_array - 1
+            uv_ref.ant_2_array = uv_ref.ant_2_array - 1
+            uv_ref.antenna_numbers = uv_ref.antenna_numbers - 1
+            uv_ref.baseline_array = uv_ref.antnums_to_baseline(
+                uv_ref.ant_1_array, uv_ref.ant_2_array
+            )
+
+        # set the x_orientation
+        uv_ref.x_orientation = "east"
+
+        # fix the channel width, which doesn't match the channel width in the parameter file
+        uv_ref.channel_width = 1000000.0
 
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', paramfile)
     # This test obsparam file has "single_source.txt" as its catalog.
@@ -62,8 +84,11 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     uv_new = UVData()
     uv_new.read(ofilepath)
 
-    uv_new.unproject_phase(use_ant_pos=True)
-    uv_new._consolidate_phase_center_catalogs(other=uv_ref)
+    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+        uv_new.unproject_phase(use_ant_pos=True)
+        uv_new._consolidate_phase_center_catalogs(other=uv_ref)
+    else:
+        uv_new.unphase_to_drift(use_ant_pos=True)
 
     assert uvutils._check_history_version(uv_new.history, pyradiosky.__version__)
     assert uvutils._check_history_version(uv_new.history, pyuvdata.__version__)

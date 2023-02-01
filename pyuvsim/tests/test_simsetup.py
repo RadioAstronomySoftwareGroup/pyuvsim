@@ -9,6 +9,7 @@ import shutil
 import numpy as np
 import pyradiosky
 import pytest
+import pyuvdata
 import pyuvdata.tests as uvtest
 import yaml
 from astropy import units
@@ -468,7 +469,10 @@ def test_param_reader():
     # set missing x_orientation
     hera_uv.x_orientation = "east"
 
-    hera_uv.unproject_phase()
+    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+        hera_uv.unproject_phase()
+    else:
+        hera_uv.unphase_to_drift()
     hera_uv.telescope_name = 'HERA'
 
     beam0 = UVBeam()
@@ -552,8 +556,8 @@ def test_param_reader():
     hera_uv.reorder_blts("time", "baseline")
 
     # renumber/rename the phase centers so the equality check will pass.
-    uv_obj._consolidate_phase_center_catalogs(other=hera_uv, ignore_name=True)
-
+    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+        uv_obj._consolidate_phase_center_catalogs(other=hera_uv, ignore_name=True)
     hera_uv.flex_spw_id_array = np.full(hera_uv.Nfreqs, hera_uv.spw_array[0], dtype=int)
     assert uv_obj == hera_uv
 
@@ -920,12 +924,18 @@ def test_param_select_bls():
 
     param_dict['cat_name'] = 'foo'
     uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
-    assert uv_obj_full.phase_center_catalog[0]["cat_name"] == 'foo'
+    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+        assert uv_obj_full.phase_center_catalog[0]["cat_name"] == 'foo'
+    else:
+        assert uv_obj_full.object_name == 'foo'
 
     param_dict.pop("cat_name")
     param_dict['object_name'] = 'foo'
     uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
-    assert uv_obj_full.phase_center_catalog[0]["cat_name"] == 'foo'
+    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+        assert uv_obj_full.phase_center_catalog[0]["cat_name"] == 'foo'
+    else:
+        assert uv_obj_full.object_name == 'foo'
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")

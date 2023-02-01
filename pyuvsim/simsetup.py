@@ -20,6 +20,7 @@ import warnings
 import astropy.units as units
 import numpy as np
 import pyradiosky
+import pyuvdata
 import yaml
 from astropy.coordinates import (ICRS, AltAz, Angle, EarthLocation, Latitude,
                                  Longitude)
@@ -1708,21 +1709,25 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
     if 'Npols' not in uvparam_dict:
         uvparam_dict['Npols'] = len(uvparam_dict['polarization_array'])
 
-    if 'cat_name' not in param_dict and "object_name" not in param_dict:
+    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+        uvparam_name = "cat_name"
+    else:
+        uvparam_name = "object_name"
+    if "cat_name" not in param_dict and "object_name" not in param_dict:
         tloc = EarthLocation.from_geocentric(*uvparam_dict['telescope_location'], unit='m')
         time = Time(uvparam_dict['time_array'][0], scale='utc', format='jd')
         src, _ = create_mock_catalog(time, arrangement='zenith', array_location=tloc)
         if 'sources' in param_dict:
             source_file_name = os.path.basename(param_dict['sources']['catalog'])
-            uvparam_dict['cat_name'] = '{}_ra{:.4f}_dec{:.4f}'.format(
+            uvparam_dict[uvparam_name] = '{}_ra{:.4f}_dec{:.4f}'.format(
                 source_file_name, src.ra.deg[0], src.dec.deg[0]
             )
         else:
-            uvparam_dict['cat_name'] = 'unprojected'
+            uvparam_dict[uvparam_name] = 'unprojected'
     elif "object_name" in param_dict:
-        uvparam_dict['cat_name'] = param_dict['object_name']
+        uvparam_dict[uvparam_name] = param_dict['object_name']
     else:
-        uvparam_dict['cat_name'] = param_dict['cat_name']
+        uvparam_dict[uvparam_name] = param_dict['cat_name']
 
     uv_obj = UVData()
     uv_obj._set_future_array_shapes()
@@ -1750,17 +1755,23 @@ def initialize_uvdata_from_params(obs_params, return_beams=None):
 
     uv_obj.ant_1_array, uv_obj.ant_2_array = uv_obj.baseline_to_antnums(uv_obj.baseline_array)
 
-    cat_id = uv_obj._add_phase_center(
-        cat_name=uvparam_dict["cat_name"], cat_type="unprojected"
-    )
-    uv_obj.phase_center_id_array = np.full(uv_obj.Nblts, cat_id, dtype=int)
+    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+
+        cat_id = uv_obj._add_phase_center(
+            cat_name=uvparam_dict["cat_name"], cat_type="unprojected"
+        )
+        uv_obj.phase_center_id_array = np.full(uv_obj.Nblts, cat_id, dtype=int)
+
+        _set_lsts_on_uvdata(uv_obj)
+        # set the apparent coordinates on the object
+        uv_obj._set_app_coords_helper()
+
+    else:
+        uv_obj._set_drift()
+        _set_lsts_on_uvdata(uv_obj)
 
     # add other required metadata to allow select to work without errors
     # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
-
-    _set_lsts_on_uvdata(uv_obj)
-    # set the apparent coordinates on the object
-    uv_obj._set_app_coords_helper()
 
     uv_obj.set_uvws_from_antenna_positions()
     uv_obj.history = ''

@@ -186,7 +186,8 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         # for some reason, the vis_units also change. This is more problematic...
         uv2.vis_units = uv.vis_units
 
-    uv2._consolidate_phase_center_catalogs(other=uv, ignore_name=True)
+    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+        uv2._consolidate_phase_center_catalogs(other=uv, ignore_name=True)
     assert uv == uv2
 
     uv.data_array += 1
@@ -223,7 +224,8 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         # for some reason, the vis_units also change. This is more problematic...
         uv2.vis_units = uv.vis_units
 
-    uv2._consolidate_phase_center_catalogs(other=uv, ignore_name=True)
+    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+        uv2._consolidate_phase_center_catalogs(other=uv, ignore_name=True)
     assert uv2 == uv
 
 
