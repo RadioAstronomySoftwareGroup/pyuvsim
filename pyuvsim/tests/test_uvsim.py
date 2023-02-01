@@ -11,11 +11,13 @@ import astropy.constants as const
 import numpy as np
 import pyradiosky
 import pytest
+import pyuvdata
 import pyuvdata.tests as uvtest
 import pyuvdata.utils as uvutils
 from astropy import units
 from astropy.coordinates import (Angle, EarthLocation, Latitude, Longitude,
                                  SkyCoord)
+from packaging import version  # packaging is installed with setuptools
 from pyuvdata import UVBeam, UVData
 
 import pyuvsim
@@ -76,7 +78,10 @@ def triangle_pos():
         # consists of a right triangle of baselines with w term
         hera_uv = UVData.from_file(longbl_uvfits_file, ant_str='cross')
     hera_uv.use_future_array_shapes()
-    hera_uv.unproject_phase(use_ant_pos=True)
+    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+        hera_uv.unproject_phase(use_ant_pos=True)
+    else:
+        hera_uv.unphase_to_drift(use_ant_pos=True)
 
     enu = hera_uv.get_ENU_antpos()[0]
     uvw = hera_uv.uvw_array[:hera_uv.Nbls]
