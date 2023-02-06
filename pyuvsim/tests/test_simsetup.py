@@ -15,14 +15,23 @@ import yaml
 from astropy import units
 from astropy.coordinates import (Angle, EarthLocation, Latitude, Longitude,
                                  SkyCoord)
+from astropy.time import Time
 from packaging import version  # packaging is installed with setuptools
+from pyradiosky import SkyModel
 from pyradiosky.data import DATA_PATH as SKY_DATA_PATH
 from pyuvdata import UVBeam, UVData
+
+try:
+    from lunarsky import MoonLocation
+    from lunarsky import Time as LTime
+
+    hasmoon = True
+except ImportError:
+    hasmoon = False
 
 import pyuvsim
 import pyuvsim.tests as simtest
 from pyuvsim import simsetup
-from pyuvsim.astropy_interface import Time
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
@@ -52,10 +61,12 @@ def test_mock_catalog_zenith_source(hera_loc):
     )
     icrs_coord = source_coord.transform_to('icrs')
 
-    ra = icrs_coord.ra
-    dec = icrs_coord.dec
-
-    test_source = pyradiosky.SkyModel('src0', ra, dec, units.Quantity([1, 0, 0, 0], 'Jy'), 'flat')
+    test_source = SkyModel(
+        name='src0',
+        skycoord=icrs_coord,
+        stokes=units.Quantity([1, 0, 0, 0], 'Jy'),
+        spectral_type='flat',
+    )
 
     cat, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
 
@@ -85,9 +96,12 @@ def test_mock_catalog_off_zenith_source(hera_loc):
     )
     icrs_coord = source_coord.transform_to('icrs')
 
-    ra = icrs_coord.ra
-    dec = icrs_coord.dec
-    test_source = pyradiosky.SkyModel('src0', ra, dec, units.Quantity([1.0, 0, 0, 0], "Jy"), 'flat')
+    test_source = SkyModel(
+        name='src0',
+        skycoord=icrs_coord,
+        stokes=units.Quantity([1.0, 0, 0, 0], "Jy"),
+        spectral_type='flat'
+    )
 
     cat, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
 
@@ -251,8 +265,11 @@ def test_gleam_catalog(filetype):
         SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml'
     )
 
-    warn_messages = ["No spectral_type specified for GLEAM, using 'flat'."]
-    warnings = [UserWarning]
+    warn_messages = [
+        "No spectral_type specified for GLEAM, using 'flat'. In version 1.4 "
+        "this default will change to 'subband' to match pyradiosky's default.",
+    ]
+    warnings = [DeprecationWarning]
     with uvtest.check_warnings(warnings, match=warn_messages):
         gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
             gleam_param_filename, return_recarray=False, filetype=filetype, return_catname=False
@@ -268,11 +285,7 @@ def test_gleam_catalog(filetype):
     param_dict["sources"].pop("min_flux")
     param_dict["sources"].pop("max_flux")
 
-    warn_messages = ["No spectral_type specified for GLEAM, using 'flat'."]
-    warnings = [UserWarning]
-    with uvtest.check_warnings(
-        warnings, match=warn_messages
-    ):
+    with uvtest.check_warnings(warnings, match=warn_messages):
         gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
             param_dict, return_recarray=False, filetype=filetype, return_catname=False
         )
@@ -286,7 +299,7 @@ def test_skyh5_catalog(use_filetype, tmp_path):
     gleam_filename = os.path.join(
         SIM_DATA_PATH, 'gleam_50srcs.vot'
     )
-    skyobj = pyradiosky.SkyModel.from_gleam_catalog(gleam_filename)
+    skyobj = SkyModel.from_gleam_catalog(gleam_filename)
     assert skyobj.Ncomponents == 50
 
     skyh5_file = os.path.join(tmp_path, 'gleam.skyh5')
@@ -325,9 +338,16 @@ def test_skyh5_catalog(use_filetype, tmp_path):
     with open(param_filename, 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)
 
-    hdf5_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-        param_filename, return_recarray=False, filetype=filetype, return_catname=False
-    )
+    with uvtest.check_warnings(
+        DeprecationWarning,
+        match="This file was not detected as a skyh5 file by pyradiosky. "
+        "Starting in version 1.4 this will generate an error, either "
+        "rename the file extension to 'skyh5' or specify the catalog "
+        "filetype in the parameter file.",
+    ):
+        hdf5_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+            param_filename, return_recarray=False, filetype=filetype, return_catname=False
+        )
     assert hdf5_catalog == skyh5_catalog
 
     # test error with unknown extension
@@ -347,7 +367,10 @@ def test_skyh5_catalog(use_filetype, tmp_path):
         )
         assert h5_catalog == skyh5_catalog
     else:
-        with pytest.raises(ValueError, match="The file extension is not recognized as a valid one"):
+        with pytest.raises(
+            ValueError,
+            match="Cannot determine the file type. Please specify using the filetype parameter."
+        ):
             pyuvsim.simsetup.initialize_catalog_from_params(
                 param_filename, return_recarray=False, return_catname=False
             )
@@ -357,8 +380,7 @@ def test_skyh5_catalog(use_filetype, tmp_path):
 def test_healpix_catalog():
     pytest.importorskip('astropy_healpix')
     path = os.path.join(SKY_DATA_PATH, 'healpix_disk.skyh5')
-    sky = pyradiosky.SkyModel()
-    sky.read_skyh5(path)
+    sky = SkyModel.from_file(path)
 
     params = {'sources': {'catalog': path}}
     hpx_sky = pyuvsim.simsetup.initialize_catalog_from_params(
@@ -375,13 +397,22 @@ def test_healpix_hdf5_catalog():
     """
     pytest.importorskip('astropy_healpix')
     path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
-    sky = pyradiosky.SkyModel()
+    sky = SkyModel()
     sky.read_healpix_hdf5(path)
 
     params = {'sources': {'catalog': path}}
-    hpx_sky = pyuvsim.simsetup.initialize_catalog_from_params(
-        params, return_recarray=False, return_catname=False
-    )
+    with uvtest.check_warnings(
+        DeprecationWarning,
+        match=[
+            "This method reads an old 'healvis' style healpix HDF5 file",
+            "Support for this catalog filetype will be removed when we require "
+            "pyradiosky 0.3. Re-write it as a skyh5 file using pyradiosky to ensure "
+            "future compatibilty."
+        ]
+    ):
+        hpx_sky = pyuvsim.simsetup.initialize_catalog_from_params(
+            params, return_recarray=False, return_catname=False
+        )
     assert hpx_sky == sky
 
 
@@ -404,50 +435,6 @@ def test_gleam_catalog_spectral_type(spectral_type):
     )
     assert gleam_catalog.spectral_type == spectral_type
     assert gleam_catalog.Ncomponents == 50
-
-
-@pytest.mark.parametrize(
-    ("key_pop", "message"),
-    [("ra_column", "No ra_column specified"),
-     ("dec_column", "No dec_column specified")])
-def test_vot_catalog_warns(key_pop, message):
-    vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
-
-    vot_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-        vot_param_filename, return_recarray=False, return_catname=False
-    )
-    with open(vot_param_filename, 'r') as pfile:
-        param_dict = yaml.safe_load(pfile)
-    param_dict['config_path'] = os.path.dirname(vot_param_filename)
-    param_dict["sources"].pop(key_pop)
-
-    warn_messages = [message]
-    warnings = [UserWarning]
-    with uvtest.check_warnings(warnings, match=warn_messages):
-        vot_catalog2 = pyuvsim.simsetup.initialize_catalog_from_params(
-            param_dict, return_recarray=False, return_catname=False
-        )
-
-    assert vot_catalog == vot_catalog2
-
-
-@pytest.mark.parametrize(
-    ("key_pop", "message"),
-    [("table_name", "No table_name specified"),
-     ("id_column", "No id_column specified"),
-     ("flux_columns", "No flux_columns specified")])
-def test_vot_catalog_error(key_pop, message):
-    vot_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testvot.yaml')
-
-    with open(vot_param_filename, 'r') as pfile:
-        param_dict = yaml.safe_load(pfile)
-    param_dict['config_path'] = os.path.dirname(vot_param_filename)
-    param_dict["sources"].pop(key_pop)
-
-    with pytest.raises(ValueError, match=message):
-        pyuvsim.simsetup.initialize_catalog_from_params(
-            param_dict, return_recarray=False, return_catname=False
-        )
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
@@ -1163,10 +1150,12 @@ def test_mock_catalogs(arrangement, text_cat):
     cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, arrangement, rseed=2458098)
 
     # For each mock catalog, verify the Ra/Dec source positions against a saved text catalog.
-    radec_catalog = pyradiosky.SkyModel()
-    radec_catalog.read_text_catalog(
+    radec_catalog = SkyModel.from_file(
         os.path.join(SIM_DATA_PATH, 'test_catalogs', text_cat)
     )
+    print(radec_catalog.skycoord.frame)
+    print(cat.skycoord.frame)
+    print(radec_catalog.skycoord.separation(cat.skycoord))
     assert np.all(radec_catalog == cat)
 
 
@@ -1459,12 +1448,9 @@ def test_moon_lsts():
 def test_mock_catalog_moon():
     # A mock catalog made with a MoonLocation.
     pytest.importorskip('lunarsky')
-    import lunarsky
 
-    from pyuvsim.astropy_interface import Time
-
-    time = Time.now()
-    loc = lunarsky.MoonLocation.from_selenodetic(24.433333333, 0.687500000)
+    time = LTime.now()
+    loc = MoonLocation.from_selenodetic(24.433333333, 0.687500000)
     mmock, mkwds = pyuvsim.simsetup.create_mock_catalog(time, 'hera_text', array_location=loc)
     eloc = EarthLocation.from_geodetic(24.433, 0.6875)
     emock, ekwds = pyuvsim.simsetup.create_mock_catalog(time, 'hera_text', array_location=eloc)
@@ -1495,10 +1481,11 @@ def cat_with_some_pols():
     ra = Longitude(np.linspace(0, 2 * np.pi, Nsrcs), 'rad')
     dec = Latitude(np.linspace(-np.pi / 2, np.pi / 3, Nsrcs), 'rad')
 
-    sky = pyradiosky.SkyModel(
+    sky = SkyModel(
         name=np.arange(Nsrcs).astype(str),
         ra=ra,
         dec=dec,
+        frame="icrs",
         stokes=stokes * units.Jy,
         spectral_type='full',
         freq_array=freqs
@@ -1527,8 +1514,6 @@ def test_skymodeldata_with_quantity_stokes(unit, cat_with_some_pols):
     assert smd.flux_unit == unit
 
     sky2 = smd.get_skymodel()
-    if units.Quantity != pyradiosky.SkyModel()._stokes.expected_type:
-        sky.stokes = sky.stokes.to_value(unit)
     assert sky2 == sky
 
 
@@ -1542,8 +1527,7 @@ def test_skymodeldata(component_type, cat_with_some_pols):
     else:
         pytest.importorskip('astropy_healpix')
         path = os.path.join(SKY_DATA_PATH, 'healpix_disk.skyh5')
-        sky = pyradiosky.SkyModel()
-        sky.read_skyh5(path)
+        sky = SkyModel.from_file(path)
         filename_use = ["healpix_disk"]
 
     smd = pyuvsim.simsetup.SkyModelData(sky, filename=filename_use)
@@ -1620,8 +1604,16 @@ def test_skymodeldata_non_icrs(cat_with_some_pols):
     gcrs_coord = SkyCoord(ra, dec, frame="gcrs")
     icrs_coord = gcrs_coord.transform_to("icrs")
 
-    cat_with_some_pols.frame = "gcrs"
-    smd = pyuvsim.simsetup.SkyModelData(cat_with_some_pols)
+    sky = SkyModel(
+        name=cat_with_some_pols.name,
+        ra=ra,
+        dec=dec,
+        frame="gcrs",
+        stokes=cat_with_some_pols.stokes,
+        spectral_type=cat_with_some_pols.spectral_type,
+        freq_array=cat_with_some_pols.freq_array,
+    )
+    smd = pyuvsim.simsetup.SkyModelData(sky)
 
     assert np.allclose(icrs_coord.ra.deg, smd.ra)
     assert np.allclose(icrs_coord.dec.deg, smd.dec)
@@ -1646,7 +1638,7 @@ def test_set_lsts_errors():
     uv0.lst_array = None
 
     uv0.extra_keywords['world'] = 'moon'
-    if not pyuvsim.astropy_interface.hasmoon:
+    if not hasmoon:
         with pytest.raises(ValueError, match="Cannot construct lsts for MoonLocation"):
             pyuvsim.simsetup._set_lsts_on_uvdata(uv0)
 

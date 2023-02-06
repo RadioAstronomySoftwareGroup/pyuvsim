@@ -2,11 +2,21 @@
 
 ## [Unreleased]
 
+### Changed
+- Require pyradiosky >= 0.2.0
+- Increase the minimum compatible version for lunarsky to 0.2.1 to fix astropy
+deprecation warnings.
+
+### Fixed
+- Bugs when running with pyradiosky>0.2, mostly related to the new `skycoord` parameter
+on pyradiosky's `SkyModel` object.
+- Better handling of lunarsky imports, required for the newest version of pyradiosky
+
 ## [1.2.5] - 2022-06-01
 
 ### Changed
 - Initial ordering of blt axis in `initialize_uvdata_from_params`
-  (unchanged output by default).
+(unchanged output by default).
 - Use future array shapes on UVBeam objects.
 - Update dependency requirements to: pyuvdata >= 2.2.10,<2.3, pyradiosky>=0.1.0,<0.2,
 numpy>=1.19, scipy>=1.3

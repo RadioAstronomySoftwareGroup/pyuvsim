@@ -1,4 +1,4 @@
-SOURCE_ID	RA_J2000 [deg]	Dec_J2000 [deg]	Flux [Jy]	Frequency [Hz]
+source_id	ra_icrs [deg]	dec_icrs [deg]	Flux [Jy]	Frequency [Hz]
 HERATEST0	68.48535	-28.559917	1	100000000.0
 HERATEST1	66.21075	-28.669444	1	100000000.0
 HERATEST2	63.93300	-28.742866	1	100000000.0

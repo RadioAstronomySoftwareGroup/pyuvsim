@@ -1,4 +1,4 @@
-SOURCE_ID	RA_J2000 [deg]	Dec_J2000 [deg]	Flux [Jy]
+source_id	ra_icrs [deg]	dec_icrs [deg]	Flux [Jy]
 src0	199.70817524	-64.19118019	1.00000000
 src1	199.50763644	-83.08033677	1.00000000
 src2	19.92709296	-78.03087124	1.00000000

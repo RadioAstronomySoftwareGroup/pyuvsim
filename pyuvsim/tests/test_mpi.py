@@ -10,6 +10,7 @@ import pyradiosky
 import pytest
 from astropy import units  # noqa
 from astropy.coordinates import Latitude, Longitude
+from astropy.time import Time
 
 pytest.importorskip('mpi4py')
 import mpi4py  # noqa
@@ -19,7 +20,6 @@ from mpi4py import MPI  # noqa
 
 import pyuvsim  # noqa
 from pyuvsim import mpi  # noqa
-from pyuvsim.astropy_interface import Time  # noqa
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -28,12 +28,23 @@ def _start_mpi():
 
 
 @pytest.fixture(scope='module')
-def fake_tasks():
+def single_source():
     sky = pyradiosky.SkyModel(
-        'src', Longitude('10d'), Latitude('5d'), np.array([1, 0, 0, 0]) * units.Jy,
-        'spectral_index', reference_frequency=np.array([100e6]) * units.Hz,
-        spectral_index=np.array([-0.74])
+        name='src',
+        ra=Longitude('10d'),
+        dec=Latitude('5d'),
+        frame="icrs",
+        stokes=np.array([1, 0, 0, 0]) * units.Jy,
+        spectral_type='spectral_index',
+        reference_frequency=np.array([100e6]) * units.Hz,
+        spectral_index=np.array([-0.74]),
     )
+    return sky
+
+
+@pytest.fixture(scope='module')
+def fake_tasks(single_source):
+    sky = single_source.copy()
     n_tasks = 30
     t0 = Time.now()
     freq = 50 * units.Hz
@@ -192,13 +203,9 @@ def test_sharedmem_bcast_with_quantities():
 
 
 @pytest.mark.parallel(3)
-def test_skymodeldata_share():
+def test_skymodeldata_share(single_source):
     # Test the SkyModelData share method.
-    sky = pyradiosky.SkyModel(
-        'src', Longitude('10d'), Latitude('5d'), np.array([1, 0, 0, 0]) * units.Jy,
-        'spectral_index', reference_frequency=np.array([100e6]) * units.Hz,
-        spectral_index=np.array([-0.74])
-    )
+    sky = single_source.copy()
 
     smd = pyuvsim.simsetup.SkyModelData()
     if mpi.rank == 0:
