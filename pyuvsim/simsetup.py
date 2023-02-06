@@ -409,7 +409,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
             (array_location.lat.deg, array_location.lon.deg, array_location.height.value))
     }
 
-    if isinstance(array_location, MoonLocation):
+    if hasmoon and isinstance(array_location, MoonLocation):
         mock_keywords['world'] = 'moon'
     else:
         mock_keywords['world'] = 'earth'
@@ -1013,7 +1013,7 @@ def initialize_catalog_from_params(
         return sky
 
 
-def _construct_beam_list(beam_ids, telconfig, freq_range=None):
+def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False):
     """Construct BeamList."""
     beam_list = []
     for beamID in beam_ids:
@@ -1087,7 +1087,9 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None):
     if freq_range is not None:
         select['freq_range'] = freq_range
 
-    beam_list_obj = BeamList(beam_list=beam_list, select_params=select)
+    beam_list_obj = BeamList(
+        beam_list=beam_list, select_params=select, force_check=force_check
+    )
     if 'spline_interp_opts' in telconfig.keys():
         beam_list_obj.spline_interp_opts = telconfig['spline_interp_opts']
 
@@ -1098,7 +1100,7 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None):
     return beam_list_obj
 
 
-def parse_telescope_params(tele_params, config_path='', freq_range=None):
+def parse_telescope_params(tele_params, config_path='', freq_range=None, force_beam_check=False):
     """
     Parse the "telescope" section of obsparam.
 
@@ -1112,6 +1114,11 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None):
         Path to directory holding configuration and layout files.
     freq_range : float
         If given, select frequencies on reading the beam.
+    force_beam_check : bool
+        The beam consistency check is only possible for object-beams (not string mode).
+        If `force_beam_check` is True, it will convert beams to object-mode to force
+        the check to run (then convert back to string mode).
+
 
     Returns
     -------
@@ -1240,7 +1247,9 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None):
         for a in which_ants:
             beam_dict[a] = beamID
 
-    beam_list = _construct_beam_list(np.unique(beam_ids), telconfig, freq_range=freq_range)
+    beam_list = _construct_beam_list(
+        np.unique(beam_ids), telconfig, freq_range=freq_range, force_check=force_beam_check
+    )
 
     return return_dict, beam_list, beam_dict
 
@@ -1587,7 +1596,7 @@ def subselect(uv_obj, param_dict):
 
 
 def initialize_uvdata_from_params(
-    obs_params, return_beams=None, reorder_blt_kw=None, check_kw=None
+    obs_params, return_beams=None, reorder_blt_kw=None, check_kw=None, force_beam_check=False
 ):
     """
     Construct a :class:`pyuvdata.UVData` object from parameters in a valid yaml file.
@@ -1616,6 +1625,10 @@ def initialize_uvdata_from_params(
         Keyword arguments to send to the ``uvdata.check()`` method at the end of the
         setup process. Typical parameters include `run_check_acceptability` and
         `check_extra`, which are both True by default.
+    force_beam_check : bool
+        The beam consistency check is only possible for object-beams (not string mode).
+        If `force_beam_check` is True, it will convert beams to object-mode to force
+        the check to run (then convert back to string mode).
 
     Returns
     -------
@@ -1662,8 +1675,12 @@ def initialize_uvdata_from_params(
     else:
         freq_range = None
 
-    tele_params, beam_list, beam_dict = parse_telescope_params(tele_dict, config_path=param_dict[
-        'config_path'], freq_range=freq_range)
+    tele_params, beam_list, beam_dict = parse_telescope_params(
+        tele_dict,
+        config_path=param_dict['config_path'],
+        freq_range=freq_range,
+        force_beam_check=force_beam_check
+    )
     uvparam_dict.update(tele_params)
     uvparam_dict["x_orientation"] = beam_list.x_orientation
     logger.info("Finished Setup of BeamList")
@@ -1884,7 +1901,8 @@ def initialize_uvdata_from_keywords(
         start_freq=None, bandwidth=None, freq_array=None, channel_width=None, Ntimes=None,
         integration_time=None, start_time=None, time_array=None, bls=None,
         antenna_nums=None, antenna_names=None, polarization_array=None, no_autos=False,
-        redundant_threshold=None, write_files=True, path_out=None, complete=False, **kwargs):
+        redundant_threshold=None, write_files=True, path_out=None, complete=False,
+        force_beam_check=False, **kwargs):
     """
     Initialize a :class:`pyuvdata.UVData` object from keyword arguments.
 
@@ -1950,6 +1968,10 @@ def initialize_uvdata_from_keywords(
     complete : bool (optional)
         Whether to fill out the :class:`pyuvdata.UVData` object with its requisite
         data arrays, and check if it's all consistent.
+    force_beam_check : bool
+        The beam consistency check is only possible for object-beams (not string mode).
+        If `force_beam_check` is True, it will convert beams to object-mode to force
+        the check to run (then convert back to string mode).
     kwargs : dictionary
         Any additional valid :class:`pyuvdata.UVData` attribute to assign to object.
 
@@ -2074,7 +2096,9 @@ def initialize_uvdata_from_keywords(
 
     param_dict['obs_param_file'] = os.path.basename(output_yaml_filename)
     param_dict['telescope'].update(layout_params)
-    uv_obj = initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv_obj = initialize_uvdata_from_params(
+        param_dict, return_beams=False, force_beam_check=force_beam_check
+    )
 
     if complete:
         _complete_uvdata(uv_obj, inplace=True)

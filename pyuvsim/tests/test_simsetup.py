@@ -479,15 +479,12 @@ def test_param_reader():
         [
             DeprecationWarning,
             UserWarning,
-            UserWarning,
             PendingDeprecationWarning,
             PendingDeprecationWarning
         ],
         match=[
             "The return_beams parameter currently defaults to True, but starting in"
             "version 1.4 it will default to False.",
-            "Cannot check consistency of a string-mode BeamList! Set force=True to "
-            "force consistency checking.",
             "Cannot check consistency of a string-mode BeamList! Set force=True to "
             "force consistency checking.",
             "chromatic gaussian beams will not be supported in the future. Define your "
