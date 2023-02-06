@@ -26,7 +26,7 @@ def heratext_posfreq():
     time = Time('2018-03-01 00:00:00', scale='utc')
     array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
                                    height=1073.)
-    sources, mock_keywords = pyuvsim.create_mock_catalog(
+    sources, _ = pyuvsim.create_mock_catalog(
         time, 'hera_text', array_location=array_location
     )
 

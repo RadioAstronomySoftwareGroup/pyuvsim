@@ -183,7 +183,7 @@ class BeamList:
             If any beam is inconsistent with the rest of the beams.
 
         """
-        if self.string_mode:
+        if self.string_mode and len(self._str_beam_list) > 0:
             if not force:
                 warnings.warn(
                     "Cannot check consistency of a string-mode BeamList! Set force=True"

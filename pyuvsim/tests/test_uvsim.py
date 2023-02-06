@@ -104,7 +104,7 @@ def uvobj_beams_srcs():
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     param_dict['select'] = {'redundant_threshold': 0.1}
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=True
+        param_dict, return_beams=True, force_beam_check=True
     )
     assert uv_obj.future_array_shapes
 
