@@ -127,9 +127,6 @@ def test_mock_diffuse_maps_errors():
             pyuvsim.simsetup.create_mock_catalog(Time.now(), arrangement='diffuse')
 
 
-# This filter can be removed when lunarsky is updated to not trigger this
-# astropy deprecation warning.
-@pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 @pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
 @pytest.mark.parametrize('model', [
                          ['monopole', {}],
@@ -1159,9 +1156,6 @@ def test_mock_catalogs(arrangement, text_cat):
     assert np.all(radec_catalog == cat)
 
 
-# This filter can be removed when lunarsky is updated to not trigger this
-# astropy deprecation warning.
-@pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 def test_saved_mock_catalog():
     time = Time(2458098.27471265, scale='utc', format='jd')
     cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(time, 'random', Nsrcs=100, save=True)
@@ -1175,9 +1169,6 @@ def test_saved_mock_catalog():
     assert np.allclose(alts_reload, np.degrees(alt))
 
 
-# This filter can be removed when lunarsky is updated to not trigger this
-# astropy deprecation warning.
-@pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 @pytest.mark.parametrize('min_alt', [-20, 0, None, 50])
 def test_randsource_minalt(min_alt):
     time = Time(2458098.27471265, scale='utc', format='jd')
@@ -1193,9 +1184,6 @@ def test_randsource_minalt(min_alt):
     assert np.all(alt >= np.radians(min_alt))
 
 
-# This filter can be removed when lunarsky is updated to not trigger this
-# astropy deprecation warning.
-@pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 def test_randsource_distribution():
     # Check that random sources are uniformly distributed per solid angle
 

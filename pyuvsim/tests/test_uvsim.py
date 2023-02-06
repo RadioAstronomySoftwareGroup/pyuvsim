@@ -157,9 +157,6 @@ def uvdata_two_redundant_bls_triangle_sources():
     return uv_obj, beam_list, beam_dict, sources
 
 
-# This filter can be removed when lunarsky is updated to not trigger this
-# astropy deprecation warning.
-@pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 def test_visibility_single_zenith_source(cst_beam, hera_loc):
     """Test single zenith source."""
 
@@ -319,9 +316,6 @@ def test_redundant_baselines(cst_beam, hera_loc):
     assert np.allclose(visibility1, visibility2)
 
 
-# This filter can be removed when lunarsky is updated to not trigger this
-# astropy deprecation warning.
-@pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 @pytest.mark.parametrize('beam', multi_beams)
 def test_single_offzenith_source(beam, hera_loc):
     """Test single off-zenith source."""
