@@ -20,19 +20,19 @@ import warnings
 
 import astropy.units as units
 import numpy as np
-import pyradiosky
 import pyuvdata
 import yaml
 from astropy.coordinates import (ICRS, AltAz, Angle, EarthLocation, Latitude,
-                                 Longitude)
+                                 Longitude, SkyCoord)
+from astropy.time import Time
 from packaging import version  # packaging is installed with setuptools
+from pyradiosky import SkyModel
 from pyuvdata import UVData
 from pyuvdata import utils as uvutils
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 from .analyticbeam import AnalyticBeam
-from .astropy_interface import LunarTopo, MoonLocation, SkyCoord, Time, hasmoon
 from .telescope import BeamList
 
 try:
@@ -52,6 +52,17 @@ except ImportError:
         return 0
 
     mpi = None
+
+try:
+    from lunarsky import LunarTopo, MoonLocation
+    from lunarsky import SkyCoord as LunarSkyCoord
+    from lunarsky import Time as LTime
+
+    hasmoon = True
+except ImportError:
+    hasmoon = False
+
+
 from .utils import check_file_exists_and_increment
 
 logger = logging.getLogger(__name__)
@@ -176,7 +187,7 @@ def _set_lsts_on_uvdata(uv_obj):
             raise ValueError("Cannot construct lsts for MoonLocation without lunarsky module")
         un_jds, inv = np.unique(uv_obj.time_array, return_inverse=True)
         loc = MoonLocation(*uv_obj.telescope_location, unit='m')
-        times = Time(un_jds, format='jd', scale='utc', location=loc)
+        times = LTime(un_jds, format='jd', scale='utc', location=loc)
         uv_obj.lst_array = times.sidereal_time('apparent').rad[inv]
     else:
         raise ValueError(f"Invalid world {world}.")
@@ -184,7 +195,7 @@ def _set_lsts_on_uvdata(uv_obj):
 
 
 def _create_catalog_diffuse(
-    map_nside, diffuse_model, diffuse_params, time, localframe, array_location
+    map_nside, diffuse_model, diffuse_params, time, array_location
 ):
     """
     Make a :class:`pyradiosky.SkyModel` object from an analog diffuse map function.
@@ -222,12 +233,14 @@ def _create_catalog_diffuse(
     npix = 12 * map_nside**2
     pixinds = np.arange(npix)
 
-    if localframe == 'lunartopo':
-        frame = LunarTopo(location=array_location, obstime=time)
-    else:
-        frame = AltAz(location=array_location, obstime=time)
     hpix = astropy_healpix.HEALPix(nside=map_nside, frame=ICRS())
     icrs_coord = hpix.healpix_to_skycoord(pixinds)
+
+    if hasmoon and isinstance(array_location, MoonLocation):
+        localframe = LunarTopo(location=array_location, obstime=time)
+        icrs_coord = LunarSkyCoord(icrs_coord)
+    else:
+        localframe = AltAz(location=array_location, obstime=time)
     # This filter can be removed when lunarsky is updated to not trigger this
     # astropy deprecation warning.
     with warnings.catch_warnings():
@@ -235,7 +248,7 @@ def _create_catalog_diffuse(
             "ignore",
             message="The get_frame_attr_names",
         )
-        source_coord = icrs_coord.transform_to(frame)
+        source_coord = icrs_coord.transform_to(localframe)
 
     alts = source_coord.alt.rad
     azs = source_coord.az.rad
@@ -248,26 +261,18 @@ def _create_catalog_diffuse(
 
     stokes *= units.K
 
-    if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):
-        catalog = pyradiosky.SkyModel(
-            stokes=stokes,
-            nside=map_nside,
-            hpx_inds=pixinds,
-            spectral_type='flat',
-            frame="icrs"
-        )
-    else:
-        catalog = pyradiosky.SkyModel(
-            stokes=stokes,
-            nside=map_nside,
-            hpx_inds=pixinds,
-            spectral_type='flat',
-        )
+    catalog = SkyModel(
+        stokes=stokes,
+        nside=map_nside,
+        hpx_inds=pixinds,
+        spectral_type='flat',
+        frame="icrs"
+    )
 
     return catalog, icrs_coord, alts, azs, fluxes
 
 
-def _create_catalog_discrete(Nsrcs, alts, azs, fluxes, time, localframe, array_location):
+def _create_catalog_discrete(Nsrcs, alts, azs, fluxes, time, array_location):
     """
     Make a :class:`pyradiosky.SkyModel` object from a set of point sources.
 
@@ -278,15 +283,13 @@ def _create_catalog_discrete(Nsrcs, alts, azs, fluxes, time, localframe, array_l
     Nsrcs : int
         Number of sources
     alts :  array_like of float
-        Altitudes or Latitudes (depending on localframe) of the sources in radians.
+        Altitudes or Latitudes (depending on array_location) of the sources in radians.
     azs :  array_like of float
-        Azimuths or Longitues (depending on localframe) of the sources in radians.
+        Azimuths or Longitues (depending on array_location) of the sources in radians.
     fluxes : array_like of float
         Brightnesses of the sources in Jy.
     time : :class:`astropy.time.Time` object
         Time to use in defining the positions.
-    localframe : :class:`astropy.coordinates.BaseCoordinateFrame` class or str
-        Frame that the source positions are defined in (e.g. altaz or ICRS)
     array_location : :class:`astropy.coordinates.EarthLocation` or :class:`lunarsky.MoonLocation`
         Location to use in defining the positions.
 
@@ -298,8 +301,20 @@ def _create_catalog_discrete(Nsrcs, alts, azs, fluxes, time, localframe, array_l
         Astropy SkyCoord object containing the coordinates for the sources in ICRS.
 
     """
-    source_coord = SkyCoord(alt=Angle(alts, unit=units.deg), az=Angle(azs, unit=units.deg),
-                            obstime=time, frame=localframe, location=array_location)
+    if hasmoon and isinstance(array_location, MoonLocation):
+        localframe = LunarTopo
+        coord_class = LunarSkyCoord
+    else:
+        localframe = AltAz
+        coord_class = SkyCoord
+
+    source_coord = coord_class(
+        alt=Angle(alts, unit=units.deg),
+        az=Angle(azs, unit=units.deg),
+        obstime=time,
+        frame=localframe,
+        location=array_location
+    )
     # This filter can be removed when lunarsky is updated to not trigger this
     # astropy deprecation warning.
     with warnings.catch_warnings():
@@ -315,23 +330,12 @@ def _create_catalog_discrete(Nsrcs, alts, azs, fluxes, time, localframe, array_l
 
     stokes *= units.Jy
 
-    if version.parse(pyradiosky.__version__) > version.parse("0.1.2"):
-        catalog = pyradiosky.SkyModel(
-            name=names,
-            ra=icrs_coord.ra,
-            dec=icrs_coord.dec,
-            stokes=stokes,
-            spectral_type='flat',
-            frame="icrs"
-        )
-    else:
-        catalog = pyradiosky.SkyModel(
-            name=names,
-            ra=icrs_coord.ra,
-            dec=icrs_coord.dec,
-            stokes=stokes,
-            spectral_type='flat'
-        )
+    catalog = SkyModel(
+        name=names,
+        skycoord=icrs_coord,
+        stokes=stokes,
+        spectral_type='flat',
+    )
 
     return catalog, icrs_coord
 
@@ -420,10 +424,8 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     }
 
     if isinstance(array_location, MoonLocation):
-        localframe = 'lunartopo'
         mock_keywords['world'] = 'moon'
     else:
-        localframe = 'altaz'
         mock_keywords['world'] = 'earth'
 
     if arrangement == 'off-zenith':
@@ -536,13 +538,13 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
         mock_keywords['diffuse_params'] = repr(diffuse_params)
 
         catalog, icrs_coord, alts, azs, fluxes = _create_catalog_diffuse(
-            map_nside, diffuse_model, diffuse_params, time, localframe, array_location
+            map_nside, diffuse_model, diffuse_params, time, array_location
         )
 
     else:
 
         catalog, icrs_coord = _create_catalog_discrete(
-            Nsrcs, alts, azs, fluxes, time, localframe, array_location
+            Nsrcs, alts, azs, fluxes, time, array_location
         )
 
     if return_data:
@@ -618,23 +620,18 @@ class SkyModelData:
             self.component_type = sky_in.component_type
             self.spectral_type = sky_in.spectral_type
             self.Ncomponents = sky_in.Ncomponents
-            if hasattr(sky_in, "get_lon_lat"):
-                if sky_in.frame != "icrs":
-                    # This filter can be removed when lunarsky is updated to not
-                    # trigger this astropy deprecation warning.
-                    with warnings.catch_warnings():
-                        warnings.filterwarnings(
-                            "ignore",
-                            message="The get_frame_attr_names",
-                        )
-                        sky_in.transform_to(ICRS)
-                sky_ra, sky_dec = sky_in.get_lon_lat()
-                self.ra = sky_ra.deg
-                self.dec = sky_dec.deg
-            else:
-                # backwards compatibility for pyradiosky < 0.1.3
-                self.ra = sky_in.ra.deg
-                self.dec = sky_in.dec.deg
+            if sky_in.frame != "icrs":
+                # This filter can be removed when lunarsky is updated to not
+                # trigger this astropy deprecation warning.
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        message="The get_frame_attr_names",
+                    )
+                    sky_in.transform_to(ICRS)
+            sky_ra, sky_dec = sky_in.get_lon_lat()
+            self.ra = sky_ra.deg
+            self.dec = sky_dec.deg
             self.Nfreqs = sky_in.Nfreqs
             stokes_in = sky_in.stokes
 
@@ -669,7 +666,7 @@ class SkyModelData:
             else:
                 filename_use = filename
             self.filename = filename_use
-        elif hasattr(sky_in, "filename"):
+        elif sky_in is not None and sky_in.filename is not None:
             self.filename = sky_in.filename
 
     def subselect(self, inds):
@@ -778,8 +775,6 @@ class SkyModelData:
             obj = self.subselect(inds)
             return obj.get_skymodel()
 
-        ra_use = Longitude(self.ra, unit='deg')
-        dec_use = Latitude(self.dec, unit='deg')
         stokes_use = np.zeros((4, self.Nfreqs, self.Ncomponents), dtype=float)
 
         stokes_use[0, ...] = self.stokes_I
@@ -801,18 +796,17 @@ class SkyModelData:
         if self.component_type == 'healpix':
             other['nside'] = self.nside
             other['hpx_inds'] = self.hpx_inds
+            other['frame'] = "icrs"
         else:
             other['name'] = self.name
+            other['skycoord'] = SkyCoord(
+                ra=Longitude(self.ra, unit='deg'),
+                dec=Latitude(self.dec, unit='deg'),
+                frame="icrs"
+            )
+        other["filename"] = self.filename
 
-        empty_sky = pyradiosky.SkyModel()
-        if hasattr(empty_sky, "filename"):
-            # this only works for pyradiosky >= 0.1.3
-            other["filename"] = self.filename
-
-        return pyradiosky.SkyModel(
-            ra=ra_use, dec=dec_use, stokes=stokes_use,
-            spectral_type=self.spectral_type, **other
-        )
+        return SkyModel(stokes=stokes_use, spectral_type=self.spectral_type, **other)
 
 
 def _sky_select_calc_rise_set(sky, source_params, telescope_lat_deg=None):
@@ -827,127 +821,22 @@ def _sky_select_calc_rise_set(sky, source_params, telescope_lat_deg=None):
         Latitude of telescope in degrees, used for horizon calculations.
 
     """
-    if hasattr(sky, "cut_nonrising"):
+    if telescope_lat_deg is not None:
+        telescope_lat = Latitude(telescope_lat_deg * units.deg)
+        sky.cut_nonrising(telescope_lat)
+        calc_kwargs = {}
+        if "horizon_buffer" in source_params:
+            calc_kwargs["horizon_buffer"] = float(source_params["horizon_buffer"])
+        sky.calculate_rise_set_lsts(telescope_lat, **calc_kwargs)
 
-        if telescope_lat_deg is not None:
-            telescope_lat = Latitude(telescope_lat_deg * units.deg)
-            sky.cut_nonrising(telescope_lat)
-            calc_kwargs = {}
-            if "horizon_buffer" in source_params:
-                calc_kwargs["horizon_buffer"] = float(source_params["horizon_buffer"])
-            sky.calculate_rise_set_lsts(telescope_lat, **calc_kwargs)
+    min_brightness = None
+    if "min_flux" in source_params:
+        min_brightness = float(source_params["min_flux"]) * units.Jy
+    max_brightness = None
+    if "max_flux" in source_params:
+        max_brightness = float(source_params["max_flux"]) * units.Jy
 
-        min_brightness = None
-        if "min_flux" in source_params:
-            min_brightness = float(source_params["min_flux"]) * units.Jy
-        max_brightness = None
-        if "max_flux" in source_params:
-            max_brightness = float(source_params["max_flux"]) * units.Jy
-
-        sky.select(min_brightness=min_brightness, max_brightness=max_brightness)
-
-    else:
-        # backwards compatibility for pyradiosky < 0.1.3
-
-        # Parse source selection options
-        select_options = ['min_flux', 'max_flux', 'horizon_buffer']
-
-        # Put catalog selection cuts in source section.
-        source_select_kwds = {}
-        for key in select_options:
-            if key in source_params:
-                source_select_kwds[key] = float(source_params[key])
-        if telescope_lat_deg is not None:
-            source_select_kwds['latitude_deg'] = telescope_lat_deg
-
-        sky.source_cuts(**source_select_kwds)
-
-    return sky
-
-
-def _read_pyradiosky_file(filename, source_params, filetype=None):
-    """
-    Read in a pyradiosky catalog file.
-
-    Parameters
-    ----------
-    filename : str
-        File to read in.
-    source_params : dict
-        Dictionary specifying options to pyradiosky read methods.
-    filetype : str
-        One of ['skyh5', 'gleam', 'vot', 'text', 'hdf5'] or None.
-        If None, the code attempts to guess what the file type is.
-
-    Returns:
-    --------
-    :class:`pyradiosky.SkyModel`
-        SkyModel object based on filename
-
-    """
-    sky = pyradiosky.SkyModel()
-
-    allowed_filetypes = ['skyh5', 'gleam', 'vot', 'text', 'hdf5']
-    if filetype is not None:
-        if filetype not in allowed_filetypes:
-            raise ValueError(f"Invalid filetype. Filetype options are: {allowed_filetypes}")
-    else:
-        if filename.endswith("txt"):
-            filetype = "text"
-        elif filename.endswith('vot'):
-            if "gleam" in filename.lower():
-                filetype = "gleam"
-            else:
-                filetype = "vot"
-        elif filename.endswith("skyh5"):
-            filetype = "skyh5"
-        elif filename.endswith("hdf5"):
-            filetype = "hdf5"
-
-    if filetype == "text":
-        sky.read_text_catalog(filename)
-    elif filetype == "gleam":
-        if "spectral_type" in source_params:
-            spectral_type = source_params["spectral_type"]
-        else:
-            warnings.warn("No spectral_type specified for GLEAM, using 'flat'.")
-            spectral_type = "flat"
-        sky.read_gleam_catalog(
-            filename, spectral_type=spectral_type
-        )
-    elif filetype == "vot":
-        vo_params = {}
-        required_params = ["table_name", "id_column", "flux_columns"]
-        warn_params = {"ra_column": "RAJ2000", "dec_column": "DEJ2000"}
-        for param in required_params:
-            if param not in source_params:
-                raise ValueError(f"No {param} specified for {filename}.")
-            vo_params[param] = source_params[param]
-        for param, default in warn_params.items():
-            if param not in source_params:
-                warnings.warn(
-                    f"No {param} specified for {filename}, using default: {default}."
-                )
-                vo_params[param] = default
-            else:
-                vo_params[param] = source_params[param]
-
-        vo_params["reference_frequency"] = None
-        sky.read_votable_catalog(filename, **vo_params)
-    elif filetype == "skyh5":
-        sky.read_skyh5(filename)
-    elif filetype == "hdf5":
-        # In principal, this could either be a skyh5 or an old-style healvis hdf5 file
-        # Try skyh5 first, if that doesn't work, use the old method
-        try:
-            sky.read_skyh5(filename)
-        except ValueError:
-            sky.read_healpix_hdf5(filename)
-    else:
-        raise ValueError(
-            "The file extension is not recognized as a valid one for SkyModel objects. "
-            "Expected extensions include: '.txt', '.vot', '.skyh5' and '.hdf5'."
-        )
+    sky.select(min_brightness=min_brightness, max_brightness=max_brightness)
 
     return sky
 
@@ -1050,12 +939,70 @@ def initialize_catalog_from_params(
         if not os.path.isfile(catalog):
             catalog = os.path.join(param_dict['config_path'], catalog)
 
-        if filetype is None:
-            if "filetype" in source_params:
-                filetype = source_params["filetype"]
+        allowed_read_params = [
+            "spectral_type",
+            "table_name",
+            "id_column",
+            "ra_column",
+            "dec_column",
+            "lon_column",
+            "lat_column",
+            "frame",
+            "flux_columns",
+            "reference_frequency",
+            "freq_array",
+            "spectral_index_column",
+        ]
+        read_params = {}
+        if filetype is not None:
+            read_params["filetype"] = filetype
+        elif "filetype" in source_params:
+            read_params["filetype"] = source_params["filetype"]
+
+        for param, value in source_params.items():
+            if param in allowed_read_params:
+                read_params[param] = value
+
+        detect_gleam = filetype == "gleam" or (
+            os.path.splitext(catalog)[1] == ".vot" and "gleam" in catalog.casefold()
+        )
+
+        if detect_gleam and "spectral_type" not in source_params.keys():
+            warnings.warn(
+                "No spectral_type specified for GLEAM, using 'flat'. In version 1.4 "
+                "this default will change to 'subband' to match pyradiosky's default.",
+                DeprecationWarning,
+            )
+            read_params["spectral_type"] = "flat"
 
         source_list_name = os.path.basename(catalog)
-        sky = _read_pyradiosky_file(catalog, source_params, filetype=filetype)
+        try:
+            sky = SkyModel.from_file(catalog, **read_params)
+        except ValueError:
+            if os.path.splitext(catalog)[1] == ".hdf5":
+                # In principal, this could either be a skyh5 or an old-style healvis hdf5 file
+                # Try skyh5 first, if that doesn't work, use the old method
+                try:
+                    read_params["filetype"] = "skyh5"
+                    sky = SkyModel.from_file(catalog, **read_params)
+                    warnings.warn(
+                        "This file was not detected as a skyh5 file by pyradiosky. "
+                        "Starting in version 1.4 this will generate an error, either "
+                        "rename the file extension to 'skyh5' or specify the catalog "
+                        "filetype in the parameter file.",
+                        DeprecationWarning,
+                    )
+                except ValueError:
+                    sky = SkyModel()
+                    sky.read_healpix_hdf5(catalog)
+                    warnings.warn(
+                        "Support for this catalog filetype will be removed when we "
+                        "require pyradiosky 0.3. Re-write it as a skyh5 file using "
+                        "pyradiosky to ensure future compatibilty.",
+                        DeprecationWarning,
+                    )
+            else:
+                raise
 
     if input_uv is not None:
         telescope_lat_deg = input_uv.telescope_location_lat_lon_alt_degrees[0]

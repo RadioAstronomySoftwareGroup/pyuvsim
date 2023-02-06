@@ -241,7 +241,7 @@ Sources
 ^^^^^^^
     Specify the path to a catalog file via ``catalog``. The path can be given as an
     absolute path or relative to the location of the obsparam. This catalog can be any
-    file type that is readable with `pyradiosky`.
+    file type that is readable with ``pyradiosky``.
 
     An example text catalog file:
 
@@ -250,10 +250,14 @@ Sources
 
     The columns are:
 
-        * ``SOURCE_ID`` : Identifier for the source
-        * ``RA_J2000`` : Right ascension of source at J2000 epoch, in decimal degrees.
-        * ``DEC_J2000`` : Declination of source at J2000 epoch, in decimal degrees.
-        * ``FLUX``: Source stokes I brightness in Janskies.  (Currently only point sources are supported).
+        * ``source_id`` : Identifier for the source
+        * ``ra_icrs`` : Right ascension of source in decimal degrees in the ICRS frame.
+          Other frames are supported, e.g. ``ra_J2000`` would yield an FK5 frame at the J2000 epoch.
+          See ``pyradiosky`` docs for more details on frame specification.
+        * ``dec_icrs`` : Declination of source  in decimal degrees in the ICRS frame.
+          Other frames are supported, e.g. ``dec_J2000`` would yield an FK5 frame at the J2000 epoch.
+          See ``pyradiosky`` docs for more details on frame specification.
+        * ``Flux``: Source stokes I brightness in Janskies.  (Currently only point sources are supported).
         * ``Frequency``: A reference frequency for the given flux. This will be used for spectral modeling.
 
     If the catalog is a GLEAM VO table file, optionally specify the ``spectral_type``
@@ -266,8 +270,9 @@ Sources
       * ``id_column`` : The name of the column to use for the source IDs (required).
       * ``flux_columns`` : One or a list of columns to use for the source fluxes
         (a list for fluxes at multiple frequencies) (required).
-      * ``ra_column`` : The name of the column to use for the source RAs (recommended, defaults to ``RAJ2000``).
-      * ``dec_column`` : The name of the column to use for the source Decs (recommended, defaults to ``DEJ2000``).
+      * ``lon_column`` : The name of the column to use for the source longitudes (required, ``ra_column`` is a deprecated synonym)
+      * ``lat_column`` : The name of the column to use for the source latitudes (required, ``ra_column`` is a deprecated synonym).
+      * ``frame`` : The name of the ``astropy`` frame to use.
 
     Optionally specify the ``filetype`` as one of ['skyh5', 'gleam', 'vot', 'text', 'hdf5'].
     If this is not specified, the code attempts to guess what file type it is.

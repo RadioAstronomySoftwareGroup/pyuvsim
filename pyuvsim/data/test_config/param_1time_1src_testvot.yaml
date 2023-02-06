@@ -9,8 +9,9 @@ sources:
   catalog: '../single_source.vot'
   table_name: single
   id_column: source_id
-  ra_column: RAJ2000
-  dec_column: DEJ2000
+  lon_column: RAJ2000
+  lat_column: DEJ2000
+  frame: icrs
   flux_columns: Si
 telescope:
   array_layout: 'triangle_bl_layout.csv'

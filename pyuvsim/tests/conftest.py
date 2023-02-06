@@ -20,7 +20,12 @@ from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
 
 from pyuvsim import mpi
-from pyuvsim.astropy_interface import MoonLocation, hasmoon
+
+try:
+    from lunarsky import MoonLocation
+    hasmoon = True
+except ImportError:
+    hasmoon = False
 
 issubproc = os.environ.get('TEST_IN_PARALLEL', 0)
 try:

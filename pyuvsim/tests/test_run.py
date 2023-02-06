@@ -14,13 +14,13 @@ import pyuvdata
 import pyuvdata.utils as uvutils
 import yaml
 from astropy import units
+from astropy.time import Time
 from packaging import version  # packaging is installed with setuptools
 from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
 from pyuvdata import UVData
 
 import pyuvsim
 from pyuvsim.analyticbeam import c_ms
-from pyuvsim.astropy_interface import Time
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.telescope import BeamList
 
@@ -313,10 +313,10 @@ def test_input_uv_error():
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:This method will be removed in version 3.0")
-@pytest.mark.skipif('not pyuvsim.astropy_interface.hasmoon')
 @pytest.mark.parametrize("future_shapes", [True, False])
 def test_sim_on_moon(future_shapes):
-    from pyuvsim.astropy_interface import MoonLocation
+    pytest.importorskip("lunarsky")
+    from lunarsky import MoonLocation
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_tranquility_hex.yaml')
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     param_dict['select'] = {'redundant_threshold': 0.1}

@@ -16,8 +16,17 @@ import numpy as np
 import yaml
 from astropy.constants import c as speed_of_light
 from astropy.coordinates import EarthLocation
+from astropy.time import Time
 from astropy.units import Quantity
 from pyuvdata import UVData
+
+try:
+    from lunarsky import MoonLocation
+    from lunarsky import Time as LTime
+
+    hasmoon = True
+except ImportError:
+    hasmoon = False
 
 try:
     from . import mpi
@@ -26,7 +35,6 @@ except ImportError:  # pragma: no cover
 from . import simsetup
 from . import utils as simutils
 from .antenna import Antenna
-from .astropy_interface import MoonLocation, Time, hasmoon
 from .baseline import Baseline
 from .simsetup import SkyModelData
 from .telescope import Telescope
@@ -546,7 +554,14 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         raise ValueError("If world keyword is set, it must be either 'moon' or 'earth'.")
     telescope = Telescope(input_uv.telescope_name, location, beam_list)
     freq_array = input_uv.freq_array * units.Hz
-    time_array = Time(input_uv.time_array, scale='utc', format='jd', location=telescope.location)
+    if hasmoon and isinstance(location, MoonLocation):
+        time_array = LTime(
+            input_uv.time_array, scale='utc', format='jd', location=telescope.location
+        )
+    else:
+        time_array = Time(
+            input_uv.time_array, scale='utc', format='jd', location=telescope.location
+        )
     for src_i in src_iter:
         sky = catalog.get_skymodel(src_i)
         if (

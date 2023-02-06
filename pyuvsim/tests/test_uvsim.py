@@ -17,12 +17,19 @@ import pyuvdata.utils as uvutils
 from astropy import units
 from astropy.coordinates import (Angle, EarthLocation, Latitude, Longitude,
                                  SkyCoord)
+from astropy.time import Time
 from packaging import version  # packaging is installed with setuptools
 from pyuvdata import UVBeam, UVData
 
+try:
+    import lunarsky  # noqa
+
+    hasmoon = True
+except ImportError:
+    hasmoon = False
+
 import pyuvsim
 import pyuvsim.utils as simutils
-from pyuvsim.astropy_interface import Time
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.uvsim import _set_nsky_parts
 
@@ -244,8 +251,12 @@ def test_visibility_source_below_horizon_radec(cst_beam, hera_loc):
     source_coord = SkyCoord(ra=Angle('13h20m'), dec=Angle('-30d43m17.5s'),
                             obstime=time, frame='icrs', location=array_location)
 
-    source = pyradiosky.SkyModel('src_down', source_coord.ra, source_coord.dec,
-                                 np.array([1.0, 0, 0, 0]).reshape(4, 1) * units.Jy, 'flat')
+    source = pyradiosky.SkyModel(
+        name='src_down',
+        skycoord=source_coord,
+        stokes=np.array([1.0, 0, 0, 0]).reshape(4, 1) * units.Jy,
+        spectral_type='flat'
+    )
 
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
     antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
@@ -1005,7 +1016,8 @@ def test_fullfreq_check(uvobj_beams_srcs):
         dec=dec,
         stokes=stokes,
         spectral_type='full',
-        freq_array=freqs0
+        freq_array=freqs0,
+        frame="icrs",
     )
 
     sky1 = pyradiosky.SkyModel(
@@ -1014,7 +1026,8 @@ def test_fullfreq_check(uvobj_beams_srcs):
         dec=dec,
         stokes=stokes,
         spectral_type='full',
-        freq_array=freqs1
+        freq_array=freqs1,
+        frame="icrs",
     )
 
     Ntasks = uv_obj.Nblts * uv_obj.Nfreqs
@@ -1035,7 +1048,7 @@ def test_fullfreq_check(uvobj_beams_srcs):
     next(taskiter1)
 
 
-@pytest.mark.skipif('pyuvsim.astropy_interface.hasmoon')
+@pytest.mark.skipif('hasmoon')
 def test_moonloc_error(uvobj_beams_srcs):
     # Break if the uvobj indicates that the sim is on the Moon, but lunarsky is not available.
 
