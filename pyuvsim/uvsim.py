@@ -321,18 +321,11 @@ class UVEngine:
         sources = self.task.sources
         baseline = self.task.baseline
 
-        # This filter can be removed when lunarsky is updated to not trigger this
-        # astropy deprecation warning.
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="The get_frame_attr_names",
-            )
-            if sources.alt_az is None:
-                sources.update_positions(self.task.time, self.task.telescope.location)
+        if sources.alt_az is None:
+            sources.update_positions(self.task.time, self.task.telescope.location)
 
-            if self.update_local_coherency:
-                self.local_coherency = sources.coherency_calc()
+        if self.update_local_coherency:
+            self.local_coherency = sources.coherency_calc()
 
         self.beam1_jones = baseline.antenna1.get_beam_jones(
             self.task.telescope,

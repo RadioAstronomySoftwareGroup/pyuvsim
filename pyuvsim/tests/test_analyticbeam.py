@@ -3,7 +3,6 @@
 # Licensed under the 3-clause BSD License
 
 import os
-import warnings
 
 import numpy as np
 import pytest
@@ -31,14 +30,7 @@ def heratext_posfreq():
         time, 'hera_text', array_location=array_location
     )
 
-    # This filter can be removed when lunarsky is updated to not trigger this
-    # astropy deprecation warning.
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="The get_frame_attr_names",
-        )
-        sources.update_positions(time, array_location)
+    sources.update_positions(time, array_location)
     za_vals = np.pi / 2. - sources.alt_az[1]  # rad
     az_vals = sources.alt_az[1]
 
@@ -175,9 +167,6 @@ def test_achromatic_gaussian_beam(heratext_posfreq):
     assert np.allclose(interpolated_beam, expected_data)
 
 
-# This filter can be removed when lunarsky is updated to not trigger this
-# astropy deprecation warning.
-@pytest.mark.filterwarnings("ignore:The get_frame_attr_names")
 @pytest.mark.filterwarnings("ignore:UVW orientation appears to be flipped")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_gaussbeam_values():

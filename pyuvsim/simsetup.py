@@ -241,14 +241,7 @@ def _create_catalog_diffuse(
         icrs_coord = LunarSkyCoord(icrs_coord)
     else:
         localframe = AltAz(location=array_location, obstime=time)
-    # This filter can be removed when lunarsky is updated to not trigger this
-    # astropy deprecation warning.
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="The get_frame_attr_names",
-        )
-        source_coord = icrs_coord.transform_to(localframe)
+    source_coord = icrs_coord.transform_to(localframe)
 
     alts = source_coord.alt.rad
     azs = source_coord.az.rad
@@ -315,14 +308,7 @@ def _create_catalog_discrete(Nsrcs, alts, azs, fluxes, time, array_location):
         frame=localframe,
         location=array_location
     )
-    # This filter can be removed when lunarsky is updated to not trigger this
-    # astropy deprecation warning.
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="The get_frame_attr_names",
-        )
-        icrs_coord = source_coord.transform_to('icrs')
+    icrs_coord = source_coord.transform_to('icrs')
 
     names = np.array(['src' + str(si) for si in range(Nsrcs)])
     stokes = np.zeros((4, 1, Nsrcs))
@@ -621,14 +607,7 @@ class SkyModelData:
             self.spectral_type = sky_in.spectral_type
             self.Ncomponents = sky_in.Ncomponents
             if sky_in.frame != "icrs":
-                # This filter can be removed when lunarsky is updated to not
-                # trigger this astropy deprecation warning.
-                with warnings.catch_warnings():
-                    warnings.filterwarnings(
-                        "ignore",
-                        message="The get_frame_attr_names",
-                    )
-                    sky_in.transform_to(ICRS)
+                sky_in.transform_to(ICRS)
             sky_ra, sky_dec = sky_in.get_lon_lat()
             self.ra = sky_ra.deg
             self.dec = sky_dec.deg
