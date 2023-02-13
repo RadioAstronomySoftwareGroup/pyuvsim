@@ -1783,6 +1783,12 @@ def initialize_uvdata_from_params(
 
     uv_obj = UVData()
     uv_obj._set_future_array_shapes()
+
+    #Quick lunar fix
+    uv_obj._telescope_location.frame = uvparam_dict.pop('telescope_frame')
+    if uv_obj._telescope_location.frame == 'mcmf':
+    	uv_obj._telescope_location.acceptable_range = (1.71e6, 1.75e6)
+
     # use the __iter__ function on UVData to get list of UVParameters on UVData
     valid_param_names = [getattr(uv_obj, param).name for param in uv_obj]
     for k in valid_param_names:
