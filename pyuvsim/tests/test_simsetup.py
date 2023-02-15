@@ -1414,7 +1414,7 @@ def test_beamlist_init_freqrange():
 
     # How the beam attributes should turn out for this file:
     assert isinstance(beam_list[0], UVBeam)
-    assert len(beam_list[0].freq_array[0]) == 2
+    assert len(beam_list[0].freq_array) == 2
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
