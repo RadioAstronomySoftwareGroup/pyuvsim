@@ -13,7 +13,7 @@
 - `reorder_kw` option to `initialize_uvdata_from_params` function.
 - `check_kw` option to `initialize_uvdata_from_params` function.
 - `select:` parameter to obsparam file definition for `telescope:`.
-- 
+-
 ## [1.2.4] - 2022-06-01
 
 ### Added
