@@ -51,7 +51,7 @@ setup_args = {
         'astropy>=5.0.4',
         'numpy>=1.15',
         'psutil',
-        'pyradiosky>=0.1.2<0.2',
+        'pyradiosky>=0.1.2,<0.2',
         'pyuvdata>=2.2.10',
         'pyyaml',
         'scipy',
