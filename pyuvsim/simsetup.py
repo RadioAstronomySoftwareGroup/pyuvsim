@@ -1815,10 +1815,6 @@ def initialize_uvdata_from_params(
     logger.info(f"Integration Time: {uv_obj.integration_time.nbytes / 1024**3:.2f} GB")
     logger.info(f"       Ant1Array: {uv_obj.ant_1_array.nbytes / 1024**3:.2f} GB")
 
-    _set_lsts_on_uvdata(uv_obj)
-    logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
-    logger.info("Set LSTs")
-
     uv_obj.set_uvws_from_antenna_positions()
     logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
     logger.info("Set UVWs")
@@ -1841,6 +1837,38 @@ def initialize_uvdata_from_params(
             * (24. * 60 ** 2)  # Seconds
         )
 
+    subselect(uv_obj, param_dict)
+    logger.info("After Select")
+
+    # we construct uvdata objects in (time, ant1) order
+    # but the simulator will force (time, baseline) later
+    # so order this now so we don't get any warnings.
+    if reorder_kw is None:
+        reorder_kw = {'order': 'time', 'minor_order': 'baseline'}
+
+    if reorder_kw and reorder_kw != {
+        'order': uv_obj.blt_order[0],
+        'minor_order': uv_obj.blt_order[1]
+    }:
+        uv_obj.reorder_blts(**reorder_kw)
+
+    logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
+    logger.info("After Re-order BLTS")
+
+    if check_kw is None:
+        check_kw = {}
+    uv_obj.check(**check_kw)
+
+    logger.info("After Check")
+    logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
+    if return_beams:
+        return uv_obj, beam_list, beam_dict
+    else:
+        return uv_obj
+
+
+def subselect(uv_obj, param_dict):
+    """Make sub-selection on a UVData object."""
     # select on object
     valid_select_keys = [
         'antenna_nums', 'antenna_names', 'ant_str', 'bls',
@@ -1871,34 +1899,6 @@ def initialize_uvdata_from_params(
 
         if redundant_threshold is not None:
             uv_obj.compress_by_redundancy(tol=redundant_threshold)
-
-    logger.info("After Select")
-
-    # we construct uvdata objects in (time, ant1) order
-    # but the simulator will force (time, baseline) later
-    # so order this now so we don't get any warnings.
-    if reorder_kw is None:
-        reorder_kw = {'order': 'time', 'minor_order': 'baseline'}
-
-    if reorder_kw and reorder_kw != {
-        'order': uv_obj.blt_order[0],
-        'minor_order': uv_obj.blt_order[1]
-    }:
-        uv_obj.reorder_blts(**reorder_kw)
-
-    logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
-    logger.info("After Re-order BLTS")
-
-    if check_kw is None:
-        check_kw = {}
-    uv_obj.check(**check_kw)
-
-    logger.info("After Check")
-    logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
-    if return_beams:
-        return uv_obj, beam_list, beam_dict
-    else:
-        return uv_obj
 
 
 def _complete_uvdata(uv_in, inplace=False, check_kw=None):
