@@ -3,10 +3,10 @@
 ## [Unreleased]
 
 ### Changed
-- Use future array shapes on UVBeam objects.
-- Require pyuvdata >= 2.2.10
 - Initial ordering of blt axis in `initialize_uvdata_from_params`
   (unchanged output by default).
+- Use future array shapes on UVBeam objects.
+- Require pyuvdata >= 2.2.10
 
 
 ### Added

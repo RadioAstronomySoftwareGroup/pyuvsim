@@ -1626,8 +1626,42 @@ def time_array_to_params(time_array):
     return tdict
 
 
+def subselect(uv_obj, param_dict):
+    """Make sub-selection on a UVData object."""
+    # select on object
+    valid_select_keys = [
+        'antenna_nums', 'antenna_names', 'ant_str', 'bls',
+        'frequencies', 'freq_chans', 'times', 'blt_inds'
+    ]
+
+    # downselect baselines (or anything that can be passed to pyuvdata's select method)
+    # Note: polarization selection is allowed here, but will cause an error if the incorrect pols
+    # are passed to pyuvsim.
+    if 'select' in param_dict:
+        select_params = param_dict['select']
+        no_autos = bool(select_params.pop('no_autos', False))
+        select_params = {k: v for k, v in select_params.items() if k in valid_select_keys}
+        if 'antenna_nums' in select_params:
+            select_params['antenna_nums'] = list(map(int, select_params['antenna_nums']))
+        redundant_threshold = param_dict['select'].get('redundant_threshold', None)
+        if 'bls' in select_params:
+            bls = select_params['bls']
+            if isinstance(bls, str):
+                # If read from file, this should be a string.
+                bls = ast.literal_eval(bls)
+                select_params['bls'] = bls
+        if len(select_params) > 0:
+            uv_obj.select(**select_params)
+
+        if no_autos:
+            uv_obj.select(ant_str='cross')
+
+        if redundant_threshold is not None:
+            uv_obj.compress_by_redundancy(tol=redundant_threshold)
+
+
 def initialize_uvdata_from_params(
-    obs_params, return_beams=None, reorder_kw=None, check_kw=None
+    obs_params, return_beams=None, reorder_blt_kw=None, check_kw=None
 ):
     """
     Construct a :class:`pyuvdata.UVData` object from parameters in a valid yaml file.
@@ -1648,7 +1682,7 @@ def initialize_uvdata_from_params(
     return_beams : bool
         Option to return the beam_list and beam_dict. Currently defaults to True, but
         will default to False starting in version 1.4.
-    reorder_kw : dict (optional)
+    reorder_blt_kw : dict (optional)
         Keyword arguments to send to the ``uvdata.reorder_blts`` method at the end of
         the setup process. Typical parameters include "order" and "minor_order". Default
         values are ``order='time'`` and ``minor_order='baseline'``.
@@ -1843,14 +1877,14 @@ def initialize_uvdata_from_params(
     # we construct uvdata objects in (time, ant1) order
     # but the simulator will force (time, baseline) later
     # so order this now so we don't get any warnings.
-    if reorder_kw is None:
-        reorder_kw = {'order': 'time', 'minor_order': 'baseline'}
+    if reorder_blt_kw is None:
+        reorder_blt_kw = {'order': 'time', 'minor_order': 'baseline'}
 
-    if reorder_kw and reorder_kw != {
+    if reorder_blt_kw and reorder_blt_kw != {
         'order': uv_obj.blt_order[0],
         'minor_order': uv_obj.blt_order[1]
     }:
-        uv_obj.reorder_blts(**reorder_kw)
+        uv_obj.reorder_blts(**reorder_blt_kw)
 
     logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
     logger.info("After Re-order BLTS")
@@ -1867,40 +1901,6 @@ def initialize_uvdata_from_params(
         return uv_obj
 
 
-def subselect(uv_obj, param_dict):
-    """Make sub-selection on a UVData object."""
-    # select on object
-    valid_select_keys = [
-        'antenna_nums', 'antenna_names', 'ant_str', 'bls',
-        'frequencies', 'freq_chans', 'times', 'blt_inds'
-    ]
-
-    # downselect baselines (or anything that can be passed to pyuvdata's select method)
-    # Note: polarization selection is allowed here, but will cause an error if the incorrect pols
-    # are passed to pyuvsim.
-    if 'select' in param_dict:
-        select_params = param_dict['select']
-        no_autos = bool(select_params.pop('no_autos', False))
-        select_params = {k: v for k, v in select_params.items() if k in valid_select_keys}
-        if 'antenna_nums' in select_params:
-            select_params['antenna_nums'] = list(map(int, select_params['antenna_nums']))
-        redundant_threshold = param_dict['select'].get('redundant_threshold', None)
-        if 'bls' in select_params:
-            bls = select_params['bls']
-            if isinstance(bls, str):
-                # If read from file, this should be a string.
-                bls = ast.literal_eval(bls)
-                select_params['bls'] = bls
-        if len(select_params) > 0:
-            uv_obj.select(**select_params)
-
-        if no_autos:
-            uv_obj.select(ant_str='cross')
-
-        if redundant_threshold is not None:
-            uv_obj.compress_by_redundancy(tol=redundant_threshold)
-
-
 def _complete_uvdata(uv_in, inplace=False, check_kw=None):
     """
     Fill out all required parameters of a :class:`pyuvdata.UVData` object.
@@ -1914,6 +1914,10 @@ def _complete_uvdata(uv_in, inplace=False, check_kw=None):
         Usually an incomplete object, containing only metadata.
     inplace : bool, optional
         Whether to perform the filling on the passed object, or a copy.
+    check_kw : dict, optional
+        A dict of kwargs to pass to :func:`pyuvdata.UVData.check()`. If not provided,
+        will be an empty dict (i.e. default checks are run). If set to False, no checks
+        will be run at all.
 
     Returns
     -------
