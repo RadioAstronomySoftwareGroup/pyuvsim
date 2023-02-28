@@ -548,13 +548,12 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     telescope = Telescope(input_uv.telescope_name, location, beam_list)
     freq_array = input_uv.freq_array * units.Hz
     if hasmoon and isinstance(location, MoonLocation):
-        time_array = LTime(
-            input_uv.time_array, scale='utc', format='jd', location=telescope.location
-        )
+        tclass = LTime
     else:
-        time_array = Time(
-            input_uv.time_array, scale='utc', format='jd', location=telescope.location
-        )
+        tclass = Time
+    time_array = tclass(
+        input_uv.time_array, scale='utc', format='jd', location=telescope.location
+    )
     for src_i in src_iter:
         sky = catalog.get_skymodel(src_i)
         if (
