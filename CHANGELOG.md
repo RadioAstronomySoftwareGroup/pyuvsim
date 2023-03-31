@@ -8,6 +8,9 @@
 - Use future array shapes on UVBeam objects.
 - Require pyuvdata >= 2.2.10
 
+### Fixed
+- A major bug introduced between v1.2.1 and v1.2.2 that caused errors in simulations
+when the source list was large enough that it needed to be split among processing units.
 
 ### Added
 - `reorder_kw` option to `initialize_uvdata_from_params` function.
