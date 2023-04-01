@@ -6,9 +6,12 @@ dependencies:
   - astropy==5.0.4
   - astropy-healpix==0.6
   - coverage
+  # specify this version of h5py (the min supported by pyuvdata) to avoid an h5py package issue
+  - h5py==3.1.*
   - line_profiler
   - mpi4py==3.0.*
-  - numpy==1.19.*
+  # specify 1.20 instead of 1.19 because apparently the pyuvdata 2.2.10 package requires >= 1.20
+  - numpy==1.20.*
   - pip
   - psutil
   - python-casacore==3.3.1
