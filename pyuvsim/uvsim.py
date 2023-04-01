@@ -636,7 +636,7 @@ def _set_nsky_parts(Nsrcs, cat_nfreqs, Nsky_parts):
     elif Nsky_parts < Nsky_parts_calc:
         raise ValueError(
             "Nsky_parts is too small, it will lead to out of memory errors. It "
-            "needs to be at least {Nsky_parts_calc}. "
+            f"needs to be at least {Nsky_parts_calc}. "
         )
     return Nsky_parts
 

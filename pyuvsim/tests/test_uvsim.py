@@ -24,6 +24,7 @@ import pyuvsim
 import pyuvsim.utils as simutils
 from pyuvsim.astropy_interface import Time
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+from pyuvsim.uvsim import _set_nsky_parts
 
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 EW_uvfits_10time10chan = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfits')
@@ -669,6 +670,60 @@ def test_nsky_parts_large():
     )
 
     assert out_uv_single_nsky == out_uv_multi_nsky
+
+
+def test_set_nsky_parts_errors():
+    pytest.importorskip('mpi4py')
+    from pyuvsim import mpi
+    mpi.start_mpi(block_nonroot_stdout=False)
+
+    # Spoof environmental parameters.
+    # Choose an absurdly large number of tasks per node and very small available memory
+    # to get a large Nsky_parts_calc
+    # The alternative would be to make a very large source catalog, but that's not ideal in a test.
+    Npus_node = 2000
+    pyuvsim.mpi.Npus_node = Npus_node  # Absurdly large
+    os.environ['SLURM_MEM_PER_NODE'] = str(1000.)  # Only 10MB of memory
+
+    Nsrcs = 1e9
+    cat_nfreqs = 1e3
+
+    mem_avail = (simutils.get_avail_memory()
+                 - mpi.get_max_node_rss(return_per_node=True) * 2**30)
+    Npus_node = mpi.node_comm.Get_size()
+    skymodel_mem_footprint = (
+        simutils.estimate_skymodel_memory_usage(Nsrcs, cat_nfreqs) * Npus_node
+    )
+    # Allow up to 50% of available memory for SkyModel data.
+    skymodel_mem_max = 0.5 * mem_avail
+    Nsky_parts_calc = np.ceil(skymodel_mem_footprint / float(skymodel_mem_max))
+    assert Nsky_parts_calc > 1
+
+    with pytest.raises(
+        ValueError,
+        match="Nsky_parts is too small, it will lead to out of memory errors."
+    ):
+        _set_nsky_parts(Nsrcs, cat_nfreqs, 1)
+
+    # make the cat_nfreqs absurdly large to trigger insufficient memory condition.
+    cat_nfreqs = 1e9
+    skymodel_mem_footprint = (
+        simutils.estimate_skymodel_memory_usage(Nsrcs, cat_nfreqs) * Npus_node
+    )
+    # Allow up to 50% of available memory for SkyModel data.
+    skymodel_mem_max = 0.5 * mem_avail
+    Nsky_parts_calc = np.ceil(skymodel_mem_footprint / float(skymodel_mem_max))
+    assert Nsky_parts_calc > Nsrcs
+
+    with pytest.raises(
+        ValueError,
+        match="Insufficient memory for simulation."
+    ):
+        _set_nsky_parts(Nsrcs, cat_nfreqs, 5)
+
+    # Reset spoofed parameters.
+    del os.environ['SLURM_MEM_PER_NODE']
+    pyuvsim.mpi.Npus_node = 1
 
 
 def test_task_coverage():
