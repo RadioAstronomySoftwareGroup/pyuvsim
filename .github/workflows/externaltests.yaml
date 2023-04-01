@@ -26,11 +26,12 @@ jobs:
           cd ../
           git clone https://github.com/HERA-Team/hera_sim.git
           cd pyuvsim
-      - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2.0.0
+      - name: Setup Minimamba
+        uses: conda-incubator/setup-miniconda@v2
         with:
-          auto-update-conda: true
-          miniconda-version: "latest"
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           python-version: ${{ env.PYTHON }}
           environment-file: ../hera_sim/ci/${{ env.ENV_NAME }}.yaml
           activate-environment: ${{ env.ENV_NAME }}

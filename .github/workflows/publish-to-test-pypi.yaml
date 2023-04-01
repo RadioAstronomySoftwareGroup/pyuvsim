@@ -22,11 +22,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2.0.0
+      - name: Setup Minimamba
+        uses: conda-incubator/setup-miniconda@v2
         with:
-          auto-update-conda: true
-          miniconda-version: "latest"
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           python-version: ${{ env.PYTHON }}
           environment-file: ci/${{ env.ENV_NAME }}.yaml
           activate-environment: ${{ env.ENV_NAME }}
@@ -52,7 +53,7 @@ jobs:
 
       - name: Build a binary wheel and a source tarball
         run: |
-          python -m pep517.build --source --out-dir dist/ .
+          python3 -m build
 
       - name: Publish to Test PyPI
         if: startsWith(github.event.ref, 'refs/tags')
