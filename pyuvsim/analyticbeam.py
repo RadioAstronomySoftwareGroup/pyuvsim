@@ -6,7 +6,13 @@
 import warnings
 
 import numpy as np
-import pyuvdata.utils as uvutils
+
+with warnings.catch_warnings():
+    # This can be removed once we require pyuvdata >= 2.3
+    warnings.filterwarnings("ignore", message='pkg_resources is deprecated as an API')
+    warnings.filterwarnings("ignore", message='Deprecated call to `pkg_resources.declare_namespace')
+    import pyuvdata.utils as uvutils
+
 from astropy.constants import c as speed_of_light
 from scipy.special import j1
 
