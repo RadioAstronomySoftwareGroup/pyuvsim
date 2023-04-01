@@ -639,6 +639,7 @@ def test_local_task_gen():
         assert np.allclose(engine1.make_visibility(), engine0.make_visibility())
 
 
+@pytest.mark.filterwarnings("ignore:The parameter `blt_order` could not be identified")
 def test_nsky_parts_large():
     """Check that we get the same visibilities no matter what Nsky_parts is set to."""
     pytest.importorskip('mpi4py')
