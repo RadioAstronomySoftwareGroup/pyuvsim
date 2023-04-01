@@ -98,6 +98,14 @@ class UVTask:
         if sources.spectral_type == 'flat':
             self.freq_i = 0
 
+    def __repr__(self) -> str:
+        """Make a nice representation."""
+        return (
+            f"UVTask, [time: {self.time}, freq: {self.freq}, source names: "
+            f"{self.sources.name}, baseline: {self.baseline.antenna1.name}-"
+            f"{self.baseline.antenna2.name}, self.freq_i: {self.freq_i}]"
+        )
+
     def __eq__(self, other):
         """
         Test for equality between two UVTask objects.
@@ -522,7 +530,8 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     # some additional overhead for numpy arrays as well
     # usually seeing [0.00001, 0.00003] MiB / task memory required
     # based on the reference simulations.
-    order = np.lexsort((_bls[task_slice], _freqs[task_slice], _times[task_slice])).flat
+    # Flatten inside the loop so that we always have the same thing in each loop.
+    order = np.lexsort((_bls[task_slice], _freqs[task_slice], _times[task_slice]))
 
     tloc = [np.float64(x) for x in input_uv.telescope_location]
 
@@ -552,7 +561,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         if sky.spectral_type != 'flat':
             sky.at_frequencies(freq_array)
 
-        for index in order:
+        for index in order.flat:
             task_index = task_ids[index]
             # Shape indicates slowest to fastest index.
             if not isinstance(task_index, tuple):
@@ -604,6 +613,34 @@ def _check_ntasks_valid(Ntasks_tot):
         )
 
 
+def _set_nsky_parts(Nsrcs, cat_nfreqs, Nsky_parts):
+    """Set the Nsky_parts."""
+    # Estimating required memory to decide how to split source array.
+    mem_avail = (simutils.get_avail_memory()
+                 - mpi.get_max_node_rss(return_per_node=True) * 2**30)
+
+    Npus_node = mpi.node_comm.Get_size()
+    skymodel_mem_footprint = (
+        simutils.estimate_skymodel_memory_usage(Nsrcs, cat_nfreqs) * Npus_node
+    )
+
+    # Allow up to 50% of available memory for SkyModel data.
+    skymodel_mem_max = 0.5 * mem_avail
+
+    Nsky_parts_calc = np.ceil(skymodel_mem_footprint / float(skymodel_mem_max))
+    Nsky_parts_calc = max(Nsky_parts_calc, 1)
+    if Nsky_parts_calc > Nsrcs:
+        raise ValueError("Insufficient memory for simulation.")
+    if Nsky_parts is None:
+        Nsky_parts = Nsky_parts_calc
+    elif Nsky_parts < Nsky_parts_calc:
+        raise ValueError(
+            "Nsky_parts is too small, it will lead to out of memory errors. It "
+            "needs to be at least {Nsky_parts_calc}. "
+        )
+    return Nsky_parts
+
+
 def run_uvdata_uvsim(
     input_uv,
     beam_list,
@@ -611,7 +648,8 @@ def run_uvdata_uvsim(
     catalog=None,
     beam_interp_check=None,
     quiet=False,
-    block_nonroot_stdout=True
+    block_nonroot_stdout=True,
+    Nsky_parts=None,
 ):
     """
     Run uvsim from UVData object.
@@ -640,6 +678,11 @@ def run_uvdata_uvsim(
         Do not print anything.
     block_nonroot_stdout : bool
         Redirect stdout on nonzero ranks to /dev/null, for cleaner output.
+    Nsky_parts : int, optional
+        Number of parts to chunk the source list into to reduce memory. The default is
+        to use the minimum number to fit within the memory of the processing unit. This
+        parameter is included mostly to allow for testing, but can be used by a
+        knowledgeable user if needed. If set too low, a ValueError will be raised.
 
     Returns
     -------
@@ -711,22 +754,7 @@ def run_uvdata_uvsim(
         else:
             beam_interp_check = True
 
-    # Estimating required memory to decide how to split source array.
-    mem_avail = (simutils.get_avail_memory()
-                 - mpi.get_max_node_rss(return_per_node=True) * 2**30)
-
-    Npus_node = mpi.node_comm.Get_size()
-    skymodel_mem_footprint = (
-        simutils.estimate_skymodel_memory_usage(Nsrcs, catalog.Nfreqs) * Npus_node
-    )
-
-    # Allow up to 50% of available memory for SkyModel data.
-    skymodel_mem_max = 0.5 * mem_avail
-
-    Nsky_parts = np.ceil(skymodel_mem_footprint / float(skymodel_mem_max))
-    Nsky_parts = max(Nsky_parts, 1)
-    if Nsky_parts > Nsrcs:
-        raise ValueError("Insufficient memory for simulation.")
+    Nsky_parts = _set_nsky_parts(Nsrcs, catalog.Nfreqs, Nsky_parts)
 
     local_task_iter = uvdata_to_task_iter(
         task_inds, input_uv, catalog.subselect(src_inds),
