@@ -629,6 +629,39 @@ def test_local_task_gen():
         assert np.allclose(engine1.make_visibility(), engine0.make_visibility())
 
 
+def test_nsky_parts_large():
+    """Check that we get the same visibilities no matter what Nsky_parts is set to."""
+    pytest.importorskip('mpi4py')
+    hera_uv = UVData.from_file(EW_uvfits_10time10chan)
+    hera_uv.use_future_array_shapes()
+    hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
+    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    sources, kwds = pyuvsim.create_mock_catalog(
+        time, arrangement='random', Nsrcs=25, return_data=True, rseed=100
+    )
+
+    beam_list = pyuvsim.BeamList([multi_beams[1]])
+    beam_dict = None
+    out_uv_single_nsky = pyuvsim.uvsim.run_uvdata_uvsim(
+        input_uv=hera_uv.copy(),
+        beam_list=beam_list,
+        beam_dict=beam_dict,
+        catalog=sources,
+        block_nonroot_stdout=False,
+    )
+
+    out_uv_multi_nsky = pyuvsim.uvsim.run_uvdata_uvsim(
+        input_uv=hera_uv.copy(),
+        beam_list=beam_list,
+        beam_dict=beam_dict,
+        catalog=sources,
+        block_nonroot_stdout=False,
+        Nsky_parts=5,
+    )
+
+    assert out_uv_single_nsky == out_uv_multi_nsky
+
+
 def test_task_coverage():
     """
     Check that the task ids generated in different scenarios
