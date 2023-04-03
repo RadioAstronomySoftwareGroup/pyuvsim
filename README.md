@@ -72,20 +72,20 @@ following packages before installing `pyuvsim`:
 Required:
 
 * astropy>=5.0.4
-* numpy>=1.15
+* numpy>=1.19
 * psutil
-* pyradiosky>=0.1.0<0.2
-* pyuvdata>=2.2.10
+* pyradiosky>=0.1.0,<0.2
+* pyuvdata>=2.2.10,<2.3
 * pyyaml>=5.1
-* scipy>1.0.1
+* scipy>=1.3
 * setuptools_scm
 
 Optional:
 
-* astropy-healpix (for using healpix based sky catalogs or beams)
+* astropy-healpix>=0.6 (for using healpix based sky catalogs or beams)
 * mpi4py>=3.0.0 (for actually running simulations)
-* lunarsky (for simulating telescopes on the moon)
-* python-casacore >= 3.1.0 (for writing CASA measurement sets)
+* lunarsky>=0.1.2 (for simulating telescopes on the moon)
+* python-casacore>=3.3.1 (for writing CASA measurement sets)
 
 ### Developer Installation
 If you are developing `pyuvsim`, you will need to download and install the

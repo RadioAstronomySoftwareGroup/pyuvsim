@@ -16,9 +16,9 @@ with io.open('README.md', 'r', encoding='utf-8') as readme_file:
     readme = readme_file.read()
 
 sim_reqs = ['mpi4py>=3.0.0']
-moon_reqs = ['lunarsky']
-healpix_reqs = ["astropy_healpix"]
-casa_reqs = ["python-casacore>=3.1.0"]
+moon_reqs = ['lunarsky>=0.1.2']
+healpix_reqs = ["astropy_healpix>=0.6"]
+casa_reqs = ["python-casacore>=3.3.1"]
 test_reqs = (
     sim_reqs
     + moon_reqs
@@ -49,12 +49,12 @@ setup_args = {
     'include_package_data': True,
     'install_requires': [
         'astropy>=5.0.4',
-        'numpy>=1.15',
+        'numpy>=1.19',
         'psutil',
         'pyradiosky>=0.1.2,<0.2',
-        'pyuvdata>=2.2.10',
+        'pyuvdata>=2.2.10,<2.3',
         'pyyaml',
-        'scipy',
+        'scipy>=1.3',
         'setuptools_scm',
     ],
     'extras_require': {
