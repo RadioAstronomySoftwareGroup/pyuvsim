@@ -215,6 +215,15 @@ def test_visibility_source_below_horizon(cst_beam, hera_loc):
 
     task = pyuvsim.UVTask(source_arr, time, freq, baseline, array)
 
+    task_str = task.__repr__()
+
+    expected_str = (
+        f"UVTask<time: {task.time}, freq: {task.freq}, source names: "
+        f"{task.sources.name}, baseline: {task.baseline.antenna1.name}-"
+        f"{task.baseline.antenna2.name}, freq_i: {task.freq_i}>"
+    )
+    assert task_str == expected_str
+
     engine = pyuvsim.UVEngine(task)
 
     visibility = engine.make_visibility()
