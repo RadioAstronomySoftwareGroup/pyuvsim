@@ -101,9 +101,9 @@ class UVTask:
     def __repr__(self) -> str:
         """Make a nice representation."""
         return (
-            f"UVTask, [time: {self.time}, freq: {self.freq}, source names: "
+            f"UVTask<time: {self.time}, freq: {self.freq}, source names: "
             f"{self.sources.name}, baseline: {self.baseline.antenna1.name}-"
-            f"{self.baseline.antenna2.name}, self.freq_i: {self.freq_i}]"
+            f"{self.baseline.antenna2.name}, freq_i: {self.freq_i}>"
         )
 
     def __eq__(self, other):
