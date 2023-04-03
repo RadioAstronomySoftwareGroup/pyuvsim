@@ -3,22 +3,22 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - astropy>=5.0.4
-  - astropy-healpix
+  - astropy==5.0.4
+  - astropy-healpix==0.6
   - coverage
   - line_profiler
-  - mpi4py>=3.0.0
-  - numpy>=1.15
+  - mpi4py==3.0.*
+  - numpy==1.19.*
   - pip
   - psutil
-  - python-casacore>=3.1.0
+  - python-casacore==3.3.1
   - pytest
   - pytest-cov
-  - pyuvdata=2.2.10
-  - pyyaml>=5.1
-  - scipy
+  - pyuvdata==2.2.10
+  - pyyaml==5.1.*
+  - scipy==1.3.*
   - setuptools_scm
   - pip:
     - pyradiosky==0.1.2
-    - lunarsky
+    - lunarsky==0.1.2
     - git+https://github.com/aelanman/analytic_diffuse

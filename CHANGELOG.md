@@ -6,7 +6,10 @@
 - Initial ordering of blt axis in `initialize_uvdata_from_params`
   (unchanged output by default).
 - Use future array shapes on UVBeam objects.
-- Require pyuvdata >= 2.2.10
+- Update dependency requirements to: pyuvdata >= 2.2.10,<2.3, pyradiosky>=0.1.0,<0.2,
+numpy>=1.19, scipy>=1.3
+- Update optional dependency requirements to: astropy-healpix>=0.6, lunarsky>=0.1.2,
+python-casacore>=3.3.1
 
 ### Fixed
 - A major bug introduced between v1.2.1 and v1.2.2 that caused errors in simulations
