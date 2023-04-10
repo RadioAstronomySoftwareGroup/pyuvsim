@@ -530,7 +530,6 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     # some additional overhead for numpy arrays as well
     # usually seeing [0.00001, 0.00003] MiB / task memory required
     # based on the reference simulations.
-    # Flatten inside the loop so that we always have the same thing in each loop.
     order = np.lexsort((_bls[task_slice], _freqs[task_slice], _times[task_slice]))
 
     tloc = [np.float64(x) for x in input_uv.telescope_location]
@@ -561,6 +560,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         if sky.spectral_type != 'flat':
             sky.at_frequencies(freq_array)
 
+        # Use flat here to get a 1D iterator
         for index in order.flat:
             task_index = task_ids[index]
             # Shape indicates slowest to fastest index.
