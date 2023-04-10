@@ -645,6 +645,7 @@ def test_local_task_gen():
 
 
 @pytest.mark.filterwarnings("ignore:The parameter `blt_order` could not be identified")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_nsky_parts_large():
     """Check that we get the same visibilities no matter what Nsky_parts is set to."""
     pytest.importorskip('mpi4py')

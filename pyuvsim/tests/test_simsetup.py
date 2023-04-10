@@ -186,10 +186,9 @@ def test_catalog_from_params(horizon_buffer):
     if horizon_buffer:
         source_dict["horizon_buffer"] = 0.04364
     with uvtest.check_warnings(
-        [UserWarning, DeprecationWarning, DeprecationWarning],
+        [UserWarning, DeprecationWarning],
         match=[
             "No array_location specified. Defaulting to the HERA site.",
-            "initialize_catalog_from_params will return a SkyModel instance",
             "The return_catname parameter currently defaults to True, but starting in"
             "version 1.4 it will default to False.",
         ]
@@ -197,7 +196,7 @@ def test_catalog_from_params(horizon_buffer):
         pyuvsim.simsetup.initialize_catalog_from_params({'sources': source_dict})
 
     catalog_uv = pyuvsim.simsetup.initialize_catalog_from_params(
-        {'sources': source_dict}, hera_uv, return_recarray=False, return_catname=False
+        {'sources': source_dict}, hera_uv, return_catname=False
     )
     source_dict['array_location'] = arrloc
     del source_dict['time']
@@ -218,7 +217,6 @@ def test_catalog_from_params(horizon_buffer):
         catalog_str = pyuvsim.simsetup.initialize_catalog_from_params(
             {'sources': source_dict},
             hera_uv,
-            return_recarray=False,
             return_catname=False
         )
     assert np.all(catalog_str == catalog_uv)
@@ -232,14 +230,14 @@ def test_vot_catalog(use_filetype):
     if use_filetype:
         filetype = "vot"
     vot_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-        vot_param_filename, return_recarray=False, filetype=filetype, return_catname=False
+        vot_param_filename, filetype=filetype, return_catname=False
     )
 
     if use_filetype:
         filetype = "text"
     txt_param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
     txt_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-        txt_param_filename, return_recarray=False, filetype=filetype, return_catname=False
+        txt_param_filename, filetype=filetype, return_catname=False
     )
 
     assert vot_catalog == txt_catalog
@@ -252,7 +250,7 @@ def test_vot_catalog_errors():
         match="Invalid filetype. Filetype options are:"
     ):
         pyuvsim.simsetup.initialize_catalog_from_params(
-            vot_param_filename, return_recarray=False, filetype="foo", return_catname=False
+            vot_param_filename, filetype="foo", return_catname=False
         )
 
 
@@ -269,7 +267,7 @@ def test_gleam_catalog(filetype):
     warnings = [DeprecationWarning]
     with uvtest.check_warnings(warnings, match=warn_messages):
         gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-            gleam_param_filename, return_recarray=False, filetype=filetype, return_catname=False
+            gleam_param_filename, filetype=filetype, return_catname=False
         )
 
     # flux cuts applied
@@ -284,7 +282,7 @@ def test_gleam_catalog(filetype):
 
     with uvtest.check_warnings(warnings, match=warn_messages):
         gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-            param_dict, return_recarray=False, filetype=filetype, return_catname=False
+            param_dict, filetype=filetype, return_catname=False
         )
 
     assert gleam_catalog.Ncomponents == 50
@@ -320,38 +318,16 @@ def test_skyh5_catalog(use_filetype, tmp_path):
     if use_filetype:
         filetype = "skyh5"
     skyh5_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-        param_filename, return_recarray=False, filetype=filetype, return_catname=False
+        param_filename, filetype=filetype, return_catname=False
     )
 
     assert skyh5_catalog.Ncomponents == 50
 
-    # test works with `hdf5` extension:
+    # test error with unknown extension
     hdf5_file = os.path.join(tmp_path, 'gleam.hdf5')
-    if use_filetype:
-        filetype = "hdf5"
     skyobj.write_skyh5(hdf5_file, clobber=True)
 
     param_dict['sources']['catalog'] = hdf5_file
-    with open(param_filename, 'w') as yfile:
-        yaml.dump(param_dict, yfile, default_flow_style=False)
-
-    with uvtest.check_warnings(
-        DeprecationWarning,
-        match="This file was not detected as a skyh5 file by pyradiosky. "
-        "Starting in version 1.4 this will generate an error, either "
-        "rename the file extension to 'skyh5' or specify the catalog "
-        "filetype in the parameter file.",
-    ):
-        hdf5_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-            param_filename, return_recarray=False, filetype=filetype, return_catname=False
-        )
-    assert hdf5_catalog == skyh5_catalog
-
-    # test error with unknown extension
-    h5_file = os.path.join(tmp_path, 'gleam.h5')
-    skyobj.write_skyh5(h5_file, clobber=True)
-
-    param_dict['sources']['catalog'] = h5_file
     with open(param_filename, 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)
 
@@ -360,7 +336,7 @@ def test_skyh5_catalog(use_filetype, tmp_path):
         with open(param_filename, 'w') as yfile:
             yaml.dump(param_dict, yfile, default_flow_style=False)
         h5_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-            param_filename, return_recarray=False, return_catname=False
+            param_filename, return_catname=False
         )
         assert h5_catalog == skyh5_catalog
     else:
@@ -369,7 +345,7 @@ def test_skyh5_catalog(use_filetype, tmp_path):
             match="Cannot determine the file type. Please specify using the filetype parameter."
         ):
             pyuvsim.simsetup.initialize_catalog_from_params(
-                param_filename, return_recarray=False, return_catname=False
+                param_filename, return_catname=False
             )
 
 
@@ -381,35 +357,8 @@ def test_healpix_catalog():
 
     params = {'sources': {'catalog': path}}
     hpx_sky = pyuvsim.simsetup.initialize_catalog_from_params(
-        params, return_recarray=False, return_catname=False
+        params, return_catname=False
     )
-    assert hpx_sky == sky
-
-
-@pytest.mark.filterwarnings("ignore:This method reads an old 'healvis' style healpix HDF5 file")
-def test_healpix_hdf5_catalog():
-    """Test that an old healvis style hdf5 file works.
-
-    Remove this when we require a newer version of pyradiosky.
-    """
-    pytest.importorskip('astropy_healpix')
-    path = os.path.join(SKY_DATA_PATH, 'healpix_disk.hdf5')
-    sky = SkyModel()
-    sky.read_healpix_hdf5(path)
-
-    params = {'sources': {'catalog': path}}
-    with uvtest.check_warnings(
-        DeprecationWarning,
-        match=[
-            "This method reads an old 'healvis' style healpix HDF5 file",
-            "Support for this catalog filetype will be removed when we require "
-            "pyradiosky 0.3. Re-write it as a skyh5 file using pyradiosky to ensure "
-            "future compatibilty."
-        ]
-    ):
-        hpx_sky = pyuvsim.simsetup.initialize_catalog_from_params(
-            params, return_recarray=False, return_catname=False
-        )
     assert hpx_sky == sky
 
 
@@ -428,7 +377,7 @@ def test_gleam_catalog_spectral_type(spectral_type):
     param_dict["sources"]["spectral_type"] = spectral_type
 
     gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
-        param_dict, return_recarray=False, return_catname=False
+        param_dict, return_catname=False
     )
     assert gleam_catalog.spectral_type == spectral_type
     assert gleam_catalog.Ncomponents == 50

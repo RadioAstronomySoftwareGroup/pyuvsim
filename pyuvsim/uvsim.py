@@ -945,7 +945,7 @@ def run_uvsim(
             params, return_beams=True
         )
         skydata = simsetup.initialize_catalog_from_params(
-            params, input_uv, return_recarray=False, return_catname=False
+            params, input_uv, return_catname=False
         )
         if not quiet:
             print(f"UVData initialization took {(Time.now() - start).to('minute'):.3f}")

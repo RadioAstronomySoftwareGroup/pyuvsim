@@ -20,6 +20,7 @@ import warnings
 
 import astropy.units as units
 import numpy as np
+import pyradiosky
 import pyuvdata
 import yaml
 from astropy.coordinates import (ICRS, AltAz, Angle, EarthLocation, Latitude,
@@ -333,7 +334,7 @@ def create_mock_catalog(time, arrangement='zenith', array_location=None, Nsrcs=N
     Create a mock catalog.
 
     SkyModels are defined in an AltAz frame at the given time, then returned in
-    ICRS ra/dec coordinates.
+    ICRS ra/dec coordinates. They always have a 'flat' spectral type.
 
     Parameters
     ----------
@@ -584,6 +585,7 @@ class SkyModelData:
     stokes_U = None  # noqa should be all lower case
     stokes_V = None  # noqa should be all lower case
     freq_array = None
+    freq_edge_array = None
     reference_frequency = None
     spectral_index = None
     polarized = None
@@ -633,6 +635,13 @@ class SkyModelData:
 
             if sky_in._freq_array.required:
                 self.freq_array = sky_in.freq_array.to("Hz").value
+            if (
+                version.parse(pyradiosky.__version__) > version.parse("0.2")
+                and sky_in.spectral_type == "subband"
+                and sky_in.freq_edge_array is not None
+            ):
+                self.freq_edge_array = sky_in.freq_edge_array.to("Hz").value
+
             if sky_in._reference_frequency.required:
                 self.reference_frequency = sky_in.reference_frequency.to("Hz").value
             if sky_in._spectral_index.required:
@@ -691,6 +700,8 @@ class SkyModelData:
             new_sky.spectral_index = self.spectral_index[inds]
         if self.freq_array is not None:
             new_sky.freq_array = self.freq_array
+        if self.freq_edge_array is not None:
+            new_sky.freq_edge_array = self.freq_edge_array
         if self.hpx_inds is not None:
             new_sky.hpx_inds = self.hpx_inds[inds]
 
@@ -769,6 +780,8 @@ class SkyModelData:
         other = {}
         if self.spectral_type in ['full', 'subband']:
             other['freq_array'] = self.freq_array * units.Hz
+        if self.freq_edge_array is not None:
+            other['freq_edge_array'] = self.freq_edge_array * units.Hz
         if self.spectral_type == 'spectral_index':
             other['reference_frequency'] = self.reference_frequency * units.Hz
             other['spectral_index'] = self.spectral_index
@@ -821,7 +834,7 @@ def _sky_select_calc_rise_set(sky, source_params, telescope_lat_deg=None):
 
 
 def initialize_catalog_from_params(
-    obs_params, input_uv=None, return_recarray=True, filetype=None, return_catname=None
+    obs_params, input_uv=None, filetype=None, return_catname=None
 ):
     """
     Make catalog from parameter file specifications.
@@ -834,8 +847,6 @@ def initialize_catalog_from_params(
         Either an obsparam file name or a dictionary of parameters.
     input_uv: :class:`pyuvdata.UVData`
         Used to set location for mock catalogs and for horizon cuts.
-    return_recarray: bool
-        Return a recarray instead of a :class:`pyradiosky.SkyModel` instance.
     filetype : str
         One of ['skyh5', 'gleam', 'vot', 'text', 'hdf5'] or None.
         If None, the code attempts to guess what the file type is.
@@ -845,7 +856,7 @@ def initialize_catalog_from_params(
 
     Returns
     -------
-    skydata: numpy.recarray or :class:`pyradiosky.SkyModel`
+    skydata: :class:`pyradiosky.SkyModel`
         Source catalog filled with data.
     source_list_name: str
         Catalog identifier for metadata. Only returned if return_catname is True.
@@ -955,33 +966,7 @@ def initialize_catalog_from_params(
             read_params["spectral_type"] = "flat"
 
         source_list_name = os.path.basename(catalog)
-        try:
-            sky = SkyModel.from_file(catalog, **read_params)
-        except ValueError:
-            if os.path.splitext(catalog)[1] == ".hdf5":
-                # In principal, this could either be a skyh5 or an old-style healvis hdf5 file
-                # Try skyh5 first, if that doesn't work, use the old method
-                try:
-                    read_params["filetype"] = "skyh5"
-                    sky = SkyModel.from_file(catalog, **read_params)
-                    warnings.warn(
-                        "This file was not detected as a skyh5 file by pyradiosky. "
-                        "Starting in version 1.4 this will generate an error, either "
-                        "rename the file extension to 'skyh5' or specify the catalog "
-                        "filetype in the parameter file.",
-                        DeprecationWarning,
-                    )
-                except ValueError:
-                    sky = SkyModel()
-                    sky.read_healpix_hdf5(catalog)
-                    warnings.warn(
-                        "Support for this catalog filetype will be removed when we "
-                        "require pyradiosky 0.3. Re-write it as a skyh5 file using "
-                        "pyradiosky to ensure future compatibilty.",
-                        DeprecationWarning,
-                    )
-            else:
-                raise
+        sky = SkyModel.from_file(catalog, **read_params)
 
     if input_uv is not None:
         telescope_lat_deg = input_uv.telescope_location_lat_lon_alt_degrees[0]
@@ -992,20 +977,10 @@ def initialize_catalog_from_params(
         sky, source_params, telescope_lat_deg=telescope_lat_deg
     )
 
-    # If the filename parameter doesn't exist on the sky object
-    # (because of an older version of pyradiosky) or if it is None (e.g. for mock skies)
+    # If the filename parameter is None (e.g. for mock skies)
     # add the source_list_name to the object so it can be put in the UVData history later
-    if getattr(sky, "filename", None) is None:
+    if sky.filename is None:
         sky.filename = source_list_name
-
-    if return_recarray:
-        warnings.warn("initialize_catalog_from_params will return a SkyModel instance, not "
-                      "a recarray, by default in version 1.3. Set keyword "
-                      "`return_recarray=True` to ensure recarray is returned.",
-                      DeprecationWarning)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            sky = sky.to_recarray()
 
     if return_catname:
         return sky, source_list_name
