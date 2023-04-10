@@ -185,7 +185,7 @@ def test_powerbeam_sim(cst_beam):
     cfg = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
     input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(cfg, return_beams=False)
     sky_model = pyuvsim.simsetup.initialize_catalog_from_params(
-        cfg, return_recarray=False, return_catname=False
+        cfg, return_catname=False
     )
     sky_model = pyuvsim.simsetup.SkyModelData(sky_model)
 
@@ -193,7 +193,6 @@ def test_powerbeam_sim(cst_beam):
         pyuvsim.run_uvdata_uvsim(input_uv, beams, catalog=sky_model)
 
 
-@pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_run_paramdict_uvsim():
     # Running a simulation from parameter dictionary.
@@ -204,7 +203,6 @@ def test_run_paramdict_uvsim():
     pyuvsim.run_uvsim(params, return_uv=True)
 
 
-@pytest.mark.filterwarnings("ignore:The frequency field is included in the recarray")
 @pytest.mark.filterwarnings("ignore:No julian date given for mock catalog")
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_run_nsky_parts(capsys):
@@ -248,7 +246,6 @@ def test_run_gleam_uvsim(spectral_type):
 
 
 @pytest.mark.filterwarnings("ignore:The reference_frequency is aliased as `frequency`")
-@pytest.mark.filterwarnings("ignore:recarray flux columns will no longer be labeled")
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize(
     "spectral_type",
@@ -276,14 +273,19 @@ def test_zenith_spectral_sim(spectral_type, tmpdir):
         source.reference_frequency = np.array([ref_freq]) * units.Hz
         source.spectral_index = np.array([alpha])
     else:
+        freq_lower = freqs - freq_params["channel_width"] * units.Hz / 2.
+        freq_upper = freqs + freq_params["channel_width"] * units.Hz / 2.
+        source.freq_edge_array = np.concatenate(
+            (freq_lower[np.newaxis, :], freq_upper[np.newaxis, :]), axis=0
+        )
         source.Nfreqs = Nfreqs
         source.freq_array = freqs
         source.stokes = np.repeat(source.stokes, Nfreqs, axis=1)
         source.stokes[0, :, 0] *= spectrum
         source.coherency_radec = stokes_to_coherency(source.stokes)
 
-    catpath = str(tmpdir.join('spectral_test_catalog.txt'))
-    source.write_text_catalog(catpath)
+    catpath = str(tmpdir.join('spectral_test_catalog.skyh5'))
+    source.write_skyh5(catpath)
     params['sources'] = {"catalog" : catpath}
     params['filing']['outdir'] = str(tmpdir)
     params['freq'] = freq_params

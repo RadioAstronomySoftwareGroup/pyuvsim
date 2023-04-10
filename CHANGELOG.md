@@ -8,8 +8,8 @@
 deprecation warnings.
 
 ### Fixed
-- Bugs when running with pyradiosky>0.2, mostly related to the new `skycoord` parameter
-on pyradiosky's `SkyModel` object.
+- Bugs when running with pyradiosky>=0.2, mostly related to the new `skycoord` parameter
+on pyradiosky's `SkyModel` object and calls to functions removed from pyradiosky.
 - Better handling of lunarsky imports, required for the newest version of pyradiosky
 
 ## [1.2.5] - 2022-06-01
