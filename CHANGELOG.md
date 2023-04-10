@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.2.5] - 2022-06-01
+
 ### Changed
 - Initial ordering of blt axis in `initialize_uvdata_from_params`
   (unchanged output by default).
