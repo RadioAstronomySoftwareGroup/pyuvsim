@@ -23,7 +23,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         python-version: [3.8, 3.9, "3.10"]
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
         with:
           fetch-depth: 1
 
@@ -55,7 +55,7 @@ jobs:
           python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: Upload Coverage
-        uses: codecov/codecov-action@v2.0.2
+        uses: codecov/codecov-action@v3
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -74,7 +74,7 @@ jobs:
         shell: bash -l {0}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
         with:
           fetch-depth: 1
       - name: Setup Minimamba
@@ -104,7 +104,7 @@ jobs:
         run: |
           python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
-      - uses: codecov/codecov-action@v2.0.2
+      - uses: codecov/codecov-action@v3
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -123,7 +123,7 @@ jobs:
         shell: bash -l {0}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
         with:
           fetch-depth: 1
       - name: Setup Minimamba
@@ -153,7 +153,7 @@ jobs:
         run: |
           python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
-      - uses: codecov/codecov-action@v2.0.2
+      - uses: codecov/codecov-action@v3
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -172,7 +172,7 @@ jobs:
         # Adding -l {0} helps ensure conda can be found properly.
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
         with:
           fetch-depth: 0
 
@@ -204,7 +204,7 @@ jobs:
           python -m pytest -W error --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: Upload Coverage
-        uses: codecov/codecov-action@v2.0.2
+        uses: codecov/codecov-action@v3
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
