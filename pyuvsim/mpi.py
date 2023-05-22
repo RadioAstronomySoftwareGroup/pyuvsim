@@ -418,8 +418,7 @@ def get_max_node_rss(return_per_node=False):
     Parameters
     ----------
     return_per_node : bool
-        Return the total memory on the node to each rank on
-        that node.
+        Return the total memory on the node to each rank on that node.
 
     Returns
     -------

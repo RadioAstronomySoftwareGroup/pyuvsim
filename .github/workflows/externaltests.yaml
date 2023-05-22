@@ -18,7 +18,7 @@ jobs:
       PYTHON: 3.8
 
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
         with:
          fetch-depth: 1
       - name: clone hera_sim
