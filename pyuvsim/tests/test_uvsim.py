@@ -685,18 +685,21 @@ def test_set_nsky_parts_errors():
     mpi.start_mpi(block_nonroot_stdout=False)
 
     # Spoof environmental parameters.
-    # Choose an absurdly large number of tasks per node and very small available memory
-    # to get a large Nsky_parts_calc
-    # The alternative would be to make a very large source catalog, but that's not ideal in a test.
-    Npus_node = 2000
-    pyuvsim.mpi.Npus_node = Npus_node  # Absurdly large
-    os.environ['SLURM_MEM_PER_NODE'] = str(1000.)  # Only 10MB of memory
+    # Choose an absurdly large number of tasks per node and a lot of sources to get a
+    # large Nsky_parts_calc
+    Npus_node = 2000  # Absurdly large
+    mpi.Npus_node = Npus_node
+    mem_per_node = str(100000.)  # 1GB of memory per node
+    os.environ['SLURM_MEM_PER_NODE'] = mem_per_node
+    assert simutils.get_avail_memory() == float(mem_per_node) * 1e6  # convert to bytes
 
-    Nsrcs = 1e9
+    Nsrcs = 1e12
     cat_nfreqs = 1e3
 
     mem_avail = (simutils.get_avail_memory()
                  - mpi.get_max_node_rss(return_per_node=True) * 2**30)
+    # This used to happen sometimes because the mem_per_node was too low.
+    assert mem_avail > 0, "Computed available memory was negative."
     Npus_node = mpi.node_comm.Get_size()
     skymodel_mem_footprint = (
         simutils.estimate_skymodel_memory_usage(Nsrcs, cat_nfreqs) * Npus_node
