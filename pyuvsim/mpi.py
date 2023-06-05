@@ -26,6 +26,8 @@ rank_comm = None
 # Split serialized objects into chunks of 2 GiB
 INT_MAX = 2**31 - 1
 
+shared_window_list = []
+
 
 def set_mpi_excepthook(mpi_comm):
     """Kill the whole job on an uncaught python exception."""
@@ -68,6 +70,7 @@ def start_mpi(block_nonroot_stdout=True):
         # For non-root ranks, do not print to stdout.
         sys.stdout = open('/dev/null', 'w')
         atexit.register(sys.stdout.close)
+    atexit.register(free_shared)
 
 
 def shared_mem_bcast(arr, root=0):
@@ -84,10 +87,17 @@ def shared_mem_bcast(arr, root=0):
     root : int
         Root rank on COMM_WORLD, from which data will be broadcast.
 
+    Returns
+    -------
+    sh_arr : array-like
+        The shared array.
+
     Notes
     -----
     Data will be duplicated once per node, but will be shared among
     processes on each node.
+    The shared windows are added to the module-level `shared_window_list` to be
+    freed at exit.
 
     """
     nbytes = 0
@@ -119,6 +129,8 @@ def shared_mem_bcast(arr, root=0):
     buf, itemsize = win.Shared_query(0)
     sh_arr = np.ndarray(buffer=buf, dtype=dtype, shape=shape)
 
+    shared_window_list.append(win)
+
     if node_comm.rank == root:
         # Now fill the window on each node with the data.
         sh_arr[:] = arr[()]
@@ -131,35 +143,12 @@ def shared_mem_bcast(arr, root=0):
     return sh_arr
 
 
-def quantity_shared_bcast(obj, root=0):
-    """
-    Broadcast to shared memory for classes derived from :class:`astropy.units.Quantity`.
-
-    The value array will be in shared memory, but the handle to it on each process
-    will be a :class:`astropy.units.Quantity`, :class:`astropy.coordinates.Angle`,
-    :class:`astropy.coordinates.Latitude`, :class:`astropy.coordinates.Longitude`, etc.
-
-    Parameters
-    ----------
-    obj : :class:`astropy.units.Quantity` or derived class
-        Object to be shared.
-    root : int
-        Root rank on COMM_WORLD, from which data will be broadcast.
-
-    """
-    unit = None
-    sclass = None
-    value = None
-    if world_comm.rank == root:
-        sclass = obj.__class__
-        unit = obj.unit
-        value = obj.value
-
-    value = shared_mem_bcast(value, root=root)
-    sclass = world_comm.bcast(sclass, root=root)
-    unit = world_comm.bcast(unit, root=root)
-
-    return sclass(value, copy=False, unit=unit)
+def free_shared():
+    """Free all the shared resources."""
+    while len(shared_window_list) > 0:
+        win = shared_window_list.pop()
+        win.Free()
+    world_comm.Barrier()
 
 
 def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):

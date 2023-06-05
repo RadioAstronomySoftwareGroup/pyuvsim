@@ -88,6 +88,8 @@ def test_shared_mem():
     with pytest.raises(ValueError, match="assignment destination is read-only"):
         sA.itemset(0, 3.0)
 
+    mpi.world_comm.Barrier()
+
 
 def test_mem_usage():
     # Check that the mpi-enabled memory check is consistent
@@ -188,18 +190,19 @@ def test_big_bcast_gather_loop(fake_tasks):
 
 
 @pytest.mark.parallel(3)
-def test_sharedmem_bcast_with_quantities():
-    # Use mpi.quantity_shared_bcast and check returned objects.
+def test_sharedmem_bcast():
+    # Use mpi.shared_mem_bcast and check returned objects.
 
-    lats = Latitude(np.linspace(-np.pi / 2, np.pi / 2, 10), 'rad')
-    freqs = np.linspace(100e6, 130e6, 15) * units.Hz
-    lat_return = mpi.quantity_shared_bcast(lats)
-    freq_return = mpi.quantity_shared_bcast(freqs)
+    lats = np.linspace(-np.pi / 2, np.pi / 2, 10)
+    freqs = np.linspace(100e6, 130e6, 15)
+    lat_return = mpi.shared_mem_bcast(lats)
+    freq_return = mpi.shared_mem_bcast(freqs)
 
     if mpi.rank == 0:
         assert np.all(lat_return == lats)
         assert np.all(freq_return == freqs)
-        assert np.all(freq_return.to("MHz") == freqs.to("MHz"))
+
+    mpi.world_comm.Barrier()
 
 
 @pytest.mark.parallel(3)

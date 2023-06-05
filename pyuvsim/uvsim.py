@@ -747,108 +747,109 @@ def run_uvdata_uvsim(
 
     # Construct beam objects from strings
     beam_list.set_obj_mode(use_shared_mem=True)
-
-    # In case the user created the beam list without checking consistency:
-    beam_list.check_consistency()
-
-    if beam_list.beam_type != 'efield':
-        raise ValueError("Beam type must be efield!")
-
-    if beam_interp_check is None:
-        # check that all the beams cover the full sky
-        if beam_list.check_all_azza_beams_full_sky():
-            beam_interp_check = False
-        else:
-            beam_interp_check = True
-
-    Nsky_parts = _set_nsky_parts(Nsrcs, catalog.Nfreqs, Nsky_parts)
-
-    local_task_iter = uvdata_to_task_iter(
-        task_inds, input_uv, catalog.subselect(src_inds),
-        beam_list, beam_dict, Nsky_parts=Nsky_parts
-    )
-
-    Ntasks_tot = Ntasks_local * Nsky_parts
-    # Sum all the tasks across each node
-    Nsky_parts = comm.reduce(Nsky_parts, op=mpi.MPI.MAX, root=0)
-    Ntasks_tot = comm.reduce(Ntasks_tot, op=mpi.MPI.SUM, root=0)
-    if rank == 0 and not quiet:
-        if Nsky_parts > 1:
-            print(
-                "The source list has been split into Nsky_parts"
-                f" <= {Nsky_parts} chunks on some or all nodes"
-                " due to memory limitations.",
-                flush=True,
-            )
-        print("Tasks: ", Ntasks_tot, flush=True)
-        pbar = simutils.progsteps(maxval=Ntasks_tot)
-
-    engine = UVEngine()
     count = mpi.Counter()
-    size_complex = np.ones(1, dtype=complex).nbytes
-    data_array_shape = (Nblts, Nfreqs, 4)
-    uvdata_indices = []
 
-    for task in local_task_iter:
-        engine.set_task(task)
-        vis = engine.make_visibility()
+    # wrap this in a try/finally (no exception handling) to ensure resources are freed
+    try:
+        # In case the user created the beam list without checking consistency:
+        beam_list.check_consistency()
 
-        blti, freq_ind = task.uvdata_index
+        if beam_list.beam_type != 'efield':
+            raise ValueError("Beam type must be efield!")
 
-        uvdata_indices.append(task.uvdata_index)
+        if beam_interp_check is None:
+            # check that all the beams cover the full sky
+            if beam_list.check_all_azza_beams_full_sky():
+                beam_interp_check = False
+            else:
+                beam_interp_check = True
 
-        flat_ind = np.ravel_multi_index(
-            (blti, freq_ind, 0), data_array_shape
+        Nsky_parts = _set_nsky_parts(Nsrcs, catalog.Nfreqs, Nsky_parts)
+
+        local_task_iter = uvdata_to_task_iter(
+            task_inds, input_uv, catalog.subselect(src_inds),
+            beam_list, beam_dict, Nsky_parts=Nsky_parts
         )
-        offset = flat_ind * size_complex
 
-        vis_data.Lock(0)
-        vis_data.Accumulate(vis, 0, target=offset, op=mpi.MPI.SUM)
-        vis_data.Unlock(0)
-
-        cval = count.next()
+        Ntasks_tot = Ntasks_local * Nsky_parts
+        # Sum all the tasks across each node
+        Nsky_parts = comm.reduce(Nsky_parts, op=mpi.MPI.MAX, root=0)
+        Ntasks_tot = comm.reduce(Ntasks_tot, op=mpi.MPI.SUM, root=0)
         if rank == 0 and not quiet:
-            pbar.update(cval)
+            if Nsky_parts > 1:
+                print(
+                    "The source list has been split into Nsky_parts"
+                    f" <= {Nsky_parts} chunks on some or all nodes"
+                    " due to memory limitations.",
+                    flush=True,
+                )
+            print("Tasks: ", Ntasks_tot, flush=True)
+            pbar = simutils.progsteps(maxval=Ntasks_tot)
 
-    request = comm.Ibarrier()
+        engine = UVEngine()
+        size_complex = np.ones(1, dtype=complex).nbytes
+        data_array_shape = (Nblts, Nfreqs, 4)
+        uvdata_indices = []
 
-    while not request.Test():
+        for task in local_task_iter:
+            engine.set_task(task)
+            vis = engine.make_visibility()
+
+            blti, freq_ind = task.uvdata_index
+
+            uvdata_indices.append(task.uvdata_index)
+
+            flat_ind = np.ravel_multi_index(
+                (blti, freq_ind, 0), data_array_shape
+            )
+            offset = flat_ind * size_complex
+
+            vis_data.Lock(0)
+            vis_data.Accumulate(vis, 0, target=offset, op=mpi.MPI.SUM)
+            vis_data.Unlock(0)
+
+            cval = count.next()
+            if rank == 0 and not quiet:
+                pbar.update(cval)
+
+        request = comm.Ibarrier()
+
+        while not request.Test():
+            if rank == 0 and not quiet:
+                cval = count.current_value()
+                pbar.update(cval)
         if rank == 0 and not quiet:
-            cval = count.current_value()
-            pbar.update(cval)
+            pbar.finish()
 
-    count.free()
-    if rank == 0 and not quiet:
-        pbar.finish()
+        if rank == 0 and not quiet:
+            print("Calculations Complete.", flush=True)
 
-    if rank == 0 and not quiet:
-        print("Calculations Complete.", flush=True)
+        # If profiling is active, save meta data:
+        from .profiling import prof  # noqa
+        if hasattr(prof, 'meta_file'):  # pragma: nocover
+            # Saving axis sizes on current rank (local) and for the whole job (global).
+            # These lines are affected by issue 179 of line_profiler, so the nocover
+            # above will need to stay until this issue is resolved (see profiling.py).
+            task_inds = np.array(uvdata_indices)
+            bl_inds = task_inds[:, 0] % Nbls
+            time_inds = (task_inds[:, 0] - bl_inds) // Nbls
+            Ntimes_loc = np.unique(time_inds).size
+            Nbls_loc = np.unique(bl_inds).size
+            Nfreqs_loc = np.unique(task_inds[:, 1]).size
+            axes_dict = {
+                'Ntimes_loc': Ntimes_loc,
+                'Nbls_loc': Nbls_loc,
+                'Nfreqs_loc': Nfreqs_loc,
+                'Nsrcs_loc': Nsky_parts,
+                'prof_rank': prof.rank
+            }
 
-    # If profiling is active, save meta data:
-    from .profiling import prof  # noqa
-    if hasattr(prof, 'meta_file'):  # pragma: nocover
-        # Saving axis sizes on current rank (local) and for the whole job (global).
-        # These lines are affected by issue 179 of line_profiler, so the nocover
-        # above will need to stay until this issue is resolved (see profiling.py).
-        task_inds = np.array(uvdata_indices)
-        bl_inds = task_inds[:, 0] % Nbls
-        time_inds = (task_inds[:, 0] - bl_inds) // Nbls
-        Ntimes_loc = np.unique(time_inds).size
-        Nbls_loc = np.unique(bl_inds).size
-        Nfreqs_loc = np.unique(task_inds[:, 1]).size
-        axes_dict = {
-            'Ntimes_loc': Ntimes_loc,
-            'Nbls_loc': Nbls_loc,
-            'Nfreqs_loc': Nfreqs_loc,
-            'Nsrcs_loc': Nsky_parts,
-            'prof_rank': prof.rank
-        }
-
-        with open(prof.meta_file, 'w') as afile:
-            for k, v in axes_dict.items():
-                afile.write("{} \t {:d}\n".format(k, int(v)))
-
-    vis_data.Free()
+            with open(prof.meta_file, 'w') as afile:
+                for k, v in axes_dict.items():
+                    afile.write("{} \t {:d}\n".format(k, int(v)))
+    finally:
+        count.free()
+        vis_data.Free()
 
     if rank == 0:
         if input_order is not None:
@@ -968,6 +969,7 @@ def run_uvsim(
         quiet=quiet,
         beam_interp_check=beam_interp_check,
     )
+
     if rank == 0 and not quiet:
         print(f"Run uvdata uvsim took {(Time.now() - start).to('minute'):.3f}")
 
