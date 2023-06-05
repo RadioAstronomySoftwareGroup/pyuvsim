@@ -8,6 +8,7 @@
 deprecation warnings.
 
 ### Fixed
+- Bugs where shared memory resources were not properly freed.
 - Bugs when running with pyradiosky>=0.2, mostly related to the new `skycoord` parameter
 on pyradiosky's `SkyModel` object and calls to functions removed from pyradiosky.
 - Better handling of lunarsky imports, required for the newest version of pyradiosky

@@ -83,6 +83,16 @@ def test_mock_catalog_zenith_source(hera_loc):
     assert new_cat == cat
 
 
+def test_shared_mpierr():
+    time = Time(2457458.65410, scale='utc', format='jd')
+    cat, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
+    cat_data = pyuvsim.simsetup.SkyModelData(cat)
+
+    if pyuvsim.mpi is None:
+        with pytest.raises(ImportError, match="You need mpi4py to use this method."):
+            cat_data.share(root=0)
+
+
 def test_mock_catalog_off_zenith_source(hera_loc):
     src_az = Angle('90.0d')
     src_alt = Angle('85.0d')
