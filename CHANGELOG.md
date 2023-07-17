@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.2.6] - 2022-07-17
+
 ### Changed
 - Require pyradiosky >= 0.2.0
 - Increase the minimum compatible version for lunarsky to 0.2.1 to fix astropy
