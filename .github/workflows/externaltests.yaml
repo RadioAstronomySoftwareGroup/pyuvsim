@@ -15,7 +15,7 @@ jobs:
         shell: bash -l {0}
     env:
       ENV_NAME: tests
-      PYTHON: 3.8
+      PYTHON: 3.9
 
     steps:
       - uses: actions/checkout@main

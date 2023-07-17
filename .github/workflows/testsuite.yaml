@@ -8,7 +8,7 @@ concurrency:
 jobs:
   tests:
     env:
-      ENV_NAME: tests
+      # ENV_NAME: pyuvsim_tests
       PYTHON: ${{ matrix.python-version }}
       OS: ${{ matrix.os }}
     name: Testing
@@ -21,11 +21,21 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: [3.8, 3.9, "3.10"]
+        python-version: [3.8, 3.9, "3.10", "3.11"]
     steps:
       - uses: actions/checkout@main
         with:
           fetch-depth: 1
+
+      # This is required becasue we're temporarily using a different env
+      # (without casacore) for python 3.11 jobs
+      - name: Set env_name variable
+        run: |
+          if [ ${{ env.PYTHON }} != '3.11' ]; then
+            echo "ENV_NAME=pyuvsim_tests" >> "$GITHUB_ENV"
+          else
+            echo "ENV_NAME=pyuvsim_tests_311" >> "$GITHUB_ENV"
+          fi
 
       - name: Setup Minimamba
         uses: conda-incubator/setup-miniconda@v2
@@ -66,7 +76,7 @@ jobs:
   min_deps:
     env:
       ENV_NAME: min_deps
-      PYTHON: 3.8
+      PYTHON: 3.9
     name: Min Deps Testing
     defaults:
       run:
@@ -163,8 +173,8 @@ jobs:
 
   warning_test:
     env:
-      ENV_NAME: tests
-      PYTHON: 3.8
+      ENV_NAME: pyuvsim_tests
+      PYTHON: 3.9
     name: Warning Test
     runs-on: ubuntu-latest
     defaults:
