@@ -8,7 +8,7 @@ concurrency:
 jobs:
   tests:
     env:
-      # ENV_NAME: pyuvsim_tests
+      ENV_NAME: pyuvsim_tests
       PYTHON: ${{ matrix.python-version }}
       OS: ${{ matrix.os }}
     name: Testing
@@ -26,16 +26,6 @@ jobs:
       - uses: actions/checkout@main
         with:
           fetch-depth: 1
-
-      # This is required becasue we're temporarily using a different env
-      # (without casacore) for python 3.11 jobs
-      - name: Set env_name variable
-        run: |
-          if [ ${{ env.PYTHON }} != '3.11' ]; then
-            echo "ENV_NAME=pyuvsim_tests" >> "$GITHUB_ENV"
-          else
-            echo "ENV_NAME=pyuvsim_tests_311" >> "$GITHUB_ENV"
-          fi
 
       - name: Setup Minimamba
         uses: conda-incubator/setup-miniconda@v2
