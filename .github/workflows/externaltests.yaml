@@ -14,32 +14,38 @@ jobs:
         # Adding -l {0} helps ensure conda can be found properly.
         shell: bash -l {0}
     env:
-      ENV_NAME: tests
-      PYTHON: 3.9
+      PYTHON: "3.10"
 
     steps:
       - uses: actions/checkout@main
         with:
          fetch-depth: 1
+
+      - uses: mpi4py/setup-mpi@v1
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON }}
+
+      - name: Install pyuvsim
+        run: |
+          pip install --upgrade pip
+          pip install .
+
       - name: clone hera_sim
         run: |
           cd ../
           git clone https://github.com/HERA-Team/hera_sim.git
-          cd pyuvsim
-      - name: Setup Minimamba
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          python-version: ${{ env.PYTHON }}
-          environment-file: ../hera_sim/ci/${{ env.ENV_NAME }}.yaml
-          activate-environment: ${{ env.ENV_NAME }}
 
-      - name: Conda Info
+      - name: Install hera_sim
         run: |
-          conda info -a
-          conda list
+          cd ../hera_sim
+          pip install .[tests]
+
+      - name: Environment Info
+        run: |
+          pip list
           PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
           if [[ $PYVER != ${{ env.PYTHON }} ]]; then
             exit 1;
@@ -47,9 +53,5 @@ jobs:
 
       - name: run herasim tests
         run: |
-          pip install --no-deps .
-          cd ../
-          cd hera_sim
-          pip install --no-deps .
-          mkdir test-reports
-          python -m pytest hera_sim --junitxml=test-reports/xunit.xml
+          cd ../hera_sim
+          python -m pytest
