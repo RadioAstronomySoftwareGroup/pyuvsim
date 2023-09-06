@@ -109,8 +109,10 @@ def test_file_namer(tmpdir, ext):
     assert new_filepath.endswith(f"_111{ext}")
 
 
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
+# TODO: remove the "LST values stored" filter when pyuvdata > 2.4
+@pytest.mark.filterwarnings("ignore:LST values stored in this file are not")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 @pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5', 'ms'])
 def test_write_uvdata(save_format, tmpdir):
     """ Test function that defines filenames from parameter dict """
@@ -139,8 +141,10 @@ def test_write_uvdata(save_format, tmpdir):
         assert ofname == expected_ofname
 
 
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
+# TODO: remove the "LST values stored" filter when pyuvdata > 2.4
+@pytest.mark.filterwarnings("ignore:LST values stored in this file are not")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 @pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5', 'ms'])
 def test_write_uvdata_clobber(save_format, tmpdir):
     """Test overwriting a uvdata object yields the expected results."""
@@ -229,8 +233,10 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     assert uv2 == uv
 
 
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
+# TODO: remove the "LST values stored" filter when pyuvdata > 2.4
+@pytest.mark.filterwarnings("ignore:LST values stored in this file are not")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_write_fix_autos(tmpdir):
     uv = UVData.from_file(triangle_uvfits_file)
     uv.use_future_array_shapes()
@@ -251,8 +257,10 @@ def test_write_fix_autos(tmpdir):
         simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='uvh5')
 
 
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
+# TODO: remove the "LST values stored" filter when pyuvdata > 2.4
+@pytest.mark.filterwarnings("ignore:LST values stored in this file are not")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_write_error_with_no_format(tmpdir):
     """Test write_uvdata will error if no format is given."""
     uv = UVData.from_file(triangle_uvfits_file)
@@ -265,8 +273,10 @@ def test_write_error_with_no_format(tmpdir):
         simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='')
 
 
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
+# TODO: remove the "LST values stored" filter when pyuvdata > 2.4
+@pytest.mark.filterwarnings("ignore:LST values stored in this file are not")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_file_format_in_filing_dict(tmpdir):
     """Test file is written out when output_format is set in filing dict."""
     uv = UVData.from_file(triangle_uvfits_file)
