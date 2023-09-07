@@ -174,6 +174,7 @@ def test_mock_diffuse_maps(model, hera_loc, apollo_loc, location):
 
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
+@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 @pytest.mark.parametrize("horizon_buffer", [True, False])
 def test_catalog_from_params(horizon_buffer):
     # Pass in parameter dictionary as dict
@@ -396,6 +397,7 @@ def test_gleam_catalog_spectral_type(spectral_type):
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not self-consistent")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
+@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 def test_param_reader():
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml")
     hera_uv = UVData.from_file(triangle_uvfits_file)
@@ -494,10 +496,10 @@ def test_param_reader():
 
     # the old object was written before ordering was enforced
     assert hera_uv.blt_order != uv_obj.blt_order
-    hera_uv.reorder_blts("time", "ant1")
-    hera_uv.reorder_blts("time", "baseline")
+    hera_uv.reorder_blts(order="time", minor_order="ant1")
+    hera_uv.reorder_blts(order="time", minor_order="baseline")
 
-    uv_obj.reorder_blts("time", "baseline")
+    uv_obj.reorder_blts(order="time", minor_order="baseline")
     # renumber/rename the phase centers so the equality check will pass.
     if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
         uv_obj._consolidate_phase_center_catalogs(other=hera_uv, ignore_name=True)
@@ -1351,6 +1353,7 @@ def test_beamlist_init_freqrange():
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
+@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 def test_moon_lsts():
     # Check that setting lsts for a Moon simulation works as expected.
     pytest.importorskip('lunarsky')

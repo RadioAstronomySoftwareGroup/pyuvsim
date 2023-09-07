@@ -1197,8 +1197,9 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     return_dict['antenna_names'] = np.array(antnames.tolist())
     return_dict['antenna_numbers'] = np.array(antnums)
     antpos_enu = np.vstack((E, N, U)).T
+    lat, lon, alt = telescope_location
     return_dict['antenna_positions'] = (
-        uvutils.ECEF_from_ENU(antpos_enu, *telescope_location)
+        uvutils.ECEF_from_ENU(antpos_enu, latitude=lat, longitude=lon, altitude=alt)
         - tele_params['telescope_location'])
     if world is not None:
         return_dict['world'] = world

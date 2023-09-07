@@ -515,8 +515,9 @@ def test_file_to_tasks(cst_beam, future_shapes):
     telescope = pyuvsim.Telescope(hera_uv.telescope_name, tel_loc, beam_list)
 
     ant_pos = hera_uv.antenna_positions + hera_uv.telescope_location
+    lat, lon, alt = hera_uv.telescope_location_lat_lon_alt
     ant_pos_enu = uvutils.ENU_from_ECEF(
-        ant_pos, *hera_uv.telescope_location_lat_lon_alt
+        ant_pos, latitude=lat, longitude=lon, altitude=alt
     )
 
     expected_task_list = []
@@ -1081,7 +1082,11 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
     pytest.importorskip('mpi4py')
     uvdata_linear, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
 
-    uvdata_linear.reorder_blts(*order)
+    if len(order) == 2:
+        minor_order = order[1]
+    else:
+        minor_order = None
+    uvdata_linear.reorder_blts(order=order[0], minor_order=minor_order)
 
     out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
         input_uv=uvdata_linear.copy(),
@@ -1110,7 +1115,11 @@ def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
     pytest.importorskip('mpi4py')
     uvdata_linear, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
 
-    uvdata_linear.reorder_blts(*order)
+    if len(order) == 2:
+        minor_order = order[1]
+    else:
+        minor_order = None
+    uvdata_linear.reorder_blts(order=order[0], minor_order=minor_order)
     # delete the order like we forgot to set it
     uvdata_linear.blt_order = None
     with uvtest.check_warnings(
