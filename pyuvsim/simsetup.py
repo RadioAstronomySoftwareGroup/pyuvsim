@@ -175,26 +175,6 @@ def _config_str_to_dict(config_str):
     return param_dict
 
 
-def _set_lsts_on_uvdata(uv_obj):
-    """Set the LSTs on a :class:`pyuvdata.UVData` object, with handling for MoonLocations."""
-    # If the telescope location is a MoonLocation,
-    # then uv_obj.extra_keywords['world'] == 'moon'.
-    world = uv_obj.extra_keywords.get('world', 'earth')
-
-    if world == 'earth':
-        uv_obj.set_lsts_from_time_array()
-    elif world == 'moon':
-        if not hasmoon:
-            raise ValueError("Cannot construct lsts for MoonLocation without lunarsky module")
-        un_jds, inv = np.unique(uv_obj.time_array, return_inverse=True)
-        loc = MoonLocation(*uv_obj.telescope_location, unit='m')
-        times = LTime(un_jds, format='jd', scale='utc', location=loc)
-        uv_obj.lst_array = times.sidereal_time('apparent').rad[inv]
-    else:
-        raise ValueError(f"Invalid world {world}.")
-    return uv_obj
-
-
 def _create_catalog_diffuse(
     map_nside, diffuse_model, diffuse_params, time, array_location
 ):
@@ -1218,7 +1198,7 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     else:
         raise ValueError(f"Invalid world {world}")
     tele_params["telescope_location"] = uvutils.XYZ_from_LatLonAlt(*telescope_location, frame=frame)
-
+    
     telescope_name = tele_params['telescope_name']
 
     # get array layout
@@ -1784,8 +1764,8 @@ def initialize_uvdata_from_params(
     uv_obj = UVData()
     uv_obj._set_future_array_shapes()
 
-    #Quick lunar fix
-    uv_obj._telescope_location.frame = uvparam_dict.pop('telescope_frame')
+    #Setting the frame and acceptable range for the moon
+    uv_obj._telescope_location.frame = uvparam_dict['telescope_frame']
     if uv_obj._telescope_location.frame == 'mcmf':
     	uv_obj._telescope_location.acceptable_range = (1.71e6, 1.75e6)
 
@@ -1822,13 +1802,13 @@ def initialize_uvdata_from_params(
         )
         uv_obj.phase_center_id_array = np.full(uv_obj.Nblts, cat_id, dtype=int)
 
-        _set_lsts_on_uvdata(uv_obj)
+        uv_obj.set_lsts_from_time_array()
         # set the apparent coordinates on the object
         uv_obj._set_app_coords_helper()
 
     else:
         uv_obj._set_drift()
-        _set_lsts_on_uvdata(uv_obj)
+        uv_obj.set_lsts_from_time_array()
 
     # add other required metadata to allow select to work without errors
     # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
