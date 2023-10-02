@@ -1198,7 +1198,7 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     else:
         raise ValueError(f"Invalid world {world}")
     tele_params["telescope_location"] = uvutils.XYZ_from_LatLonAlt(*telescope_location, frame=frame)
-    
+
     telescope_name = tele_params['telescope_name']
 
     # get array layout
