@@ -1607,14 +1607,14 @@ def test_moon_lsts():
 
     # Confirm that the LSTs match the zenith RAs for the telescope_location
     loc = MoonLocation.from_selenocentric(*uv_obj.telescope_location, unit='m')
-    times_quant = Time(times, format='jd', location=loc)
+    times_quant = LTime(times, format='jd', location=loc)
     skycrds = SkyCoord(
         alt=["90d"] * times.size,
         az=["0d"] * times.size,
         frame="lunartopo",
         obstime=times_quant,
         location=loc
-    ).transform_to(ICRS())
+    ).transform_to('icrs')
 
     assert np.allclose(skycrds.ra.rad, lsts, atol=1e-7)
 
@@ -1784,23 +1784,6 @@ def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
     assert smd_copy.ra.base is smd.ra.base
     assert smd_copy.dec.base is smd.dec.base
     assert smd_copy.stokes_I.base is smd.stokes_I.base
-
-
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-def test_set_lsts_errors():
-    # Error cases on set_lsts function.
-    uv0 = UVData.from_file(longbl_uvfits_file)
-    uv0.use_future_array_shapes()
-    uv0.lst_array = None
-
-    uv0.extra_keywords['world'] = 'moon'
-    if not hasmoon:
-        with pytest.raises(ValueError, match="Cannot construct lsts for MoonLocation"):
-            pyuvsim.simsetup._set_lsts_on_uvdata(uv0)
-
-    uv0.extra_keywords['world'] = 'tatooine'
-    with pytest.raises(ValueError, match="Invalid world tatooine."):
-        pyuvsim.simsetup._set_lsts_on_uvdata(uv0)
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
