@@ -57,7 +57,6 @@ except ImportError:
 try:
     from lunarsky import LunarTopo, MoonLocation
     from lunarsky import SkyCoord as LunarSkyCoord
-    from lunarsky import Time as LTime
 
     hasmoon = True
 except ImportError:
@@ -1764,10 +1763,10 @@ def initialize_uvdata_from_params(
     uv_obj = UVData()
     uv_obj._set_future_array_shapes()
 
-    #Setting the frame and acceptable range for the moon
+    # Setting the frame and acceptable range for the moon
     uv_obj._telescope_location.frame = uvparam_dict['telescope_frame']
     if uv_obj._telescope_location.frame == 'mcmf':
-    	uv_obj._telescope_location.acceptable_range = (1.71e6, 1.75e6)
+        uv_obj._telescope_location.acceptable_range = (1.71e6, 1.75e6)
 
     # use the __iter__ function on UVData to get list of UVParameters on UVData
     valid_param_names = [getattr(uv_obj, param).name for param in uv_obj]
