@@ -80,11 +80,11 @@ following packages before installing `pyuvsim`:
 
 Required:
 
-* astropy>=5.0.4
+* astropy>=5.2
 * numpy>=1.19
 * psutil
 * pyradiosky>=0.2.0
-* pyuvdata>=2.2.10
+* pyuvdata>=2.2.12
 * pyyaml>=5.1
 * scipy>=1.3
 * setuptools_scm
