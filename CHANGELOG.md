@@ -7,6 +7,7 @@
 
 ### Changed
 - Require pyuvdata >= 2.4.1 to properly support lunar sims.
+- Require scipy>1.5.
 - Moved all necessary mpi broadcasts calls into `run_uvdata_uvsim` to make it more user friendly.
 - Changed the default file type for writing out UVData files to be the uvh5
 format rather than the uvfits format because it does not require phasing.
