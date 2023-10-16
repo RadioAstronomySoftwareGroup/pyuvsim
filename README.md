@@ -86,7 +86,7 @@ Required:
 * pyradiosky>=0.2.0
 * pyuvdata>=2.4.1
 * pyyaml>=5.1
-* scipy>=1.3
+* scipy>=1.5
 * setuptools_scm
 
 Optional:
