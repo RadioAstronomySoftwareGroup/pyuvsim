@@ -410,7 +410,7 @@ def test_sim_on_moon(future_shapes):
     uv_compare = UVData()
     uv_compare.read(uv_filename)
     assert np.allclose(uv_out.telescope_location, uv_compare.telescope_location)
-    assert uv_out._telescope_location.frame == uv_compare._telescope_location.frame 
+    assert uv_out._telescope_location.frame == uv_compare._telescope_location.frame
 
     # Cleanup
     os.remove(uv_filename)
