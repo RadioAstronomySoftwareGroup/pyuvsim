@@ -404,3 +404,13 @@ def test_sim_on_moon(future_shapes):
 
     assert np.allclose(uv_out.data_array[:, :, 0], 0.5)
     assert uv_out.extra_keywords['world'] == 'moon'
+
+    # Lunar Frame Roundtripping
+    uv_filename = pyuvsim.utils.write_uvdata(uv_out, param_dict, return_filename=True, quiet=True)
+    uv_compare = UVData()
+    uv_compare.read(uv_filename)
+    assert np.allclose(uv_out.telescope_location, uv_compare.telescope_location)
+    assert uv_out._telescope_location.frame == uv_compare._telescope_location.frame 
+
+    # Cleanup
+    os.remove(uv_filename)
