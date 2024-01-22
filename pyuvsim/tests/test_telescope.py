@@ -65,19 +65,23 @@ def beam_objs(beam_objs_main):
 @pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 def test_convert_loop(beam_objs):
     beams = beam_objs
-    beams[0].freq_interp_kind = 'linear'
-    beams[1].freq_interp_kind = 'cubic'
 
-    # Should warn about inconsistent params on UVBeams.
-    with uvtest.check_warnings(UserWarning, match="Conflicting settings for"):
+    if hasattr(beams[0], "_freq_interp_kind"):
+        beams[0].freq_interp_kind = 'linear'
+        beams[1].freq_interp_kind = 'cubic'
+
+        # Should warn about inconsistent params on UVBeams.
+        with uvtest.check_warnings(UserWarning, match="Conflicting settings for"):
+            beamlist = pyuvsim.BeamList(beams)
+
+        # Convert beams to strings:
+        # Fail, because UVBeams are inconsistent.
+        with pytest.raises(ValueError, match='Conflicting settings for'):
+            beamlist.set_str_mode()
+
+        beams[1].freq_interp_kind = 'linear'
+    else:
         beamlist = pyuvsim.BeamList(beams)
-
-    # Convert beams to strings:
-    # Fail, because UVBeams are inconsistent.
-    with pytest.raises(ValueError, match='Conflicting settings for'):
-        beamlist.set_str_mode()
-
-    beams[1].freq_interp_kind = 'linear'
 
     beamlist.set_str_mode()
 
@@ -87,7 +91,8 @@ def test_convert_loop(beam_objs):
 
     assert beamlist2 == beamlist
 
-    assert beamlist.uvb_params['freq_interp_kind'] == 'linear'
+    if hasattr(beams[0], "_freq_interp_kind"):
+        assert beamlist.uvb_params['freq_interp_kind'] == 'linear'
 
     for bs in beamlist:
         assert isinstance(bs, str)
@@ -111,19 +116,24 @@ def test_object_mode(beam_objs):
     beams = beam_objs
     beamlist = pyuvsim.BeamList(beams)
 
-    beamlist[0].freq_interp_kind = 'cubic'
-
     uvb = copy.deepcopy(beams[0])
-    uvb.freq_interp_kind = 'quartic'
-
+    if hasattr(beams[0], "_freq_interp_kind"):
+        beamlist[0].freq_interp_kind = 'cubic'
+        uvb.freq_interp_kind = 'quartic'
+        warn_type = UserWarning
+        msg = "Conflicting settings for"
+    else:
+        warn_type = None
+        msg = ""
     # Warn if inserted object mismatches.
-    with uvtest.check_warnings(UserWarning, match="Conflicting settings for"):
+    with uvtest.check_warnings(warn_type, match=msg):
         beamlist.append(uvb)
     assert len(beamlist) == 7
 
-    # Error if converting to string mode with mismatched keywords:
-    with pytest.raises(ValueError, match='Conflicting settings '):
-        beamlist.set_str_mode()
+    if hasattr(beams[0], "_freq_interp_kind"):
+        # Error if converting to string mode with mismatched keywords:
+        with pytest.raises(ValueError, match='Conflicting settings '):
+            beamlist.set_str_mode()
 
     beamlist._set_params_on_uvbeams(beamlist._obj_beam_list)
 
@@ -147,12 +157,14 @@ def test_string_mode(beam_objs):
     beamlist.set_str_mode()
 
     uvb = beams[0]
-    uvb.freq_interp_kind = 'quartic'
+    if hasattr(beams[0], "_freq_interp_kind"):
+        uvb.freq_interp_kind = 'quartic'
 
-    with pytest.raises(ValueError, match='UVBeam parameters do not'):
-        beamlist.append(uvb)
+        with pytest.raises(ValueError, match='UVBeam parameters do not'):
+            beamlist.append(uvb)
 
-    uvb.freq_interp_kind = beamlist.uvb_params['freq_interp_kind']
+        uvb.freq_interp_kind = beamlist.uvb_params['freq_interp_kind']
+
     beamlist.append(uvb)
 
     assert isinstance(beamlist[-1], str)
@@ -185,6 +197,8 @@ def test_comparison(beam_objs):
 
 
 def test_no_overwrite(beam_objs):
+    if not hasattr(beam_objs[0], "_freq_interp_kind"):
+        pytest.skip()
     # Ensure UVBeam keywords are not overwritten by BeamList.uvb_params
     # while in object mode.
     newbeams = beam_objs

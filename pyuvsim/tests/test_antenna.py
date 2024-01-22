@@ -54,7 +54,6 @@ def test_jones_set_interp(cst_beam, hera_loc):
     array_location = hera_loc
 
     beam = cst_beam.copy()
-    beam.freq_interp_kind = None
 
     beam_list = pyuvsim.BeamList([beam])
     antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 10, 0]), 0)
@@ -62,14 +61,9 @@ def test_jones_set_interp(cst_beam, hera_loc):
     source_altaz = np.array([[0.0], [np.pi / 4.]])
     freq = 123e6 * units.Hz
 
-    with pytest.raises(ValueError, match='freq_interp_kind must be set'):
-        antenna1.get_beam_jones(array, source_altaz, freq)
-
     jones = antenna1.get_beam_jones(array, source_altaz, freq, freq_interp_kind='cubic')
-    assert beam.freq_interp_kind == 'cubic'
     jones0 = antenna1.get_beam_jones(array, source_altaz, freq)
     jones1 = antenna1.get_beam_jones(array, source_altaz, freq, freq_interp_kind='linear')
-    assert beam.freq_interp_kind == 'linear'
     jones2 = antenna1.get_beam_jones(array, source_altaz, freq)
 
     assert np.all(jones2 == jones0)

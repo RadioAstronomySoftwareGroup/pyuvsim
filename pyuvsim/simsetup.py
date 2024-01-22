@@ -1062,11 +1062,15 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
     if freq_range is not None:
         select['freq_range'] = freq_range
 
-    beam_list_obj = BeamList(
-        beam_list=beam_list, select_params=select, force_check=force_check
-    )
+    bl_options = {}
     if 'spline_interp_opts' in telconfig.keys():
-        beam_list_obj.spline_interp_opts = telconfig['spline_interp_opts']
+        bl_options["spline_interp_opts"] = telconfig['spline_interp_opts']
+    if 'freq_interp_kind' in telconfig.keys():
+        bl_options["freq_interp_kind"] = telconfig['freq_interp_kind']
+
+    beam_list_obj = BeamList(
+        beam_list=beam_list, select_params=select, force_check=force_check, **bl_options,
+    )
 
     for key in beam_list_obj.uvb_params.keys():
         if key in telconfig:
