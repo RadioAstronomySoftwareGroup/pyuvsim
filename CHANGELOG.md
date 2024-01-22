@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed
+- Add tracking of the beam `freq_interp_kind` to the BeamList object since
+it is moving from a UVBeam attribute to a parameter to the `UVBeam.interp` method
+in future pyuvdata versions. Also ensure compatibility with current and future
+pyuvdata versions.
+
 ## [1.2.6] - 2022-07-17
 
 ### Changed
