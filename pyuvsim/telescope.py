@@ -45,6 +45,14 @@ class BeamList:
         Is True if the beams are represented as strings, False if they're objects
     uvb_params : dict
         Set of additional attributes to set on UVBeam objects.
+    spline_interp_opts : dict
+        Degrees of the bivariate spline for the angular interpolation (passed
+        directly to numpy.RectBivariateSpline, e.g. use {'kx' : 2, 'ky' : 2}
+        for 2nd degree splines in each direction.) Default is 3rd order in
+        each direction.
+    freq_interp_kind : str
+        The type of frequency interpolation, anything accepted by
+        scipy.interpolate.interp1d. Default is "cubic".
 
     Parameters
     ----------
@@ -92,18 +100,24 @@ class BeamList:
         beam_list=None,
         uvb_params=None,
         select_params: dict[str: tuple[float, float]] = None,
+        spline_interp_opts: dict[str: int] | None = None,
+        freq_interp_kind: str = "cubic",
         check: bool = True,
         force_check: bool = False
     ):
 
-        self.uvb_params = {'freq_interp_kind': 'cubic'}
-
+        self.uvb_params = {}
         # this can go away when we require pyuvdata version >= 2.2.13
         empty_uvbeam = UVBeam()
         if hasattr(empty_uvbeam, "_interpolation_function"):
             self.uvb_params["interpolation_function"] = "az_za_simple"
 
-        self.spline_interp_opts = None
+        # this can go away when we require pyuvdata version >= 2.4.2
+        if hasattr(empty_uvbeam, "_freq_interp_kind"):
+            self.uvb_params["freq_interp_kind"] = freq_interp_kind
+
+        self.spline_interp_opts = spline_interp_opts
+        self.freq_interp_kind = freq_interp_kind
         self._str_beam_list = []
         self._obj_beam_list = []
         if beam_list is not None:
@@ -213,8 +227,8 @@ class BeamList:
             for indx, thing in items.items():
                 if np.any(thing != items[min_index]):
                     raise BeamConsistencyError(
-                        f"{item} of beam {indx+1} is not consistent with beam "
-                        f"{min_index+1}: {thing} vs. {items[min_index]}"
+                        f"{item} of beam {indx + 1} is not consistent with beam "
+                        f"{min_index + 1}: {thing} vs. {items[min_index]}"
                     )
 
         check_thing("beam_type")

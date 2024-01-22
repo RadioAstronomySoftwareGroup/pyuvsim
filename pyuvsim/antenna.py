@@ -71,7 +71,7 @@ class Antenna:
             See :meth:`pyuvdata.UVBeam.interp` for options.
         freq_interp_kind : str
             Interpolation method for frequencies. Note -- This overrides whatever method
-            may be set on the :class:`pyuvdata.UVBeam` objects.
+            may be set on the :class:`pyuvdata.UVBeam` or BeamList objects.
 
         Returns
         -------
@@ -95,9 +95,6 @@ class Antenna:
         if beam.data_normalization != 'peak':
             beam.peak_normalize()
 
-        if freq_interp_kind is not None:
-            beam.freq_interp_kind = freq_interp_kind
-
         interp_kwargs = {
             'az_array' : source_az,
             'za_array' : source_za,
@@ -108,9 +105,28 @@ class Antenna:
 
         if interpolation_function is not None:
             if hasattr(beam, "_interpolation_function"):
+                # this can go away when we require pyuvdata version >= 2.2.13
                 beam.interpolation_function = interpolation_function
             else:
                 interp_kwargs["interpolation_function"] = interpolation_function
+
+        if isinstance(array.beam_list, BeamList):
+            spline_opts = array.beam_list.spline_interp_opts
+            if spline_opts is not None:
+                interp_kwargs["spline_opts"] = spline_opts
+            bl_freq_interp_kind = array.beam_list.freq_interp_kind
+        else:
+            bl_freq_interp_kind = None
+
+        if freq_interp_kind is None:
+            freq_interp_kind = bl_freq_interp_kind
+
+        if freq_interp_kind is not None:
+            if hasattr(beam, "_freq_interp_kind"):
+                # this can go away when we require pyuvdata version >= 2.4.2
+                beam.freq_interp_kind = freq_interp_kind
+            else:
+                interp_kwargs["freq_interp_kind"] = freq_interp_kind
 
         # UVBeams need an interpolation_function. If none is set, default to az_za_simple.
         # this can go away when we require pyuvdata version >= 2.2.13
@@ -121,13 +137,6 @@ class Antenna:
             beam.interpolation_function = 'az_za_simple'
             warnings.warn("UVBeam interpolation_function is not set."
                           f" Defaulting to {beam.interpolation_function}.")
-
-        spline_opts = None
-        if isinstance(array.beam_list, BeamList):
-            spline_opts = array.beam_list.spline_interp_opts
-
-        if spline_opts is not None:
-            interp_kwargs['spline_opts'] = spline_opts
 
         interp_data, _ = beam.interp(**interp_kwargs)
 
