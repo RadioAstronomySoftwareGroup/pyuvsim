@@ -48,7 +48,11 @@ def multi_beams():
         beam0.read_beamfits(herabeam_default)
     beam0.use_future_array_shapes()
     beam0.extra_keywords['beam_path'] = herabeam_default
-    beam0.freq_interp_kind = 'cubic'
+
+    if hasattr(beam0, "_freq_interp_kind"):
+        # this can go away when we require pyuvdata version >= 2.4.2
+        beam0.freq_interp_kind = "cubic"
+
     if hasattr(beam0, "_interpolation_function"):
         beam0.interpolation_function = 'az_za_simple'
     beam1 = pyuvsim.AnalyticBeam('uniform')
