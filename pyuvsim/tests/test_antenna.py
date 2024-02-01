@@ -18,7 +18,9 @@ def test_jones_set_spline(cst_beam, hera_loc):
     # Run get_beam_jones with spline options.
     array_location = hera_loc
     beam0 = cst_beam.copy()
-    beam0.freq_interp_kind = 'cubic'
+    if hasattr(beam0, "_freq_interp_kind"):
+        # this can go away when we require pyuvdata version >= 2.4.2
+        beam0.freq_interp_kind = "cubic"
     telescope_config_name = os.path.join(SIM_DATA_PATH, 'mwa128_config.yaml')
     with open(telescope_config_name, 'r') as yf:
         telconfig = yaml.safe_load(yf)

@@ -101,8 +101,9 @@ def test_convert_loop(beam_objs):
     assert beamlist._str_beam_list == []
 
     # Reset UVBeams
-    beams[0].freq_interp_kind = None
-    beams[1].freq_interp_kind = None
+    if hasattr(beams[0], "_freq_interp_kind"):
+        beams[0].freq_interp_kind = None
+        beams[1].freq_interp_kind = None
 
 
 def test_object_mode(beam_objs):

@@ -179,7 +179,8 @@ def test_analytic_diffuse(model, tmpdir):
 @pytest.mark.filterwarnings("ignore:Fixing auto polarization power beams")
 def test_powerbeam_sim(cst_beam):
     new_cst = copy.deepcopy(cst_beam)
-    new_cst.freq_interp_kind = 'nearest'  # otherwise we get an error about freq interpolation
+    if hasattr(new_cst, "_freq_interp_kind"):
+        new_cst.freq_interp_kind = 'nearest'  # otherwise we get an error about freq interpolation
     new_cst.efield_to_power()
     beams = BeamList([new_cst] * 4)
     cfg = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
