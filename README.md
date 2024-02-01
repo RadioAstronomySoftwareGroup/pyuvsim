@@ -174,8 +174,13 @@ We use a `generation.major.minor` format.
 Testing: Backed by unittests, internal model validation, and significant external comparison.
 * Major - Adds new physical effect or major computational improvement. Small number of improvements with each release.
 Testing: Backed by unittests, internal model validation and limited external comparison.
-* Minor - Bug fixes and small improvements not expected to change physical model.
+* Minor - Bug fixes and small improvements not expected to change physical model
+and which do not include breaking API changes.
 Testing: Backed by unittests
+
+We do our best to provide a significant period (usually 2 major generations) of
+deprecation warnings for all breaking changes to the API.
+We track all changes in our [changelog](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/main/CHANGELOG.md).
 
 ### Some helpful definitions
 * __Physical effects__: things like polarization effects, noise, ionospheric modeling, or nonterrestrial observing positions.
