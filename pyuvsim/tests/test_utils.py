@@ -103,10 +103,7 @@ def test_file_namer(tmpdir, ext):
             f.write(' ')
         fnames.append(fname)
     existing_file = fnames[0]
-    if ext == '.ext':
-        new_filepath = simutils.check_file_exists_and_increment(existing_file, 'ext')
-    else:
-        new_filepath = simutils.check_file_exists_and_increment(existing_file)
+    new_filepath = simutils.check_file_exists_and_increment(existing_file)
     assert new_filepath.endswith(f"_111{ext}")
 
 
