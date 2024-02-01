@@ -2028,13 +2028,13 @@ def initialize_uvdata_from_keywords(
         # Increment name appropriately:
         output_layout_filepath = os.path.join(path_out, output_layout_filename)
         output_layout_filename = os.path.basename(
-            check_file_exists_and_increment(output_layout_filepath, 'csv')
+            check_file_exists_and_increment(output_layout_filepath)
         )
 
         if output_yaml_filename is None:
             output_yaml_filename = 'obsparam.yaml'
         output_yaml_filename = check_file_exists_and_increment(
-            os.path.join(path_out, output_yaml_filename), 'yaml'
+            os.path.join(path_out, output_yaml_filename)
         )
 
         if antenna_layout_filepath is not None:

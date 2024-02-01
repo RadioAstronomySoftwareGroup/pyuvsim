@@ -146,43 +146,15 @@ def zenithangle_azimuth_to_altaz(zenith_angle, azimuth):
     return altitude, new_azimuth
 
 
-def strip_extension(filepath, ext=None):
-    """
-    Remove extension from file.
-
-    Parameters
-    ----------
-    ext : str
-        Extenstion to remove. If not specified, only 'uvfits', 'uvh5', 'yaml' extensions
-        are removed.
-    """
-    if '.' not in filepath:
-        return filepath, ''
-    file_list = filepath.split('.')
-    if ext is not None:
-        return filepath[:-len(ext) - 1], '.' + ext
-    ext = file_list[-1]
-    # miriad files might not have an extension
-    # limited list of recognized extensions
-    if ext not in ['uvfits', 'uvh5', 'yaml']:
-        return filepath, ''
-    return ".".join(file_list[:-1]), '.' + file_list[-1]
-
-
-def check_file_exists_and_increment(filepath, extension=None):
+def check_file_exists_and_increment(filepath):
     """
     Check for a file and increment the name if it does to ensure a unique name.
 
     Given filepath (path + filename), check if it exists. If so, add a _1
     at the end, if that exists add a _2, and so on.
 
-    Parameters
-    ----------
-    extension : str
-        File extension, to be removed before modifying the filename and then added back.
-
     """
-    base_filepath, ext = strip_extension(filepath, extension)
+    base_filepath, ext = os.path.splitext(filepath)
     bf_list = base_filepath.split('_')
     if bf_list[-1].isdigit():
         base_filepath = '_'.join(bf_list[:-1])
