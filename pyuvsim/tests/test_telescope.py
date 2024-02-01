@@ -42,19 +42,14 @@ def beam_objs_main():
     beams.append(pyuvsim.AnalyticBeam('airy', diameter=diameter_m))
     sigma = 0.03
     # Ignore warnings of pending sigma deprecation
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", "Achromatic gaussian beams will not be supported in the future"
-        )
-        beams.append(pyuvsim.AnalyticBeam('gaussian', sigma=sigma))
-        ref_freq, alpha = 100e6, -0.5
-        beams.append(
-            pyuvsim.AnalyticBeam('gaussian', sigma=sigma, ref_freq=ref_freq, spectral_index=alpha)
-        )
+    beams.append(pyuvsim.AnalyticBeam('gaussian', sigma=sigma))
+    ref_freq, alpha = 100e6, -0.5
+    beams.append(
+        pyuvsim.AnalyticBeam('gaussian', sigma=sigma, ref_freq=ref_freq, spectral_index=alpha)
+    )
     return beams
 
 
-@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 @pytest.fixture()
 def beam_objs(beam_objs_main):
     beams_copy = copy.deepcopy(beam_objs_main)
@@ -62,7 +57,6 @@ def beam_objs(beam_objs_main):
     return beams_copy
 
 
-@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 def test_convert_loop(beam_objs):
     beams = beam_objs
 
@@ -111,7 +105,6 @@ def test_convert_loop(beam_objs):
     beams[1].freq_interp_kind = None
 
 
-@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 def test_object_mode(beam_objs):
     beams = beam_objs
     beamlist = pyuvsim.BeamList(beams)
@@ -150,7 +143,6 @@ def test_object_mode(beam_objs):
     assert beamlist[-1].sigma == 3.0
 
 
-@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 def test_string_mode(beam_objs):
     beams = beam_objs
     beamlist = pyuvsim.BeamList(beams)
@@ -178,7 +170,6 @@ def test_string_mode(beam_objs):
         pytest.fail("something went wrong with scraping uvb params")
 
 
-@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_comparison(beam_objs):
     beamlist = pyuvsim.BeamList(beam_objs)
@@ -213,7 +204,6 @@ def test_no_overwrite(beam_objs):
     assert beamlist.uvb_params['freq_interp_kind'] == 'cubic'
 
 
-@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 def test_beamlist_errors(beam_objs):
     # make a copy to enable Telescope equality checking
     beams = copy.deepcopy(beam_objs)
@@ -298,7 +288,6 @@ def test_beam_basis_type(beam_objs):
 
 
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer")
-@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 def test_beam_basis_type_errors(beam_objs):
     beam_objs[0].pixel_coordinate_system = "orthoslant_zenith"
     beam_objs[0].check()
@@ -359,7 +348,6 @@ def test_powerbeam_consistency(beam_objs):
     beamlist.check_consistency()
 
 
-@pytest.mark.filterwarnings('ignore:Achromatic gaussian')
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
 def test_check_azza_full_sky(beam_objs):
     beam = beam_objs
