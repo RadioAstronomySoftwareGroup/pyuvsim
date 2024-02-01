@@ -20,6 +20,7 @@ precision necessary for 21cm cosmology science,
 1. High level of test coverage including accuracy (design goal is 97%).
 2. Testing against analytic calculations, monitored by continuous integration (see memo #XXX)
 3. Comparison with external simulations with standardized reference simulations
+
 ## Usability and extensibility
 A secondary goal is a community simulation environment which provides well documented and flexible code to support a diversity of use cases.
 Key elements of this approach include:
@@ -41,6 +42,14 @@ Each addition of new physics is validated against analytic calculations and incl
 1. Time domain sources (TODO)
 1. Ionospheric scintillation (TODO)
 
+# Citation
+Please cite pyuvsim by citing our JOSS paper:
+
+Lanman et al., (2019). pyuvsim: A comprehensive simulation package for radio
+interferometers in python. Journal of Open Source Software, 4(37), 1234,
+https://doi.org/10.21105/joss.01234
+
+[ADS Link](https://ui.adsabs.harvard.edu/abs/2019JOSS....4.1234L/abstract)
 
 
 ## Installation
