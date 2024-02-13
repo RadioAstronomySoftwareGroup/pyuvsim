@@ -1,5 +1,5 @@
 Nants: 3
 beam_paths:
-  0: ../data/HERA_NicCST.uvbeam
+  0: ../data/HERA_NicCST.beamfits
 telescope_location: (-30.721527777777911, 21.428305555555557, 1073.0000000093132)
 telescope_name: HERA

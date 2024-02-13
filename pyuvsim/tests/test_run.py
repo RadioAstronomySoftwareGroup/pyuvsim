@@ -5,12 +5,14 @@
 import copy
 import os
 import resource
+import shutil
 import sys
 
 import numpy as np
 import pyradiosky
 import pytest
 import pyuvdata
+import pyuvdata.tests as uvtest
 import pyuvdata.utils as uvutils
 import yaml
 from astropy import units
@@ -195,13 +197,58 @@ def test_powerbeam_sim(cst_beam):
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
-def test_run_paramdict_uvsim():
+@pytest.mark.parametrize("rename_beamfits", [True, False])
+def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
     # Running a simulation from parameter dictionary.
-    params = pyuvsim.simsetup._config_str_to_dict(
-        os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
-    )
+    param_file = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
 
-    pyuvsim.run_uvsim(params, return_uv=True)
+    msg = ["Cannot check consistency of a string-mode BeamList"]
+    warn_type = [UserWarning]
+    if rename_beamfits:
+        os.makedirs(os.path.join(tmp_path, 'test_config'))
+        new_param_file = os.path.join(tmp_path, 'test_config', 'param_1time_1src_testcat.yaml')
+        shutil.copyfile(param_file, new_param_file)
+
+        telescope_param_file = os.path.join(
+            SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan.yaml'
+        )
+        new_telescope_param_file = os.path.join(
+            tmp_path, 'test_config', '28m_triangle_10time_10chan.yaml'
+        )
+        shutil.copyfile(telescope_param_file, new_telescope_param_file)
+
+        telescope_layout_file = os.path.join(
+            SIM_DATA_PATH, 'test_config', 'triangle_bl_layout.csv'
+        )
+        new_telescope_layout_file = os.path.join(tmp_path, 'test_config', 'triangle_bl_layout.csv')
+        shutil.copyfile(telescope_layout_file, new_telescope_layout_file)
+
+        source_file = os.path.join(SIM_DATA_PATH, 'single_source.txt')
+        new_source_file = os.path.join(tmp_path, 'single_source.txt')
+        shutil.copyfile(source_file, new_source_file)
+
+        beamfits_file = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.beamfits')
+        new_beam_file = os.path.join(tmp_path, 'test_config', 'HERA_NicCST.uvbeam')
+        shutil.copyfile(beamfits_file, new_beam_file)
+
+        # change the beam file name to .uvbeam
+        with open(new_telescope_param_file, 'r') as pfile:
+            tele_param_dict = yaml.safe_load(pfile)
+            tele_param_dict["beam_paths"][0] = new_beam_file
+
+        with open(new_telescope_param_file, 'w') as yfile:
+            yaml.dump(tele_param_dict, yfile, default_flow_style=False)
+
+        n_beam_warnings = 3
+        warn_type += [DeprecationWarning] * n_beam_warnings
+        msg += [pyuvsim.telescope.weird_beamfits_extension_warning] * n_beam_warnings
+
+        params = pyuvsim.simsetup._config_str_to_dict(new_param_file)
+    else:
+        params = pyuvsim.simsetup._config_str_to_dict(param_file)
+
+    with uvtest.check_warnings(warn_type, match=msg):
+        pyuvsim.run_uvsim(params, return_uv=True)
 
 
 @pytest.mark.filterwarnings("ignore:No julian date given for mock catalog")

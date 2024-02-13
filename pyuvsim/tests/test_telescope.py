@@ -19,7 +19,7 @@ try:
 except ImportError:
     has_mpi = False
 
-herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
+herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.beamfits')
 
 
 @pytest.fixture(scope='module')
@@ -217,7 +217,7 @@ def test_beamlist_errors(beam_objs):
         pyuvsim.BeamList(newlist)
 
     # Try to append an invalid beam path while in object mode.
-    beam_path = 'invalid_file.uvbeam'
+    beam_path = 'invalid_file.beamfits'
     with pytest.raises(ValueError, match='Invalid file path'):
         beamlist.append(beam_path)
 

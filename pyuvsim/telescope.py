@@ -16,6 +16,13 @@ except ImportError:
 
 from .analyticbeam import AnalyticBeam
 
+weird_beamfits_extension_warning = (
+    "This beamfits file does not have a '.fits' or '.beamfits' extension, so "
+    "UVBeam does not recognize it as a beamfits file. Either change the file "
+    "extension or specify the beam_type. This is currently handled with a "
+    "try/except clause in pyuvsim, but this will become an error in version 1.4"
+)
+
 
 class BeamConsistencyError(Exception):
     """An Exception class to mark inconsistencies among beams in a BeamList."""
@@ -30,8 +37,8 @@ class BeamList:
     Each rank in the simulation gets a copy of the set of beam objects
     used for calculating Jones matrices. Rather than broadcasting the objects
     themselves, the list is composed of strings which provide either a complete
-    description of an analytic beam or the path to a beamfits file. After the
-    broadcast, the beams are initialized from these strings.
+    description of an analytic beam or the path to a UVBeam readable file. After
+    the broadcast, the beams are initialized from these strings.
 
     This class provides methods to transform between the string and object
     representations, and also carries parameters used globally by all UVBeams,
@@ -64,10 +71,19 @@ class BeamList:
         Passing in a mixture of strings and objects will error.
     uvb_params : dict (optional)
         Options to set uvb_params, overriding settings from passed-in UVBeam objects.
+    uvb_read_kwargs : dict (optional)
+        A nested dictionary that can contain parameters to pass to the UVBeam
+        read method for each UVBeam in the beam dict. The top-level keys are
+        beam_id integers, the value for each beam id is a dict with the kwargs
+        specified for each beam. This can include ``file_type`` or any other
+        parameter accepted by the UVBeam.read method. Note that this can in
+        principal overlap with entries in select_params. Entries in uvb_read_kwargs
+        will supercede anything that is also in select_params.
     select_params : dict (optional)
-        A dictionary that can contain parameters for selecting parts of the beam to
-        read. Example keys include ``freq_range`` and ``za_range``. Note that these
-        will only be used for beamfits format files.
+        A dictionary that can contain parameters for selecting parts of the beam
+        to read. Example keys include ``freq_range`` and ``za_range``. Note that
+        these will only be used for UVBeam readable files and they apply to all
+        such beams unless they are superceded by uvb_read_kwargs.
     check : bool
         Whether to perform a consistency check on the beams (i.e. asserting that several
         of their defining parameters are the same for all beams in the list).
@@ -85,7 +101,7 @@ class BeamList:
     -----
     If an object beam is added while in string mode, it will be converted to a string
     before being inserted, and vice versa. ***In order to be converted to a string, a UVBeam
-    needs to have the entry 'beam_path' in its extra_keywords, giving the path to the beamfits
+    needs to have the entry 'beam_path' in its extra_keywords, giving the path to the beam
     file it came from.***
 
     """
@@ -99,6 +115,7 @@ class BeamList:
         self,
         beam_list=None,
         uvb_params=None,
+        uvb_read_kwargs: dict[str: tuple[float, float]] = None,
         select_params: dict[str: tuple[float, float]] = None,
         spline_interp_opts: dict[str: int] | None = None,
         freq_interp_kind: str = "cubic",
@@ -142,6 +159,7 @@ class BeamList:
                 list_uvb_params = self._scrape_uvb_params(self._obj_beam_list, strict=False)
         self.uvb_params.update(list_uvb_params)
         self.uvb_params.update(uvb_params)    # Optional parameters for the UVBeam objects
+        self.uvb_read_kwargs = uvb_read_kwargs or {}
         self.select_params = select_params or {}
         self.is_consistent = False
         if check:
@@ -398,7 +416,7 @@ class BeamList:
             return self._str_beam_list[ind]
         return self._obj_beam_list[ind]
 
-    def __setitem__(self, ind, value):
+    def __setitem__(self, ind, value, uvb_read_kwargs=None):
         """
         Insert into the beam list.
 
@@ -428,8 +446,10 @@ class BeamList:
 
             self._str_beam_list[ind] = self._obj_to_str(value)
         else:
+            if uvb_read_kwargs is not None:
+                self.uvb_read_kwargs[ind] = uvb_read_kwargs
             try:
-                value = self._str_to_obj(value)
+                value = self._str_to_obj(ind, value)
             except FileNotFoundError as err:
                 raise ValueError(f"Invalid file path: {value}") from err
             self._obj_beam_list[ind] = value
@@ -462,7 +482,7 @@ class BeamList:
                 self._obj_beam_list.pop()
             raise err
 
-    def _str_to_obj(self, beam_model, use_shared_mem=False):
+    def _str_to_obj(self, beam_id, beam_model, use_shared_mem=False):
         """Convert beam strings to objects."""
         if isinstance(beam_model, (AnalyticBeam, UVBeam)):
             return beam_model
@@ -485,28 +505,55 @@ class BeamList:
                 "pip install pyuvsim[sim] or pip install pyuvsim[all] if you also want "
                 "the line_profiler installed.")
 
-        path = beam_model  # beam_model = path to beamfits
+        path = beam_model  # beam_model = path to UVBeam readable file
         uvb = UVBeam()
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore", "The shapes of several attributes will be changing"
-            )
-            if use_shared_mem and (mpi.world_comm is not None):
-                if mpi.rank == 0:
-                    uvb.read_beamfits(path, **self.select_params)
-                    uvb.peak_normalize()
-                for key, attr in uvb.__dict__.items():
-                    if not isinstance(attr, parameter.UVParameter):
-                        continue
-                    if key == '_data_array':
-                        uvb.__dict__[key].value = mpi.shared_mem_bcast(attr.value, root=0)
-                    else:
-                        uvb.__dict__[key].value = mpi.world_comm.bcast(attr.value, root=0)
-                mpi.world_comm.Barrier()
-            else:
-                uvb.read_beamfits(path, **self.select_params)
+        read_kwargs = {}
+        if len(self.select_params) > 0:
+            read_kwargs = self.select_params
+        if len(self.uvb_read_kwargs) > 0 and beam_id in self.uvb_read_kwargs:
+            # do this after select_params to ensure these overwrite select_params
+            read_kwargs.update(self.uvb_read_kwargs[beam_id])
+
         # always use future shapes
-        uvb.use_future_array_shapes()
+        read_kwargs["use_future_array_shapes"] = True
+
+        if self.select_params is not None:
+            for key, value in self.select_params.items():
+                if key not in read_kwargs:
+                    read_kwargs[key] = value
+
+        if use_shared_mem and (mpi.world_comm is not None):
+            if mpi.rank == 0:
+                try:
+                    uvb.read(path, **read_kwargs)
+                except ValueError:
+                    # If file type is not recognized, assume beamfits,
+                    # which was originally the only option.
+                    uvb.read_beamfits(path, **read_kwargs)
+                    warnings.warn(
+                        weird_beamfits_extension_warning,
+                        DeprecationWarning,
+                    )
+                uvb.peak_normalize()
+            for key, attr in uvb.__dict__.items():
+                if not isinstance(attr, parameter.UVParameter):
+                    continue
+                if key == '_data_array':
+                    uvb.__dict__[key].value = mpi.shared_mem_bcast(attr.value, root=0)
+                else:
+                    uvb.__dict__[key].value = mpi.world_comm.bcast(attr.value, root=0)
+            mpi.world_comm.Barrier()
+        else:
+            try:
+                uvb.read(path, **read_kwargs)
+            except ValueError:
+                # If file type is not recognized, assume beamfits,
+                # which was originally the only option.
+                uvb.read_beamfits(path, **read_kwargs)
+                warnings.warn(
+                    weird_beamfits_extension_warning,
+                    DeprecationWarning,
+                )
         for key, val in self.uvb_params.items():
             setattr(uvb, key, val)
         uvb.extra_keywords['beam_path'] = path
@@ -540,10 +587,10 @@ class BeamList:
 
         Convert AnalyticBeam objects to a string representation
         that can be used to generate them. Replaces UVBeam objects with
-        the path to the beamfits file they originate from. Additional
+        the path to the UVBeam readable file they originate from. Additional
         UVBeam attributes are stored in the BeamList.uvb_params dictionary.
 
-        Any UVBeams in the list must have the path to their beamfits files
+        Any UVBeams in the list must have the path to their beam files
         stored as 'beam_path' in the `extra_keywords` dictionary.
 
         Sets :attr:`~.string_mode` to True.
@@ -554,7 +601,7 @@ class BeamList:
             If UVBeam objects in the list have inconsistent UVBeam parameters.
         ValueError:
             If any UVBeam objects lack a "beam_path" keyword in the "extra_keywords"
-            attribute, specifying the path to the beamfits file that generates it.
+            attribute, specifying the path to the UVBeam readable file that generates it.
 
         """
         if self._obj_beam_list != []:
@@ -584,8 +631,10 @@ class BeamList:
 
         """
         if self._str_beam_list != []:
-            self._obj_beam_list = [self._str_to_obj(bstr, use_shared_mem=use_shared_mem)
-                                   for bstr in self._str_beam_list]
+            beam_list = []
+            for bid, bstr in enumerate(self._str_beam_list):
+                beam_list.append(self._str_to_obj(bid, bstr, use_shared_mem=use_shared_mem))
+            self._obj_beam_list = beam_list
         self._set_params_on_uvbeams(self._obj_beam_list)
         self._str_beam_list = []
         self.string_mode = False

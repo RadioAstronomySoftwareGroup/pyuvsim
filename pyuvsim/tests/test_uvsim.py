@@ -36,7 +36,7 @@ from pyuvsim.uvsim import _set_nsky_parts
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
 EW_uvfits_10time10chan = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfits')
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
-herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
+herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.beamfits')
 
 
 def multi_beams():

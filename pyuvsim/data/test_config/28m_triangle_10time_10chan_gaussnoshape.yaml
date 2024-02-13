@@ -1,5 +1,5 @@
 beam_paths:
-  0: HERA_NicCST.uvbeam
+  0: HERA_NicCST.beamfits
   1: 'uniform'
   2: 'gaussian'
   3: 'gaussian'
