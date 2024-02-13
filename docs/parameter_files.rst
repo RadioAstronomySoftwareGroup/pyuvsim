@@ -181,44 +181,62 @@ Telescope Configuration
 
     This yaml file provides the telescope name, location in latitude/longitude/altitude
     in degrees/degrees/meters (respectively), and the `beam dictionary`.
-    In this case, beam_id == 0 is the UVBeam file hera.uvbeam, beam_id == 1
-    is an Airy disk with diameter 16 m, beam_id == 2 is a Gaussian beam with
-    sigma 0.03, beam_id == 3 is another Airy beam with diameter 12 m, 4 is a Gaussian
-    with diameter 14 m, and 5 is a Gaussian with with diameter 12 m. When specifying a shape
-    parameter for a specific beam_id, the beam type needs to be specified using
-    the type keyword (rather than on the same line as the beam_id) and then
-    the shape keyword can be specified in the next line at the same indent level.
-    When no shape parameter is added in the beam_dictionary (as with 3), pyuvsim
-    will look for a default parameter below. So in this case, the beam_id == 3
-    ends up with a diameter of 12 m. The dictionary only needs to be as long as
-    the number of unique beams used in the array, while the layout file specifies
-    which antennas will use which beam type. This allows for a mixture of beams
-    to be used, as in this example. Unassigned beams will be ignored (the given
-    layout file does not use beams 2 or 3).
+    In this case we have 7 different types of beams with beam IDs running from
+    0 to 6:
 
-    `freq_interp_kind` sets the type of frequency interpolation for all UVBeam objects
-    defined in the beam list (see documentation on UVBeam for options).
+      - 0 is the UVBeam file hera.beamfits
+      - 1 is an Airy disk with diameter 16 m
+      - 2 is a Gaussian beam with sigma 0.03 radians (for the E-Field beam)
+      - 3 is another Airy beam with diameter 12 m
+      - 4 is a Gaussian with diameter 14 m
+      - 5 is a Gaussian with with diameter 12 m.
+      - 6 is a UVBeam (for the MWA) with some keywords specified to pass to UVBeam.read
+
+    When specifying a shape parameter for a specific beam_id, the beam type
+    needs to be specified using the type keyword (rather than on the same line
+    as the beam_id) and then the shape keyword can be specified in the next
+    line at the same indent level. When no shape parameter is added in the
+    beam_dictionary (as with 3), pyuvsim will look for a default parameter below.
+    So in this case, the beam_id == 3 and 5 end up with a diameter of 12 m.
+    The dictionary only needs to be as long as the number of unique beams used
+    in the array, while the layout file specifies which antennas will use which
+    beam type. This allows for a mixture of beams to be used, as in this example.
+    Unassigned beams will be ignored (the given layout file only uses beam IDs 0 and 1).
+
+    `freq_interp_kind` sets the type of frequency interpolation for all UVBeam
+    objects defined in the beam list (see documentation on UVBeam for options).
 
     The `spline_interp_opts` keyword lets the user set the order on the angular
     interpolating polynomial spline function. By default, it is cubic.
 
-    The `select: freq_buffer` (optional) option allows for doing partial reading of a
-    UVBeam file. Only frequencies within `freq_buffer` of the min and max of the
-    simulated frequencies will be read during setup. This can help reduce peak memory
+    The `select` options allows for doing partial reading UVBeam files.
+    This can include any selection parameter accepted by UVBeam.read and it
+    will apply to all UVBeams in the file. It can also take a `freq_buffer`
+    parameter which is used to set the freq_range on read so that only
+    frequencies within `freq_buffer` of the min and max of the simulated
+    frequencies will be read during setup. This can help reduce peak memory
     usage.
+
+    UVBeams can have parameters that will be passed to the UVBeam.read method.
+    These can be any parameters accepted by the UVBeam.read method. If the same
+    parameter is passed for a specific UVBeam and to the `select` section described
+    above, the values passed for the specific UVBeam will supercede the matching
+    `select` parameters for that beam.
 
     Analytic beams may require additional parameters.
 
     - uniform = The same response in all directions. No additional parameters.
-    - gaussian = Gaussian function shaped beam. Requires either an antenna diameter
-      (in meters) or a standard deviation sigma (in radians). This standard deviation sets
-      the width of the beam in zenith angle. Note that defining gaussian beams via `sigma`
-      will be deprecated in the future.
+    - gaussian = Gaussian function shaped beam. Requires either an antenna `diameter`
+      (in meters) or a standard deviation `sigma` (in radians). Gaussian beams
+      specified by a diameter will have their width matched to an Airy beam at
+      each simulated frequency, so it is inherently chromatic. For Gaussian beams
+      specified with `sigma`, `sigma` sets the width of the E-Field beam in zenith angle.
+      If only `sigma` is specified, the beam is achromatic, optionally both the
+      `spectral_index` and `reference_frequency` parameters can be set to generate
+      a chromatic beam with standard deviation defined by a power law:
+      `stddev(f) = sigma * (f/ref_freq)**(spectral_index)`
     - airy = Airy disk (ie, diffraction pattern of a circular aperture). Requires an
-      antenna diameter.
-
-    Note that beams defined with an antenna diameter will be chromatic (their widths on
-    the sky will change with frequency).
+      antenna diameter and is inherently chromatic.
 
     The figure below shows the array created by these configurations, with beam type
     indicated by color.

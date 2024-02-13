@@ -20,6 +20,7 @@ from packaging import version  # packaging is installed with setuptools
 from pyradiosky import SkyModel
 from pyradiosky.data import DATA_PATH as SKY_DATA_PATH
 from pyuvdata import UVBeam, UVData
+from pyuvdata.data import DATA_PATH as UV_DATA_PATH
 
 try:
     from lunarsky import MoonLocation
@@ -34,7 +35,7 @@ import pyuvsim.tests as simtest
 from pyuvsim import simsetup
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
-herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
+herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.beamfits')
 
 # Five different test configs
 param_filenames = [
@@ -549,7 +550,7 @@ def test_param_reader():
                         SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan_nofile.yaml'
                     )
                 }
-            }, ValueError, "Undefined beam model"
+            }, ValueError, "Unrecognized beam file or model"
         ),
     ]
 )
@@ -1102,9 +1103,6 @@ def test_mock_catalogs(arrangement, text_cat):
     radec_catalog = SkyModel.from_file(
         os.path.join(SIM_DATA_PATH, 'test_catalogs', text_cat)
     )
-    print(radec_catalog.skycoord.frame)
-    print(cat.skycoord.frame)
-    print(radec_catalog.skycoord.separation(cat.skycoord))
     assert np.all(radec_catalog == cat)
 
 
@@ -1289,7 +1287,11 @@ def test_beamlist_init_errors():
     bad_conf_1 = copy.deepcopy(telconfig)
     del bad_conf_1['beam_paths'][1]['type']
 
-    with pytest.raises(ValueError, match="Beam model must have a"):
+    with pytest.raises(
+        ValueError,
+        match="Beam model must have either a 'filename' field for UVBeam files "
+        "or a 'type' field for analytic beams."
+    ):
         pyuvsim.simsetup._construct_beam_list(beam_ids, bad_conf_1)
 
     bad_conf_2 = copy.deepcopy(telconfig)
@@ -1304,15 +1306,45 @@ def test_beamlist_init_errors():
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
-def test_beamlist_init():
+@pytest.mark.parametrize(
+    ("rename_beamfits", "pass_beam_type"),
+    [(True, False), (True, True), (False, False)],
+)
+def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
     telescope_config_name = os.path.join(SIM_DATA_PATH, 'bl_lite_mixed.yaml')
     with open(telescope_config_name, 'r') as yf:
         telconfig = yaml.safe_load(yf)
 
-    telconfig['beam_paths'][0] = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
+    beamfits_file = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.beamfits')
 
-    beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(6), telconfig)
-    beam_list.set_obj_mode()
+    msg = ""
+    warn_type = None
+    if rename_beamfits:
+        new_beam_file = os.path.join(tmp_path, 'HERA_NicCST.uvbeam')
+        shutil.copyfile(beamfits_file, new_beam_file)
+
+        if not pass_beam_type:
+            warn_type = DeprecationWarning
+            msg = pyuvsim.telescope.weird_beamfits_extension_warning
+
+        telconfig['beam_paths'][0] = new_beam_file
+    else:
+        telconfig['beam_paths'][0] = beamfits_file
+
+    if pass_beam_type:
+        beam_file = beamfits_file
+        telconfig['beam_paths'][0] = {
+            "filename": beam_file,
+            "file_type": "beamfits",
+        }
+
+    telconfig['beam_paths'][6]["filename"] = os.path.join(UV_DATA_PATH, "mwa_full_EE_test.h5")
+
+    nbeams = len(telconfig["beam_paths"])
+    beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(nbeams), telconfig)
+
+    with uvtest.check_warnings(warn_type, match=msg):
+        beam_list.set_obj_mode()
 
     # How the beam attributes should turn out for this file:
     assert isinstance(beam_list[0], UVBeam)
@@ -1326,6 +1358,9 @@ def test_beamlist_init():
     assert beam_list[4].diameter == 14
     assert beam_list[5].type == 'gaussian'
     assert beam_list[5].diameter == 12
+    assert isinstance(beam_list[6], UVBeam)
+
+    assert len(beam_list.uvb_read_kwargs) > 0
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
@@ -1334,7 +1369,7 @@ def test_beamlist_init_freqrange():
     with open(telescope_config_name, 'r') as yf:
         telconfig = yaml.safe_load(yf)
 
-    telconfig['beam_paths'][0] = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.uvbeam')
+    telconfig['beam_paths'][0] = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.beamfits')
 
     beam_list = pyuvsim.simsetup._construct_beam_list(
         np.arange(6), telconfig, freq_range=(117e6, 148e6)

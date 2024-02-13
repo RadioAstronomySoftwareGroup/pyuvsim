@@ -988,31 +988,54 @@ def initialize_catalog_from_params(
         return sky
 
 
+def _check_uvbeam_file(beam_file):
+    if not os.path.exists(beam_file):
+        testdata_beam_file = os.path.join(SIM_DATA_PATH, beam_file)
+        if os.path.exists(testdata_beam_file):
+            beam_file = testdata_beam_file
+        else:
+            raise ValueError(f"Unrecognized beam file or model: {beam_file}")
+    return beam_file
+
+
 def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False):
     """Construct BeamList."""
     beam_list = []
+    uvb_read_kwargs = {}
     for beamID in beam_ids:
         beam_model = telconfig['beam_paths'][beamID]
 
         if not isinstance(beam_model, (str, dict)):
             raise ValueError('Beam model is not properly specified in telescope config file.')
 
-        # first check to see if the beam_model is a string giving a file location
-        if (isinstance(beam_model, str)
-                and (os.path.exists(beam_model)
-                     or os.path.exists(os.path.join(SIM_DATA_PATH, beam_model)))):
-            if os.path.exists(beam_model):
-                beam_list.append(beam_model)
-            else:
-                beam_list.append(os.path.join(SIM_DATA_PATH, beam_model))
-        # Failing that, try to parse the beam string as an analytic beam.
+        if isinstance(beam_model, str) and beam_model not in AnalyticBeam.supported_types:
+            # this is the path to a UVBeam readable file
+            beam_file = _check_uvbeam_file(beam_model)
+
+            beam_list.append(beam_file)
+        elif "filename" in beam_model:
+            # this a UVBeam readable file with (possibly) some read kwargs
+            beam_file = beam_model["filename"]
+            read_kwargs = {}
+            for key, value in beam_model.items():
+                if key != "filename":
+                    read_kwargs[key] = value
+            if len(read_kwargs) > 0:
+                uvb_read_kwargs[beamID] = read_kwargs
+
+            beam_file = _check_uvbeam_file(beam_file)
+
+            beam_list.append(beam_file)
         else:
             if isinstance(beam_model, str):
                 beam_type = beam_model
             elif 'type' in beam_model:
                 beam_type = beam_model['type']
             else:
-                raise ValueError("Beam model must have a 'type' field.")
+                raise ValueError(
+                    "Beam model must have either a 'filename' field for UVBeam "
+                    "files or a 'type' field for analytic beams."
+                )
 
             if beam_type not in AnalyticBeam.supported_types:
                 raise ValueError("Undefined beam model type: {}".format(beam_type))
@@ -1069,7 +1092,11 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
         bl_options["freq_interp_kind"] = telconfig['freq_interp_kind']
 
     beam_list_obj = BeamList(
-        beam_list=beam_list, select_params=select, force_check=force_check, **bl_options,
+        beam_list=beam_list,
+        select_params=select,
+        uvb_read_kwargs=uvb_read_kwargs,
+        force_check=force_check,
+        **bl_options,
     )
 
     for key in beam_list_obj.uvb_params.keys():
@@ -1213,11 +1240,12 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     return_dict['telescope_location_lat_lon_alt'] = np.asarray(telescope_location_latlonalt)
     return_dict['telescope_name'] = telescope_name
 
-    # if provided, parse sections related to beam files and types
     if not tele_config:
+        # if no info on beams, just return what we have
         beam_dict = {n: 0 for n in antnames}
         return return_dict, beam_list, beam_dict
 
+    # if provided, parse sections related to beam files and types
     return_dict['telescope_config_name'] = telescope_config_name
     beam_ids = ant_layout['beamid']
     beam_dict = {}
@@ -1661,6 +1689,7 @@ def initialize_uvdata_from_params(
         freq_range=freq_range,
         force_beam_check=force_beam_check
     )
+
     uvparam_dict.update(tele_params)
     uvparam_dict["x_orientation"] = beam_list.x_orientation
     logger.info("Finished Setup of BeamList")

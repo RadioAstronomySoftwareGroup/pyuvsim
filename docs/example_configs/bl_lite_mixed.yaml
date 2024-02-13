@@ -1,5 +1,5 @@
 beam_paths:
-  0: hera.uvbeam
+  0: hera.beamfits
   1:
     type: airy
     diameter: 16
@@ -7,6 +7,14 @@ beam_paths:
     type: gaussian
     sigma: 0.03
   3: airy
+  4:
+    type: gaussian
+    diameter: 14
+  5: gaussian
+  6:
+    filename: mwa_full_EE_test.h5
+    pixels_per_deg: 1
+    freq_range: [100.e+6, 200.e+6]
 diameter: 12
 spline_interp_opts:
         kx: 4

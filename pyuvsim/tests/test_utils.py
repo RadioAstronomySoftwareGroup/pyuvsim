@@ -126,9 +126,18 @@ def test_write_uvdata(save_format, tmpdir):
 
     ofname = str(tmpdir.join('test_file'))
     filing_dict = {'outfile_name': ofname}
-    expected_ofname = simutils.write_uvdata(uv, filing_dict,
-                                            return_filename=True,
-                                            out_format=save_format)
+    if save_format == "miriad":
+        warn_str = (
+            "writing default values for restfreq, vsource, veldop, jyperk, and systemp"
+        )
+        warn_type = UserWarning
+    else:
+        warn_type = None
+        warn_str = ""
+    with uvtest.check_warnings(warn_type, match=warn_str):
+        expected_ofname = simutils.write_uvdata(uv, filing_dict,
+                                                return_filename=True,
+                                                out_format=save_format)
     ofname = os.path.join('.', ofname)
 
     if save_format == 'uvfits' or save_format is None:
@@ -159,12 +168,21 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     uv.set_lsts_from_time_array()
     ofname = str(tmpdir.join('test_file'))
     filing_dict = {'outfile_name': ofname}
-    expected_ofname = simutils.write_uvdata(
-        uv,
-        filing_dict,
-        return_filename=True,
-        out_format=save_format,
-    )
+    if save_format == "miriad":
+        warn_str = (
+            "writing default values for restfreq, vsource, veldop, jyperk, and systemp"
+        )
+        warn_type = UserWarning
+    else:
+        warn_type = None
+        warn_str = ""
+    with uvtest.check_warnings(warn_type, match=warn_str):
+        expected_ofname = simutils.write_uvdata(
+            uv,
+            filing_dict,
+            return_filename=True,
+            out_format=save_format,
+        )
 
     ofname = os.path.join('.', ofname)
 
