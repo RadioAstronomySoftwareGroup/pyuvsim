@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- Added support for all UVBeam readable files rather than just beamfits.
+
 ### Changed
 - Removed deprecation of gaussian beams defined from sigma parameter.
 - Add tracking of the beam `freq_interp_kind` to the BeamList object since
