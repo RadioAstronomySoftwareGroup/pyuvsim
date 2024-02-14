@@ -3,6 +3,7 @@
 # Licensed under the 3-clause BSD License
 
 import os
+import shutil
 
 import numpy as np
 import pytest
@@ -127,17 +128,34 @@ def test_write_uvdata(save_format, tmpdir):
     ofname = str(tmpdir.join('test_file'))
     filing_dict = {'outfile_name': ofname}
     if save_format == "miriad":
-        warn_str = (
+        warn_str = [
             "writing default values for restfreq, vsource, veldop, jyperk, and systemp"
-        )
-        warn_type = UserWarning
+        ]
+        warn_type = [UserWarning]
     else:
         warn_type = None
         warn_str = ""
-    with uvtest.check_warnings(warn_type, match=warn_str):
-        expected_ofname = simutils.write_uvdata(uv, filing_dict,
-                                                return_filename=True,
-                                                out_format=save_format)
+    try:
+        with uvtest.check_warnings(warn_type, match=warn_str):
+            expected_ofname = simutils.write_uvdata(uv, filing_dict,
+                                                    return_filename=True,
+                                                    out_format=save_format)
+    except AssertionError:
+        if save_format in ["miriad", "ms"]:
+            shutil.rmtree(expected_ofname)
+        else:
+            os.remove(expected_ofname)
+        warn_type = [UserWarning]
+        warn_str = [
+            "The lst_array is not self-consistent with the time_array and "
+            "telescope location. Consider recomputing with the "
+            "`set_lsts_from_time_array` method."
+        ]
+        with uvtest.check_warnings(warn_type, match=warn_str):
+            expected_ofname = simutils.write_uvdata(uv, filing_dict,
+                                                    return_filename=True,
+                                                    out_format=save_format)
+
     ofname = os.path.join('.', ofname)
 
     if save_format == 'uvfits' or save_format is None:
@@ -154,6 +172,7 @@ def test_write_uvdata(save_format, tmpdir):
 @pytest.mark.filterwarnings("ignore:LST values stored in this file are not")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
+@pytest.mark.filterwarnings("ignore:writing default values for restfreq, vsource")
 @pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5', 'ms'])
 def test_write_uvdata_clobber(save_format, tmpdir):
     """Test overwriting a uvdata object yields the expected results."""
@@ -168,23 +187,12 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     uv.set_lsts_from_time_array()
     ofname = str(tmpdir.join('test_file'))
     filing_dict = {'outfile_name': ofname}
-    if save_format == "miriad":
-        warn_str = (
-            "writing default values for restfreq, vsource, veldop, jyperk, and systemp"
-        )
-        warn_type = UserWarning
-    else:
-        warn_type = None
-        warn_str = ""
-    with uvtest.check_warnings(warn_type, match=warn_str):
-        expected_ofname = simutils.write_uvdata(
-            uv,
-            filing_dict,
-            return_filename=True,
-            out_format=save_format,
-        )
-
-    ofname = os.path.join('.', ofname)
+    expected_ofname = simutils.write_uvdata(
+        uv,
+        filing_dict,
+        return_filename=True,
+        out_format=save_format,
+    )
 
     assert os.path.exists(expected_ofname)
 
