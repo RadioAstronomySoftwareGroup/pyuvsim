@@ -189,7 +189,7 @@ Telescope Configuration
       - 2 is a Gaussian beam with sigma 0.03 radians (for the E-Field beam)
       - 3 is another Airy beam with diameter 12 m
       - 4 is a Gaussian with diameter 14 m
-      - 5 is a Gaussian with with diameter 12 m.
+      - 5 is a Gaussian with diameter 12 m.
       - 6 is a UVBeam (for the MWA) with some keywords specified to pass to UVBeam.read
 
     When specifying a shape parameter for a specific beam_id, the beam type

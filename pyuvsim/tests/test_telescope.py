@@ -33,6 +33,9 @@ def beam_objs_main():
     uvb.use_future_array_shapes()
     uvb.extra_keywords['beam_path'] = herabeam_default
 
+    # beams are always peak normalized inside BeamList
+    uvb.peak_normalize()
+
     uvb2 = uvb.copy()
 
     beams = [uvb, uvb2]
