@@ -1013,9 +1013,11 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
             beam_file = _check_uvbeam_file(beam_model)
 
             beam_list.append(beam_file)
-        elif "filename" in beam_model:
+        elif isinstance(beam_model, dict) and "filename" in beam_model:
             # this a UVBeam readable file with (possibly) some read kwargs
             beam_file = beam_model["filename"]
+            beam_file = beam_model.pop("filename")
+            read_kwargs = beam_model
             read_kwargs = {}
             for key, value in beam_model.items():
                 if key != "filename":
@@ -1038,7 +1040,7 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
                 )
 
             if beam_type not in AnalyticBeam.supported_types:
-                raise ValueError("Undefined beam model type: {}".format(beam_type))
+                raise ValueError(f"Undefined beam model type: {beam_type}")
 
             this_beam_opts = {}
             if isinstance(beam_model, dict):
@@ -1160,7 +1162,7 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
         if not os.path.isdir(config_path):
             config_path = os.path.dirname(config_path)
             if not os.path.isdir(config_path):
-                raise ValueError('config_path {} is not a directory'.format(config_path))
+                raise ValueError(f'config_path {config_path} is not a directory')
         telescope_config_name = tele_params['telescope_config_name']
         if not os.path.exists(telescope_config_name):
             telescope_config_name = os.path.join(config_path, telescope_config_name)
@@ -1207,7 +1209,8 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
                 layout_csv = os.path.join(config_path, layout_csv)
                 if not os.path.exists(layout_csv):
                     raise ValueError(
-                        'layout_csv file {} from yaml does not exist'.format(layout_csv))
+                        f'layout_csv file {layout_csv} from yaml does not exist'
+                    )
             ant_layout = _parse_layout_csv(layout_csv)
             E, N, U = ant_layout['e'], ant_layout['n'], ant_layout['u']
             antnames = ant_layout['name']
@@ -1478,7 +1481,7 @@ def parse_time_params(time_params):
                     atol=dayspersec):  # To nearest second
                 raise ValueError(
                     "Calculated time array is not consistent with set integration_time."
-                    "\nInput parameters are: {}".format(str(init_time_params)))
+                    f"\nInput parameters are: {init_time_params}")
 
     return_dict['integration_time'] = time_params['integration_time']
     return_dict['time_array'] = time_arr
@@ -2157,7 +2160,7 @@ def uvdata_to_telescope_config(
         telescope_config_path = \
             check_file_exists_and_increment(
                 os.path.join(
-                    path_out, 'telescope_config_{}.yaml'.format(uvdata_in.telescope_name)
+                    path_out, 'telescope_config_{uvdata_in.telescope_name}.yaml'
                 )
             )
         telescope_config_name = os.path.basename(telescope_config_path)
@@ -2185,8 +2188,8 @@ def uvdata_to_telescope_config(
     with open(os.path.join(path_out, telescope_config_name), 'w+') as yfile:
         yaml.dump(yaml_dict, yfile, default_flow_style=False)
 
-    logger.info('Path: {}, telescope_config: {}, layout: {}'.format(
-        path_out, telescope_config_name, layout_csv_name)
+    logger.info(
+        f'Path: {path_out}, telescope_config: {telescope_config_name}, layout: {layout_csv_name}'
     )
 
     if return_names:

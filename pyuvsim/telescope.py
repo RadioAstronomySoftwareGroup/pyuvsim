@@ -115,8 +115,8 @@ class BeamList:
         self,
         beam_list=None,
         uvb_params=None,
-        uvb_read_kwargs: dict[str: tuple[float, float]] = None,
-        select_params: dict[str: tuple[float, float]] = None,
+        uvb_read_kwargs: dict[str: tuple[float, float]] | None = None,
+        select_params: dict[str: tuple[float, float]] | None = None,
         spline_interp_opts: dict[str: int] | None = None,
         freq_interp_kind: str = "cubic",
         check: bool = True,
@@ -507,43 +507,16 @@ class BeamList:
 
         path = beam_model  # beam_model = path to UVBeam readable file
         uvb = UVBeam()
-        read_kwargs = {}
-        if len(self.select_params) > 0:
-            read_kwargs = self.select_params
-        if len(self.uvb_read_kwargs) > 0 and beam_id in self.uvb_read_kwargs:
-            # do this after select_params to ensure these overwrite select_params
-            read_kwargs.update(self.uvb_read_kwargs[beam_id])
+        read_kwargs = {**self.select_params, **self.uvb_read_kwargs.get(beam_id, {})}
 
         # always use future shapes
         read_kwargs["use_future_array_shapes"] = True
 
-        if self.select_params is not None:
-            for key, value in self.select_params.items():
-                if key not in read_kwargs:
-                    read_kwargs[key] = value
-
-        if use_shared_mem and (mpi.world_comm is not None):
-            if mpi.rank == 0:
-                try:
-                    uvb.read(path, **read_kwargs)
-                except ValueError:
-                    # If file type is not recognized, assume beamfits,
-                    # which was originally the only option.
-                    uvb.read_beamfits(path, **read_kwargs)
-                    warnings.warn(
-                        weird_beamfits_extension_warning,
-                        DeprecationWarning,
-                    )
-                uvb.peak_normalize()
-            for key, attr in uvb.__dict__.items():
-                if not isinstance(attr, parameter.UVParameter):
-                    continue
-                if key == '_data_array':
-                    uvb.__dict__[key].value = mpi.shared_mem_bcast(attr.value, root=0)
-                else:
-                    uvb.__dict__[key].value = mpi.world_comm.bcast(attr.value, root=0)
-            mpi.world_comm.Barrier()
-        else:
+        if (
+            (mpi.world_comm is not None and use_shared_mem and mpi.rank == 0)
+            or not use_shared_mem
+            or mpi.world_comm is None
+        ):
             try:
                 uvb.read(path, **read_kwargs)
             except ValueError:
@@ -554,6 +527,17 @@ class BeamList:
                     weird_beamfits_extension_warning,
                     DeprecationWarning,
                 )
+            uvb.peak_normalize()
+
+        if use_shared_mem and (mpi.world_comm is not None):
+            for key, attr in uvb.__dict__.items():
+                if not isinstance(attr, parameter.UVParameter):
+                    continue
+                if key == '_data_array':
+                    uvb.__dict__[key].value = mpi.shared_mem_bcast(attr.value, root=0)
+                else:
+                    uvb.__dict__[key].value = mpi.world_comm.bcast(attr.value, root=0)
+            mpi.world_comm.Barrier()
         for key, val in self.uvb_params.items():
             setattr(uvb, key, val)
         uvb.extra_keywords['beam_path'] = path
