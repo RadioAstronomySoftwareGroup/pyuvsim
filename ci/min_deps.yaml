@@ -10,6 +10,7 @@ dependencies:
   - pip
   - pytest
   - pytest-cov
+  - pytest-xdist
   - pyuvdata>=2.2.10
   - pyyaml>=5.1
   - scipy>=1.3
