@@ -139,7 +139,7 @@ def test_analytic_diffuse(model, tmpdir):
     herauniform_path = str(tmpdir.join('hera_uniform.yaml'))
 
     teleconfig = {
-        'beam_paths': {0: 'uniform'},
+        'beam_paths': {0: {"type": "uniform"}},
         'telescope_location': "(-30.72153, 21.42830, 1073.0)",
         'telescope_name': 'HERA'
     }
@@ -234,7 +234,7 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
         # change the beam file name to .uvbeam
         with open(new_telescope_param_file, 'r') as pfile:
             tele_param_dict = yaml.safe_load(pfile)
-            tele_param_dict["beam_paths"][0] = new_beam_file
+            tele_param_dict["beam_paths"][0] = {"filename": new_beam_file}
 
         with open(new_telescope_param_file, 'w') as yfile:
             yaml.dump(tele_param_dict, yfile, default_flow_style=False)

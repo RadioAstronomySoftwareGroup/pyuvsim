@@ -180,63 +180,59 @@ Telescope Configuration
     .. literalinclude:: example_configs/bl_lite_mixed.yaml
 
     This yaml file provides the telescope name, location in latitude/longitude/altitude
-    in degrees/degrees/meters (respectively), and the `beam dictionary`.
-    In this case we have 7 different types of beams with beam IDs running from
-    0 to 6:
+    in degrees/degrees/meters (respectively), and the beam dictionary
+    (the ``beam_paths`` section).
+    In this case we have 5 different types of beams with beam IDs running from
+    0 to 4:
 
-      - 0 is the UVBeam file hera.beamfits
-      - 1 is an Airy disk with diameter 16 m
-      - 2 is a Gaussian beam with sigma 0.03 radians (for the E-Field beam)
-      - 3 is another Airy beam with diameter 12 m
-      - 4 is a Gaussian with diameter 14 m
-      - 5 is a Gaussian with diameter 12 m.
-      - 6 is a UVBeam (for the MWA) with some keywords specified to pass to UVBeam.read
+      - 0: a UVBeam from the file `hera.beamfits`
+      - 1: a UVBeam (for the MWA) with some keywords specified to pass to ``UVBeam.read``
+      - 2: an analytic Airy disk with diameter 16 m
+      - 3: an analytic Gaussian beam with sigma 0.03 radians (for the E-Field beam)
+      - 4: an analytic Gaussian with diameter 14 m
 
-    When specifying a shape parameter for a specific beam_id, the beam type
-    needs to be specified using the type keyword (rather than on the same line
-    as the beam_id) and then the shape keyword can be specified in the next
-    line at the same indent level. When no shape parameter is added in the
-    beam_dictionary (as with 3), pyuvsim will look for a default parameter below.
-    So in this case, the beam_id == 3 and 5 end up with a diameter of 12 m.
+    The parameters for each beam depends on whether it is a UVBeam or an analytic
+    beam. UVBeams must have a `filename` parameter and they can optionally have
+    any other parameter that can be passed to the ``UVBeam.read`` method.
+    Analytic beams must have a `type` parameter and can have parameters specifying
+    shapes as appropriate for their type.
     The dictionary only needs to be as long as the number of unique beams used
     in the array, while the layout file specifies which antennas will use which
     beam type. This allows for a mixture of beams to be used, as in this example.
-    Unassigned beams will be ignored (the given layout file only uses beam IDs 0 and 1).
+    Unassigned beams will be ignored (the given layout file only uses beamIDs 0 and 2).
 
-    `freq_interp_kind` sets the type of frequency interpolation for all UVBeam
-    objects defined in the beam list (see documentation on UVBeam for options).
+    Analytic beams may require shape parameters depending on their type.
 
-    The `spline_interp_opts` keyword lets the user set the order on the angular
-    interpolating polynomial spline function. By default, it is cubic.
-
-    The `select` options allows for doing partial reading UVBeam files.
-    This can include any selection parameter accepted by UVBeam.read and it
-    will apply to all UVBeams in the file. It can also take a `freq_buffer`
-    parameter which is used to set the freq_range on read so that only
-    frequencies within `freq_buffer` of the min and max of the simulated
-    frequencies will be read during setup. This can help reduce peak memory
-    usage.
-
-    UVBeams can have parameters that will be passed to the UVBeam.read method.
-    These can be any parameters accepted by the UVBeam.read method. If the same
-    parameter is passed for a specific UVBeam and to the `select` section described
-    above, the values passed for the specific UVBeam will supercede the matching
-    `select` parameters for that beam.
-
-    Analytic beams may require additional parameters.
-
-    - uniform = The same response in all directions. No additional parameters.
-    - gaussian = Gaussian function shaped beam. Requires either an antenna `diameter`
+    - airy: Airy disk (ie, diffraction pattern of a circular aperture). Requires an
+      antenna diameter and is inherently chromatic.
+    - gaussian: Gaussian function shaped beam. Requires either an antenna `diameter`
       (in meters) or a standard deviation `sigma` (in radians). Gaussian beams
       specified by a diameter will have their width matched to an Airy beam at
-      each simulated frequency, so it is inherently chromatic. For Gaussian beams
+      each simulated frequency, so are inherently chromatic. For Gaussian beams
       specified with `sigma`, `sigma` sets the width of the E-Field beam in zenith angle.
       If only `sigma` is specified, the beam is achromatic, optionally both the
       `spectral_index` and `reference_frequency` parameters can be set to generate
       a chromatic beam with standard deviation defined by a power law:
       `stddev(f) = sigma * (f/ref_freq)**(spectral_index)`
-    - airy = Airy disk (ie, diffraction pattern of a circular aperture). Requires an
-      antenna diameter and is inherently chromatic.
+    - uniform: The same response in all directions. No additional parameters.
+
+    There are also some global parameters that apply to all the UVBeams:
+
+      - `freq_interp_kind` sets the type of frequency interpolation for all UVBeam
+        objects defined in the beam list (see documentation on UVBeam for options).
+
+      - The `spline_interp_opts` keyword lets the user set the order on the angular
+        interpolating polynomial spline function. By default, it is cubic.
+
+      - The `select` section allows for doing partial reading UVBeam files.
+        This can include any selection parameter accepted by UVBeam.read.
+        It can also take a `freq_buffer` parameter which is used to set the
+        `freq_range` on read so that only frequencies within `freq_buffer` of the
+        min and max of the simulated frequencies will be read during setup. This
+        can help reduce peak memory usage. Note that if any of the same `select`
+        parameters are passed for a specific UVBeam and to the `select` section,
+        the values passed for the specific UVBeam will supercede the values in the
+        `select` section.
 
     The figure below shows the array created by these configurations, with beam type
     indicated by color.
