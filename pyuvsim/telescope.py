@@ -513,8 +513,9 @@ class BeamList:
         read_kwargs["use_future_array_shapes"] = True
 
         if (
-            (mpi.world_comm is not None and use_shared_mem and mpi.rank == 0)
+            (use_shared_mem and mpi.world_comm is not None and mpi.rank == 0)
             or not use_shared_mem
+            or mpi is None
             or mpi.world_comm is None
         ):
             try:
