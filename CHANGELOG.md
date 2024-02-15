@@ -12,6 +12,11 @@ it is moving from a UVBeam attribute to a parameter to the `UVBeam.interp` metho
 in future pyuvdata versions. Also ensure compatibility with current and future
 pyuvdata versions.
 
+### Deprecated
+- Specifying beams in yaml files as simple strings (they must now parse as a dict)
+and specifying global beam shape options like diameter and sigma (they must now
+be specified per beam.)
+
 ## [1.2.6] - 2022-07-17
 
 ### Changed
