@@ -11,10 +11,15 @@ from pyuvdata import UVData
 import pyuvsim.simsetup
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
-# Read in a uvfits file and automatically generate yaml files.
+# Read in a uvdata readable file and automatically generate yaml files.
 # Will assume the same beam_id for all antennas for now.
 
-parser = argparse.ArgumentParser(description=("Extracts antenna position info from uvfits."))
+parser = argparse.ArgumentParser(
+    description=(
+        "Extracts antenna position info from a data file readable by "
+        ":class:`pyuvdata.UVData`."
+    )
+)
 
 parser.add_argument('file_in', metavar='<FILE>', type=str, nargs='+')
 parser.add_argument('-l', '--layout_csv_name', default=None)

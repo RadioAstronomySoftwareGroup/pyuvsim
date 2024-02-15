@@ -2217,7 +2217,7 @@ def uvdata_to_telescope_config(
 def uvdata_to_config_file(uvdata_in, param_filename=None, telescope_config_name='',
                           layout_csv_name='', catalog='mock', path_out='.'):
     """
-    Extract simulation configuration settings from uvfits.
+    Extract simulation configuration settings from a UVData object.
 
     When used with :func:`~uvdata_to_telescope_config`, this will produce all the necessary
     configuration yaml and csv file to make an "empty" :class:`pyuvdata.UVData` object comparable to

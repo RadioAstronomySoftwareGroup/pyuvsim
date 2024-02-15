@@ -459,10 +459,15 @@ def test_param_reader():
 
     with open(param_filename, 'r') as fhandle:
         param_dict = yaml.safe_load(fhandle)
-    expected_ofilepath = pyuvsim.utils.write_uvdata(
-        uv_obj, param_dict, return_filename=True, dryrun=True
-    )
-    assert './sim_results.uvfits' == expected_ofilepath
+    with uvtest.check_warnings(
+        UserWarning,
+        match="No out format specified for uvdata file. Defaulting to uvh5 "
+        "(note this is a defaulting change, it used to default to uvfits)."
+    ):
+        expected_ofilepath = pyuvsim.utils.write_uvdata(
+            uv_obj, param_dict, return_filename=True, dryrun=True
+        )
+    assert './sim_results.uvh5' == expected_ofilepath
 
     # Spoof attributes that won't match.
     uv_obj.antenna_names = uv_obj.antenna_names.tolist()

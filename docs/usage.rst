@@ -8,7 +8,7 @@ catalog and effectively "fills" the UVData object with simulated data.
 The function ``uvsim.run_pyuvsim`` in uvsim.py accepts as input a path to a yaml
 ``obsparam`` file and writes out the data to ``uvfits``, ``miriad``, or ``uvh5`` format.
 Optionally, it can also skip writing the data out and just return a ``UVData`` object
-filled with simulated data. The default behavior is to write to ``uvfits``.
+filled with simulated data. The default behavior is to write to ``uvh5``.
 
 This is demonstrated in more detail in ``run_param_pyuvsim.py`` in the scripts directory.
 See :doc:`parameter_files` for information on the parameter files.
@@ -46,11 +46,11 @@ return data for (it will only profile one MPI rank at a time!).
 Generating Config Files from Data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The scripts ``uvfits_to_telescope_config.py`` and ``uvfits_to_config.py`` are provided
-for convenience. These will accept the path to any valid uvfits file as input, along
-with output file name options, and will generate telescope layout, telescope
-configuration, and an obsparam file for a simulation with the same time, frequency,
-and baseline structure as the data file.
+The scripts ``uvdata_to_telescope_config.py`` and ``uvdata_to_config.py`` are provided
+for convenience. These will accept the path to any valid file readable by UVData
+as input, along with output file name options, and will generate telescope layout,
+telescope configuration, and an obsparam file for a simulation with the same time,
+frequency, and baseline structure as the data file.
 
 Note that the generated configuration files will still need to be given paths to
 beam models and source catalogs before they can be used.

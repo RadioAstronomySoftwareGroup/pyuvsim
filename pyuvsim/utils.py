@@ -2,11 +2,10 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Define various utility functions."""
-
-
 import os
 import sys
 import time as pytime
+import warnings
 from datetime import timedelta
 
 import numpy as np
@@ -204,7 +203,7 @@ def write_uvdata(
     quiet=False,
 ):
     """
-    Parse output file information from parameters and write uvfits to file.
+    Parse output file information from parameters and write out to a file.
 
     Parameters
     ----------
@@ -217,7 +216,7 @@ def write_uvdata(
     dryrun : Bool
         (Default false) Don't write to file.
     out_format : Str
-        (Default uvfits) Write as uvfits/miriad/uvh5/ms
+        (Default uvh5) Write as uvfits/miriad/uvh5/ms
     fix_autos : bool
         If auto-correlations with imaginary values are found, fix those values so
         that they are real-only in data_array.
@@ -233,11 +232,6 @@ def write_uvdata(
         param_dict = param_dict['filing']
     if 'outdir' not in param_dict:
         param_dict['outdir'] = '.'
-    if 'output_format' in param_dict:
-        out_format = param_dict['output_format']
-    elif out_format is None:
-        # TODO should this be the default? It requires forcing phasing...
-        out_format = 'uvfits'
 
     if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
         outfile_prefix = ""
@@ -251,20 +245,26 @@ def write_uvdata(
     else:
         outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
 
+    _, file_extension = os.path.splitext(outfile_name)
+
+    if 'output_format' in param_dict:
+        out_format = param_dict['output_format']
+    elif file_extension in [".uvfits", ".uvh5", ".ms"]:
+        out_format = file_extension[1:]
+    elif out_format is None:
+        # should be removed eventually. Maybe in v1.4? (it was added in 1.2.6)
+        warnings.warn(
+            "No out format specified for uvdata file. Defaulting to uvh5 (note "
+            "this is a defaulting change, it used to default to uvfits)."
+        )
+        out_format = 'uvh5'
+
     if not os.path.exists(param_dict['outdir']):
         os.makedirs(param_dict['outdir'])
 
-    if out_format == 'uvfits':
-        if not outfile_name.endswith(".uvfits"):
-            outfile_name = outfile_name + ".uvfits"
-
-    if out_format == 'uvh5':
-        if not outfile_name.endswith(".uvh5"):
-            outfile_name = outfile_name + ".uvh5"
-
-    if out_format == 'ms':
-        if not outfile_name.endswith(".ms"):
-            outfile_name = outfile_name + ".ms"
+    if out_format in ["uvfits", "uvh5", "ms"]:
+        if not outfile_name.endswith(f".{out_format}"):
+            outfile_name = outfile_name + f".{out_format}"
 
     noclobber = ('clobber' not in param_dict) or not bool(param_dict['clobber'])
     if noclobber:
