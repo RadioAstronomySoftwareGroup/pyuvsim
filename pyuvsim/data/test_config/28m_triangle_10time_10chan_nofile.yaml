@@ -1,9 +1,13 @@
 beam_paths:
-  0: filethatdoesnotexist.beamfits
-  1: 'uniform'
-  2: 'gaussian'
-  3: 'airy'
-sigma: 0.02
-diameter: 14.6
+  0:
+    filename: filethatdoesnotexist.beamfits
+  1:
+    type: uniform
+  2:
+    type: gaussian
+    sigma: 0.02
+  3:
+    type: airy
+    diameter: 14.6
 telescope_location: (-30.721527777777847, 21.428305555555557, 1073.0000000046566)
 telescope_name: HERA

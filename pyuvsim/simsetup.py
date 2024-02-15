@@ -1002,11 +1002,29 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
     """Construct BeamList."""
     beam_list = []
     uvb_read_kwargs = {}
+
+    # possible global shape options
+    if "diameter" in telconfig.keys() or "sigma" in telconfig.keys():
+        warnings.warn(
+            "Beam shape options diameter and sigma should be specified per beamID "
+            "in the 'beam_paths' section not as globals. For examples see the "
+            "parameter_files documentation. This will become an error in version 1.4",
+            DeprecationWarning,
+        )
+
     for beamID in beam_ids:
         beam_model = telconfig['beam_paths'][beamID]
 
         if not isinstance(beam_model, (str, dict)):
             raise ValueError('Beam model is not properly specified in telescope config file.')
+
+        if isinstance(beam_model, str):
+            warnings.warn(
+                "Entries in 'beam_paths' can no longer be specified as simple strings, "
+                "they must be parsed as dicts. For examples see the parameter_files "
+                "documentation. This will become an error in version 1.4",
+                DeprecationWarning,
+            )
 
         if isinstance(beam_model, str) and beam_model not in AnalyticBeam.supported_types:
             # this is the path to a UVBeam readable file
@@ -2170,7 +2188,7 @@ def uvdata_to_telescope_config(
             os.path.join(path_out, uvdata_in.telescope_name + "_layout.csv"))
         layout_csv_name = os.path.basename(layout_csv_path)
 
-    antpos_enu, antenna_numbers = uvdata_in.get_ENU_antpos()
+    antpos_enu, _ = uvdata_in.get_ENU_antpos()
 
     _write_layout_csv(
         os.path.join(path_out, layout_csv_name),
@@ -2182,7 +2200,7 @@ def uvdata_to_telescope_config(
         "telescope_name": uvdata_in.telescope_name,
         "telescope_location": repr(tuple(uvdata_in.telescope_location_lat_lon_alt_degrees)),
         "Nants": uvdata_in.Nants_telescope,
-        "beam_paths": {0: beam_filepath}
+        "beam_paths": {0: {"filename": beam_filepath}}
     }
 
     with open(os.path.join(path_out, telescope_config_name), 'w+') as yfile:

@@ -1020,12 +1020,12 @@ def test_uvdata_keyword_init(case, tmpdir):
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-def test_uvfits_to_config():
+def test_uvfits_to_config(tmp_path):
     """
         Loopback test of reading parameters from uvfits file, generating uvfits file, and reading
         in again.
     """
-    opath = 'uvfits_yaml_temp'
+    opath = os.path.join(tmp_path, 'uvfits_yaml_temp')
     param_filename = 'obsparam.yaml'
     second_param_filename = 'test2_config.yaml'
     if not os.path.exists(opath):
@@ -1035,9 +1035,12 @@ def test_uvfits_to_config():
     uv0 = UVData.from_file(longbl_uvfits_file)
     uv0.use_future_array_shapes()
 
-    path, telescope_config, layout_fname = \
-        pyuvsim.simsetup.uvdata_to_telescope_config(uv0, herabeam_default,
-                                                    path_out=opath, return_names=True)
+    path, telescope_config, layout_fname = pyuvsim.simsetup.uvdata_to_telescope_config(
+        uv0,
+        herabeam_default,
+        path_out=opath,
+        return_names=True
+    )
 
     uv0.integration_time[-1] += 2  # Test case of non-uniform integration times
     with uvtest.check_warnings(
@@ -1051,6 +1054,11 @@ def test_uvfits_to_config():
             layout_csv_name=os.path.join(path, layout_fname),
             path_out=opath
         )
+
+    print(os.path.join(opath, param_filename))
+    with open(os.path.join(opath, param_filename), 'r') as pfile:
+        foo = yaml.safe_load(pfile)
+        print(foo)
 
     # From parameters, generate a uvdata object.
     param_dict = pyuvsim.simsetup._config_str_to_dict(os.path.join(opath, param_filename))
@@ -1281,27 +1289,61 @@ def test_beamlist_init_errors():
 
     bad_conf_0 = copy.deepcopy(telconfig)
     bad_conf_0['beam_paths'][1] = 1.35
-    with pytest.raises(ValueError, match="Beam model is not properly specified"):
-        pyuvsim.simsetup._construct_beam_list(beam_ids, bad_conf_0)
+    with uvtest.check_warnings(
+        DeprecationWarning,
+        match="Beam shape options diameter and sigma should be specified per "
+        "beamID in the 'beam_paths' section not as globals. For examples see "
+        "the parameter_files documentation. This will become an error in "
+        "version 1.4"
+    ):
+        with pytest.raises(ValueError, match="Beam model is not properly specified"):
+            pyuvsim.simsetup._construct_beam_list(beam_ids, bad_conf_0)
 
     bad_conf_1 = copy.deepcopy(telconfig)
     del bad_conf_1['beam_paths'][1]['type']
 
-    with pytest.raises(
-        ValueError,
-        match="Beam model must have either a 'filename' field for UVBeam files "
-        "or a 'type' field for analytic beams."
+    with uvtest.check_warnings(
+        DeprecationWarning,
+        match="Beam shape options diameter and sigma should be specified per "
+        "beamID in the 'beam_paths' section not as globals. For examples see "
+        "the parameter_files documentation. This will become an error in "
+        "version 1.4"
     ):
-        pyuvsim.simsetup._construct_beam_list(beam_ids, bad_conf_1)
+        with pytest.raises(
+            ValueError,
+            match="Beam model must have either a 'filename' field for UVBeam files "
+            "or a 'type' field for analytic beams."
+        ):
+            pyuvsim.simsetup._construct_beam_list(beam_ids, bad_conf_1)
 
     bad_conf_2 = copy.deepcopy(telconfig)
     bad_conf_2['beam_paths'][1]['type'] = 'unsupported_type'
-    with pytest.raises(ValueError, match="Undefined beam model type"):
-        pyuvsim.simsetup._construct_beam_list(beam_ids, bad_conf_2)
+    with uvtest.check_warnings(
+        DeprecationWarning,
+        match="Beam shape options diameter and sigma should be specified per "
+        "beamID in the 'beam_paths' section not as globals. For examples see "
+        "the parameter_files documentation. This will become an error in "
+        "version 1.4"
+    ):
+        with pytest.raises(ValueError, match="Undefined beam model type"):
+            pyuvsim.simsetup._construct_beam_list(beam_ids, bad_conf_2)
 
     # Check that spline_interp_opts is passed along correctly to BeamList
     telconfig['spline_interp_opts'] = {'kx' : 2, 'ky' : 2}
-    beam_list = pyuvsim.simsetup._construct_beam_list(beam_ids, telconfig)
+    with uvtest.check_warnings(
+        DeprecationWarning,
+        match=[
+            "Beam shape options diameter and sigma should be specified per "
+            "beamID in the 'beam_paths' section not as globals. For examples see "
+            "the parameter_files documentation. This will become an error in "
+            "version 1.4"
+        ] + [
+            "Entries in 'beam_paths' can no longer be specified as simple strings, "
+            "they must be parsed as dicts. For examples see the parameter_files "
+            "documentation. This will become an error in version 1.4"
+        ] * 3,
+    ):
+        beam_list = pyuvsim.simsetup._construct_beam_list(beam_ids, telconfig)
     assert beam_list.spline_interp_opts is not None
 
 
@@ -1341,7 +1383,25 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
     telconfig['beam_paths'][6]["filename"] = os.path.join(UV_DATA_PATH, "mwa_full_EE_test.h5")
 
     nbeams = len(telconfig["beam_paths"])
-    beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(nbeams), telconfig)
+    warn_list = [
+        "Beam shape options diameter and sigma should be specified per "
+        "beamID in the 'beam_paths' section not as globals. For examples see "
+        "the parameter_files documentation. This will become an error in "
+        "version 1.4"
+    ] + [
+        "Entries in 'beam_paths' can no longer be specified as simple strings, "
+        "they must be parsed as dicts. For examples see the parameter_files "
+        "documentation. This will become an error in version 1.4"
+    ] * 3
+    warn_types = [DeprecationWarning] * 4
+    if not pass_beam_type:
+        warn_list += [
+            "Cannot check consistency of a string-mode BeamList! Set force=True "
+            "to force consistency checking."
+        ]
+        warn_types += [UserWarning]
+    with uvtest.check_warnings(warn_types, match=warn_list):
+        beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(nbeams), telconfig)
 
     with uvtest.check_warnings(warn_type, match=msg):
         beam_list.set_obj_mode()
@@ -1371,9 +1431,25 @@ def test_beamlist_init_freqrange():
 
     telconfig['beam_paths'][0] = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.beamfits')
 
-    beam_list = pyuvsim.simsetup._construct_beam_list(
-        np.arange(6), telconfig, freq_range=(117e6, 148e6)
-    )
+    with uvtest.check_warnings(
+        [DeprecationWarning] * 4 + [UserWarning],
+        match=[
+            "Beam shape options diameter and sigma should be specified per "
+            "beamID in the 'beam_paths' section not as globals. For examples see "
+            "the parameter_files documentation. This will become an error in "
+            "version 1.4"
+        ] + [
+            "Entries in 'beam_paths' can no longer be specified as simple strings, "
+            "they must be parsed as dicts. For examples see the parameter_files "
+            "documentation. This will become an error in version 1.4"
+        ] * 3 + [
+            "Cannot check consistency of a string-mode BeamList! Set force=True "
+            "to force consistency checking."
+        ]
+    ):
+        beam_list = pyuvsim.simsetup._construct_beam_list(
+            np.arange(6), telconfig, freq_range=(117e6, 148e6)
+        )
     beam_list.set_obj_mode()
 
     # How the beam attributes should turn out for this file:

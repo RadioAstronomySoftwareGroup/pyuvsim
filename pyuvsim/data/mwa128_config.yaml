@@ -1,4 +1,5 @@
 beam_paths:
-    0 : 'uniform'
+    0 :
+        type: uniform
 telescope_location: (-26.70331940555556, 116.67081523611111, 377.82699999958277)
 telescope_name: MWA

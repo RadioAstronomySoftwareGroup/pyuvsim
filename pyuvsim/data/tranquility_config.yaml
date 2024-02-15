@@ -1,5 +1,6 @@
 beam_paths:
-    0 : 'uniform'
+    0 :
+        type: uniform
 telescope_location: (0.6875, 24.433, 0)
 world: 'moon'
 telescope_name: apollo11

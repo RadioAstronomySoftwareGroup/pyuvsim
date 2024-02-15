@@ -141,7 +141,15 @@ def test_object_mode(beam_objs, tmp_path):
     else:
         # otherwise check that looping str/obj modes works
         beamlist.set_str_mode()
-        beamlist.set_obj_mode()
+        with uvtest.check_warnings(
+            DeprecationWarning,
+            match="This beamfits file does not have a '.fits' or '.beamfits' "
+            "extension, so UVBeam does not recognize it as a beamfits file. "
+            "Either change the file extension or specify the beam_type. This is "
+            "currently handled with a try/except clause in pyuvsim, but this "
+            "will become an error in version 1.4",
+        ):
+            beamlist.set_obj_mode()
 
     beamlist._set_params_on_uvbeams(beamlist._obj_beam_list)
 
