@@ -113,8 +113,14 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
 @pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:invalid value encountered in divide")
-@pytest.mark.parametrize('model', ['monopole', 'cosza', 'quaddome', 'monopole-nonflat'])
-def test_analytic_diffuse(model, tmpdir):
+# Set the tolerances as low as we can achieve currently. Ideally these tolerances
+# would be lower, but it's complicated.
+# See Lanman, Murray and Jacobs, 2022, DOI: 10.3847/1538-4365/ac45fd
+@pytest.mark.parametrize(
+    ('model', 'tol'),
+    [('monopole', 3e-4), ('cosza', 2e-4), ('quaddome', 8e-5), ('monopole-nonflat', 3e-4)],
+)
+def test_analytic_diffuse(model, tol, tmpdir):
     # Generate the given model and simulate for a few baselines.
     # Import from analytic_diffuse  (consider moving to rasg_affiliates?)
     pytest.importorskip('analytic_diffuse')
@@ -130,7 +136,7 @@ def test_analytic_diffuse(model, tmpdir):
     elif model == 'monopole-nonflat':
         modname = 'monopole'
         use_w = True
-        params['order'] = 30    # Expansion order for the non-flat monopole solution.
+        params['order'] = 50    # Expansion order for the non-flat monopole solution.
 
     # Making configuration files for this simulation.
     template_path = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_diffuse_sky.yaml')
@@ -160,6 +166,9 @@ def test_analytic_diffuse(model, tmpdir):
     obspar['telescope']['telescope_config_name'] = herauniform_path
     obspar['sources']['diffuse_model'] = modname
     obspar['sources'].update(params)
+    if model == "monopole":
+        # use a higher nside for monopole to improve the accuracy
+        obspar['sources']["map_nside"] = 256
     obspar['filing']['outfile_name'] = 'diffuse_sim.uvh5'
     obspar['filing']['output_format'] = 'uvh5'
     obspar['filing']['outdir'] = str(tmpdir)
@@ -174,7 +183,7 @@ def test_analytic_diffuse(model, tmpdir):
     soln = analytic_diffuse.get_solution(modname)
     uvw_lam = uv_out.uvw_array * uv_out.freq_array[0] / c_ms
     ana = soln(uvw_lam, **params)
-    assert np.allclose(ana / 2, dat, atol=1e-2)
+    np.testing.assert_allclose(ana / 2, dat, atol=tol, rtol=0)
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
