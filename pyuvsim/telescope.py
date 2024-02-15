@@ -461,7 +461,7 @@ class BeamList:
             return self._str_beam_list == other._str_beam_list
         return self._obj_beam_list == other._obj_beam_list
 
-    def append(self, value):
+    def append(self, value, uvb_read_kwargs=None):
         """
         Append to the beam list.
 
@@ -474,7 +474,7 @@ class BeamList:
         else:
             self._obj_beam_list.append('')
         try:
-            self.__setitem__(-1, value)
+            self.__setitem__(-1, value, uvb_read_kwargs=uvb_read_kwargs)
         except ValueError as err:
             if self.string_mode:
                 self._str_beam_list.pop()
