@@ -1,6 +1,7 @@
 
 import copy
 import os
+import shutil
 import warnings
 
 import numpy as np
@@ -109,11 +110,17 @@ def test_convert_loop(beam_objs):
         beams[1].freq_interp_kind = None
 
 
-def test_object_mode(beam_objs):
+def test_object_mode(beam_objs, tmp_path):
     beams = beam_objs
     beamlist = pyuvsim.BeamList(beams)
 
+    beamfits_file = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.beamfits')
+
+    new_beam_file = os.path.join(tmp_path, 'HERA_NicCST.uvbeam')
+    shutil.copyfile(beamfits_file, new_beam_file)
+
     uvb = copy.deepcopy(beams[0])
+    uvb.extra_keywords['beam_path'] = new_beam_file
     if hasattr(beams[0], "_freq_interp_kind"):
         beamlist[0].freq_interp_kind = 'cubic'
         uvb.freq_interp_kind = 'quartic'
@@ -124,13 +131,17 @@ def test_object_mode(beam_objs):
         msg = ""
     # Warn if inserted object mismatches.
     with uvtest.check_warnings(warn_type, match=msg):
-        beamlist.append(uvb)
+        beamlist.append(uvb, uvb_read_kwargs={"file_type": "beamfits"})
     assert len(beamlist) == 7
 
     if hasattr(beams[0], "_freq_interp_kind"):
         # Error if converting to string mode with mismatched keywords:
         with pytest.raises(ValueError, match='Conflicting settings '):
             beamlist.set_str_mode()
+    else:
+        # otherwise check that looping str/obj modes works
+        beamlist.set_str_mode()
+        beamlist.set_obj_mode()
 
     beamlist._set_params_on_uvbeams(beamlist._obj_beam_list)
 
