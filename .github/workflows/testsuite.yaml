@@ -52,7 +52,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+          python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v3
@@ -102,7 +102,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+          python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - uses: codecov/codecov-action@v3
         if: success()
@@ -151,7 +151,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+          python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - uses: codecov/codecov-action@v3
         if: success()
@@ -200,7 +200,7 @@ jobs:
           pip install --no-deps .
 
       - name: Run Tests
-        run: |
+        run: |  # currently cannot use `-n auto` here because pytest-cov causes warnings when used with pytest-xdist
           python -m pytest -W error --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: Upload Coverage
