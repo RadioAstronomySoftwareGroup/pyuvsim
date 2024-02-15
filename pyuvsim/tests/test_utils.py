@@ -145,12 +145,16 @@ def test_write_uvdata(save_format, tmpdir):
             shutil.rmtree(expected_ofname)
         else:
             os.remove(expected_ofname)
-        warn_type = [UserWarning]
-        warn_str = [
-            "The lst_array is not self-consistent with the time_array and "
-            "telescope location. Consider recomputing with the "
-            "`set_lsts_from_time_array` method."
-        ]
+        if version.parse(pyuvdata.__version__) > version.parse("2.4.0"):
+            warn_type = [UserWarning]
+            warn_str = [
+                "The lst_array is not self-consistent with the time_array and "
+                "telescope location. Consider recomputing with the "
+                "`set_lsts_from_time_array` method."
+            ]
+        else:
+            warn_type = None
+            warn_str = ""
         with uvtest.check_warnings(warn_type, match=warn_str):
             expected_ofname = simutils.write_uvdata(uv, filing_dict,
                                                     return_filename=True,
