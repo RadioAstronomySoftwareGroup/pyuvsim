@@ -25,7 +25,7 @@ these are passed into a simulation.
       outfile_prefix: 'sim' # Prefix for the output file name, separated by underscores
       outfile_suffix: 'results' # Suffix for output file name
       outfile_name: 'sim_results' # Alternatively, give the full name
-      output_format: 'uvfits'  # Format for output. Default is 'uvfits', but measurement sets ('ms'), 'miriad' and 'uvh5' are also supported.
+      output_format: 'uvfits'  # Format for output. Default is 'uvh5', but measurement sets ('ms'), 'miriad' and 'uvh5' are also supported.
       clobber: False        # overwrite existing files. (Default False)
     freq:
       Nfreqs: 10    # Number of frequencies

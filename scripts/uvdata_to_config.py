@@ -8,9 +8,14 @@ from pyuvdata import UVData
 
 import pyuvsim.simsetup
 
-# Take a uvfits file, and save sim parameters as a yaml file.
+# Take a uvdata readable file, and save sim parameters as a yaml file.
 
-parser = argparse.ArgumentParser(description=("Generate basic simulation parameters from uvfits."))
+parser = argparse.ArgumentParser(
+    description=(
+        "Generate basic simulation parameters from a data file readable by "
+        ":class:`pyuvdata.UVData`."
+    )
+)
 
 parser.add_argument('file_in', metavar='<FILE>', type=str, nargs='+')
 parser.add_argument('-p', '--param_filename', default=None)

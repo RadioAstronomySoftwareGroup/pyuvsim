@@ -119,15 +119,19 @@ def test_write_uvdata(save_format, tmpdir):
     """ Test function that defines filenames from parameter dict """
     if save_format == "ms":
         pytest.importorskip("casacore")
-        if not hasattr(UVData, "write_ms"):
-            pytest.skip()
 
     uv = UVData.from_file(triangle_uvfits_file)
     uv.use_future_array_shapes()
 
     ofname = str(tmpdir.join('test_file'))
     filing_dict = {'outfile_name': ofname}
-    if save_format == "miriad":
+    if save_format is None:
+        warn_str = [
+            "No out format specified for uvdata file. Defaulting to uvh5 (note "
+            "this is a defaulting change, it used to default to uvfits)"
+        ]
+        warn_type = [UserWarning]
+    elif save_format == "miriad":
         warn_str = [
             "writing default values for restfreq, vsource, veldop, jyperk, and systemp"
         ]
@@ -145,14 +149,17 @@ def test_write_uvdata(save_format, tmpdir):
             shutil.rmtree(expected_ofname)
         else:
             os.remove(expected_ofname)
+        if save_format is not None:
+            warn_type = []
+            warn_str = []
         if version.parse(pyuvdata.__version__) > version.parse("2.4.0"):
-            warn_type = [UserWarning]
-            warn_str = [
+            warn_type += [UserWarning]
+            warn_str += [
                 "The lst_array is not self-consistent with the time_array and "
                 "telescope location. Consider recomputing with the "
                 "`set_lsts_from_time_array` method."
             ]
-        else:
+        if len(warn_type) < 1:
             warn_type = None
             warn_str = ""
         with uvtest.check_warnings(warn_type, match=warn_str):
@@ -162,9 +169,9 @@ def test_write_uvdata(save_format, tmpdir):
 
     ofname = os.path.join('.', ofname)
 
-    if save_format == 'uvfits' or save_format is None:
+    if save_format == 'uvfits':
         assert ofname + '.uvfits' == expected_ofname
-    elif save_format == 'uvh5':
+    elif save_format == 'uvh5' or save_format is None:
         assert ofname + '.uvh5' == expected_ofname
     elif save_format == 'ms':
         assert ofname + '.ms' == expected_ofname
@@ -189,14 +196,45 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     uv.use_future_array_shapes()
 
     uv.set_lsts_from_time_array()
-    ofname = str(tmpdir.join('test_file'))
-    filing_dict = {'outfile_name': ofname}
-    expected_ofname = simutils.write_uvdata(
-        uv,
-        filing_dict,
-        return_filename=True,
-        out_format=save_format,
-    )
+    filing_dict = {
+        'outdir': tmpdir.join('test_dir'),
+        'outfile_name': 'test_file',
+    }
+    if save_format is None:
+        warn_str = [
+            "No out format specified for uvdata file. Defaulting to uvh5 (note "
+            "this is a defaulting change, it used to default to uvfits)"
+        ]
+        warn_type = [UserWarning]
+    elif save_format == "miriad":
+        warn_str = [
+            "writing default values for restfreq, vsource, veldop, jyperk, and systemp"
+        ]
+        warn_type = [UserWarning]
+    else:
+        warn_type = None
+        warn_str = ""
+    try:
+        with uvtest.check_warnings(warn_type, match=warn_str):
+            expected_ofname = simutils.write_uvdata(
+                uv,
+                filing_dict,
+                return_filename=True,
+                out_format=save_format,
+            )
+    except AssertionError:
+        # should only get here for miriad
+        assert save_format == "miriad"
+        shutil.rmtree(expected_ofname)
+        warn_type = None
+        warn_str = ""
+        with uvtest.check_warnings(warn_type, match=warn_str):
+            expected_ofname = simutils.write_uvdata(
+                uv,
+                filing_dict,
+                return_filename=True,
+                out_format=save_format,
+            )
 
     assert os.path.exists(expected_ofname)
 
@@ -227,11 +265,12 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     uv.data_array += 1
 
     filing_dict["clobber"] = True
-    simutils.write_uvdata(
-        uv,
-        filing_dict,
-        out_format=save_format,
-    )
+    with uvtest.check_warnings(warn_type, match=warn_str):
+        simutils.write_uvdata(
+            uv,
+            filing_dict,
+            out_format=save_format,
+        )
 
     if hasattr(uv2, "filename"):
         uv2.filename = uv.filename
