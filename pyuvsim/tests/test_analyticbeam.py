@@ -3,6 +3,7 @@
 # Licensed under the 3-clause BSD License
 
 import os
+import re
 
 import numpy as np
 import pytest
@@ -48,13 +49,13 @@ def test_uniform_beam(heratext_posfreq):
     nsrcs = az_vals.size
     n_freqs = freqs.size
 
-    interpolated_beam, interp_basis_vector = beam.interp(
+    interpolated_beam, _ = beam.interp(
         az_array=az_vals, za_array=za_vals, freq_array=freqs
     )
     expected_data = np.zeros((2, 2, n_freqs, nsrcs), dtype=float)
     expected_data[1, 0, :, :] = 1
     expected_data[0, 1, :, :] = 1
-    assert np.allclose(interpolated_beam, expected_data)
+    np.testing.assert_allclose(interpolated_beam, expected_data)
 
 
 def test_airy_beam_values(heratext_posfreq):
@@ -64,7 +65,7 @@ def test_airy_beam_values(heratext_posfreq):
 
     az_vals, za_vals, freq_vals = heratext_posfreq
 
-    interpolated_beam, interp_basis_vector = beam.interp(
+    interpolated_beam, _ = beam.interp(
         az_array=az_vals, za_array=za_vals, freq_array=freq_vals
     )
 
@@ -79,7 +80,7 @@ def test_airy_beam_values(heratext_posfreq):
     expected_data[1, 0, :, :] = airy_values
     expected_data[0, 1, :, :] = airy_values
 
-    assert np.allclose(interpolated_beam, expected_data)
+    np.testing.assert_allclose(interpolated_beam, expected_data)
 
 
 def test_interp_errors(heratext_posfreq):
@@ -164,7 +165,7 @@ def test_achromatic_gaussian_beam(heratext_posfreq):
     expected_data[1, 0, :, :] = gaussian_vals
     expected_data[0, 1, :, :] = gaussian_vals
 
-    assert np.allclose(interpolated_beam, expected_data)
+    np.testing.assert_allclose(interpolated_beam, expected_data)
 
 
 @pytest.mark.filterwarnings("ignore:UVW orientation appears to be flipped")
@@ -186,7 +187,7 @@ def test_gaussbeam_values():
 
     time = Time(hera_uv.time_array[0], scale='utc', format='jd')
 
-    catalog, mock_keywords = pyuvsim.create_mock_catalog(
+    catalog, _ = pyuvsim.create_mock_catalog(
         time=time, arrangement='long-line', Nsrcs=41, min_alt=80., array_location=array_location
     )
 
@@ -237,16 +238,11 @@ def test_chromatic_gaussian():
     az = np.zeros(Npix)
     za = np.linspace(0, np.pi / 2., Npix)
 
-    # Error if trying to define chromatic beam without a reference frequency
-    with pytest.raises(ValueError,
-                       match='ref_freq must be set for nonzero gaussian beam spectral index'):
-        pyuvsim.AnalyticBeam('gaussian', sigma=sigma, spectral_index=alpha)
-
-    A = pyuvsim.AnalyticBeam('gaussian', sigma=sigma, ref_freq=freqs[0], spectral_index=alpha)
+    gauss = pyuvsim.AnalyticBeam('gaussian', sigma=sigma, ref_freq=freqs[0], spectral_index=alpha)
 
     # Get the widths at each frequency.
 
-    vals, _ = A.interp(az, za, freqs)
+    vals, _ = gauss.interp(az, za, freqs)
 
     vals = vals[0, 1]
 
@@ -254,6 +250,13 @@ def test_chromatic_gaussian():
         hwhm = za[np.argmin(np.abs(vals[fi] - 0.5))]
         sig_f = sigma * (freqs[fi] / freqs[0]) ** alpha
         assert np.isclose(sig_f, 2 * hwhm / 2.355, atol=1e-3)
+
+
+def test_chromatic_gaussian_error():
+    # Error if trying to define chromatic beam without a reference frequency
+    with pytest.raises(ValueError,
+                       match='ref_freq must be set for nonzero gaussian beam spectral index'):
+        pyuvsim.AnalyticBeam('gaussian', sigma=np.radians(15.0), spectral_index=-1.5)
 
 
 def test_power_analytic_beam():
@@ -271,12 +274,7 @@ def test_power_analytic_beam():
         pb.efield_to_power()
         evals = eb.interp(az, za, freqs)[0][0, 1]
         pvals = pb.interp(az, za, freqs)[0][0, 0]
-        assert np.allclose(evals**2, pvals)
-
-    # Ensure uniform beam works
-    pb = pyuvsim.AnalyticBeam('uniform')
-    pb.efield_to_power()
-    pb.interp(az, za, freqs)
+        np.testing.assert_allclose(evals**2, pvals)
 
 
 def test_comparison():
@@ -292,25 +290,39 @@ def test_comparison():
     assert beam2 != beam1
 
 
-def test_beamerrs():
+def test_beam_init_errs():
     """
     Error cases.
     """
     with pytest.raises(ValueError, match='type not recognized'):
         pyuvsim.AnalyticBeam('unsupported_type')
 
-    beam = pyuvsim.AnalyticBeam('gaussian')
+
+@pytest.mark.parametrize(
+    ("beam_type", "error_msg"),
+    [
+        (
+            "gaussian",
+            re.escape(
+                "Antenna diameter (meters) or sigma (radians) needed for gaussian beams."
+            ),
+        ),
+        ("airy", "Antenna diameter needed for airy beam"),
+        ("noninterpolable", "no interp for this type: noninterpolable"),
+    ]
+)
+def test_beam_interp_errs(beam_type, error_msg):
+    if beam_type == "noninterpolable":
+        beam = pyuvsim.AnalyticBeam("uniform")
+        beam.type = "noninterpolable"
+    else:
+        beam = pyuvsim.AnalyticBeam(beam_type)
     az, za = np.random.uniform(0.0, np.pi, (2, 5))
     freq_arr = np.linspace(1e8, 1.5e8, 10)
-    with pytest.raises(ValueError, match='Dish diameter needed for gaussian beam'):
-        beam.interp(az, za, freq_arr)
-
-    beam.type = 'airy'
-    with pytest.raises(ValueError, match='Dish diameter needed for airy beam'):
-        beam.interp(az, za, freq_arr)
-
-    beam.type = 'noninterpolable'
-    with pytest.raises(ValueError, match='no interp for this type: noninterpolable'):
+    with pytest.raises(
+        ValueError,
+        match=error_msg
+    ):
         beam.interp(az, za, freq_arr)
 
 

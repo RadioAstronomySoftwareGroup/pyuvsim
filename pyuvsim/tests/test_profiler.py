@@ -3,6 +3,7 @@
 # Licensed under the 3-clause BSD License
 import atexit
 import os
+import re
 import shutil
 
 import pytest
@@ -29,7 +30,6 @@ def test_profiler(tmpdir):
     line_profiler = pytest.importorskip('line_profiler')
     outpath = profdata_dir_setup(tmpdir)
     testprof_fname = str(outpath.join('time_profile.out'))
-    print(testprof_fname)
     pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname, dump_raw=True)
     with uvtest.check_warnings(UserWarning, match='Profiler already set'):
         pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname[:-4], dump_raw=True)
@@ -44,3 +44,24 @@ def test_profiler(tmpdir):
     assert len(lstats.timings) != 0
     func_names = [k[2] for k in lstats.timings.keys()]
     assert unique(func_names).tolist() == sorted(pyuvsim.profiling.default_profile_funcs)
+
+
+def test_profiler_mock_import(tmpdir):
+    try:
+        from line_profiler import LineProfiler  # noqa
+    except ImportError:
+        outpath = profdata_dir_setup(tmpdir)
+        testprof_fname = str(outpath.join('time_profile.out'))
+
+        with pytest.raises(
+                ImportError,
+                match=re.escape(
+                    "You need mpi4py and line_profiler to use the "
+                    "profiling module. Install them both by running pip "
+                    "install pyuvsim[all]."
+                )
+        ):
+            pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname, dump_raw=True)
+
+        lp = pyuvsim.LineProfiler()
+        assert lp is None

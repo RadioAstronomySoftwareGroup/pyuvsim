@@ -375,7 +375,7 @@ def test_single_offzenith_source(beam, hera_loc):
     assert np.isclose(beam_za, beam_za2)
     assert np.isclose(beam_az, beam_az2)
 
-    interpolated_beam, interp_basis_vector = beam.interp(
+    interpolated_beam, _ = beam.interp(
         az_array=np.array([beam_az]), za_array=np.array([beam_za]),
         freq_array=np.array([freq.to_value('Hz')]))
 
@@ -450,7 +450,7 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
 
     # analytically calculate visibilities
     beam.peak_normalize()
-    interpolated_beam, interp_basis_vector = beam.interp(
+    interpolated_beam, _ = beam.interp(
         az_array=np.array([0.0]), za_array=np.array([src_za.rad]),
         freq_array=np.array([freq.to_value('Hz')])
     )

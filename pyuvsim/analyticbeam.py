@@ -176,7 +176,9 @@ class AnalyticBeam:
             interp_basis_vector = None
         elif self.type == 'gaussian':
             if (self.diameter is None) and (self.sigma is None):
-                raise ValueError("Dish diameter needed for gaussian beam -- units: meters")
+                raise ValueError(
+                    "Antenna diameter (meters) or sigma (radians) needed for gaussian beams."
+                )
             interp_data = np.zeros((2, 2, freq_array.size, az_array.size), dtype=float)
             # gaussian beam only depends on Zenith Angle (symmetric is azimuth)
             # standard deviation of sigma is referring to the standard deviation of e-field beam!
@@ -191,7 +193,7 @@ class AnalyticBeam:
             interp_basis_vector = None
         elif self.type == 'airy':
             if self.diameter is None:
-                raise ValueError("Dish diameter needed for airy beam -- units: meters")
+                raise ValueError("Antenna diameter needed for airy beam -- units: meters")
             interp_data = np.zeros((2, 2, freq_array.size, az_array.size), dtype=float)
             za_grid, f_grid = np.meshgrid(za_array, freq_array)
             xvals = self.diameter / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / c_ms

@@ -191,6 +191,7 @@ def test_analytic_diffuse(model, tol, tmpdir):
 def test_powerbeam_sim(cst_beam):
     new_cst = copy.deepcopy(cst_beam)
     if hasattr(new_cst, "_freq_interp_kind"):
+        # this can go away when we require pyuvdata version >= 2.4.2
         new_cst.freq_interp_kind = 'nearest'  # otherwise we get an error about freq interpolation
     new_cst.efield_to_power()
     beams = BeamList([new_cst] * 4)
@@ -263,8 +264,8 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
 @pytest.mark.filterwarnings("ignore:No julian date given for mock catalog")
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_run_nsky_parts(capsys):
-    # there parameters were hand picked and fine-tuned to create nsky_parts = 2
-    #  this test feels very wonky just to ensure the nsky_parts is printed
+    # these parameters were hand picked and fine-tuned to create nsky_parts = 2
+    # this test feels very wonky just to ensure the nsky_parts is printed
     scale = 1.0
     if 'linux' in sys.platform:
         scale = 2**10
@@ -288,18 +289,29 @@ def test_run_nsky_parts(capsys):
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
+@pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 @pytest.mark.parametrize(
     "spectral_type",
     ["flat", "subband", "spectral_index"])
 def test_run_gleam_uvsim(spectral_type):
     params = pyuvsim.simsetup._config_str_to_dict(
-        os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testgleam.yaml')
+        os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_testgleam.yaml')
     )
     params["sources"]["spectral_type"] = spectral_type
     params["sources"].pop("min_flux")
     params["sources"].pop("max_flux")
 
-    pyuvsim.run_uvsim(params, return_uv=True)
+    uv_out = pyuvsim.run_uvsim(params, return_uv=True)
+    assert uv_out.telescope_name == "Triangle"
+
+    file_name = f"gleam_triangle_{spectral_type}.uvh5"
+    uv_in = UVData.from_file(
+        os.path.join(SIM_DATA_PATH, file_name), use_future_array_shapes=True
+    )
+    # This just tests that we get the same answer as an earlier run, not that
+    # the data are correct (that's covered in other tests)
+    uv_out.history = uv_in.history
+    assert uv_in == uv_out
 
 
 @pytest.mark.filterwarnings("ignore:The reference_frequency is aliased as `frequency`")
