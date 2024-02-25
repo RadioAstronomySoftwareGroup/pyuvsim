@@ -4,6 +4,7 @@
 
 import os
 import shutil
+import warnings
 
 import numpy as np
 import pytest
@@ -118,7 +119,8 @@ def test_write_uvdata(save_format, tmpdir):
     if save_format == "ms":
         pytest.importorskip("casacore")
 
-    uv = UVData.from_file(triangle_uvfits_file, use_future_array_shapes=True)
+    uv = UVData.from_file(triangle_uvfits_file)
+    uv.use_future_array_shapes()
 
     ofname = str(tmpdir.join('test_file'))
     filing_dict = {'outfile_name': ofname}
@@ -191,7 +193,8 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         if not hasattr(UVData, "write_ms"):
             pytest.skip()
 
-    uv = UVData.from_file(triangle_uvfits_file, use_future_array_shapes=True)
+    uv = UVData.from_file(triangle_uvfits_file)
+    uv.use_future_array_shapes()
 
     uv.set_lsts_from_time_array()
     filing_dict = {
@@ -213,14 +216,22 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     else:
         warn_type = None
         warn_str = ""
+
     try:
         with uvtest.check_warnings(warn_type, match=warn_str):
-            expected_ofname = simutils.write_uvdata(
-                uv,
-                filing_dict,
-                return_filename=True,
-                out_format=save_format,
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", "`np.int` is a deprecated alias"
+                )
+                warnings.filterwarnings(
+                    "ignore", "`np.bool` is a deprecated alias"
+                )
+                expected_ofname = simutils.write_uvdata(
+                    uv,
+                    filing_dict,
+                    return_filename=True,
+                    out_format=save_format,
+                )
     except AssertionError:
         # handling for old pyuvdata versions
         # should only get here for miriad
@@ -238,7 +249,8 @@ def test_write_uvdata_clobber(save_format, tmpdir):
 
     assert os.path.exists(expected_ofname)
 
-    uv2 = UVData.from_file(expected_ofname, use_future_array_shapes=True)
+    uv2 = UVData.from_file(expected_ofname)
+    uv2.use_future_array_shapes()
 
     if save_format == "ms":
         # MS adds some stuff to history & extra keywords
@@ -262,6 +274,14 @@ def test_write_uvdata_clobber(save_format, tmpdir):
 
     if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
         uv2._consolidate_phase_center_catalogs(other=uv, ignore_name=True)
+    else:
+        uv2._set_multi_phase_center(preserve_phase_center_info=True)
+        if 1 not in uv2.phase_center_catalog.keys():
+            uv2._update_phase_center_id(0, 1)
+        uv2.phase_center_catalog = uv.phase_center_catalog
+        uv2.antenna_diameters = None
+        uv2.reorder_blts()
+
     assert uv == uv2
 
     uv.data_array += 1
@@ -274,7 +294,8 @@ def test_write_uvdata_clobber(save_format, tmpdir):
             out_format=save_format,
         )
 
-    uv2.read(expected_ofname, use_future_array_shapes=True)
+    uv2.read(expected_ofname)
+    uv2.use_future_array_shapes()
 
     if save_format == "ms":
         # MS adds some stuff to history & extra keywords
@@ -285,6 +306,13 @@ def test_write_uvdata_clobber(save_format, tmpdir):
 
     if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
         uv2._consolidate_phase_center_catalogs(other=uv, ignore_name=True)
+    else:
+        uv2._set_multi_phase_center(preserve_phase_center_info=True)
+        if 1 not in uv2.phase_center_catalog.keys():
+            uv2._update_phase_center_id(0, 1)
+        uv2.phase_center_catalog = uv.phase_center_catalog
+        uv2.antenna_diameters = None
+        uv2.reorder_blts()
     assert uv2 == uv
 
 
@@ -294,7 +322,8 @@ def test_write_uvdata_clobber(save_format, tmpdir):
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 def test_write_fix_autos(tmpdir):
-    uv = UVData.from_file(triangle_uvfits_file, use_future_array_shapes=True)
+    uv = UVData.from_file(triangle_uvfits_file)
+    uv.use_future_array_shapes()
 
     uv.set_lsts_from_time_array()
 
@@ -319,7 +348,8 @@ def test_write_fix_autos(tmpdir):
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 def test_write_error_with_no_format(tmpdir):
     """Test write_uvdata will error if no format is given."""
-    uv = UVData.from_file(triangle_uvfits_file, use_future_array_shapes=True)
+    uv = UVData.from_file(triangle_uvfits_file)
+    uv.use_future_array_shapes()
 
     ofname = str(tmpdir.join('test_file'))
     filing_dict = {'outfile_name': ofname}
@@ -337,7 +367,8 @@ def test_write_error_with_no_format(tmpdir):
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 def test_file_format_in_filing_dict(tmpdir):
     """Test file is written out when output_format is set in filing dict."""
-    uv = UVData.from_file(triangle_uvfits_file, use_future_array_shapes=True)
+    uv = UVData.from_file(triangle_uvfits_file)
+    uv.use_future_array_shapes()
 
     ofname = str(tmpdir.join('test_file'))
     filing_dict = {'outfile_name': ofname}
