@@ -856,7 +856,7 @@ def initialize_catalog_from_params(
 
     Returns
     -------
-    skydata: :class:`pyradiosky.SkyModel`
+    sky: :class:`pyradiosky.SkyModel`
         Source catalog filled with data.
     source_list_name: str
         Catalog identifier for metadata. Only returned if return_catname is True.
@@ -864,8 +864,8 @@ def initialize_catalog_from_params(
     """
     if return_catname is None:
         warnings.warn(
-            "The return_catname parameter currently defaults to True, but starting in"
-            "version 1.4 it will default to False.",
+            "The return_catname parameter currently defaults to True, but "
+            "starting in version 1.4 it will default to False.",
             DeprecationWarning
         )
         return_catname = True
@@ -1218,12 +1218,13 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     if 'array_layout' not in tele_params:
         raise KeyError('array_layout must be provided.')
     array_layout = tele_params.pop('array_layout')
+    assert isinstance(array_layout, (str, dict)), "array_layout must be a string or a dict"
     if isinstance(array_layout, str):
         # Interpet as file path to layout csv file.
         layout_csv = array_layout
         # if array layout is a str, parse it as .csv filepath
         if isinstance(layout_csv, str):
-            if not os.path.exists(layout_csv):
+            if not os.path.exists(layout_csv) and isinstance(config_path, str):
                 layout_csv = os.path.join(config_path, layout_csv)
                 if not os.path.exists(layout_csv):
                     raise ValueError(
@@ -2015,9 +2016,16 @@ def initialize_uvdata_from_keywords(
     arrfile = antenna_layout_filepath is not None
     outfile = output_layout_filename is not None
 
-    if write_files:
+    if array_layout is None and antenna_layout_filepath is None:
+        raise ValueError(
+            "Either array_layout or antenna_layout_filepath must be passed."
+        )
+
+    if array_layout is None or isinstance(array_layout, str) or write_files:
         if path_out is None:
             path_out = '.'
+
+    if write_files:
         if not outfile:
             if not arrfile:
                 output_layout_filename = 'antenna_layout.csv'
@@ -2057,7 +2065,7 @@ def initialize_uvdata_from_keywords(
             )
 
     if array_layout is None:
-        if outfile:
+        if write_files and output_layout_filename is not None:
             array_layout = output_layout_filename
         else:
             array_layout = antenna_layout_filepath

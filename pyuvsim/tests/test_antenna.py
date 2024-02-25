@@ -1,6 +1,7 @@
 # -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2021 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+import copy
 import os
 
 import numpy as np
@@ -47,7 +48,38 @@ def test_jones_set_spline(cst_beam, hera_loc):
     altaz[:, 0] = alts.flatten()
     altaz[:, 1] = azs.flatten()
 
-    antenna.get_beam_jones(array, altaz, 150e6, interpolation_function='az_za_simple')
+    jones_matrix = antenna.get_beam_jones(
+        array, altaz, 150e6, interpolation_function='az_za_simple'
+    )
+
+    # These are just values from a run, so this just tests for unexpected changes.
+    expected_jones = np.array(
+        [
+            [
+                [
+                    -4.57061296e-04 - 3.88626249e-04j,
+                    -7.28285993e-05 - 1.45479743e-04j,
+                    -7.28285993e-05 - 1.45479743e-04j
+                ], [
+                    -3.35886569e-02 - 1.83636844e-02j,
+                    -3.36205621e-02 - 1.84105336e-02j,
+                    -3.36205621e-02 - 1.84105336e-02j
+                ],
+            ], [
+                [
+                    -1.04000784e-02 - 1.11629186e-02j,
+                    -1.03973090e-02 - 1.11516998e-02j,
+                    -1.03973090e-02 - 1.11516998e-02j
+                ], [
+                    5.32870283e-04 + 1.16831373e-04j,
+                    1.26946128e-06 - 1.22843330e-06j,
+                    1.26946128e-06 - 1.22843330e-06j
+                ],
+            ],
+        ]
+    )
+
+    np.testing.assert_allclose(expected_jones, jones_matrix)
 
 
 def test_jones_set_interp(cst_beam, hera_loc):
@@ -102,3 +134,19 @@ def test_set_interps(cst_beam, hera_loc):
 
     if interp_function_attr:
         assert beam.interpolation_function == 'az_za_simple'
+
+
+def test_ant_comparison():
+    antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 10, 0]), 1)
+    antenna2 = pyuvsim.Antenna('ant2', 2, np.array([0, 20, 0]), 1)
+
+    ant1_copy = copy.deepcopy(antenna1)
+
+    assert antenna1 < antenna2
+    assert antenna1 <= antenna2
+    assert antenna1 <= antenna1
+    assert antenna1 == ant1_copy
+
+    assert antenna2 > antenna1
+    assert antenna2 >= antenna2
+    assert antenna1 >= antenna1

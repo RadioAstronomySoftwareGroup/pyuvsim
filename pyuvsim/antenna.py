@@ -147,7 +147,6 @@ class Antenna:
         jones_matrix = np.zeros((2, 2, Ncomponents), dtype=complex)
 
         # first axis is feed, second axis is theta, phi (opposite order of beam!)
-        print(interp_data.shape)
         jones_matrix[0, 0] = interp_data[1, 0, 0, :]
         jones_matrix[1, 1] = interp_data[0, 1, 0, :]
         jones_matrix[0, 1] = interp_data[0, 0, 0, :]

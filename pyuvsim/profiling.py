@@ -76,7 +76,7 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
         return
 
     prof = LineProfiler()
-    if mpi is None or prof is None:  # pragma: no cover
+    if mpi is None or prof is None:
         raise ImportError("You need mpi4py and line_profiler to use the "
                           "profiling module. Install them both by running pip "
                           "install pyuvsim[all].")

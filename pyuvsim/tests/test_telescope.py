@@ -65,6 +65,7 @@ def test_convert_loop(beam_objs):
     beams = beam_objs
 
     if hasattr(beams[0], "_freq_interp_kind"):
+        # this can go away when we require pyuvdata version >= 2.4.2
         beams[0].freq_interp_kind = 'linear'
         beams[1].freq_interp_kind = 'cubic'
 
@@ -90,6 +91,7 @@ def test_convert_loop(beam_objs):
     assert beamlist2 == beamlist
 
     if hasattr(beams[0], "_freq_interp_kind"):
+        # this can go away when we require pyuvdata version >= 2.4.2
         assert beamlist.uvb_params['freq_interp_kind'] == 'linear'
 
     for bs in beamlist:
@@ -104,11 +106,6 @@ def test_convert_loop(beam_objs):
 
     assert beamlist._str_beam_list == []
 
-    # Reset UVBeams
-    if hasattr(beams[0], "_freq_interp_kind"):
-        beams[0].freq_interp_kind = None
-        beams[1].freq_interp_kind = None
-
 
 def test_object_mode(beam_objs, tmp_path):
     beams = beam_objs
@@ -122,6 +119,7 @@ def test_object_mode(beam_objs, tmp_path):
     uvb = copy.deepcopy(beams[0])
     uvb.extra_keywords['beam_path'] = new_beam_file
     if hasattr(beams[0], "_freq_interp_kind"):
+        # this can go away when we require pyuvdata version >= 2.4.2
         beamlist[0].freq_interp_kind = 'cubic'
         uvb.freq_interp_kind = 'quartic'
         warn_type = UserWarning
@@ -173,6 +171,7 @@ def test_string_mode(beam_objs):
 
     uvb = beams[0]
     if hasattr(beams[0], "_freq_interp_kind"):
+        # this can go away when we require pyuvdata version >= 2.4.2
         uvb.freq_interp_kind = 'quartic'
 
         with pytest.raises(ValueError, match='UVBeam parameters do not'):
@@ -212,6 +211,7 @@ def test_comparison(beam_objs):
 
 def test_no_overwrite(beam_objs):
     if not hasattr(beam_objs[0], "_freq_interp_kind"):
+        # this can go away when we require pyuvdata version >= 2.4.2
         pytest.skip()
     # Ensure UVBeam keywords are not overwritten by BeamList.uvb_params
     # while in object mode.
@@ -251,7 +251,7 @@ def test_beamlist_errors(beam_objs):
     ):
         pyuvsim.BeamList(beams, check=True)
 
-    # test warning on beams with different x_orientation
+    # test warning on beams with no x_orientation
     beams[0].x_orientation = None
     beams[1].x_orientation = None
     with uvtest.check_warnings(
@@ -299,7 +299,8 @@ def test_beamlist_consistency_stringmode(beam_objs):
     beamlist = pyuvsim.BeamList(beams[:3], check=False)
     beamlist.set_str_mode()
 
-    pyuvsim.BeamList(beamlist._str_beam_list, check=True, force_check=True)
+    beamlist2 = pyuvsim.BeamList(beamlist._str_beam_list, check=True, force_check=True)
+    assert beamlist2 == beamlist
 
 
 def test_beam_basis_type(beam_objs):
@@ -323,6 +324,16 @@ def test_beam_basis_type_errors(beam_objs):
     ):
         beamlist.check_consistency()
 
+    beamlist.set_str_mode()
+    with pytest.raises(
+        ValueError,
+        match="Cannot get beam basis type from a string-mode BeamList."
+    ):
+        beamlist._get_beam_basis_type()
+
+
+@pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer")
+def test_beam_basis_non_orthogonal_error(beam_objs):
     # test with non-orthogonal basis vectors
     # first construct a beam with non-orthogonal basis vectors
     new_basis_vecs = np.zeros_like(beam_objs[1].basis_vector_array)
@@ -337,7 +348,7 @@ def test_beam_basis_type_errors(beam_objs):
     beam_objs[1].data_array = new_data
     beam_objs[1].check()
 
-    beamlist = pyuvsim.BeamList(beam_objs[1:], check=False)
+    beamlist = pyuvsim.BeamList(beam_objs, check=False)
     with pytest.raises(
         ValueError,
         match="pyuvsim currently only supports beams with basis vectors that"
@@ -345,13 +356,6 @@ def test_beam_basis_type_errors(beam_objs):
             "Work is in progress to add other basis vector systems."
     ):
         beamlist.check_consistency()
-
-    beamlist.set_str_mode()
-    with pytest.raises(
-        ValueError,
-        match="Cannot get beam basis type from a string-mode BeamList."
-    ):
-        beamlist._get_beam_basis_type()
 
 
 def test_empty_beamlist():
