@@ -274,7 +274,8 @@ def test_initialize_catalog_from_params(
     horizon_buffer, pass_time, pass_uv, return_catname, hera_loc
 ):
     # Pass in parameter dictionary as dict
-    uv_in = UVData.from_file(triangle_uvfits_file, use_future_array_shapes=True)
+    uv_in = UVData.from_file(triangle_uvfits_file)
+    uv_in.use_future_array_shapes()
 
     source_dict = {
         'catalog': 'mock',
@@ -496,11 +497,24 @@ def test_gleam_catalog_spectral_type(spectral_type):
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 def test_param_reader():
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml")
-    uv_in = UVData.from_file(triangle_uvfits_file, use_future_array_shapes=True)
+    uv_in = UVData.from_file(triangle_uvfits_file)
+    uv_in.use_future_array_shapes()
 
     if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
         uv_in.unproject_phase()
     else:
+        uv_in.flex_spw_id_array = np.zeros_like(uv_in.freq_array, dtype=int)
+        cat_name = uv_in.phase_center_catalog[1]["cat_name"]
+
+        uv_in.multi_phase_center = False
+        uv_in._phase_center_id_array.required = False
+        uv_in._Nphase.required = False
+        uv_in._phase_center_catalog.required = False
+
+        uv_in.Nphase = None
+        uv_in.phase_center_catalog = None
+        uv_in.object_name = cat_name
+        uv_in.phase_center_id_array = None
         uv_in.unphase_to_drift()
 
     beam0 = UVBeam()
@@ -574,6 +588,8 @@ def test_param_reader():
     # renumber/rename the phase centers so the equality check will pass.
     if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
         uv_obj._consolidate_phase_center_catalogs(other=uv_in, ignore_name=True)
+    else:
+        uv_in.object_name = uv_obj.object_name
 
     assert uv_obj == uv_in
 
@@ -1118,7 +1134,8 @@ def test_uvfits_to_config(tmp_path):
         os.makedirs(opath)  # Directory will be deleted when test completed.
 
     # Read uvfits file to params.
-    uv0 = UVData.from_file(longbl_uvfits_file, use_future_array_shapes=True)
+    uv0 = UVData.from_file(longbl_uvfits_file)
+    uv0.use_future_array_shapes()
 
     path, telescope_config, layout_fname = pyuvsim.simsetup.uvdata_to_telescope_config(
         uv0,
@@ -1730,7 +1747,8 @@ def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_set_lsts_errors():
     # Error cases on set_lsts function.
-    uv0 = UVData.from_file(longbl_uvfits_file, use_future_array_shapes=True)
+    uv0 = UVData.from_file(longbl_uvfits_file)
+    uv0.use_future_array_shapes()
     uv0.lst_array = None
 
     uv0.extra_keywords['world'] = 'moon'

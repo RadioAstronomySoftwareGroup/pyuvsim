@@ -72,6 +72,11 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
         # fix the channel width, which doesn't match the channel width in the parameter file
         uv_ref.channel_width = 1000000.0
 
+        # fix the telescope & instrument name
+        uv_ref.telescope_name = "Triangle"
+        uv_ref.instrument = "Triangle"
+        uv_ref.antenna_diameters = None
+
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', paramfile)
     # This test obsparam file has "single_source.txt" as its catalog.
     pyuvsim.uvsim.run_uvsim(param_filename)
@@ -290,6 +295,7 @@ def test_run_nsky_parts(capsys):
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 @pytest.mark.parametrize(
     "spectral_type",
     ["flat", "subband", "spectral_index"])
@@ -304,14 +310,14 @@ def test_run_gleam_uvsim(spectral_type):
     uv_out = pyuvsim.run_uvsim(params, return_uv=True)
     assert uv_out.telescope_name == "Triangle"
 
-    file_name = f"gleam_triangle_{spectral_type}.uvh5"
-    uv_in = UVData.from_file(
-        os.path.join(SIM_DATA_PATH, file_name), use_future_array_shapes=True
-    )
-    # This just tests that we get the same answer as an earlier run, not that
-    # the data are correct (that's covered in other tests)
-    uv_out.history = uv_in.history
-    assert uv_in == uv_out
+    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+        file_name = f"gleam_triangle_{spectral_type}.uvh5"
+        uv_in = UVData.from_file(os.path.join(SIM_DATA_PATH, file_name))
+        uv_in.use_future_array_shapes()
+        # This just tests that we get the same answer as an earlier run, not that
+        # the data are correct (that's covered in other tests)
+        uv_out.history = uv_in.history
+        assert uv_in == uv_out
 
 
 @pytest.mark.filterwarnings("ignore:The reference_frequency is aliased as `frequency`")
