@@ -26,7 +26,7 @@ More information on checking the reference simulations can be found in the READM
 
 We will periodically issue a new set of reference simulations as ``pyuvsim`` gains more capabilities.
 
-For more details, see `reference_simulations/README.md <https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/master/reference_simulations>`_.
+For more details, see `reference_simulations/README.md <https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/reference_simulations>`_.
 
 Benchmarking
 ------------
@@ -37,4 +37,4 @@ The README file in the ``benchmarking`` directory gives more details on how to d
 
 Note that the benchmarking scripts are designed only for SLURM systems.
 
-For more details, see `benchmarking/README.md <https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/master/benchmarking>`_.
+For more details, see `benchmarking/README.md <https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/benchmarking>`_.

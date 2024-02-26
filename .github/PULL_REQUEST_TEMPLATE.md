@@ -31,7 +31,7 @@ Bug fix checklist:
 - [ ] All new and existing tests pass.
 - [ ] I have checked that I reproduce the reference simulations or if there are differences they are explained below (if appropriate). If there are changes that are correct, I will update the reference simulation files after this PR is merged.
 - [ ] I have checked (e.g., using the benchmarking tools) that this change does not significantly increase typical runtimes. If it does, I have included a justification in the comments on this PR.
-- [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/master/CHANGELOG.md).
+- [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/main/CHANGELOG.md).
 
 New feature checklist:
 - [ ] I have added or updated the docstrings associated with my feature using the [numpy docstring format](https://numpydoc.readthedocs.io/en/latest/format.html).
@@ -40,7 +40,7 @@ New feature checklist:
 - [ ] All new and existing tests pass.
 - [ ] I have checked that I reproduce the reference simulations or if there are differences they are explained below (if appropriate). If there are changes that are correct, I will update the reference simulation files after this PR is merged.
 - [ ] I have checked (e.g., using the benchmarking tools) that this change does not significantly increase typical runtimes. If it does, I have included a justification in the comments on this PR.
-- [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/master/CHANGELOG.md).
+- [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/main/CHANGELOG.md).
 
 Breaking change checklist:
 - [ ] I have updated the docstrings associated with my change using the [numpy docstring format](https://numpydoc.readthedocs.io/en/latest/format.html).
@@ -50,19 +50,19 @@ Breaking change checklist:
 - [ ] All new and existing tests pass.
 - [ ] I have checked that I reproduce the reference simulations or if there are differences they are explained below (if appropriate). If there are changes that are correct, I will update the reference simulation files after this PR is merged.
 - [ ] I have checked (e.g., using the benchmarking tools) that this change does not significantly increase typical runtimes. If it does, I have included a justification in the comments on this PR.
-- [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/master/CHANGELOG.md).
+- [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/main/CHANGELOG.md).
 
 Reference simulation update or replacement:
 - [ ] If this is a new reference simulation or if the settings files have changed, I have added all the relevant files to the reference_simulations folder.
 - [ ] If this is a new reference simulation I have fully documented it in a memo in docs and updated any other docs as appropriate.
-- [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/master/CHANGELOG.md).
+- [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/main/CHANGELOG.md).
 
 Documentation change checklist:
 - [ ] Any updated docstrings use the [numpy docstring format](https://numpydoc.readthedocs.io/en/latest/format.html).
 - [ ] If this is a significant change to the readme or other docs, I have checked that they are rendered properly on ReadTheDocs. (you may need help to get this branch to build on RTD, just ask!)
 
 Version change checklist:
-- [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/master/CHANGELOG.md) to put all the unreleased changes under the new version (leaving the unreleased section empty).
+- [ ] I have updated the [CHANGELOG](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/blob/main/CHANGELOG.md) to put all the unreleased changes under the new version (leaving the unreleased section empty).
 - [ ] I have run the appropriate tests for this level of version change (described in the readme under versioning).
 
 Build or continuous integration change checklist:
