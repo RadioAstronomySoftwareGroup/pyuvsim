@@ -434,7 +434,8 @@ def test_gleam_catalog(filetype, flux_cut):
 
 
 @pytest.mark.parametrize("use_filetype", [True, False])
-def test_skyh5_catalog(use_filetype, tmp_path):
+@pytest.mark.parametrize("yaml_filetype", [True, False])
+def test_skyh5_catalog(use_filetype, yaml_filetype, tmp_path):
     filetype = None
     gleam_filename = os.path.join(
         SIM_DATA_PATH, 'gleam_50srcs.vot'
@@ -457,6 +458,8 @@ def test_skyh5_catalog(use_filetype, tmp_path):
         param_dict = yaml.safe_load(yf)
 
     param_dict['sources']['catalog'] = skyh5_file
+    if yaml_filetype:
+        param_dict['sources']['filetype'] = "skyh5"
     with open(param_filename, 'w') as yfile:
         yaml.dump(param_dict, yfile, default_flow_style=False)
 
