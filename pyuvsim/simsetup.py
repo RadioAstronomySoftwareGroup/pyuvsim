@@ -1218,7 +1218,8 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     if 'array_layout' not in tele_params:
         raise KeyError('array_layout must be provided.')
     array_layout = tele_params.pop('array_layout')
-    assert isinstance(array_layout, (str, dict)), "array_layout must be a string or a dict"
+    if not isinstance(array_layout, (str, dict)):
+        raise ValueError('array_layout must be a string or have options that parse as a dict.')
     if isinstance(array_layout, str):
         # Interpet as file path to layout csv file.
         layout_csv = array_layout

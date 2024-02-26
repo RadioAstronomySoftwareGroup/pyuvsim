@@ -680,10 +680,11 @@ def test_tele_parser():
 
 
 @pytest.mark.parametrize(
-    ("tele_dict", "err_msg"),
+    ("tele_dict", "err_type", "err_msg"),
     [
         (
             {'array_layout': os.path.join(SIM_DATA_PATH, 'test_layout_6ant.csv')},
+            KeyError,
             'If telescope_config_name not provided in `telescope` obsparam section, '
             'you must provide telescope_location'
         ),
@@ -692,6 +693,7 @@ def test_tele_parser():
                 'array_layout': os.path.join(SIM_DATA_PATH, 'test_layout_6ant.csv'),
                 'telescope_location': '(-30.72152777777791, 21.428305555555557, 1073.0000000093132)'
             },
+            KeyError,
             'If telescope_config_name not provided in `telescope` obsparam section, '
             'you must provide telescope_name'
         ),
@@ -700,12 +702,22 @@ def test_tele_parser():
                 'telescope_name': "foo",
                 'telescope_location': '(-30.72152777777791, 21.428305555555557, 1073.0000000093132)'
             },
+            KeyError,
             "array_layout must be provided."
+        ),
+        (
+            {
+                'array_layout': 5,
+                'telescope_name': "foo",
+                'telescope_location': '(-30.72152777777791, 21.428305555555557, 1073.0000000093132)'
+            },
+            ValueError,
+            'array_layout must be a string or have options that parse as a dict.'
         ),
     ],
 )
-def test_tele_parser_errors(tele_dict, err_msg):
-    with pytest.raises(KeyError, match=err_msg):
+def test_tele_parser_errors(tele_dict, err_type, err_msg):
+    with pytest.raises(err_type, match=err_msg):
         pyuvsim.simsetup.parse_telescope_params(tele_dict)
 
 
