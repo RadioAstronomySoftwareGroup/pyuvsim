@@ -63,54 +63,51 @@ jobs:
           env_vars: OS,PYTHON
           fail_ci_if_error: true
 
+  # Use pip for diversity
+  # do this on min_deps because it's hard to get mpi4py to install from pip
   min_deps:
     env:
-      ENV_NAME: min_deps
-      PYTHON: 3.9
+      PYTHON: "3.10"
     name: Min Deps Testing
-    defaults:
-      run:
-        # Adding -l {0} helps ensure conda can be found properly.
-        shell: bash -l {0}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@main
         with:
-          fetch-depth: 1
-      - name: Setup Minimamba
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          python-version: ${{ env.PYTHON }}
-          environment-file: ci/${{ env.ENV_NAME }}.yaml
-          activate-environment: ${{ env.ENV_NAME }}
+          fetch-depth: 0
 
-      - name: Conda Info
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON }}
+
+      # need to install the testing packages but not the other optional ones
+      - name: Install
         run: |
-          conda info -a
-          conda list
+          pip install coverage pytest pytest-cov pytest-xdist
+          pip install -e .
+
+      - name: Environment Info
+        run: |
+          pip list
           PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
           if [[ $PYVER != ${{ env.PYTHON }} ]]; then
             exit 1;
           fi
 
-      - name: Install
-        run: |
-          pip install --no-deps .
-
       - name: Run Tests
         run: |
-          python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+          python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
+
+      - name: check coverage report
+        run: |
+          ls
+          cat coverage.xml
 
       - uses: codecov/codecov-action@v3
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
-          file: ./coverage.xml #optional
-          env_vars: OS,PYTHON
-          fail_ci_if_error: true
+          files: ./coverage.xml #optional
 
   min_versions:
     env:
