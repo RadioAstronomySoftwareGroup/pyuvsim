@@ -267,11 +267,15 @@ def test_mock_diffuse_maps(modname, modkwargs, hera_loc, apollo_loc, location):
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 @pytest.mark.parametrize(
-    ("horizon_buffer", "pass_time", "pass_uv", "return_catname"),
-    [(True, True, False, None), (False, False, True, False), (True, True, True, False)]
+    ("horizon_buffer", "pass_time", "pass_array_loc", "pass_uv", "return_catname"),
+    [
+        (True, True, True, False, None),
+        (False, False, False, True, False),
+        (True, True, True, True, False)
+    ]
 )
 def test_initialize_catalog_from_params(
-    horizon_buffer, pass_time, pass_uv, return_catname, hera_loc
+    horizon_buffer, pass_time, pass_array_loc, pass_uv, return_catname, hera_loc
 ):
     # Pass in parameter dictionary as dict
     uv_in = UVData.from_file(triangle_uvfits_file)
@@ -285,6 +289,11 @@ def test_initialize_catalog_from_params(
     if horizon_buffer:
         source_dict["horizon_buffer"] = 0.04364
 
+    if pass_array_loc:
+        source_dict["array_location"] = ",".join(
+            [str(coord) for coord in uv_in.telescope_location_lat_lon_alt_degrees]
+        )
+
     warn_type = []
     warn_str = []
     if pass_time:
@@ -297,8 +306,9 @@ def test_initialize_catalog_from_params(
         uv_use = uv_in
     else:
         uv_use = None
-        warn_type += [UserWarning]
-        warn_str += ["No array_location specified. Defaulting to the HERA site."]
+        if not pass_array_loc:
+            warn_type += [UserWarning]
+            warn_str += ["No array_location specified. Defaulting to the HERA site."]
 
     if return_catname is None:
         warn_type += [DeprecationWarning]
