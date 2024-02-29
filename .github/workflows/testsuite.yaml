@@ -98,11 +98,6 @@ jobs:
         run: |
           python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
 
-      - name: check coverage report
-        run: |
-          ls
-          cat coverage.xml
-
       - uses: codecov/codecov-action@v3
         if: success()
         with:
