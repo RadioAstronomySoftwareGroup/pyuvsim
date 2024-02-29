@@ -63,7 +63,7 @@ By default, `mpi` capabilities are not enabled -- many of the utilities provided
 in `pyuvsim` do not require it. To use the simulator within `pyuvsim`, you
 should install `pyuvsim` with  `pip install pyuvsim[sim]`. Note that the
 `pyuvsim` simulator is intended to run on clusters running the linux operating
-system, but we do test against Mac OSX as well.
+system, but we test against Mac OSX as well. We test against both Open MPI and MPICH.
 
 There are a few more optional dependencies for `pyuvsim` which enable some features,
 such as `astropy_healpix` to use healpix based sky catalogs or healpix beams,

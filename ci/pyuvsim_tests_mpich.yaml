@@ -1,4 +1,4 @@
-name: pyuvsim_tests
+name: pyuvsim_tests_mpich
 channels:
   - conda-forge
   - defaults
@@ -7,6 +7,7 @@ dependencies:
   - astropy-healpix>=0.6
   - coverage
   - line_profiler
+  - mpich
   - mpi4py>=3.0.0
   - numpy>=1.20
   - pip
