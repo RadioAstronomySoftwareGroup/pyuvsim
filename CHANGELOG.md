@@ -6,6 +6,7 @@
 - Added support for all UVBeam readable files rather than just beamfits.
 
 ### Changed
+- Moved all necessary mpi broadcasts calls into `run_uvdata_uvsim` to make it more user friendly.
 - Changed the default file type for writing out UVData files to be the uvh5
 format rather than the uvfits format because it does not require phasing.
 - Removed deprecation of gaussian beams defined from sigma parameter.
