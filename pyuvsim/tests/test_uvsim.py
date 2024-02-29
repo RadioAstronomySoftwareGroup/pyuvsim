@@ -1077,7 +1077,7 @@ def test_run_mpierr():
             pyuvsim.run_uvsim(params, return_uv=True)
 
         with pytest.raises(ImportError, match='You need mpi4py to use the uvsim module'):
-            pyuvsim.run_uvdata_uvsim(UVData(), ['beamlist'])
+            pyuvsim.run_uvdata_uvsim(UVData(), ['beamlist'], {}, pyuvsim.SkyModelData())
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
