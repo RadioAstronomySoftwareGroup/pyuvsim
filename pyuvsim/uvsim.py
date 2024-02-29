@@ -708,6 +708,11 @@ def run_uvdata_uvsim(
     comm = mpi.get_comm()
     Npus = mpi.get_Npus()
 
+    input_uv = comm.bcast(input_uv, root=0)
+    beam_list = comm.bcast(beam_list, root=0)
+    beam_dict = comm.bcast(beam_dict, root=0)
+    catalog.share(root=0)
+
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
 
@@ -954,11 +959,6 @@ def run_uvsim(
         skydata = simsetup.SkyModelData(skydata)
         if not quiet:
             print(f"Skymodel setup took {(Time.now() - start).to('minute'):.3f}")
-
-    input_uv = comm.bcast(input_uv, root=0)
-    beam_list = comm.bcast(beam_list, root=0)
-    beam_dict = comm.bcast(beam_dict, root=0)
-    skydata.share(root=0)
 
     start = Time.now()
     uv_out = run_uvdata_uvsim(
