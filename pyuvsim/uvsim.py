@@ -711,6 +711,9 @@ def run_uvdata_uvsim(
     input_uv = comm.bcast(input_uv, root=0)
     beam_list = comm.bcast(beam_list, root=0)
     beam_dict = comm.bcast(beam_dict, root=0)
+
+    if catalog is None:
+        catalog = SkyModelData()
     catalog.share(root=0)
 
     if not isinstance(input_uv, UVData):
