@@ -941,7 +941,6 @@ def run_uvsim(
 
     mpi.start_mpi(block_nonroot_stdout=block_nonroot_stdout)
     rank = mpi.get_rank()
-    comm = mpi.get_comm()
 
     input_uv = UVData()
     beam_list = None
