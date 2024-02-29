@@ -255,7 +255,10 @@ Sources
 ^^^^^^^
     Specify the path to a catalog file via ``catalog``. The path can be given as an
     absolute path or relative to the location of the obsparam. This catalog can be any
-    file type that is readable with ``pyradiosky``.
+    file type that is readable with ``pyradiosky``. pyradiosky's SkyModel
+    (`SkyModel <https://pyradiosky.readthedocs.io/en/latest/index.html>`__)
+    supports a wide range of catalogs, including point sources and diffuse maps
+    and multiple spectral models.
 
     An example text catalog file:
 
