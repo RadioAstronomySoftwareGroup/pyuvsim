@@ -206,9 +206,10 @@ def test_powerbeam_sim(cst_beam):
         cfg, return_catname=False
     )
     sky_model = pyuvsim.simsetup.SkyModelData(sky_model)
+    beam_dict = {n: 0 for n in range(4)}
 
     with pytest.raises(ValueError, match="Beam type must be efield!"):
-        pyuvsim.run_uvdata_uvsim(input_uv, beams, catalog=sky_model)
+        pyuvsim.run_uvdata_uvsim(input_uv, beams, beam_dict, catalog=sky_model)
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
@@ -380,12 +381,12 @@ def test_pol_error():
     hera_uv.polarizations = ['xx']
 
     with pytest.raises(ValueError, match='input_uv must have XX,YY,XY,YX polarization'):
-        pyuvsim.run_uvdata_uvsim(hera_uv, ['beamlist'])
+        pyuvsim.run_uvdata_uvsim(hera_uv, ['beamlist'], {}, catalog=pyuvsim.SkyModelData())
 
 
 def test_input_uv_error():
     with pytest.raises(TypeError, match="input_uv must be UVData object"):
-        pyuvsim.run_uvdata_uvsim(None, None)
+        pyuvsim.run_uvdata_uvsim(None, None, {}, catalog=pyuvsim.SkyModelData())
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
