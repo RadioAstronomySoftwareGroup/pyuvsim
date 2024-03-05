@@ -15,6 +15,7 @@ import pyuvdata.utils as uvutils
 import yaml
 from astropy import units
 from astropy.time import Time
+from astropy.coordinates import Longitude, Latitude
 from packaging import version  # packaging is installed with setuptools
 from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
 from pyuvdata import UVData
@@ -364,7 +365,7 @@ def test_input_uv_error():
 @pytest.mark.filterwarnings("ignore:This method will be removed in version 3.0")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 @pytest.mark.parametrize("future_shapes", [True, False])
-def test_sim_on_moon(future_shapes):
+def test_sim_on_moon(future_shapes, tmpdir):
     pytest.importorskip("lunarsky")
     from lunarsky import MoonLocation
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_tranquility_hex.yaml')
@@ -406,6 +407,8 @@ def test_sim_on_moon(future_shapes):
     assert uv_out.extra_keywords['world'] == 'moon'
 
     # Lunar Frame Roundtripping
+    param_dict['filing']['outdir'] = str(tmpdir)
+
     uv_filename = pyuvsim.utils.write_uvdata(uv_out, param_dict, return_filename=True, quiet=True)
     uv_compare = UVData()
     uv_compare.read(uv_filename)
@@ -414,3 +417,48 @@ def test_sim_on_moon(future_shapes):
 
     # Cleanup
     os.remove(uv_filename)
+
+
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
+@pytest.mark.filterwarnings("ignore:This method will be removed in version 3.0")
+@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
+def test_lunar_gauss(tmpdir):
+    pytest.importorskip("lunarsky")
+    from lunarsky import MoonLocation
+    # Make a gaussian source that passes through zenith
+    # Confirm that simulated visibilities match expectation.
+
+    params = pyuvsim.simsetup._config_str_to_dict(
+        os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_lunar_gauss.yaml')
+    )
+
+    params['filing']['outdir'] = str(tmpdir)
+
+    uv_out = pyuvsim.run_uvsim(params, return_uv=True, quiet=True)
+
+    ###Skymodel and update positions###
+
+    #Init sky model
+    sm = pyradiosky.SkyModel(name = 'source0', ra = Longitude(308.32686, unit = 'deg'),
+        dec = Latitude(-21, unit='deg'), stokes = units.Quantity([1,0,0,0], unit = 'Jy'),
+        spectral_type = 'flat', frame='icrs')
+
+    #Init starting position
+    pos = uv_out.telescope_location_lat_lon_alt_degrees
+    sm.update_positions(Time(2458174.0, format='jd'), MoonLocation(Longitude(pos[1], unit='deg'), Latitude(pos[0], unit='deg'), units.Quantity(pos[2], unit='m')))
+
+    ###Creating the analytical gaussian###
+
+    Alt = np.zeros(uv_out.Ntimes)
+    Az = np.zeros(uv_out.Ntimes)
+    refTimes = uv_out.get_times(0,1)
+    for t in range(uv_out.Ntimes):
+        sm.update_positions(Time(refTimes[t], format='jd'), MoonLocation(Longitude(pos[1], unit='deg'), Latitude(pos[0], unit='deg'), units.Quantity(pos[2], unit='m')))
+        Alt[t] = sm.alt_az[0,0]
+        Az[t] = sm.alt_az[1,0]
+
+    sigma = 0.5
+    Vis = 0.5*np.exp( -np.power( (Alt-np.pi/2)/sigma  ,2))
+
+    #Check that the analytical visibility agrees with the simulation
+    assert np.allclose(Vis, np.abs( uv_out.get_data(0,1)[:,0,0]), rtol=1e-04, atol=1e-04) 
