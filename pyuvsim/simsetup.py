@@ -1163,7 +1163,7 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
         * `antenna_location_file`: Path to csv layout file
         * `telescope_name`: observatory name
         * `x_orientation`: physical orientation of the dipole labelled as "x"
-        * `world`: Either "earth" or "moon".
+        * `world`: Either "earth" or "moon" (requires lunarsky).
     beam_list : :class:`pyuvsim.BeamList`
         This is a BeamList object in string mode.
         The strings provide either paths to beamfits files or the specifications to make
@@ -1212,10 +1212,13 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     telescope_location[0] *= np.pi / 180.
     telescope_location[1] *= np.pi / 180.  # Convert to radians
     if world == "moon":
-        mloc = MoonLocation.from_selenodetic(*telescope_location)
-        tele_params['telescope_location'] = mloc.mcmf.cartesian.xyz.to_value("m")
+        frame = "mcmf"
+    elif world == "earth" or world is None:
+        frame = "itrs"
     else:
-        tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
+        raise ValueError(f"Invalid world {world}")
+    tele_params["telescope_location"] = uvutils.XYZ_from_LatLonAlt(*telescope_location, frame=frame)
+
     telescope_name = tele_params['telescope_name']
 
     # get array layout
@@ -1255,16 +1258,13 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     return_dict['antenna_names'] = np.array(antnames.tolist())
     return_dict['antenna_numbers'] = np.array(antnums)
     antpos_enu = np.vstack((E, N, U)).T
-    if world == "moon":
-        ltop = LunarTopo(CartesianRepresentation(*antpos_enu.T, unit='m'), location=mloc)
-        apos_mcmf = ltop.transform_to(MCMF)
-        return_dict['antenna_positions'] = (apos_mcmf.cartesian.xyz.T - mloc.mcmf.cartesian.xyz).to_value("m")
-    else:
-        return_dict['antenna_positions'] = (
-            uvutils.ECEF_from_ENU(antpos_enu, *telescope_location)
-            - tele_params['telescope_location'])
+    return_dict['antenna_positions'] = (
+        uvutils.ECEF_from_ENU(antpos_enu, *telescope_location, frame=frame)
+        - tele_params['telescope_location']
+    )
     if world is not None:
         return_dict['world'] = world
+    return_dict['telescope_frame'] = frame
 
     return_dict['array_layout'] = layout_csv
     return_dict['telescope_location'] = np.asarray(tele_params['telescope_location'])
@@ -1832,6 +1832,7 @@ def initialize_uvdata_from_params(
     logger.info(f"Integration Time: {uv_obj.integration_time.nbytes / 1024**3:.2f} GB")
     logger.info(f"       Ant1Array: {uv_obj.ant_1_array.nbytes / 1024**3:.2f} GB")
 
+    uv_obj.set_lsts_from_time_array()
     uv_obj.set_uvws_from_antenna_positions()
     logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
     logger.info("Set UVWs")
@@ -1917,7 +1918,7 @@ def _complete_uvdata(uv_in, inplace=False, check_kw=None):
     # but retain this functionality for now.
     # in most cases should be a no-op anyway.
     if uv_obj.lst_array is None:
-        _set_lsts_on_uvdata(uv_obj)
+        uv_obj.set_lsts_from_time_array()
 
     # Clear existing data, if any.
     _shape = (uv_obj.Nblts, uv_obj.Nfreqs, uv_obj.Npols)
