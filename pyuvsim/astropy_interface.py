@@ -38,5 +38,5 @@ except ImportError:
 
         pass
 
-for obj in [SkyCoord, MoonLocation, LunarTopo, Time]:
+for obj in [SkyCoord, MoonLocation, LunarTopo, Time, MCMF]:
     assert obj

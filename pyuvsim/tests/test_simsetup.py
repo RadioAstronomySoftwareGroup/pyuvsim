@@ -727,6 +727,17 @@ def test_tele_parser():
             ValueError,
             'array_layout must be a string or have options that parse as a dict.'
         ),
+        (
+            {
+                'array_layout': os.path.join(SIM_DATA_PATH, 'test_layout_6ant.csv'),
+                'telescope_name': "foo",
+                'telescope_location':
+                    '(-30.72152777777791, 21.428305555555557, 1073.0000000093132)',
+                'world': "tatooine",
+            },
+            ValueError,
+            'Invalid world tatooine'
+        ),
     ],
 )
 def test_tele_parser_errors(tele_dict, err_type, err_msg):
@@ -1594,12 +1605,18 @@ def test_moon_lsts():
     times, time_inds = np.unique(uv_obj.time_array, return_inverse=True)
     assert np.all(lst_inds == time_inds)
 
-    # Confirm that the change in LST makes sense for a lunar month.
-    dlst = np.degrees(lsts[1] - lsts[0]) / 15 * 3600  # Hours per step.
-    tstep_per_lunar_month = 28 * 24 * 3600 / uv_obj.integration_time[0]
-    sec_per_tstep = 24 * 3600 / tstep_per_lunar_month
+    # Confirm that the LSTs match the zenith RAs for the telescope_location
+    loc = MoonLocation.from_selenocentric(*uv_obj.telescope_location, unit='m')
+    times_quant = Time(times, format='jd', location=loc)
+    skycrds = SkyCoord(
+        alt=["90d"] * times.size,
+        az=["0d"] * times.size,
+        frame="lunartopo",
+        obstime=times_quant,
+        location=loc
+    ).transform_to(ICRS())
 
-    assert np.isclose(dlst, sec_per_tstep, rtol=1e-2)
+    assert np.allclose(skycrds.ra.rad, lsts, atol=1e-7)
 
     # Unset the lst array and confirm that the call from _complete_uvdata returns the same.
     backup_lst_array = uv_obj.lst_array.copy()
