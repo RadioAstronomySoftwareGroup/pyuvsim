@@ -1,6 +1,6 @@
 beam_paths:
   0: 'gaussian'
 sigma: 0.5
-telescope_location: ( 30.0, 0.0, 0.0 ) 
+telescope_location: ( 30.0, 0.0, 0.0 )
 world: 'moon'
 telescope_name: lunarArray

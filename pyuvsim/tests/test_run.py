@@ -14,8 +14,8 @@ import pyuvdata.tests as uvtest
 import pyuvdata.utils as uvutils
 import yaml
 from astropy import units
+from astropy.coordinates import Latitude, Longitude
 from astropy.time import Time
-from astropy.coordinates import Longitude, Latitude
 from packaging import version  # packaging is installed with setuptools
 from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
 from pyuvdata import UVData
@@ -425,6 +425,7 @@ def test_sim_on_moon(future_shapes, tmpdir):
 def test_lunar_gauss(tmpdir):
     pytest.importorskip("lunarsky")
     from lunarsky import MoonLocation
+
     # Make a gaussian source that passes through zenith
     # Confirm that simulated visibilities match expectation.
 
@@ -461,4 +462,4 @@ def test_lunar_gauss(tmpdir):
     Vis = 0.5*np.exp( -np.power( (Alt-np.pi/2)/sigma  ,2))
 
     #Check that the analytical visibility agrees with the simulation
-    assert np.allclose(Vis, np.abs( uv_out.get_data(0,1)[:,0,0]), rtol=1e-04, atol=1e-04) 
+    assert np.allclose(Vis, np.abs( uv_out.get_data(0,1)[:,0,0]), rtol=1e-04, atol=1e-04)
