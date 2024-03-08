@@ -124,10 +124,7 @@ class BeamList:
     ):
 
         self.uvb_params = {}
-        # this can go away when we require pyuvdata version >= 2.2.13
         empty_uvbeam = UVBeam()
-        if hasattr(empty_uvbeam, "_interpolation_function"):
-            self.uvb_params["interpolation_function"] = "az_za_simple"
 
         # this can go away when we require pyuvdata version >= 2.4.2
         if hasattr(empty_uvbeam, "_freq_interp_kind"):

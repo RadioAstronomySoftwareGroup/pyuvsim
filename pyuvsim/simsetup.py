@@ -21,7 +21,6 @@ import warnings
 import astropy.units as units
 import numpy as np
 import pyradiosky
-import pyuvdata
 import yaml
 from astropy.coordinates import (ICRS, AltAz, Angle, EarthLocation, Latitude,
                                  Longitude, SkyCoord)
@@ -1187,16 +1186,19 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
             telescope_location_latlonalt = ast.literal_eval(telescope_location_latlonalt)
         world = tele_params.pop('world', None)
 
-    telescope_location = np.array(telescope_location_latlonalt)
-    telescope_location[0] *= np.pi / 180.
-    telescope_location[1] *= np.pi / 180.  # Convert to radians
+    lat_rad = telescope_location_latlonalt[0] * np.pi / 180.
+    long_rad = telescope_location_latlonalt[1] * np.pi / 180.
+    alt = telescope_location_latlonalt[2]
+
     if world == "moon":
         frame = "mcmf"
     elif world == "earth" or world is None:
         frame = "itrs"
     else:
         raise ValueError(f"Invalid world {world}")
-    tele_params["telescope_location"] = uvutils.XYZ_from_LatLonAlt(*telescope_location, frame=frame)
+    tele_params["telescope_location"] = uvutils.XYZ_from_LatLonAlt(
+        latitude=lat_rad, longitude=long_rad, altitude=alt, frame=frame
+    )
 
     telescope_name = tele_params['telescope_name']
 
@@ -1238,7 +1240,9 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     return_dict['antenna_numbers'] = np.array(antnums)
     antpos_enu = np.vstack((E, N, U)).T
     return_dict['antenna_positions'] = (
-        uvutils.ECEF_from_ENU(antpos_enu, *telescope_location, frame=frame)
+        uvutils.ECEF_from_ENU(
+            antpos_enu, latitude=lat_rad, longitude=long_rad, altitude=alt, frame=frame
+        )
         - tele_params['telescope_location']
     )
     if world is not None:
@@ -1740,10 +1744,8 @@ def initialize_uvdata_from_params(
     if 'Npols' not in uvparam_dict:
         uvparam_dict['Npols'] = len(uvparam_dict['polarization_array'])
 
-    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
-        uvparam_name = "cat_name"
-    else:
-        uvparam_name = "object_name"
+    uvparam_name = "cat_name"
+
     if "cat_name" not in param_dict and "object_name" not in param_dict:
         tloc = EarthLocation.from_geocentric(*uvparam_dict['telescope_location'], unit='m')
         time = Time(uvparam_dict['time_array'][0], scale='utc', format='jd')
@@ -1794,20 +1796,14 @@ def initialize_uvdata_from_params(
     uv_obj.ant_1_array, uv_obj.ant_2_array = uv_obj.baseline_to_antnums(uv_obj.baseline_array)
 
     logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
-    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+    cat_id = uv_obj._add_phase_center(
+        cat_name=uvparam_dict["cat_name"], cat_type="unprojected"
+    )
+    uv_obj.phase_center_id_array = np.full(uv_obj.Nblts, cat_id, dtype=int)
 
-        cat_id = uv_obj._add_phase_center(
-            cat_name=uvparam_dict["cat_name"], cat_type="unprojected"
-        )
-        uv_obj.phase_center_id_array = np.full(uv_obj.Nblts, cat_id, dtype=int)
-
-        uv_obj.set_lsts_from_time_array()
-        # set the apparent coordinates on the object
-        uv_obj._set_app_coords_helper()
-
-    else:
-        uv_obj._set_drift()
-        uv_obj.set_lsts_from_time_array()
+    uv_obj.set_lsts_from_time_array()
+    # set the apparent coordinates on the object
+    uv_obj._set_app_coords_helper()
 
     # add other required metadata to allow select to work without errors
     # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
