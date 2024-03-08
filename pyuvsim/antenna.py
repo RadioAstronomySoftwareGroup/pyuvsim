@@ -3,11 +3,8 @@
 # Licensed under the 3-clause BSD License
 """Definition of Antenna objects, to describe a single interferometric element."""
 
-import warnings
-
 import astropy.units as units
 import numpy as np
-from pyuvdata import UVBeam
 
 from . import utils as simutils
 from .telescope import BeamList
@@ -104,11 +101,7 @@ class Antenna:
         }
 
         if interpolation_function is not None:
-            if hasattr(beam, "_interpolation_function"):
-                # this can go away when we require pyuvdata version >= 2.2.13
-                beam.interpolation_function = interpolation_function
-            else:
-                interp_kwargs["interpolation_function"] = interpolation_function
+            interp_kwargs["interpolation_function"] = interpolation_function
 
         if isinstance(array.beam_list, BeamList):
             spline_opts = array.beam_list.spline_interp_opts
@@ -127,16 +120,6 @@ class Antenna:
                 beam.freq_interp_kind = freq_interp_kind
             else:
                 interp_kwargs["freq_interp_kind"] = freq_interp_kind
-
-        # UVBeams need an interpolation_function. If none is set, default to az_za_simple.
-        # this can go away when we require pyuvdata version >= 2.2.13
-        if (
-            isinstance(beam, UVBeam) and hasattr(beam, "_interpolation_function")
-            and beam.interpolation_function is None
-        ):
-            beam.interpolation_function = 'az_za_simple'
-            warnings.warn("UVBeam interpolation_function is not set."
-                          f" Defaulting to {beam.interpolation_function}.")
 
         interp_data, _ = beam.interp(**interp_kwargs)
 
