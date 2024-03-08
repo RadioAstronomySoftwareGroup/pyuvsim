@@ -437,29 +437,47 @@ def test_lunar_gauss(tmpdir):
 
     uv_out = pyuvsim.run_uvsim(params, return_uv=True, quiet=True)
 
-    ###Skymodel and update positions###
+    # Skymodel and update positions
 
-    #Init sky model
-    sm = pyradiosky.SkyModel(name = 'source0', ra = Longitude(308.32686, unit = 'deg'),
-        dec = Latitude(-21, unit='deg'), stokes = units.Quantity([1,0,0,0], unit = 'Jy'),
-        spectral_type = 'flat', frame='icrs')
+    # Init sky model
+    sm = pyradiosky.SkyModel(
+        name='source0',
+        ra=Longitude(308.32686, unit='deg'),
+        dec=Latitude(-21, unit='deg'),
+        stokes=units.Quantity([1, 0, 0, 0], unit='Jy'),
+        spectral_type='flat',
+        frame='icrs'
+    )
 
-    #Init starting position
+    # Init starting position
     pos = uv_out.telescope_location_lat_lon_alt_degrees
-    sm.update_positions(Time(2458174.0, format='jd'), MoonLocation(Longitude(pos[1], unit='deg'), Latitude(pos[0], unit='deg'), units.Quantity(pos[2], unit='m')))
+    sm.update_positions(
+        Time(2458174.0, format='jd'),
+        MoonLocation(
+            Longitude(pos[1], unit='deg'),
+            Latitude(pos[0], unit='deg'),
+            units.Quantity(pos[2], unit='m')
+        )
+    )
 
-    ###Creating the analytical gaussian###
-
+    # Creating the analytical gaussian
     Alt = np.zeros(uv_out.Ntimes)
     Az = np.zeros(uv_out.Ntimes)
-    refTimes = uv_out.get_times(0,1)
+    refTimes = uv_out.get_times(0, 1)
     for t in range(uv_out.Ntimes):
-        sm.update_positions(Time(refTimes[t], format='jd'), MoonLocation(Longitude(pos[1], unit='deg'), Latitude(pos[0], unit='deg'), units.Quantity(pos[2], unit='m')))
-        Alt[t] = sm.alt_az[0,0]
-        Az[t] = sm.alt_az[1,0]
+        sm.update_positions(
+            Time(refTimes[t], format='jd'),
+            MoonLocation(
+                Longitude(pos[1], unit='deg'),
+                Latitude(pos[0], unit='deg'),
+                units.Quantity(pos[2], unit='m')
+            )
+        )
+        Alt[t] = sm.alt_az[0, 0]
+        Az[t] = sm.alt_az[1, 0]
 
     sigma = 0.5
-    Vis = 0.5*np.exp( -np.power( (Alt-np.pi/2)/sigma  ,2))
+    Vis = 0.5 * np.exp(-np.power((Alt - np.pi / 2) / sigma, 2))
 
-    #Check that the analytical visibility agrees with the simulation
-    assert np.allclose(Vis, np.abs( uv_out.get_data(0,1)[:,0,0]), rtol=1e-04, atol=1e-04)
+    # Check that the analytical visibility agrees with the simulation
+    assert np.allclose(Vis, np.abs(uv_out.get_data(0, 1)[:, 0, 0]), rtol=1e-04, atol=1e-04)
