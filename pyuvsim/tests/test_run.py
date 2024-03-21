@@ -138,6 +138,7 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
 )
 @pytest.mark.parametrize("backend", ["rma", "send_recv"])
 @pytest.mark.parametrize("progbar", ["progsteps", "tqdm"])
+@pytest.mark.parallel(2, timeout=90)
 def test_analytic_diffuse(model, tol, tmpdir, backend, progbar):
     # Generate the given model and simulate for a few baselines.
     # Import from analytic_diffuse  (consider moving to rasg_affiliates?)
