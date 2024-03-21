@@ -24,7 +24,9 @@ from pyuvsim.analyticbeam import c_ms
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.telescope import BeamList
 
-pytest.importorskip('mpi4py')  # noqa
+pytest.importorskip("mpi4py")  # noqa
+# everything in this file requires 2 PUs
+pytestmark = pytest.mark.parallel(2)
 
 
 @pytest.fixture()
@@ -40,18 +42,18 @@ def goto_tempdir(tmpdir):
 
 
 @pytest.mark.filterwarnings("ignore:antenna_diameters are not set")
-@pytest.mark.parametrize('paramfile', ['param_1time_1src_testcat.yaml',
-                                       'param_1time_1src_testvot.yaml'])
-@pytest.mark.parallel(2)
+@pytest.mark.parametrize(
+    "paramfile", ["param_1time_1src_testcat.yaml", "param_1time_1src_testvot.yaml"]
+)
 def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # Test vot and txt catalogs for parameter simulation
     # Compare to reference files.
     uv_ref = UVData()
     if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
         # if we can, use the new file that has many things fixed
-        uv_ref.read(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvh5'))
+        uv_ref.read(os.path.join(SIM_DATA_PATH, "testfile_singlesource.uvh5"))
     else:
-        uv_ref.read(os.path.join(SIM_DATA_PATH, 'testfile_singlesource.uvfits'))
+        uv_ref.read(os.path.join(SIM_DATA_PATH, "testfile_singlesource.uvfits"))
         uv_ref.unphase_to_drift(use_ant_pos=True)
         uv_ref.reorder_blts()
         # This is an old file with the bug that added one to the
@@ -75,7 +77,7 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
         uv_ref.instrument = "Triangle"
         uv_ref.antenna_diameters = None
 
-    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', paramfile)
+    param_filename = os.path.join(SIM_DATA_PATH, "test_config", paramfile)
     # This test obsparam file has "single_source.txt" as its catalog.
     pyuvsim.uvsim.run_uvsim(param_filename)
 
@@ -84,7 +86,7 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
         return
 
     path = goto_tempdir
-    ofilepath = os.path.join(path, 'tempfile.uvfits')
+    ofilepath = os.path.join(path, "tempfile.uvfits")
 
     uv_new = UVData()
     uv_new.read(ofilepath)
@@ -95,22 +97,28 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     else:
         uv_new.unphase_to_drift(use_ant_pos=True)
 
-    assert uvutils._check_history_version(uv_new.history, pyradiosky.__version__)
-    assert uvutils._check_history_version(uv_new.history, pyuvdata.__version__)
-    assert uvutils._check_history_version(uv_new.history, pyuvsim.__version__)
-    assert uvutils._check_history_version(uv_new.history, paramfile)
-    assert uvutils._check_history_version(uv_new.history, 'triangle_bl_layout.csv')
-    assert uvutils._check_history_version(uv_new.history, '28m_triangle_10time_10chan.yaml')
-    assert uvutils._check_history_version(uv_new.history, "Npus =")
+    if pyuvsim.mpi.rank == 0:
+        assert uvutils._check_history_version(uv_new.history, pyradiosky.__version__)
+        assert uvutils._check_history_version(uv_new.history, pyuvdata.__version__)
+        assert uvutils._check_history_version(uv_new.history, pyuvsim.__version__)
+        assert uvutils._check_history_version(uv_new.history, paramfile)
+        assert uvutils._check_history_version(uv_new.history, "triangle_bl_layout.csv")
+        assert uvutils._check_history_version(
+            uv_new.history, "28m_triangle_10time_10chan.yaml"
+        )
+        assert uvutils._check_history_version(uv_new.history, "Npus =")
 
-    # Reset parts that will deviate
-    uv_new.history = uv_ref.history
-    uv_new.object_name = uv_ref.object_name
-    uv_ref.dut1 = uv_new.dut1
-    uv_ref.gst0 = uv_new.gst0
-    uv_ref.rdate = uv_new.rdate
+        # Reset parts that will deviate
+        uv_new.history = uv_ref.history
+        uv_new.object_name = uv_ref.object_name
+        uv_ref.dut1 = uv_new.dut1
+        uv_ref.gst0 = uv_new.gst0
+        uv_ref.rdate = uv_new.rdate
 
-    assert uv_new == uv_ref
+        # remove filename attribute to ensure equality
+        uv_new.filename = None
+        uv_ref.filename = None
+        assert uv_new == uv_ref
 
 
 @pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
@@ -120,37 +128,47 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
 # would be lower, but it's complicated.
 # See Lanman, Murray and Jacobs, 2022, DOI: 10.3847/1538-4365/ac45fd
 @pytest.mark.parametrize(
-    ('model', 'tol'),
-    [('monopole', 3e-4), ('cosza', 2e-4), ('quaddome', 8e-5), ('monopole-nonflat', 3e-4)],
+    ("model", "tol"),
+    [
+        ("monopole", 3e-4),
+        ("cosza", 2e-4),
+        ("quaddome", 8e-5),
+        ("monopole-nonflat", 3e-4),
+    ],
 )
-def test_analytic_diffuse(model, tol, tmpdir):
+@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+@pytest.mark.parametrize("progbar", ["progsteps", "tqdm"])
+def test_analytic_diffuse(model, tol, tmpdir, backend, progbar):
     # Generate the given model and simulate for a few baselines.
     # Import from analytic_diffuse  (consider moving to rasg_affiliates?)
-    pytest.importorskip('analytic_diffuse')
-    pytest.importorskip('astropy_healpix')
-    import analytic_diffuse
+    analytic_diffuse = pytest.importorskip("analytic_diffuse")
+    pytest.importorskip("astropy_healpix")
+    if progbar == "tqdm":
+        pytest.importorskip("tqdm")
 
     modname = model
     use_w = False
     params = {}
-    if model == 'quaddome':
-        modname = 'polydome'
-        params['n'] = 2
-    elif model == 'monopole-nonflat':
-        modname = 'monopole'
+    if model == "quaddome":
+        modname = "polydome"
+        params["n"] = 2
+    elif model == "monopole-nonflat":
+        modname = "monopole"
         use_w = True
-        params['order'] = 50    # Expansion order for the non-flat monopole solution.
+        params["order"] = 50  # Expansion order for the non-flat monopole solution.
 
     # Making configuration files for this simulation.
-    template_path = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_diffuse_sky.yaml')
-    obspar_path = str(tmpdir.join('obsparam_diffuse_sky.yaml'))
-    layout_path = str(tmpdir.join('threeant_layout.csv'))
-    herauniform_path = str(tmpdir.join('hera_uniform.yaml'))
+    template_path = os.path.join(
+        SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky.yaml"
+    )
+    obspar_path = str(tmpdir.join("obsparam_diffuse_sky.yaml"))
+    layout_path = str(tmpdir.join("threeant_layout.csv"))
+    herauniform_path = str(tmpdir.join("hera_uniform.yaml"))
 
     teleconfig = {
-        'beam_paths': {0: {"type": "uniform"}},
-        'telescope_location': "(-30.72153, 21.42830, 1073.0)",
-        'telescope_name': 'HERA'
+        "beam_paths": {0: {"type": "uniform"}},
+        "telescope_location": "(-30.72153, 21.42830, 1073.0)",
+        "telescope_name": "HERA",
     }
     if not use_w:
         antpos_enu = np.array([[0, 0, 0], [0, 3, 0], [5, 0, 0]], dtype=float)
@@ -160,33 +178,36 @@ def test_analytic_diffuse(model, tol, tmpdir):
     pyuvsim.simsetup._write_layout_csv(
         layout_path, antpos_enu, np.arange(3).astype(str), np.arange(3)
     )
-    with open(herauniform_path, 'w') as ofile:
+    with open(herauniform_path, "w") as ofile:
         yaml.dump(teleconfig, ofile, default_flow_style=False)
 
-    with open(template_path, 'r') as yfile:
+    with open(template_path, "r") as yfile:
         obspar = yaml.safe_load(yfile)
-    obspar['telescope']['array_layout'] = layout_path
-    obspar['telescope']['telescope_config_name'] = herauniform_path
-    obspar['sources']['diffuse_model'] = modname
-    obspar['sources'].update(params)
+    obspar["telescope"]["array_layout"] = layout_path
+    obspar["telescope"]["telescope_config_name"] = herauniform_path
+    obspar["sources"]["diffuse_model"] = modname
+    obspar["sources"].update(params)
     if model == "monopole":
         # use a higher nside for monopole to improve the accuracy
-        obspar['sources']["map_nside"] = 256
-    obspar['filing']['outfile_name'] = 'diffuse_sim.uvh5'
-    obspar['filing']['output_format'] = 'uvh5'
-    obspar['filing']['outdir'] = str(tmpdir)
+        obspar["sources"]["map_nside"] = 256
+    obspar["filing"]["outfile_name"] = "diffuse_sim.uvh5"
+    obspar["filing"]["output_format"] = "uvh5"
+    obspar["filing"]["outdir"] = str(tmpdir)
 
-    with open(obspar_path, 'w') as ofile:
+    with open(obspar_path, "w") as ofile:
         yaml.dump(obspar, ofile, default_flow_style=False)
 
-    uv_out = pyuvsim.run_uvsim(obspar_path, return_uv=True)
-    # Convert from Jy to K sr
-    dat = uv_out.data_array[:, 0, 0] * jy_to_ksr(uv_out.freq_array[0]).value
-    # Evaluate the solution and compare to visibilities.
-    soln = analytic_diffuse.get_solution(modname)
-    uvw_lam = uv_out.uvw_array * uv_out.freq_array[0] / c_ms
-    ana = soln(uvw_lam, **params)
-    np.testing.assert_allclose(ana / 2, dat, atol=tol, rtol=0)
+    uv_out = pyuvsim.run_uvsim(
+        obspar_path, return_uv=True, backend=backend, progbar=progbar
+    )
+    if pyuvsim.mpi.rank == 0:
+        # Convert from Jy to K sr
+        dat = uv_out.data_array[:, 0, 0] * jy_to_ksr(uv_out.freq_array[0]).value
+        # Evaluate the solution and compare to visibilities.
+        soln = analytic_diffuse.get_solution(modname)
+        uvw_lam = uv_out.uvw_array * uv_out.freq_array[0] / c_ms
+        ana = soln(uvw_lam, **params)
+        np.testing.assert_allclose(ana / 2, dat, atol=tol, rtol=0)
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
@@ -195,10 +216,12 @@ def test_powerbeam_sim(cst_beam):
     new_cst = copy.deepcopy(cst_beam)
     if hasattr(new_cst, "_freq_interp_kind"):
         # this can go away when we require pyuvdata version >= 2.4.2
-        new_cst.freq_interp_kind = 'nearest'  # otherwise we get an error about freq interpolation
+        new_cst.freq_interp_kind = (
+            "nearest"  # otherwise we get an error about freq interpolation
+        )
     new_cst.efield_to_power()
     beams = BeamList([new_cst] * 4)
-    cfg = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
+    cfg = os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
     input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(cfg, return_beams=False)
     sky_model = pyuvsim.simsetup.initialize_catalog_from_params(
         cfg, return_catname=False
@@ -214,43 +237,49 @@ def test_powerbeam_sim(cst_beam):
 @pytest.mark.parametrize("rename_beamfits", [True, False])
 def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
     # Running a simulation from parameter dictionary.
-    param_file = os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
+    param_file = os.path.join(
+        SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml"
+    )
 
     msg = ["Cannot check consistency of a string-mode BeamList"]
     warn_type = [UserWarning]
     if rename_beamfits:
-        os.makedirs(os.path.join(tmp_path, 'test_config'))
-        new_param_file = os.path.join(tmp_path, 'test_config', 'param_1time_1src_testcat.yaml')
+        os.makedirs(os.path.join(tmp_path, "test_config"))
+        new_param_file = os.path.join(
+            tmp_path, "test_config", "param_1time_1src_testcat.yaml"
+        )
         shutil.copyfile(param_file, new_param_file)
 
         telescope_param_file = os.path.join(
-            SIM_DATA_PATH, 'test_config', '28m_triangle_10time_10chan.yaml'
+            SIM_DATA_PATH, "test_config", "28m_triangle_10time_10chan.yaml"
         )
         new_telescope_param_file = os.path.join(
-            tmp_path, 'test_config', '28m_triangle_10time_10chan.yaml'
+            tmp_path, "test_config", "28m_triangle_10time_10chan.yaml"
         )
         shutil.copyfile(telescope_param_file, new_telescope_param_file)
 
         telescope_layout_file = os.path.join(
-            SIM_DATA_PATH, 'test_config', 'triangle_bl_layout.csv'
+            SIM_DATA_PATH, "test_config", "triangle_bl_layout.csv"
         )
-        new_telescope_layout_file = os.path.join(tmp_path, 'test_config', 'triangle_bl_layout.csv')
+        new_telescope_layout_file = os.path.join(
+            tmp_path, "test_config", "triangle_bl_layout.csv"
+        )
         shutil.copyfile(telescope_layout_file, new_telescope_layout_file)
 
-        source_file = os.path.join(SIM_DATA_PATH, 'single_source.txt')
-        new_source_file = os.path.join(tmp_path, 'single_source.txt')
+        source_file = os.path.join(SIM_DATA_PATH, "single_source.txt")
+        new_source_file = os.path.join(tmp_path, "single_source.txt")
         shutil.copyfile(source_file, new_source_file)
 
-        beamfits_file = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.beamfits')
-        new_beam_file = os.path.join(tmp_path, 'test_config', 'HERA_NicCST.uvbeam')
+        beamfits_file = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
+        new_beam_file = os.path.join(tmp_path, "test_config", "HERA_NicCST.uvbeam")
         shutil.copyfile(beamfits_file, new_beam_file)
 
         # change the beam file name to .uvbeam
-        with open(new_telescope_param_file, 'r') as pfile:
+        with open(new_telescope_param_file, "r") as pfile:
             tele_param_dict = yaml.safe_load(pfile)
             tele_param_dict["beam_paths"][0] = {"filename": new_beam_file}
 
-        with open(new_telescope_param_file, 'w') as yfile:
+        with open(new_telescope_param_file, "w") as yfile:
             yaml.dump(tele_param_dict, yfile, default_flow_style=False)
 
         n_beam_warnings = 3
@@ -261,48 +290,53 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
     else:
         params = pyuvsim.simsetup._config_str_to_dict(param_file)
 
-    with uvtest.check_warnings(warn_type, match=msg):
+    # warnings will only happen on the worker nodes
+    if pyuvsim.mpi.rank != 0:
+        with uvtest.check_warnings(warn_type, match=msg):
+            pyuvsim.run_uvsim(params, return_uv=True)
+    else:
         pyuvsim.run_uvsim(params, return_uv=True)
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-@pytest.mark.parametrize(
-    "spectral_type",
-    ["flat", "subband", "spectral_index"])
+@pytest.mark.parametrize("spectral_type", ["flat", "subband", "spectral_index"])
 def test_run_gleam_uvsim(spectral_type):
     params = pyuvsim.simsetup._config_str_to_dict(
-        os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_testgleam.yaml')
+        os.path.join(SIM_DATA_PATH, "test_config", "param_1time_testgleam.yaml")
     )
     params["sources"]["spectral_type"] = spectral_type
     params["sources"].pop("min_flux")
     params["sources"].pop("max_flux")
 
     uv_out = pyuvsim.run_uvsim(params, return_uv=True)
-    assert uv_out.telescope_name == "Triangle"
+    if pyuvsim.mpi.rank == 0:
+        assert uv_out.telescope_name == "Triangle"
 
-    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
-        file_name = f"gleam_triangle_{spectral_type}.uvh5"
-        uv_in = UVData.from_file(os.path.join(SIM_DATA_PATH, file_name))
-        uv_in.use_future_array_shapes()
-        # This just tests that we get the same answer as an earlier run, not that
-        # the data are correct (that's covered in other tests)
-        uv_out.history = uv_in.history
-        assert uv_in == uv_out
+        if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+            file_name = f"gleam_triangle_{spectral_type}.uvh5"
+            uv_in = UVData.from_file(os.path.join(SIM_DATA_PATH, file_name))
+            uv_in.use_future_array_shapes()
+            # This just tests that we get the same answer as an earlier run, not that
+            # the data are correct (that's covered in other tests)
+            uv_out.history = uv_in.history
+            assert uv_in == uv_out
 
 
 @pytest.mark.filterwarnings("ignore:The reference_frequency is aliased as `frequency`")
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
-@pytest.mark.parametrize(
-    "spectral_type",
-    ["subband", "spectral_index"])
-def test_zenith_spectral_sim(spectral_type, tmpdir):
+@pytest.mark.parametrize("spectral_type", ["subband", "spectral_index"])
+@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+@pytest.mark.parametrize("progbar", ["progsteps", "tqdm"])
+def test_zenith_spectral_sim(spectral_type, tmpdir, backend, progbar):
     # Make a power law source at zenith in three ways.
     # Confirm that simulated visibilities match expectation.
+    if progbar == "tqdm":
+        pytest.importorskip("tqdm")
 
     params = pyuvsim.simsetup._config_str_to_dict(
-        os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
+        os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
     )
 
     alpha = -0.5
@@ -310,18 +344,20 @@ def test_zenith_spectral_sim(spectral_type, tmpdir):
     Nfreqs = 20
     freqs = np.linspace(110e6, 115e6, Nfreqs)
     freq_params = pyuvsim.simsetup.freq_array_to_params(freqs)
-    freqs = pyuvsim.simsetup.parse_frequency_params(freq_params)['freq_array']
+    freqs = pyuvsim.simsetup.parse_frequency_params(freq_params)["freq_array"]
     freqs *= units.Hz
-    spectrum = (freqs.value / ref_freq)**alpha
+    spectrum = (freqs.value / ref_freq) ** alpha
 
-    source, kwds = pyuvsim.create_mock_catalog(Time.now(), arrangement='zenith', Nsrcs=1)
+    source, kwds = pyuvsim.create_mock_catalog(
+        Time.now(), arrangement="zenith", Nsrcs=1
+    )
     source.spectral_type = spectral_type
-    if spectral_type == 'spectral_index':
+    if spectral_type == "spectral_index":
         source.reference_frequency = np.array([ref_freq]) * units.Hz
         source.spectral_index = np.array([alpha])
     else:
-        freq_lower = freqs - freq_params["channel_width"] * units.Hz / 2.
-        freq_upper = freqs + freq_params["channel_width"] * units.Hz / 2.
+        freq_lower = freqs - freq_params["channel_width"] * units.Hz / 2.0
+        freq_upper = freqs + freq_params["channel_width"] * units.Hz / 2.0
         source.freq_edge_array = np.concatenate(
             (freq_lower[np.newaxis, :], freq_upper[np.newaxis, :]), axis=0
         )
@@ -331,28 +367,30 @@ def test_zenith_spectral_sim(spectral_type, tmpdir):
         source.stokes[0, :, 0] *= spectrum
         source.coherency_radec = stokes_to_coherency(source.stokes)
 
-    catpath = str(tmpdir.join('spectral_test_catalog.skyh5'))
+    catpath = str(tmpdir.join("spectral_test_catalog.skyh5"))
     source.write_skyh5(catpath)
-    params['sources'] = {"catalog" : catpath}
-    params['filing']['outdir'] = str(tmpdir)
-    params['freq'] = freq_params
-    params['time']['start_time'] = kwds['time']
-    params['select'] = {'antenna_nums' : [1, 2]}
+    params["sources"] = {"catalog": catpath}
+    params["filing"]["outdir"] = str(tmpdir)
+    params["freq"] = freq_params
+    params["time"]["start_time"] = kwds["time"]
+    params["select"] = {"antenna_nums": [1, 2]}
 
-    uv_out = pyuvsim.run_uvsim(params, return_uv=True)
-
-    for ii in range(uv_out.Nbls):
-        assert np.allclose(uv_out.data_array[ii, :, 0], spectrum / 2)
+    uv_out = pyuvsim.run_uvsim(params, return_uv=True, backend=backend, progbar=progbar)
+    if pyuvsim.mpi.rank == 0:
+        for ii in range(uv_out.Nbls):
+            assert np.allclose(uv_out.data_array[ii, :, 0], spectrum / 2)
 
 
 def test_pol_error():
     # Check that running with a uvdata object without the proper polarizations will fail.
     hera_uv = UVData()
 
-    hera_uv.polarizations = ['xx']
+    hera_uv.polarizations = ["xx"]
 
-    with pytest.raises(ValueError, match='input_uv must have XX,YY,XY,YX polarization'):
-        pyuvsim.run_uvdata_uvsim(hera_uv, ['beamlist'], {}, catalog=pyuvsim.SkyModelData())
+    with pytest.raises(ValueError, match="input_uv must have XX,YY,XY,YX polarization"):
+        pyuvsim.run_uvdata_uvsim(
+            hera_uv, ["beamlist"], {}, catalog=pyuvsim.SkyModelData()
+        )
 
 
 def test_input_uv_error():
@@ -367,9 +405,12 @@ def test_input_uv_error():
 def test_sim_on_moon(future_shapes):
     pytest.importorskip("lunarsky")
     from lunarsky import MoonLocation
-    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_tranquility_hex.yaml')
+
+    param_filename = os.path.join(
+        SIM_DATA_PATH, "test_config", "obsparam_tranquility_hex.yaml"
+    )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    param_dict['select'] = {'redundant_threshold': 0.1}
+    param_dict["select"] = {"redundant_threshold": 0.1}
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
         param_dict, return_beams=True
     )
@@ -378,17 +419,23 @@ def test_sim_on_moon(future_shapes):
     # remove the parameter file info from extra_keywords
     uv_obj.filename = ["moon_sim"]
     uv_obj._filename.form = (1,)
-    uv_obj.extra_keywords.pop('obsparam')
-    uv_obj.extra_keywords.pop('telecfg')
-    uv_obj.extra_keywords.pop('layout')
+    uv_obj.extra_keywords.pop("obsparam")
+    uv_obj.extra_keywords.pop("telecfg")
+    uv_obj.extra_keywords.pop("layout")
     uv_obj.check()
 
     uv_obj.select(times=uv_obj.time_array[0])
-    tranquility_base = MoonLocation.from_selenocentric(*uv_obj.telescope_location, 'meter')
+    tranquility_base = MoonLocation.from_selenocentric(
+        *uv_obj.telescope_location, "meter"
+    )
 
-    time = Time(uv_obj.time_array[0], format='jd', scale='utc')
+    time = Time(uv_obj.time_array[0], format="jd", scale="utc")
     sources, kwds = pyuvsim.create_mock_catalog(
-        time, array_location=tranquility_base, arrangement='zenith', Nsrcs=30, return_data=True
+        time,
+        array_location=tranquility_base,
+        arrangement="zenith",
+        Nsrcs=30,
+        return_data=True,
     )
     # Run simulation.
     if not future_shapes:
@@ -396,11 +443,16 @@ def test_sim_on_moon(future_shapes):
     uv_out = pyuvsim.uvsim.run_uvdata_uvsim(
         uv_obj, beam_list, beam_dict, catalog=sources, quiet=True
     )
-    assert uvutils._check_history_version(uv_out.history, pyradiosky.__version__)
-    assert uvutils._check_history_version(uv_out.history, pyuvdata.__version__)
-    assert uvutils._check_history_version(uv_out.history, pyuvsim.__version__)
-    assert uvutils._check_history_version(uv_out.history, uv_obj.filename[0])
-    assert uvutils._check_history_version(uv_out.history, "Npus =")
+    if pyuvsim.mpi.rank == 0:
+        assert np.allclose(uv_out.data_array[:, :, 0], 0.5)
+        assert uv_out.extra_keywords["world"] == "moon"
 
-    assert np.allclose(uv_out.data_array[:, :, 0], 0.5)
-    assert uv_out.extra_keywords['world'] == 'moon'
+
+@pytest.mark.parallel(1)
+@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+def test_npu_error_backends(backend):
+    params = pyuvsim.simsetup._config_str_to_dict(
+        os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
+    )
+    with pytest.raises(ValueError, match="At least 2 PUs are required"):
+        pyuvsim.run_uvsim(params, return_uv=True, backend=backend)

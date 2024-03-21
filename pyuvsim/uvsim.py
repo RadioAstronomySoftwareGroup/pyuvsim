@@ -10,6 +10,7 @@ the simulation.
 """
 
 import warnings
+from contextlib import nullcontext
 
 import astropy.units as units
 import numpy as np
@@ -39,7 +40,7 @@ from .baseline import Baseline
 from .simsetup import SkyModelData
 from .telescope import Telescope
 
-__all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim']
+__all__ = ["UVTask", "UVEngine", "uvdata_to_task_iter", "run_uvsim", "run_uvdata_uvsim"]
 
 
 class UVTask:
@@ -100,10 +101,10 @@ class UVTask:
         self.uvdata_index = None  # Where to add the visibility in the uvdata object.
 
         if isinstance(self.time, float):
-            self.time = Time(self.time, format='jd')
+            self.time = Time(self.time, format="jd")
         if isinstance(self.freq, float):
             self.freq = self.freq * units.Hz
-        if sources.spectral_type == 'flat':
+        if sources.spectral_type == "flat":
             self.freq_i = 0
 
     def __repr__(self) -> str:
@@ -124,13 +125,15 @@ class UVTask:
             The other
 
         """
-        return (np.isclose(self.time.jd, other.time.jd, atol=1e-4)
-                and np.isclose(self.freq.value, other.freq.value, atol=1e-4)
-                and (self.sources == other.sources)
-                and (self.baseline == other.baseline)
-                and (self.visibility_vector == other.visibility_vector)
-                and (self.uvdata_index == other.uvdata_index)
-                and (self.telescope == other.telescope))
+        return (
+            np.isclose(self.time.jd, other.time.jd, atol=1e-4)
+            and np.isclose(self.freq.value, other.freq.value, atol=1e-4)
+            and (self.sources == other.sources)
+            and (self.baseline == other.baseline)
+            and (self.visibility_vector == other.visibility_vector)
+            and (self.uvdata_index == other.uvdata_index)
+            and (self.telescope == other.telescope)
+        )
 
     def __gt__(self, other):
         """
@@ -245,7 +248,9 @@ class UVEngine:
         The task currently being calculated.
     """
 
-    def __init__(self, task=None, update_positions=True, update_beams=True, reuse_spline=True):
+    def __init__(
+        self, task=None, update_positions=True, update_beams=True, reuse_spline=True
+    ):
         self.reuse_spline = reuse_spline  # Reuse spline fits in beam interpolation
         self.update_positions = update_positions
         self.update_beams = update_beams
@@ -282,7 +287,9 @@ class UVEngine:
         baseline = self.task.baseline
         beam_pair = (baseline.antenna1.beam_id, baseline.antenna2.beam_id)
 
-        if (not self.current_time == task.time.jd) or (self.sources is not task.sources):
+        if (not self.current_time == task.time.jd) or (
+            self.sources is not task.sources
+        ):
             self.update_positions = True
             self.update_local_coherency = True
             self.update_beams = True
@@ -291,7 +298,7 @@ class UVEngine:
             self.update_positions = False
             self.update_local_coherency = False
 
-        if not self.current_freq == task.freq.to('Hz').value:
+        if not self.current_freq == task.freq.to("Hz").value:
             self.update_beams = True
 
         if not self.current_beam_pair == beam_pair:
@@ -355,7 +362,9 @@ class UVEngine:
 
         coherency = self.local_coherency[:, :, self.task.freq_i, :]
 
-        self.beam2_jones = np.swapaxes(self.beam2_jones, 0, 1).conj()  # Transpose at each component
+        self.beam2_jones = np.swapaxes(
+            self.beam2_jones, 0, 1
+        ).conj()  # Transpose at each component
 
         self.apparent_coherency = np.einsum(
             "abz,bcz,cdz->adz", self.beam1_jones, coherency, self.beam2_jones
@@ -363,7 +372,7 @@ class UVEngine:
 
     def make_visibility(self):
         """Calculate visibility contribution from a set of source components."""
-        assert (isinstance(self.task.freq, Quantity))
+        assert isinstance(self.task.freq, Quantity)
         srcs = self.task.sources
         time = self.task.time
         location = self.task.telescope.location
@@ -382,7 +391,9 @@ class UVEngine:
         pos_lmn = srcs.pos_lmn[..., srcs.above_horizon]
 
         # need to convert uvws from meters to wavelengths
-        uvw_wavelength = self.task.baseline.uvw / speed_of_light * self.task.freq.to('1/s')
+        uvw_wavelength = (
+            self.task.baseline.uvw / speed_of_light * self.task.freq.to("1/s")
+        )
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
         vij = self.apparent_coherency * fringe
 
@@ -438,7 +449,9 @@ def _make_task_inds(Nblts, Nfreqs, Nsrcs, rank, Npus):
     return task_inds, src_inds, Ntasks_local, Nsrcs_local
 
 
-def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_parts=1):
+def uvdata_to_task_iter(
+    task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_parts=1
+):
     """
     Generate UVTask objects.
 
@@ -476,8 +489,10 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     Nsrcs_total = catalog.Ncomponents
     if Nsky_parts > 1:
         Nsky_parts = int(Nsky_parts)
-        src_iter = [simutils.iter_array_split(s, Nsrcs_total, Nsky_parts)[0]
-                    for s in range(Nsky_parts)]
+        src_iter = [
+            simutils.iter_array_split(s, Nsrcs_total, Nsky_parts)[0]
+            for s in range(Nsky_parts)
+        ]
     else:
         src_iter = [range(Nsrcs_total)]
     # Build the antenna list.
@@ -535,16 +550,18 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
 
     tloc = [np.float64(x) for x in input_uv.telescope_location]
 
-    world = input_uv.extra_keywords.get('world', 'earth')
+    world = input_uv.extra_keywords.get("world", "earth")
 
-    if world.lower() == 'earth':
-        location = EarthLocation.from_geocentric(*tloc, unit='m')
-    elif world.lower() == 'moon':
+    if world.lower() == "earth":
+        location = EarthLocation.from_geocentric(*tloc, unit="m")
+    elif world.lower() == "moon":
         if not hasmoon:
             raise ValueError("Need lunarsky module to simulate an array on the Moon.")
-        location = MoonLocation.from_selenocentric(*tloc, unit='m')
+        location = MoonLocation.from_selenocentric(*tloc, unit="m")
     else:
-        raise ValueError("If world keyword is set, it must be either 'moon' or 'earth'.")
+        raise ValueError(
+            "If world keyword is set, it must be either 'moon' or 'earth'."
+        )
     telescope = Telescope(input_uv.telescope_name, location, beam_list)
     freq_array = input_uv.freq_array * units.Hz
     if hasmoon and isinstance(location, MoonLocation):
@@ -552,19 +569,19 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     else:
         tclass = Time
     time_array = tclass(
-        input_uv.time_array, scale='utc', format='jd', location=telescope.location
+        input_uv.time_array, scale="utc", format="jd", location=telescope.location
     )
     for src_i in src_iter:
         sky = catalog.get_skymodel(src_i)
         if (
-            sky.spectral_type == 'flat'
+            sky.spectral_type == "flat"
             and sky.freq_array is None
             and sky.reference_frequency is None
         ):
             sky.freq_array = freq_array
-        if sky.component_type == 'healpix' and hasattr(sky, 'healpix_to_point'):
+        if sky.component_type == "healpix" and hasattr(sky, "healpix_to_point"):
             sky.healpix_to_point()
-        if sky.spectral_type != 'flat':
+        if sky.spectral_type != "flat":
             sky.at_frequencies(freq_array)
 
         # Use flat here to get a 1D iterator
@@ -591,7 +608,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
             freq = freq_array[freq_i]  # 0 = spw axis
 
             task = UVTask(sky, time, freq, bl, telescope, freq_i)
-            task.uvdata_index = (blt_i, freq_i)    # 0 = spectral window index
+            task.uvdata_index = (blt_i, freq_i)  # 0 = spectral window index
 
             yield task
         del sky
@@ -620,11 +637,233 @@ def _check_ntasks_valid(Ntasks_tot):
         )
 
 
+def _run_uvsim_rma(
+    uv_container,
+    local_task_iter,
+    Ntasks_tot,
+    Nsky_parts,
+    Nbls,
+    Nblts,
+    Nfreqs,
+    Nsrcs,
+    pbar,
+    quiet,
+):
+    mpi.start_mpi()
+    rank = mpi.get_rank()
+    comm = mpi.get_comm()
+    if rank == 0:
+        vis_data = mpi.MPI.Win.Create(
+            uv_container._data_array.value, comm=mpi.world_comm
+        )
+    else:
+        vis_data = mpi.MPI.Win.Create(None, comm=mpi.world_comm)
+
+    engine = UVEngine()
+    count = mpi.Counter()
+    size_complex = np.ones(1, dtype=complex).nbytes
+    data_array_shape = (Nblts, Nfreqs, 4)
+    uvdata_indices = []
+
+    with pbar as pbar:
+        try:
+            for task in local_task_iter:
+                engine.set_task(task)
+                vis = engine.make_visibility()
+
+                blti, freq_ind = task.uvdata_index
+
+                uvdata_indices.append(task.uvdata_index)
+
+                flat_ind = np.ravel_multi_index((blti, freq_ind, 0), data_array_shape)
+                offset = flat_ind * size_complex
+
+                vis_data.Lock(0)
+                vis_data.Accumulate(vis, 0, target=offset, op=mpi.MPI.SUM)
+                vis_data.Unlock(0)
+
+                cval = count.next()
+                if rank == 0 and not quiet:
+                    if not isinstance(pbar, simutils.progsteps):
+                        # need a delta if this is a tqdm progress bar
+                        cval -= pbar.n
+                    pbar.update(cval)
+        finally:
+            request = comm.Ibarrier()
+
+            while not request.Test():
+                if rank == 0 and not quiet:
+                    cval = count.current_value()
+                    if not isinstance(pbar, simutils.progsteps):
+                        # need a delta if this is a tqdm progress bar
+                        cval -= pbar.n
+                    pbar.update(cval)
+
+            count.free()
+            vis_data.Free()
+
+        if rank == 0 and not quiet:
+            print("\nCalculations Complete.", flush=True)
+
+    if rank == 0:
+        return uv_container, uvdata_indices
+    return None, uvdata_indices
+
+
+def _run_uvsim_send_recv(
+    uv_container,
+    Ntasks_tot,
+    Nsky_parts,
+    Nbls,
+    Nblts,
+    Nfreqs,
+    Nsrcs,
+    beam_list,
+    beam_dict,
+    catalog,
+    pbar,
+    quiet,
+):
+    mpi.start_mpi()
+    rank = mpi.get_rank()
+    comm = mpi.get_comm()
+    Npus = mpi.get_Npus()
+    status = mpi.get_status()
+
+    uvdata_indices = []
+
+    if rank == 0:
+        completed_workers = 0
+        n_workers = Npus - 1
+        completed_tasks = 0
+        task_inds = range(int(Nblts * Nfreqs))
+        src_inds = range(int(Nsrcs))
+        error_occurred = None
+
+        chunksize1 = int(np.ceil(0.1 * Nblts * Nfreqs / n_workers))
+        chunksize2 = int(np.ceil(Nsrcs / Nsky_parts))
+        all_iter = simutils._chunked_iterator_product(
+            task_inds,
+            src_inds,
+            chunksize1,
+            chunksize2,
+        )
+        with pbar as pbar:
+            while completed_workers < n_workers:
+                msg = comm.recv(
+                    source=mpi.MPI.ANY_SOURCE, tag=mpi.MPI.ANY_TAG, status=status
+                )
+                source = status.Get_source()
+                tag = status.Get_tag()
+
+                # an error occurred on a worker.
+                # tell all PUs to stop working
+                if error_occurred is not None:
+                    comm.send(None, dest=source, tag=mpi.Tags.EXIT)
+
+                if tag == mpi.Tags.READY:
+                    try:
+                        comm.send(next(all_iter), dest=source, tag=mpi.Tags.START)
+                    except StopIteration:
+                        comm.send(None, dest=source, tag=mpi.Tags.EXIT)
+
+                elif tag == mpi.Tags.DONE:
+                    uv_inds, vis = msg[0], msg[1]
+                    uv_container.data_array[uv_inds] += vis
+                    if isinstance(pbar, simutils.progsteps):
+                        completed_tasks += 1
+                        pbar.update(completed_tasks)
+                    else:
+                        pbar.update(1)
+
+                elif tag == mpi.Tags.EXIT:
+                    completed_workers += 1
+                elif tag == mpi.Tags.ERROR:
+                    error_occurred = msg
+                else:
+                    raise ValueError(f"{msg} {tag}")
+
+        if error_occurred is not None:
+            raise ValueError(
+                f"Error occurred on worker node {error_occurred[0]}: {error_occurred[1]}"
+            )
+
+    else:
+        engine = UVEngine()
+        while True:
+            comm.send(None, dest=0, tag=mpi.Tags.READY)
+            msg = comm.recv(source=0, tag=mpi.MPI.ANY_TAG, status=status)
+            tag = status.Get_tag()
+            if tag == mpi.Tags.START:
+                msg_task_inds, msg_src_inds = msg
+
+                try:
+                    # get message with task_inds and src_inds
+                    local_task_iter = uvdata_to_task_iter(
+                        msg_task_inds,
+                        uv_container,
+                        catalog.subselect(msg_src_inds),
+                        beam_list,
+                        beam_dict,
+                        Nsky_parts=Nsky_parts,
+                    )
+                    for task in local_task_iter:
+                        engine.set_task(task)
+
+                        uvdata_indices.append(task.uvdata_index)
+
+                        comm.send(
+                            [task.uvdata_index, engine.make_visibility()],
+                            dest=0,
+                            tag=mpi.Tags.DONE,
+                        )
+                except Exception as err:
+                    comm.send([rank, err], dest=0, tag=mpi.Tags.ERROR)
+
+            elif tag == mpi.Tags.EXIT:
+                break
+
+        comm.send(None, dest=0, tag=mpi.Tags.EXIT)
+
+    if rank == 0:
+        return uv_container, uvdata_indices
+    return None, uvdata_indices
+
+
+def _get_pbar(
+    progbar,
+    Ntasks_tot,
+    rank,
+):
+    if progbar not in ["tqdm", "progsteps"]:
+        raise ValueError(
+            "The progbar keyword must be one of "
+            "'progsteps' or 'tqdm' "
+            f"but received {progbar}."
+        )
+    if progbar == "tqdm":
+        try:
+            import tqdm
+        except ImportError as err:
+            raise ImportError(
+                "The tqdm module must be installed to use a tqdm progress bar."
+            ) from err
+    if rank == 0:
+        if progbar == "tqdm":
+            pbar = tqdm.tqdm(total=Ntasks_tot, unit="UVTask", leave=True)
+        else:
+            pbar = simutils.progsteps(maxval=Ntasks_tot)
+    else:
+        pbar = nullcontext()
+    return pbar
+
+
 def _set_nsky_parts(Nsrcs, cat_nfreqs, Nsky_parts):
     """Set the Nsky_parts."""
     # Estimating required memory to decide how to split source array.
-    mem_avail = (simutils.get_avail_memory()
-                 - mpi.get_max_node_rss(return_per_node=True) * 2**30)
+    mem_avail = (
+        simutils.get_avail_memory() - mpi.get_max_node_rss(return_per_node=True) * 2**30
+    )
 
     Npus_node = mpi.node_comm.Get_size()
     skymodel_mem_footprint = (
@@ -648,6 +887,41 @@ def _set_nsky_parts(Nsrcs, cat_nfreqs, Nsky_parts):
     return Nsky_parts
 
 
+def _check_uvdata(input_uv):
+    """Perform UVData checks for run_uvdata_uvsim.
+
+    Moved checks to reduce complexity.
+
+    Parameters
+    -----------
+    input_uv : :class:`pyuvdata.UVData` instance
+        Provides baseline/time/frequency information.
+
+    Returns
+    -------
+    the UVData ordering convention
+    """
+    if not isinstance(input_uv, UVData):
+        raise TypeError("input_uv must be UVData object")
+
+    if not (
+        (input_uv.Npols == 4)
+        and (input_uv.polarization_array.tolist() == [-5, -6, -7, -8])
+    ):
+        raise ValueError("input_uv must have XX,YY,XY,YX polarization")
+
+    if not input_uv.future_array_shapes:
+        input_uv.use_future_array_shapes()
+
+    input_order = input_uv.blt_order
+    if input_order != ("time", "baseline"):
+        input_uv.reorder_blts(order="time", minor_order="baseline")
+
+    return input_order
+
+
+# this function is very complex according to flake8.
+# too many ifs, we can swing back to this later.
 def run_uvdata_uvsim(
     input_uv,
     beam_list,
@@ -655,6 +929,8 @@ def run_uvdata_uvsim(
     catalog,
     beam_interp_check=None,
     quiet=False,
+    backend="rma",
+    progbar="progsteps",
     block_nonroot_stdout=True,
     Nsky_parts=None,
 ):
@@ -683,6 +959,12 @@ def run_uvdata_uvsim(
         zenith angle.
     quiet : bool
         Do not print anything.
+    backend : str
+        Specifies the backend for simulation.
+        Must be one of ['rma', 'send_recv']. (Default: 'rma')
+    progbar : str
+        Specifies the progress bar class used to output simulation progress.
+        Must be one of ['progsteps', 'tqdm']. Default 'progsteps'
     block_nonroot_stdout : bool
         Redirect stdout on nonzero ranks to /dev/null, for cleaner output.
     Nsky_parts : int, optional
@@ -698,163 +980,182 @@ def run_uvdata_uvsim(
 
     """
     if mpi is None:
-        raise ImportError("You need mpi4py to use the uvsim module. "
-                          "Install it by running pip install pyuvsim[sim] "
-                          "or pip install pyuvsim[all] if you also want the "
-                          "line_profiler installed.")
+        raise ImportError(
+            "You need mpi4py to use the uvsim module. "
+            "Install it by running pip install pyuvsim[sim] "
+            "or pip install pyuvsim[all] if you also want the "
+            "line_profiler installed."
+        )
 
-    mpi.start_mpi(block_nonroot_stdout=block_nonroot_stdout)
+    if backend not in ["rma", "send_recv"]:
+        raise ValueError(
+            "The backend keyword must be one of "
+            "'rma', 'send_recv' "
+            f"but received value {backend}."
+        )
+
+    if progbar not in ["tqdm", "progsteps"]:
+        raise ValueError(
+            "The progbar keyword must be one of "
+            "'progsteps' or 'tqdm' "
+            f"but received {progbar}."
+        )
+
+    if backend == "rma":
+        thread_multiple = False
+    else:
+        thread_multiple = True
+
+    mpi.start_mpi(
+        block_nonroot_stdout=block_nonroot_stdout, thread_multiple=thread_multiple
+    )
     rank = mpi.get_rank()
     comm = mpi.get_comm()
     Npus = mpi.get_Npus()
+
+    if Npus < 2:
+        raise ValueError("At least 2 PUs are required to run pyuvsim.")
 
     input_uv = comm.bcast(input_uv, root=0)
     beam_list = comm.bcast(beam_list, root=0)
     beam_dict = comm.bcast(beam_dict, root=0)
     catalog.share(root=0)
 
-    if not isinstance(input_uv, UVData):
-        raise TypeError("input_uv must be UVData object")
-
-    if not ((input_uv.Npols == 4) and (input_uv.polarization_array.tolist() == [-5, -6, -7, -8])):
-        raise ValueError("input_uv must have XX,YY,XY,YX polarization")
-
-    if not input_uv.future_array_shapes:
-        input_uv.use_future_array_shapes()
-
-    input_order = input_uv.blt_order
-    if input_order != ("time", "baseline"):
-        input_uv.reorder_blts(order="time", minor_order="baseline")
+    input_order = _check_uvdata(input_uv)
 
     # The root node will initialize our simulation
     # Read input file and make uvtask list
     if rank == 0 and not quiet:
-        print('Nbls:', input_uv.Nbls, flush=True)
-        print('Ntimes:', input_uv.Ntimes, flush=True)
-        print('Nfreqs:', input_uv.Nfreqs, flush=True)
-        print('Nsrcs:', catalog.Ncomponents, flush=True)
+        print("Nbls:", input_uv.Nbls, flush=True)
+        print("Ntimes:", input_uv.Ntimes, flush=True)
+        print("Nfreqs:", input_uv.Nfreqs, flush=True)
+        print("Nsrcs:", catalog.Ncomponents, flush=True)
+
+    uv_container = None
     if rank == 0:
         uv_container = simsetup._complete_uvdata(input_uv, inplace=False)
-        if 'world' in input_uv.extra_keywords:
-            uv_container.extra_keywords['world'] = input_uv.extra_keywords['world']
-        vis_data = mpi.MPI.Win.Create(uv_container._data_array.value, comm=mpi.world_comm)
-    else:
-        vis_data = mpi.MPI.Win.Create(None, comm=mpi.world_comm)
+        if "world" in input_uv.extra_keywords:
+            uv_container.extra_keywords["world"] = input_uv.extra_keywords["world"]
 
     Nbls = input_uv.Nbls
     Nblts = input_uv.Nblts
     Nfreqs = input_uv.Nfreqs
     Nsrcs = catalog.Ncomponents
 
-    task_inds, src_inds, Ntasks_local, Nsrcs_local = _make_task_inds(
-        Nblts, Nfreqs, Nsrcs, rank, Npus
-    )
-
     # Construct beam objects from strings
     beam_list.set_obj_mode(use_shared_mem=True)
-    count = mpi.Counter()
+    # In case the user created the beam list without checking consistency:
+    beam_list.check_consistency()
 
-    # wrap this in a try/finally (no exception handling) to ensure resources are freed
-    try:
-        # In case the user created the beam list without checking consistency:
-        beam_list.check_consistency()
+    if beam_list.beam_type != "efield":
+        raise ValueError("Beam type must be efield!")
 
-        if beam_list.beam_type != 'efield':
-            raise ValueError("Beam type must be efield!")
+    if beam_interp_check is None:
+        # check that all the beams cover the full sky
+        if beam_list.check_all_azza_beams_full_sky():
+            beam_interp_check = False
+        else:
+            beam_interp_check = True
 
-        if beam_interp_check is None:
-            # check that all the beams cover the full sky
-            if beam_list.check_all_azza_beams_full_sky():
-                beam_interp_check = False
-            else:
-                beam_interp_check = True
+    Nsky_parts = _set_nsky_parts(Nsrcs, catalog.Nfreqs, Nsky_parts)
 
-        Nsky_parts = _set_nsky_parts(Nsrcs, catalog.Nfreqs, Nsky_parts)
+    if backend == "rma":
+        # rank 0 gets a blank iter to just skip the computation step
+        local_task_iter = iter(())
+        Ntasks_local = 0
+        if rank != 0:
+            task_inds, src_inds, Ntasks_local, Nsrcs_local = _make_task_inds(
+                Nblts, Nfreqs, Nsrcs, rank - 1, Npus - 1
+            )
 
-        local_task_iter = uvdata_to_task_iter(
-            task_inds, input_uv, catalog.subselect(src_inds),
-            beam_list, beam_dict, Nsky_parts=Nsky_parts
+            local_task_iter = uvdata_to_task_iter(
+                task_inds,
+                input_uv,
+                catalog.subselect(src_inds),
+                beam_list,
+                beam_dict,
+                Nsky_parts=Nsky_parts,
+            )
+    elif backend == "send_recv":
+        # hack this a little bit, we want to have Nbls * Nfreqs * Ntimes
+        # total tasks we are distributing over all PUs but then we
+        # sum up over all PUs here in the next few lines
+        Ntasks_local = Nblts * Nfreqs / Npus
+
+    Ntasks_tot = Ntasks_local * Nsky_parts
+    # Sum all the tasks across each node
+    Nsky_parts = comm.allreduce(Nsky_parts, op=mpi.MPI.MAX)
+    Ntasks_tot = int(np.ceil(comm.allreduce(Ntasks_tot, op=mpi.MPI.SUM)))
+
+    if rank == 0 and not quiet:
+        if Nsky_parts > 1:
+            print(
+                "The source list has been split into Nsky_parts"
+                f" <= {Nsky_parts} chunks on some or all nodes"
+                " due to memory limitations.",
+                flush=True,
+            )
+        print("Tasks: ", Ntasks_tot, flush=True)
+
+    pbar = _get_pbar(progbar, Ntasks_tot, rank)
+    if backend == "rma":
+        uv_container, uvdata_indices = _run_uvsim_rma(
+            uv_container,
+            local_task_iter,
+            Ntasks_tot,
+            Nsky_parts,
+            Nbls,
+            Nblts,
+            Nfreqs,
+            Nsrcs,
+            pbar,
+            quiet,
+        )
+    elif backend == "send_recv":
+        # the compute nodes need to have the input_uv for this mode
+        # they make the task list on the fly
+        if rank != 0:
+            uv_container = input_uv
+        uv_container, uvdata_indices = _run_uvsim_send_recv(
+            uv_container,
+            Ntasks_tot,
+            Nsky_parts,
+            Nbls,
+            Nblts,
+            Nfreqs,
+            Nsrcs,
+            beam_list,
+            beam_dict,
+            catalog,
+            pbar,
+            quiet,
         )
 
-        Ntasks_tot = Ntasks_local * Nsky_parts
-        # Sum all the tasks across each node
-        Nsky_parts = comm.reduce(Nsky_parts, op=mpi.MPI.MAX, root=0)
-        Ntasks_tot = comm.reduce(Ntasks_tot, op=mpi.MPI.SUM, root=0)
-        if rank == 0 and not quiet:
-            if Nsky_parts > 1:
-                print(
-                    "The source list has been split into Nsky_parts"
-                    f" <= {Nsky_parts} chunks on some or all nodes"
-                    " due to memory limitations.",
-                    flush=True,
-                )
-            print("Tasks: ", Ntasks_tot, flush=True)
-            pbar = simutils.progsteps(maxval=Ntasks_tot)
+    # If profiling is active, save meta data:
+    from .profiling import prof  # noqa
 
-        engine = UVEngine()
-        size_complex = np.ones(1, dtype=complex).nbytes
-        data_array_shape = (Nblts, Nfreqs, 4)
-        uvdata_indices = []
+    if hasattr(prof, "meta_file") and len(uvdata_indices) > 0:  # pragma: nocover
+        # Saving axis sizes on current rank (local) and for the whole job (global).
+        # These lines are affected by issue 179 of line_profiler, so the nocover
+        # above will need to stay until this issue is resolved (see profiling.py).
+        task_inds = np.array(uvdata_indices)
 
-        for task in local_task_iter:
-            engine.set_task(task)
-            vis = engine.make_visibility()
+        bl_inds = task_inds[:, 0] % Nbls
+        time_inds = (task_inds[:, 0] - bl_inds) // Nbls
+        Ntimes_loc = np.unique(time_inds).size
+        Nbls_loc = np.unique(bl_inds).size
+        Nfreqs_loc = np.unique(task_inds[:, 1]).size
+        axes_dict = {
+            "Ntimes_loc": Ntimes_loc,
+            "Nbls_loc": Nbls_loc,
+            "Nfreqs_loc": Nfreqs_loc,
+            "Nsrcs_loc": Nsky_parts,
+            "prof_rank": prof.rank,
+        }
 
-            blti, freq_ind = task.uvdata_index
-
-            uvdata_indices.append(task.uvdata_index)
-
-            flat_ind = np.ravel_multi_index(
-                (blti, freq_ind, 0), data_array_shape
-            )
-            offset = flat_ind * size_complex
-
-            vis_data.Lock(0)
-            vis_data.Accumulate(vis, 0, target=offset, op=mpi.MPI.SUM)
-            vis_data.Unlock(0)
-
-            cval = count.next()
-            if rank == 0 and not quiet:
-                pbar.update(cval)
-
-        request = comm.Ibarrier()
-
-        while not request.Test():
-            if rank == 0 and not quiet:
-                cval = count.current_value()
-                pbar.update(cval)
-        if rank == 0 and not quiet:
-            pbar.finish()
-
-        if rank == 0 and not quiet:
-            print("Calculations Complete.", flush=True)
-
-        # If profiling is active, save meta data:
-        from .profiling import prof  # noqa
-        if hasattr(prof, 'meta_file'):  # pragma: nocover
-            # Saving axis sizes on current rank (local) and for the whole job (global).
-            # These lines are affected by issue 179 of line_profiler, so the nocover
-            # above will need to stay until this issue is resolved (see profiling.py).
-            task_inds = np.array(uvdata_indices)
-            bl_inds = task_inds[:, 0] % Nbls
-            time_inds = (task_inds[:, 0] - bl_inds) // Nbls
-            Ntimes_loc = np.unique(time_inds).size
-            Nbls_loc = np.unique(bl_inds).size
-            Nfreqs_loc = np.unique(task_inds[:, 1]).size
-            axes_dict = {
-                'Ntimes_loc': Ntimes_loc,
-                'Nbls_loc': Nbls_loc,
-                'Nfreqs_loc': Nfreqs_loc,
-                'Nsrcs_loc': Nsky_parts,
-                'prof_rank': prof.rank
-            }
-
-            with open(prof.meta_file, 'w') as afile:
-                for k, v in axes_dict.items():
-                    afile.write("{} \t {:d}\n".format(k, int(v)))
-    finally:
-        count.free()
-        vis_data.Free()
+        with open(prof.meta_file, "w") as afile:
+            for k, v in axes_dict.items():
+                afile.write("{} \t {:d}\n".format(k, int(v)))
 
     if rank == 0:
         if input_order is not None:
@@ -876,16 +1177,26 @@ def run_uvdata_uvsim(
         # Updating file history.
         history = simutils.get_version_string()
         if catalog.filename is not None:
-            history += ' Sources from source list(s): [' + ', '.join(catalog.filename) + '].'
-        if 'obsparam' in input_uv.extra_keywords:
-            obs_param_file = input_uv.extra_keywords['obsparam']
-            telescope_config_file = input_uv.extra_keywords['telecfg']
-            antenna_location_file = input_uv.extra_keywords['layout']
-            history += (' Based on config files: ' + obs_param_file + ', '
-                        + telescope_config_file + ', ' + antenna_location_file)
+            history += (
+                " Sources from source list(s): [" + ", ".join(catalog.filename) + "]."
+            )
+        if "obsparam" in input_uv.extra_keywords:
+            obs_param_file = input_uv.extra_keywords["obsparam"]
+            telescope_config_file = input_uv.extra_keywords["telecfg"]
+            antenna_location_file = input_uv.extra_keywords["layout"]
+            history += (
+                " Based on config files: "
+                + obs_param_file
+                + ", "
+                + telescope_config_file
+                + ", "
+                + antenna_location_file
+            )
         elif hasattr(uv_container, "filename") and uv_container.filename is not None:
-            history += ' Based on uvdata file(s): [' + ', '.join(uv_container.filename) + '].'
-        history += ' Npus = ' + str(mpi.Npus) + '.'
+            history += (
+                " Based on uvdata file(s): [" + ", ".join(uv_container.filename) + "]."
+            )
+        history += " Npus = " + str(mpi.Npus) + "."
 
         # add pyradiosky version
         history += catalog.pyradiosky_version_str
@@ -897,9 +1208,17 @@ def run_uvdata_uvsim(
 
         return uv_container
 
+    return
+
 
 def run_uvsim(
-    params, return_uv=False, beam_interp_check=None, quiet=False, block_nonroot_stdout=True,
+    params,
+    return_uv=False,
+    beam_interp_check=None,
+    quiet=False,
+    backend="rma",
+    progbar="progsteps",
+    block_nonroot_stdout=True,
 ):
     """
     Run a simulation off of an obsparam yaml file.
@@ -920,6 +1239,12 @@ def run_uvsim(
         zenith angle.
     quiet : bool
         If True, do not print anything to stdout. (Default False)
+    backend : str
+        Specifies the backend for simulation.
+        Must be one of ['rma', 'send_recv']. (Default: 'rma')
+    progbar : str
+        Specifies the progress bar class used to output simulation progress.
+        Must be one of ['progsteps', 'tqdm']. Default 'progsteps'
     block_nonroot_stdout : bool
         Redirect stdout on nonzero ranks to /dev/null, for cleaner output.
 
@@ -931,12 +1256,35 @@ def run_uvsim(
 
     """
     if mpi is None:
-        raise ImportError("You need mpi4py to use the uvsim module. "
-                          "Install it by running pip install pyuvsim[sim] "
-                          "or pip install pyuvsim[all] if you also want the "
-                          "line_profiler installed.")
+        raise ImportError(
+            "You need mpi4py to use the uvsim module. "
+            "Install it by running pip install pyuvsim[sim] "
+            "or pip install pyuvsim[all] if you also want the "
+            "line_profiler installed."
+        )
 
-    mpi.start_mpi(block_nonroot_stdout=block_nonroot_stdout)
+    if backend not in ["rma", "send_recv"]:
+        raise ValueError(
+            "The backend keyword must be one of "
+            "'rma', 'send_recv' "
+            f"but received value {backend}."
+        )
+
+    if progbar not in ["tqdm", "progsteps"]:
+        raise ValueError(
+            "The progbar keyword must be one of "
+            "'progsteps' or 'tqdm' "
+            f"but received {progbar}."
+        )
+
+    if backend == "rma":
+        thread_multiple = False
+    else:
+        thread_multiple = True
+
+    mpi.start_mpi(
+        thread_multiple=thread_multiple, block_nonroot_stdout=block_nonroot_stdout
+    )
     rank = mpi.get_rank()
 
     input_uv = UVData()
@@ -966,15 +1314,17 @@ def run_uvsim(
         beam_dict=beam_dict,
         catalog=skydata,
         quiet=quiet,
+        backend=backend,
+        progbar=progbar,
         beam_interp_check=beam_interp_check,
     )
 
     if rank == 0 and not quiet:
-        print(f"Run uvdata uvsim took {(Time.now() - start).to('minute'):.3f}")
+        print(f"\nRun uvdata uvsim took {(Time.now() - start).to('minute'):.3f}")
 
     if rank == 0:
         if isinstance(params, str):
-            with open(params, 'r') as pfile:
+            with open(params, "r") as pfile:
                 param_dict = yaml.safe_load(pfile)
         else:
             param_dict = params
