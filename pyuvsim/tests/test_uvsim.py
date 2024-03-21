@@ -15,7 +15,8 @@ import pyuvdata
 import pyuvdata.tests as uvtest
 import pyuvdata.utils as uvutils
 from astropy import units
-from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, SkyCoord
+from astropy.coordinates import (Angle, EarthLocation, Latitude, Longitude,
+                                 SkyCoord)
 from astropy.time import Time
 from packaging import version  # packaging is installed with setuptools
 from pyuvdata import UVBeam, UVData
