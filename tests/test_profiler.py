@@ -67,6 +67,8 @@ def test_profiler(tmpdir, backend, progbar):
         lstats = time_profiler.get_stats()
         assert len(lstats.timings) != 0
         func_names = [k[2] for k in lstats.timings.keys()]
+        # just get the function names (not objects)
+        func_names = [name.split(".")[-1] for name in func_names]
         assert unique(func_names).tolist() == sorted(
             pyuvsim.profiling.default_profile_funcs
         )

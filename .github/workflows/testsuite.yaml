@@ -180,7 +180,7 @@ jobs:
   only_progsteps:
     env:
       ENV_NAME: only_progsteps
-      PYTHON: 3.7
+      PYTHON: "3.12"
     name: No Tqdm Tests
     defaults:
       run:

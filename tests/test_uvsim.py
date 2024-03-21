@@ -767,6 +767,10 @@ def test_local_task_gen():
 
 
 @pytest.mark.filterwarnings("ignore:The parameter `blt_order` could not be identified")
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 @pytest.mark.parallel(2)
 def test_nsky_parts_large(capsys):
     """Check that we get the same visibilities no matter what Nsky_parts is set to."""
@@ -1161,9 +1165,13 @@ def test_run_mpierr(hera_loc, cst_beam):
             beam_list.share()
 
 
-@pytest.mark.parallel(2)
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("order", [("bda",), ("baseline", "time"), ("ant2", "time")])
+@pytest.mark.parallel(2)
 def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
     pytest.importorskip("mpi4py")
     uvdata_linear, beam_list, beam_dict, sky_model = (
@@ -1205,6 +1213,10 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 @pytest.mark.parallel(2)
 @pytest.mark.parametrize("order", [("bda",), ("baseline", "time"), ("ant2", "time")])
 def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
@@ -1245,7 +1257,11 @@ def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
         )
 
 
-@pytest.mark.parallel(2, timeout=10)
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
+@pytest.mark.parallel(2)
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
 @pytest.mark.parametrize("cut_beam", [10, 85, 90])
 @pytest.mark.parametrize("backend", ["rma", "send_recv"])

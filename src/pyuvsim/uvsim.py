@@ -642,8 +642,6 @@ def _run_uvsim_rma(
     rank = mpi.get_rank()
     comm = mpi.get_comm()
     if rank == 0:
-        if "world" in uv_container.extra_keywords:
-            uv_container.extra_keywords["world"] = uv_container.extra_keywords["world"]
         vis_data = mpi.MPI.Win.Create(
             uv_container._data_array.value, comm=mpi.world_comm
         )
