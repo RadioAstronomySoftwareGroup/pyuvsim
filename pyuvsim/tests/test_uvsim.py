@@ -651,7 +651,7 @@ def test_local_task_gen():
 
 @pytest.mark.filterwarnings("ignore:The parameter `blt_order` could not be identified")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-def test_nsky_parts_large():
+def test_nsky_parts_large(capsys):
     """Check that we get the same visibilities no matter what Nsky_parts is set to."""
     pytest.importorskip('mpi4py')
     hera_uv = UVData.from_file(EW_uvfits_10time10chan)
@@ -681,6 +681,8 @@ def test_nsky_parts_large():
         Nsky_parts=5,
     )
 
+    captured = capsys.readouterr()
+    assert "The source list has been split into Nsky_parts" in captured.out
     assert out_uv_single_nsky == out_uv_multi_nsky
 
 

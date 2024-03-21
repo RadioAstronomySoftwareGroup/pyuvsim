@@ -267,33 +267,6 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
         pyuvsim.run_uvsim(params, return_uv=True)
 
 
-@pytest.mark.filterwarnings("ignore:No julian date given for mock catalog")
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
-def test_run_nsky_parts(capsys):
-    # these parameters were hand picked and fine-tuned to create nsky_parts = 2
-    # this test feels very wonky just to ensure the nsky_parts is printed
-    scale = 1.0
-    if 'linux' in sys.platform:
-        scale = 2**10
-    # Running a simulation from parameter dictionary.
-    os.environ["SLURM_MEM_PER_NODE"] = str(
-        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 1e6 + 5
-    )  # Only 5MB of memory more than used right now
-    params = pyuvsim.simsetup._config_str_to_dict(
-        os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
-    )
-    # just piggy backing on the setup but we need more sources for this to work
-    params['sources']["catalog"] = "mock"
-    params["sources"]["mock_arrangement"] = "random"
-    params["sources"]["Nsrcs"] = 5000
-
-    pyuvsim.run_uvsim(params, return_uv=True)
-
-    captured = capsys.readouterr()
-    assert "The source list has been split into Nsky_parts" in captured.out
-    del os.environ["SLURM_MEM_PER_NODE"]
-
-
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
