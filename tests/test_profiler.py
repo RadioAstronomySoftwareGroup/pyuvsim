@@ -25,7 +25,12 @@ def profdata_dir_setup(tmpdir):
 
 
 @pytest.mark.filterwarnings("ignore:The mount_type parameter must be set for UVBeam")
-def test_profiler(tmpdir):
+@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+@pytest.mark.parametrize("progbar", ["progsteps", "tqdm"])
+@pytest.mark.parallel(2)
+def test_profiler(tmpdir, backend, progbar):
+    if progbar == "tqdm":
+        pytest.importorskip("tqdm")
     line_profiler = pytest.importorskip("line_profiler")
     outpath = profdata_dir_setup(tmpdir)
     testprof_fname = str(outpath.join("time_profile.out"))
@@ -37,7 +42,9 @@ def test_profiler(tmpdir):
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml"
     )
-    pyuvsim.uvsim.run_uvsim(param_filename, return_uv=True)
+    pyuvsim.uvsim.run_uvsim(
+        param_filename, return_uv=True, backend=backend, progbar=progbar
+    )
     time_profiler = pyuvsim.profiling.get_profiler()
     time_profiler.disable_by_count()
     assert isinstance(time_profiler, line_profiler.LineProfiler)
@@ -51,6 +58,18 @@ def test_profiler(tmpdir):
     assert unique(func_names).tolist() == sorted(
         pyuvsim.profiling.default_profile_funcs
     )
+    if pyuvsim.mpi.rank == 0:
+        time_profiler = pyuvsim.profiling.get_profiler()
+        time_profiler.disable_by_count()
+        assert isinstance(time_profiler, line_profiler.LineProfiler)
+        assert hasattr(time_profiler, "rank")
+        assert hasattr(time_profiler, "meta_file")
+        lstats = time_profiler.get_stats()
+        assert len(lstats.timings) != 0
+        func_names = [k[2] for k in lstats.timings.keys()]
+        assert unique(func_names).tolist() == sorted(
+            pyuvsim.profiling.default_profile_funcs
+        )
 
 
 def test_profiler_mock_import(tmpdir):

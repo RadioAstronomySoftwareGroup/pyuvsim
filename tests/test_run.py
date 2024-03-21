@@ -26,6 +26,8 @@ from pyuvsim.telescope import BeamList
 c_ms = speed_of_light.to("m/s").value
 
 pytest.importorskip("mpi4py")  # noqa
+# everything in this file requires 2 PUs
+pytestmark = pytest.mark.parallel(2)
 
 
 @pytest.mark.filterwarnings("ignore:Fixing auto-correlations to be be real-only")
@@ -76,6 +78,9 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     uv_new.extra_keywords = uv_ref.extra_keywords
     uv_ref.telescope.mount_type = uv_new.telescope.mount_type
 
+    # remove filename attribute to ensure equality
+    uv_new.filename = None
+    uv_ref.filename = None
     assert uv_new == uv_ref
 
 
@@ -94,12 +99,15 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
         ("monopole-nonflat", 3e-4),
     ],
 )
-def test_analytic_diffuse(model, tol, tmpdir):
+@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+@pytest.mark.parametrize("progbar", ["progsteps", "tqdm"])
+def test_analytic_diffuse(model, tol, tmpdir, backend, progbar):
     # Generate the given model and simulate for a few baselines.
     # Import from analytic_diffuse  (consider moving to rasg_affiliates?)
-    pytest.importorskip("analytic_diffuse")
+    analytic_diffuse = pytest.importorskip("analytic_diffuse")
     pytest.importorskip("astropy_healpix")
-    import analytic_diffuse
+    if progbar == "tqdm":
+        pytest.importorskip("tqdm")
 
     modname = model
     use_w = False
@@ -152,14 +160,17 @@ def test_analytic_diffuse(model, tol, tmpdir):
     with open(obspar_path, "w") as ofile:
         yaml.dump(obspar, ofile, default_flow_style=False)
 
-    uv_out = pyuvsim.run_uvsim(obspar_path, return_uv=True)
-    # Convert from Jy to K sr
-    dat = uv_out.data_array[:, 0, 0] * jy_to_ksr(uv_out.freq_array[0]).value
-    # Evaluate the solution and compare to visibilities.
-    soln = analytic_diffuse.get_solution(modname)
-    uvw_lam = uv_out.uvw_array * uv_out.freq_array[0] / c_ms
-    ana = soln(uvw_lam, **params)
-    np.testing.assert_allclose(ana / 2, dat, atol=tol, rtol=0)
+    uv_out = pyuvsim.run_uvsim(
+        obspar_path, return_uv=True, backend=backend, progbar=progbar
+    )
+    if pyuvsim.mpi.rank == 0:
+        # Convert from Jy to K sr
+        dat = uv_out.data_array[:, 0, 0] * jy_to_ksr(uv_out.freq_array[0]).value
+        # Evaluate the solution and compare to visibilities.
+        soln = analytic_diffuse.get_solution(modname)
+        uvw_lam = uv_out.uvw_array * uv_out.freq_array[0] / c_ms
+        ana = soln(uvw_lam, **params)
+        np.testing.assert_allclose(ana / 2, dat, atol=tol, rtol=0)
 
 
 @pytest.mark.filterwarnings("ignore:antenna_diameters are not set")
@@ -354,9 +365,15 @@ def test_run_gleam_uvsim(spectral_type, nfeeds):
         ["spectral_index", False, True],
     ),
 )
-def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
+@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+@pytest.mark.parametrize("progbar", ["progsteps", "tqdm"])
+def test_zenith_spectral_sim(
+    spectral_type, tmpdir, use_cli, use_uvdata, backend, progbar
+):
     # Make a power law source at zenith in three ways.
     # Confirm that simulated visibilities match expectation.
+    if progbar == "tqdm":
+        pytest.importorskip("tqdm")
 
     params = pyuvsim.simsetup._config_str_to_dict(
         os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
@@ -464,6 +481,10 @@ def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
                     cat_in,
                     "--outfile",
                     uvd_out,
+                    "--backend",
+                    backend,
+                    "--progbar",
+                    progbar,
                 ]
             )
         else:
@@ -478,6 +499,10 @@ def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
                     "--quiet",
                     "--keep_nonroot_stdout",
                     "--raw_profile",
+                    "--backend",
+                    backend,
+                    "--progbar",
+                    progbar,
                 ]
             )
             assert os.path.exists(profile_file)
@@ -486,10 +511,17 @@ def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
     else:
         if use_uvdata:
             uv_out = pyuvsim.run_uvdata_uvsim(
-                input_uv=uvd, beam_list=beam_list, beam_dict=beam_dict, catalog=catalog
+                input_uv=uvd,
+                beam_list=beam_list,
+                beam_dict=beam_dict,
+                catalog=catalog,
+                backend=backend,
+                progbar=progbar,
             )
         else:
-            uv_out = pyuvsim.run_uvsim(param_file, return_uv=True)
+            uv_out = pyuvsim.run_uvsim(
+                param_file, return_uv=True, backend=backend, progbar=progbar
+            )
 
     if use_cli and use_uvdata:
         # this is different because we are writing out the analytic beam to a
@@ -603,6 +635,7 @@ def test_sim_on_moon(goto_tempdir, selenoid):
 
     # Lunar Frame Roundtripping
     param_dict["filing"]["outdir"] = str(tmpdir)
+
     uv_filename = pyuvsim.utils.write_uvdata(
         uv_out, param_dict, return_filename=True, quiet=True
     )

@@ -767,9 +767,11 @@ def test_local_task_gen():
 
 
 @pytest.mark.filterwarnings("ignore:The parameter `blt_order` could not be identified")
+@pytest.mark.parallel(2)
 def test_nsky_parts_large(capsys):
     """Check that we get the same visibilities no matter what Nsky_parts is set to."""
     pytest.importorskip("mpi4py")
+    pyuvsim.mpi.start_mpi()
     hera_uv = UVData.from_file(EW_uvfits_10time10chan)
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
     time = Time(hera_uv.time_array[0], scale="utc", format="jd")
@@ -796,9 +798,10 @@ def test_nsky_parts_large(capsys):
         Nsky_parts=5,
     )
 
-    captured = capsys.readouterr()
-    assert "The source list has been split into Nsky_parts" in captured.out
-    assert out_uv_single_nsky == out_uv_multi_nsky
+    if pyuvsim.mpi.get_rank() == 0:
+        captured = capsys.readouterr()
+        assert "The source list has been split into Nsky_parts" in captured.out
+        assert out_uv_single_nsky == out_uv_multi_nsky
 
 
 def test_set_nsky_parts_errors():
@@ -1158,6 +1161,8 @@ def test_run_mpierr(hera_loc, cst_beam):
             beam_list.share()
 
 
+@pytest.mark.parallel(2)
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("order", [("bda",), ("baseline", "time"), ("ant2", "time")])
 def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
     pytest.importorskip("mpi4py")
@@ -1177,6 +1182,11 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
         beam_dict=beam_dict,
         catalog=sky_model,
     )
+    rank = pyuvsim.mpi.get_rank()
+    # rank 0 is the only one with the full uvdata object
+    if rank != 0:
+        return
+
     assert out_uv.blt_order == order
     assert out_uv.blt_order == uvdata_linear.blt_order
 
@@ -1194,9 +1204,15 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
     )
 
 
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
+@pytest.mark.parallel(2)
 @pytest.mark.parametrize("order", [("bda",), ("baseline", "time"), ("ant2", "time")])
 def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
     pytest.importorskip("mpi4py")
+    # need to get the mpi initialized
+    # now that simulations require at least 2 PUs
+    pyuvsim.mpi.start_mpi()
+    rank = pyuvsim.mpi.get_rank()
     uvdata_linear, beam_list, beam_dict, sky_model = (
         uvdata_two_redundant_bls_triangle_sources
     )
@@ -1208,22 +1224,36 @@ def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
     uvdata_linear.reorder_blts(order=order[0], minor_order=minor_order)
     # delete the order like we forgot to set it
     uvdata_linear.blt_order = None
-    with check_warnings(
-        UserWarning, match="The parameter `blt_order` could not be identified."
-    ):
+    if rank == 0:
+        with check_warnings(
+            UserWarning, match="The parameter `blt_order` could not be identified."
+        ):
+            out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
+                input_uv=uvdata_linear.copy(),
+                beam_list=beam_list,
+                beam_dict=beam_dict,
+                catalog=sky_model,
+            )
+
+        assert out_uv.blt_order == ("time", "baseline")
+    else:
         out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
             input_uv=uvdata_linear.copy(),
             beam_list=beam_list,
             beam_dict=beam_dict,
             catalog=sky_model,
         )
-    assert out_uv.blt_order == ("time", "baseline")
 
 
+@pytest.mark.parallel(2, timeout=10)
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
 @pytest.mark.parametrize("cut_beam", [10, 85, 90])
-def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources, cut_beam):
+@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources, cut_beam, backend):
     pytest.importorskip("mpi4py")
+    pyuvsim.mpi.start_mpi(block_nonroot_stdout=False)
+    rank = pyuvsim.mpi.get_rank()
+
     uvdata_linear, beam_list, beam_dict, sky_model = (
         uvdata_two_redundant_bls_triangle_sources
     )
@@ -1247,27 +1277,63 @@ def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources, cut_beam):
     indices = indices[::2]
     blt_inds = np.delete(np.arange(uvdata_linear.Nblts), indices)
     uvdata_linear.select(blt_inds=blt_inds)
-
     assert uvdata_linear.Nblts != uvdata_linear.Nbls * uvdata_linear.Ntimes
 
     if cut_beam < 85:
         # There's a source out at ~80 degrees
-        with pytest.raises(
-            ValueError,
-            match="at least one interpolation location is outside of the UVBeam",
-        ):
-            out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
-                input_uv=uvdata_linear.copy(),
-                beam_list=beam_list,
-                beam_dict=beam_dict,
-                catalog=sky_model,
-            )
+
+        # for send_recv the error is sent to node 0 and not raised on worker PUs
+        if backend == "send_recv":
+            if rank == 0:
+                with pytest.raises(
+                    ValueError,
+                    match=r".*at least one interpolation location is outside of the UVBeam",
+                ):
+                    out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
+                        input_uv=uvdata_linear.copy(),
+                        beam_list=beam_list,
+                        beam_dict=beam_dict,
+                        catalog=sky_model,
+                        backend=backend,
+                    )
+            else:
+                pyuvsim.uvsim.run_uvdata_uvsim(
+                    input_uv=uvdata_linear.copy(),
+                    beam_list=beam_list,
+                    beam_dict=beam_dict,
+                    catalog=sky_model,
+                    backend=backend,
+                )
+
+        # work only occurs on non rank 0 nodes. check for the error there.
+        else:
+            if rank != 0:
+                with pytest.raises(
+                    ValueError,
+                    match="at least one interpolation location is outside of the UVBeam",
+                ):
+                    out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
+                        input_uv=uvdata_linear.copy(),
+                        beam_list=beam_list,
+                        beam_dict=beam_dict,
+                        catalog=sky_model,
+                        backend=backend,
+                    )
+            else:
+                pyuvsim.uvsim.run_uvdata_uvsim(
+                    input_uv=uvdata_linear.copy(),
+                    beam_list=beam_list,
+                    beam_dict=beam_dict,
+                    catalog=sky_model,
+                    backend=backend,
+                )
     else:
         out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
             input_uv=uvdata_linear.copy(),
             beam_list=beam_list,
             beam_dict=beam_dict,
             catalog=sky_model,
+            backend=backend,
         )
 
         np.testing.assert_allclose(out_uv.get_data((0, 1)), out_uv.get_data((1, 2)))
@@ -1363,3 +1429,46 @@ def test_run_uvdata_uvsim_errors(kwargs, msg):
     pytest.importorskip("mpi4py")
     with pytest.raises(TypeError, match=msg):
         pyuvsim.run_uvdata_uvsim(**kwargs)
+
+
+def test_tqdm_import_error():
+    pytest.importorskip("mpi4py")
+    try:
+        import tqdm  # noqa
+
+        return
+    except ImportError:
+        with pytest.raises(ImportError, match="The tqdm module must be"):
+            pyuvsim.uvsim._get_pbar("tqdm", None, None)
+
+
+def test_progbar_error_get_pbar():
+    pytest.importorskip("mpi4py")
+    with pytest.raises(ValueError, match="The progbar keyword must be one of "):
+        pyuvsim.uvsim._get_pbar("foo", None, None)
+
+
+def test_progbar_error_uvdata_uvsim():
+    pytest.importorskip("mpi4py")
+    with pytest.raises(ValueError, match="The progbar keyword must be one of "):
+        pyuvsim.run_uvdata_uvsim(
+            None, None, None, None, False, backend="rma", progbar="Foo"
+        )
+
+
+def test_progbar_error_run_uvsim():
+    pytest.importorskip("mpi4py")
+    with pytest.raises(ValueError, match="The progbar keyword must be one of "):
+        pyuvsim.run_uvsim(None, False, None, backend="rma", progbar="Foo")
+
+
+def test_backend_error_uvdata_uvsim():
+    pytest.importorskip("mpi4py")
+    with pytest.raises(ValueError, match="The backend keyword must be one of "):
+        pyuvsim.run_uvdata_uvsim(None, None, None, None, False, backend="Test")
+
+
+def test_backend_error_run_uvsim():
+    pytest.importorskip("mpi4py")
+    with pytest.raises(ValueError, match="The backend keyword must be one of "):
+        pyuvsim.run_uvsim(None, False, False, backend="Test")

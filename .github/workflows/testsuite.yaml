@@ -177,6 +177,54 @@ jobs:
           env_vars: OS,PYTHON
           fail_ci_if_error: true
 
+  only_progsteps:
+    env:
+      ENV_NAME: only_progsteps
+      PYTHON: 3.7
+    name: No Tqdm Tests
+    defaults:
+      run:
+        # Adding -l {0} helps ensure conda can be found properly.
+        shell: bash -l {0}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+        with:
+         fetch-depth: 1
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2.0.0
+        with:
+          auto-update-conda: true
+          miniconda-version: "latest"
+          python-version: ${{ env.PYTHON }}
+          environment-file: ci/${{ env.ENV_NAME }}.yaml
+          activate-environment: ${{ env.ENV_NAME }}
+
+      - name: Conda Info
+        run: |
+          conda info -a
+          conda list
+          PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
+          if [[ $PYVER != ${{ env.PYTHON }} ]]; then
+            exit 1;
+          fi
+
+      - name: Install
+        run: |
+          pip install .
+
+      - name: Run Tests
+        run: |
+          python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+
+      - uses: codecov/codecov-action@v1.5.2
+        if: success()
+        with:
+          token: ${{secrets.CODECOV_TOKEN}} #required
+          file: ./coverage.xml #optional
+          env_vars: OS,PYTHON
+          fail_ci_if_error: true
+
   warning_test:
     env:
       ENV_NAME: pyuvsim_tests_mpich
