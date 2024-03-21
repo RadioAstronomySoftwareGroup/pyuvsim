@@ -4,9 +4,7 @@
 
 import copy
 import os
-import resource
 import shutil
-import sys
 
 import numpy as np
 import pyradiosky
