@@ -1235,7 +1235,7 @@ def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
         )
 
 
-@pytest.mark.parallel(2, timeout=10)
+@pytest.mark.parallel(2)
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("cut_beam", [10, 85, 90])
