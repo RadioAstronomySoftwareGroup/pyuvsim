@@ -3,10 +3,12 @@
 ## [Unreleased]
 
 ### Added
+- Tests verifying accuracy of Lunar simulations.
 - Added support for all UVBeam readable files rather than just beamfits.
 
 ### Changed
-- Require pyuvdata >= 2.4.1 to properly support lunar sims.
+- Require pyuvdata >= 2.4.1 to properly support lunar sims. Pass frame information
+to pyuvdata calls now that they support lunar frames.
 - Require scipy>1.5.
 - Moved all necessary mpi broadcasts calls into `run_uvdata_uvsim` to make it more user friendly.
 - Changed the default file type for writing out UVData files to be the uvh5
