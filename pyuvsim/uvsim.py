@@ -543,6 +543,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
         if not hasmoon:
             raise ValueError("Need lunarsky module to simulate an array on the Moon.")
         location = MoonLocation.from_selenocentric(*tloc, unit='m')
+        location.ellipsoid = input_uv._telescope_location.ellipsoid
     else:
         raise ValueError("If world keyword is set, it must be either 'moon' or 'earth'.")
     telescope = Telescope(input_uv.telescope_name, location, beam_list)
@@ -552,7 +553,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     else:
         tclass = Time
     time_array = tclass(
-        input_uv.time_array, scale='utc', format='jd', location=telescope.location
+        input_uv.time_array, scale='utc', format='jd', location=location
     )
     for src_i in src_iter:
         sky = catalog.get_skymodel(src_i)

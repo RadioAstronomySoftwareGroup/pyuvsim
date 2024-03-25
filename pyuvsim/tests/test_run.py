@@ -364,16 +364,45 @@ def test_input_uv_error():
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:This method will be removed in version 3.0")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
+@pytest.mark.filterwarnings("ignore:Telescope apollo11 is not in known_telescopes.")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 @pytest.mark.parametrize("future_shapes", [True, False])
-def test_sim_on_moon(future_shapes, tmpdir):
+@pytest.mark.parametrize("selenoid", ["SPHERE", "GSFC", "GRAIL23", "CE-1-LAM-GEO"])
+def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
     pytest.importorskip("lunarsky")
     from lunarsky import MoonLocation
     param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_tranquility_hex.yaml')
+
+    tmpdir = goto_tempdir
+    # copy the config files and modify the lunar ellipsoid
+    os.makedirs(os.path.join(tmpdir, "test_config"))
+    shutil.copyfile(
+        os.path.join(SIM_DATA_PATH, "test_config", "obsparam_tranquility_hex.yaml"),
+        os.path.join(tmpdir, "test_config", "obsparam_tranquility_hex.yaml"),
+    )
+    shutil.copyfile(
+        os.path.join(SIM_DATA_PATH, "tranquility_config.yaml"),
+        os.path.join(tmpdir, "tranquility_config.yaml"),
+    )
+    shutil.copyfile(
+        os.path.join(SIM_DATA_PATH, "test_config", "layout_hex37_14.6m.csv"),
+        os.path.join(tmpdir, "test_config", "layout_hex37_14.6m.csv"),
+    )
+
+    with open(os.path.join(tmpdir, "tranquility_config.yaml"), 'r') as pfile:
+        tele_param_dict = yaml.safe_load(pfile)
+    tele_param_dict["ellipsoid"] = selenoid
+    with open(os.path.join(tmpdir, "tranquility_config.yaml"), 'w') as pfile:
+        yaml.dump(tele_param_dict, pfile, default_flow_style=False)
+
+    param_filename = os.path.join(tmpdir, "test_config", "obsparam_tranquility_hex.yaml")
+
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     param_dict['select'] = {'redundant_threshold': 0.1}
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
         param_dict, return_beams=True
     )
+    assert uv_obj._telescope_location.ellipsoid == selenoid
 
     # set the filename to make sure it ends up in the history,
     # remove the parameter file info from extra_keywords
@@ -386,9 +415,10 @@ def test_sim_on_moon(future_shapes, tmpdir):
 
     uv_obj.select(times=uv_obj.time_array[0])
     tranquility_base = MoonLocation.from_selenocentric(*uv_obj.telescope_location, 'meter')
+    tranquility_base.ellipsoid = selenoid
 
     time = Time(uv_obj.time_array[0], format='jd', scale='utc')
-    sources, kwds = pyuvsim.create_mock_catalog(
+    sources, _ = pyuvsim.create_mock_catalog(
         time, array_location=tranquility_base, arrangement='zenith', Nsrcs=30, return_data=True
     )
     # Run simulation.
@@ -403,17 +433,19 @@ def test_sim_on_moon(future_shapes, tmpdir):
     assert uvutils._check_history_version(uv_out.history, uv_obj.filename[0])
     assert uvutils._check_history_version(uv_out.history, "Npus =")
 
-    assert np.allclose(uv_out.data_array[:, :, 0], 0.5)
     assert uv_out.extra_keywords['world'] == 'moon'
+    assert uv_out._telescope_location.ellipsoid == selenoid
+    assert np.allclose(uv_out.data_array[:, :, 0], 0.5)
 
     # Lunar Frame Roundtripping
     param_dict['filing']['outdir'] = str(tmpdir)
 
     uv_filename = pyuvsim.utils.write_uvdata(uv_out, param_dict, return_filename=True, quiet=True)
     uv_compare = UVData()
-    uv_compare.read(uv_filename)
+    uv_compare.read(uv_filename, use_future_array_shapes=future_shapes)
     assert np.allclose(uv_out.telescope_location, uv_compare.telescope_location)
     assert uv_out._telescope_location.frame == uv_compare._telescope_location.frame
+    assert uv_compare._telescope_location.ellipsoid == selenoid
 
     # Cleanup
     os.remove(uv_filename)
@@ -422,20 +454,49 @@ def test_sim_on_moon(future_shapes, tmpdir):
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:This method will be removed in version 3.0")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
-def test_lunar_gauss(tmpdir):
+@pytest.mark.parametrize("selenoid", ["SPHERE", "GSFC", "GRAIL23", "CE-1-LAM-GEO"])
+def test_lunar_gauss(goto_tempdir, selenoid):
     pytest.importorskip("lunarsky")
     from lunarsky import MoonLocation
 
     # Make a gaussian source that passes through zenith
     # Confirm that simulated visibilities match expectation.
 
+    tmpdir = goto_tempdir
+    # copy the config files and modify the lunar ellipsoid
+    os.makedirs(os.path.join(tmpdir, "test_config"))
+    os.makedirs(os.path.join(tmpdir, "test_catalogs"))
+    shutil.copyfile(
+        os.path.join(SIM_DATA_PATH, "test_config", "obsparam_lunar_gauss.yaml"),
+        os.path.join(tmpdir, "test_config", "obsparam_lunar_gauss.yaml"),
+    )
+    shutil.copyfile(
+        os.path.join(SIM_DATA_PATH, "test_config", "bl_single_gauss.yaml"),
+        os.path.join(tmpdir, "test_config", "bl_single_gauss.yaml"),
+    )
+    shutil.copyfile(
+        os.path.join(SIM_DATA_PATH, "test_config", "baseline_moon.csv"),
+        os.path.join(tmpdir, "test_config", "baseline_moon.csv"),
+    )
+    shutil.copyfile(
+        os.path.join(SIM_DATA_PATH, "test_catalogs", "one_distant_point_2458178.5.txt"),
+        os.path.join(tmpdir, "test_catalogs", "one_distant_point_2458178.5.txt"),
+    )
+
+    with open(os.path.join(tmpdir, "test_config", "bl_single_gauss.yaml"), 'r') as pfile:
+        tele_param_dict = yaml.safe_load(pfile)
+    tele_param_dict["ellipsoid"] = selenoid
+    with open(os.path.join(tmpdir, "test_config", "bl_single_gauss.yaml"), 'w') as pfile:
+        yaml.dump(tele_param_dict, pfile, default_flow_style=False)
+
     params = pyuvsim.simsetup._config_str_to_dict(
-        os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_lunar_gauss.yaml')
+        os.path.join(tmpdir, "test_config", "obsparam_lunar_gauss.yaml")
     )
 
     params['filing']['outdir'] = str(tmpdir)
 
     uv_out = pyuvsim.run_uvsim(params, return_uv=True, quiet=True)
+    assert uv_out._telescope_location.ellipsoid == selenoid
 
     # Skymodel and update positions
 
@@ -446,32 +507,25 @@ def test_lunar_gauss(tmpdir):
         dec=Latitude(-21, unit='deg'),
         stokes=units.Quantity([1, 0, 0, 0], unit='Jy'),
         spectral_type='flat',
-        frame='icrs'
+        frame='fk5'
     )
 
-    # Init starting position
     pos = uv_out.telescope_location_lat_lon_alt_degrees
-    sm.update_positions(
-        Time(2458174.0, format='jd'),
-        MoonLocation(
-            Longitude(pos[1], unit='deg'),
-            Latitude(pos[0], unit='deg'),
-            units.Quantity(pos[2], unit='m')
-        )
-    )
 
     # Creating the analytical gaussian
     Alt = np.zeros(uv_out.Ntimes)
     Az = np.zeros(uv_out.Ntimes)
     refTimes = uv_out.get_times(0, 1)
+    telescope_location_obj = MoonLocation(
+        Longitude(pos[1], unit='deg'),
+        Latitude(pos[0], unit='deg'),
+        units.Quantity(pos[2], unit='m'),
+        ellipsoid=selenoid,
+    )
     for t in range(uv_out.Ntimes):
         sm.update_positions(
             Time(refTimes[t], format='jd'),
-            MoonLocation(
-                Longitude(pos[1], unit='deg'),
-                Latitude(pos[0], unit='deg'),
-                units.Quantity(pos[2], unit='m')
-            )
+            telescope_location_obj,
         )
         Alt[t] = sm.alt_az[0, 0]
         Az[t] = sm.alt_az[1, 0]

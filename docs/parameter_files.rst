@@ -246,7 +246,9 @@ Telescopes on the Moon
    If the ``lunarsky`` module is installed, the ``telescope_location`` can be interpreted as the
    lon/lat/alt of an observatory on the Moon, defined in the "Mean Earth/ Mean Rotation"
    frame (see documentation on ``lunarsky``). Setting the keyword ``world: moon`` in the
-   telescope_config file enables this:
+   telescope_config file enables this. Optionally set the ``lunar_ellipsoid`` keyword
+   to specify which reference ellipsoid to use (it defaults to "SPHERE"). Must be one of
+   "SPHERE", "GSFC", "GRAIL23", "CE-1-LAM-GEO" (see ``lunarsky`` package for details).
 
    .. literalinclude:: example_configs/tranquility_config.yaml
 

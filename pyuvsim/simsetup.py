@@ -1168,6 +1168,12 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
             telconfig = yaml.safe_load(yf)
         telescope_location_latlonalt = ast.literal_eval(telconfig['telescope_location'])
         world = telconfig.pop('world', None)
+        # get the lunar ellipsoid. Default to None for earth or SPHERE for moon
+        if world == "moon":
+            ellipsoid = telconfig.pop('ellipsoid', "SPHERE")
+        else:
+            ellipsoid = telconfig.pop('ellipsoid', None)
+
         tele_params['telescope_name'] = telconfig['telescope_name']
     else:
         # if not provided, get bare-minumum keys from tele_params
@@ -1185,6 +1191,11 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
         if isinstance(telescope_location_latlonalt, str):
             telescope_location_latlonalt = ast.literal_eval(telescope_location_latlonalt)
         world = tele_params.pop('world', None)
+        # get the lunar ellipsoid. Default to None for earth or SPHERE for moon
+        if world == "moon":
+            ellipsoid = tele_params.pop('ellipsoid', "SPHERE")
+        else:
+            ellipsoid = tele_params.pop('ellipsoid', None)
 
     lat_rad = telescope_location_latlonalt[0] * np.pi / 180.
     long_rad = telescope_location_latlonalt[1] * np.pi / 180.
@@ -1197,7 +1208,11 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     else:
         raise ValueError(f"Invalid world {world}")
     tele_params["telescope_location"] = uvutils.XYZ_from_LatLonAlt(
-        latitude=lat_rad, longitude=long_rad, altitude=alt, frame=frame
+        latitude=lat_rad,
+        longitude=long_rad,
+        altitude=alt,
+        frame=frame,
+        ellipsoid=ellipsoid,
     )
 
     telescope_name = tele_params['telescope_name']
@@ -1241,13 +1256,19 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     antpos_enu = np.vstack((E, N, U)).T
     return_dict['antenna_positions'] = (
         uvutils.ECEF_from_ENU(
-            antpos_enu, latitude=lat_rad, longitude=long_rad, altitude=alt, frame=frame
+            antpos_enu,
+            latitude=lat_rad,
+            longitude=long_rad,
+            altitude=alt,
+            frame=frame,
+            ellipsoid=ellipsoid,
         )
         - tele_params['telescope_location']
     )
     if world is not None:
         return_dict['world'] = world
     return_dict['telescope_frame'] = frame
+    return_dict['ellipsoid'] = ellipsoid
 
     return_dict['array_layout'] = layout_csv
     return_dict['telescope_location'] = np.asarray(tele_params['telescope_location'])
@@ -1767,6 +1788,7 @@ def initialize_uvdata_from_params(
 
     # Setting the frame and acceptable range for the moon
     uv_obj._telescope_location.frame = uvparam_dict['telescope_frame']
+    uv_obj._telescope_location.ellipsoid = uvparam_dict['ellipsoid']
 
     # use the __iter__ function on UVData to get list of UVParameters on UVData
     valid_param_names = [getattr(uv_obj, param).name for param in uv_obj]
