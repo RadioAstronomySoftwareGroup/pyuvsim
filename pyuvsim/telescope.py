@@ -50,8 +50,6 @@ class BeamList:
     ----------
     string_mode : bool
         Is True if the beams are represented as strings, False if they're objects
-    uvb_params : dict
-        Set of additional attributes to set on UVBeam objects.
     spline_interp_opts : dict
         Degrees of the bivariate spline for the angular interpolation (passed
         directly to numpy.RectBivariateSpline, e.g. use {'kx' : 2, 'ky' : 2}
@@ -69,8 +67,6 @@ class BeamList:
         object mode with string_mode == False. If beam_list consists of strings,
         the BeamList will be initialized in string mode.
         Passing in a mixture of strings and objects will error.
-    uvb_params : dict (optional)
-        Options to set uvb_params, overriding settings from passed-in UVBeam objects.
     uvb_read_kwargs : dict (optional)
         A nested dictionary that can contain parameters to pass to the UVBeam
         read method for each UVBeam in the beam dict. The top-level keys are
@@ -114,7 +110,6 @@ class BeamList:
     def __init__(
         self,
         beam_list=None,
-        uvb_params=None,
         uvb_read_kwargs: dict[str: tuple[float, float]] | None = None,
         select_params: dict[str: tuple[float, float]] | None = None,
         spline_interp_opts: dict[str: int] | None = None,
@@ -122,13 +117,6 @@ class BeamList:
         check: bool = True,
         force_check: bool = False
     ):
-
-        self.uvb_params = {}
-        empty_uvbeam = UVBeam()
-
-        # this can go away when we require pyuvdata version >= 2.4.2
-        if hasattr(empty_uvbeam, "_freq_interp_kind"):
-            self.uvb_params["freq_interp_kind"] = freq_interp_kind
 
         self.spline_interp_opts = spline_interp_opts
         self.freq_interp_kind = freq_interp_kind
@@ -148,14 +136,7 @@ class BeamList:
             else:
                 raise ValueError("Invalid beam list: " + str(beam_list))
 
-        # If any UVBeam objects are passed in, update uvb_params:
-        list_uvb_params = {}
-        if uvb_params is None:
-            uvb_params = {}
-            if not self.string_mode:
-                list_uvb_params = self._scrape_uvb_params(self._obj_beam_list, strict=False)
-        self.uvb_params.update(list_uvb_params)
-        self.uvb_params.update(uvb_params)    # Optional parameters for the UVBeam objects
+        # If any UVBeam objects are passed in, set uvb_read_kwargs:
         self.uvb_read_kwargs = uvb_read_kwargs or {}
         self.select_params = select_params or {}
         self.is_consistent = False
@@ -346,57 +327,6 @@ class BeamList:
 
         return getattr(self._obj_beam_list[0], "beam_type", None)
 
-    def _scrape_uvb_params(self, beam_objs, strict=True):
-        """
-        Collect uvb_params from the set of beam objects.
-
-        Parameters
-        ----------
-        beam_objs : list
-            If any UVBeams are found in this list, they will be scraped
-            for relevant parameters.
-        strict : bool
-            If True, will raise an error if the UVBeams in beam_objs
-            have conflicting parameters.
-
-        Notes
-        -----
-        If beam_objs has strings in it, this will simply return an empty dict.
-
-        """
-        new_pars = {}
-        for bm in beam_objs:
-            if isinstance(bm, UVBeam):
-                for key in self.uvb_params.keys():
-                    val = getattr(bm, key)
-                    if key not in new_pars:
-                        new_pars[key] = []
-                    if val is not None:
-                        new_pars[key].append(val)
-        for key, vals in new_pars.items():
-            svals = set(vals)
-            if len(svals) == 1:
-                new_pars[key] = svals.pop()
-            elif len(svals) > 1:
-                try:
-                    raise ValueError('Conflicting settings for {}: {}'.format(key, str(svals)))
-                except ValueError as err:
-                    if strict:
-                        raise err
-                    else:
-                        warnings.warn(err.args[0])  # Use exception message as warning message.
-
-        new_pars = {k: v for k, v in new_pars.items() if v != []}
-
-        return new_pars
-
-    def _set_params_on_uvbeams(self, beam_objs):
-        """Set parameters on UVBeam objects using uvb_params."""
-        for bm in np.atleast_1d(beam_objs):
-            if isinstance(bm, UVBeam):
-                for key, val in self.uvb_params.items():
-                    setattr(bm, key, val)
-
     def __len__(self):
         """Define the length of a BeamList."""
         # Note that only one of these lists has nonzero length at a given time.
@@ -422,25 +352,6 @@ class BeamList:
 
         """
         if self.string_mode:
-            # If value is a string, then _scrape_uvb_params returns an empty dictionary.
-            newobj_params = self._scrape_uvb_params([value], strict=False)
-            mismatches = [
-                key
-                for key, val in newobj_params.items()
-                if key in self.uvb_params and val != self.uvb_params[key]
-            ]
-
-            if mismatches:
-                compare = "\n\t".join(
-                    "current = {}, new = {}".format(
-                        self.uvb_params[key], newobj_params[key]
-                    )
-                    for key in mismatches
-                )
-
-                raise ValueError('UVBeam parameters do not match '
-                                 'those currently set: \n\t' + compare)
-
             self._str_beam_list[ind] = self._obj_to_str(value)
         else:
             if uvb_read_kwargs is not None:
@@ -450,7 +361,6 @@ class BeamList:
             except FileNotFoundError as err:
                 raise ValueError(f"Invalid file path: {value}") from err
             self._obj_beam_list[ind] = value
-            self._scrape_uvb_params(self._obj_beam_list, strict=False)
 
     def __eq__(self, other):
         """Define BeamList equality."""
@@ -474,7 +384,10 @@ class BeamList:
             self.__setitem__(-1, value, uvb_read_kwargs=uvb_read_kwargs)
         except ValueError as err:
             if self.string_mode:
-                self._str_beam_list.pop()
+                # This line is hard to cover with a test. I've verified that I
+                # can get here, but I when I wrap it in  pytest.raises it stops
+                # on the earlier error.
+                self._str_beam_list.pop()  # pragma: no cover
             else:
                 self._obj_beam_list.pop()
             raise err
@@ -536,8 +449,6 @@ class BeamList:
                 else:
                     uvb.__dict__[key].value = mpi.world_comm.bcast(attr.value, root=0)
             mpi.world_comm.Barrier()
-        for key, val in self.uvb_params.items():
-            setattr(uvb, key, val)
         uvb.extra_keywords['beam_path'] = path
         return uvb
 
@@ -569,8 +480,7 @@ class BeamList:
 
         Convert AnalyticBeam objects to a string representation
         that can be used to generate them. Replaces UVBeam objects with
-        the path to the UVBeam readable file they originate from. Additional
-        UVBeam attributes are stored in the BeamList.uvb_params dictionary.
+        the path to the UVBeam readable file they originate from.
 
         Any UVBeams in the list must have the path to their beam files
         stored as 'beam_path' in the `extra_keywords` dictionary.
@@ -588,8 +498,6 @@ class BeamList:
         """
         if self._obj_beam_list != []:
             # Convert object beams to string definitions
-            new_uvb_par = self._scrape_uvb_params(self._obj_beam_list, strict=True)
-            self.uvb_params.update(new_uvb_par)
             self._str_beam_list = [self._obj_to_str(bobj) for bobj in self._obj_beam_list]
         self._obj_beam_list = []
         self.string_mode = True
@@ -597,9 +505,6 @@ class BeamList:
     def set_obj_mode(self, use_shared_mem: bool = False, check: bool = False):
         """
         Initialize AnalyticBeam and UVBeam objects from string representations.
-
-        For any UVBeams, additional attributes will be set by the :class:`BeamList.uvb_params`
-        dictionary. This overwrites any settings that may have been read from file.
 
         Sets :attr:`~.string_mode` to False.
 
@@ -617,7 +522,6 @@ class BeamList:
             for bid, bstr in enumerate(self._str_beam_list):
                 beam_list.append(self._str_to_obj(bid, bstr, use_shared_mem=use_shared_mem))
             self._obj_beam_list = beam_list
-        self._set_params_on_uvbeams(self._obj_beam_list)
         self._str_beam_list = []
         self.string_mode = False
 

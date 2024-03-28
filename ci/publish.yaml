@@ -2,12 +2,13 @@ name: publish
 channels:
   - conda-forge
 dependencies:
-  - astropy>=5.2
-  - numpy>=1.20
+  - astropy>=6.0
+  - numpy>=1.23
   - pip
-  - pyuvdata>=2.4.1
-  - pyyaml>=5.1
-  - scipy>=1.5
+  - pyuvdata>=2.4.3
+  - pyyaml>=5.4.1
+  - scipy>=1.7.3
+  - setuptools>=61
   - setuptools_scm>=7.0.3
   - psutil
   - pip:

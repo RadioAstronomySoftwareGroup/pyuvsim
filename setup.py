@@ -15,10 +15,10 @@ from branch_scheme import branch_scheme  # noqa
 with io.open('README.md', 'r', encoding='utf-8') as readme_file:
     readme = readme_file.read()
 
-sim_reqs = ['mpi4py>=3.0.0']
-moon_reqs = ['lunarsky>=0.2.1']
-healpix_reqs = ["astropy_healpix>=0.6"]
-casa_reqs = ["python-casacore>=3.3"]
+sim_reqs = ['mpi4py>=3.1.1']
+moon_reqs = ['lunarsky>=0.2.2']
+healpix_reqs = ["astropy_healpix>=1.0.2"]
+casa_reqs = ["python-casacore>=3.5.2"]
 test_reqs = (
     sim_reqs
     + moon_reqs
@@ -47,14 +47,16 @@ setup_args = {
     'scripts': glob.glob('scripts/*'),
     'use_scm_version': {'local_scheme': branch_scheme},
     'include_package_data': True,
+    "python_requires": ">=3.10",
     'install_requires': [
-        'astropy>=5.2',
-        'numpy>=1.20',
+        'astropy>=6.0',
+        'numpy>=1.23',
         'psutil',
         'pyradiosky>=0.2.0',
-        'pyuvdata>=2.4.1',
-        'pyyaml>=5.1',
-        'scipy>=1.5',
+        'pyuvdata>=2.4.3',
+        'pyyaml>=5.4.1',
+        'scipy>=1.7.3',
+        'setuptools>=61',
         'setuptools_scm>=7.0.3',
     ],
     'extras_require': {
@@ -71,9 +73,9 @@ setup_args = {
     'classifiers': ['Development Status :: 5 - Production/Stable',
                     'Intended Audience :: Science/Research',
                     'License :: OSI Approved :: BSD License',
-                    "Programming Language :: Python :: 3.8",
-                    "Programming Language :: Python :: 3.9",
                     "Programming Language :: Python :: 3.10",
+                    "Programming Language :: Python :: 3.11",
+                    "Programming Language :: Python :: 3.12",
                     'Topic :: Scientific/Engineering :: Astronomy'],
 }
 
