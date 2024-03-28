@@ -90,16 +90,11 @@ def test_convert_loop(beam_objs):
 
     assert beamlist2 == beamlist
 
-    if hasattr(beams[0], "_freq_interp_kind"):
-        # this can go away when we require pyuvdata version >= 2.4.2
-        assert beamlist.uvb_params['freq_interp_kind'] == 'linear'
-
     for bs in beamlist:
         assert isinstance(bs, str)
     assert beamlist._obj_beam_list == []
 
-    # Convert strings to beams. Need to set additional parameters for comparison.
-    beamlist._set_params_on_uvbeams(beams)
+    # Convert strings to beams.
     beamlist.set_obj_mode()
     for bi, b in enumerate(beamlist):
         assert b == beams[bi]
@@ -149,8 +144,6 @@ def test_object_mode(beam_objs, tmp_path):
         ):
             beamlist.set_obj_mode()
 
-    beamlist._set_params_on_uvbeams(beamlist._obj_beam_list)
-
     # Error if converting to string mode without beam_paths:
     beamlist[0].extra_keywords.pop('beam_path')
     with pytest.raises(ValueError, match='Need to set '):
@@ -170,26 +163,9 @@ def test_string_mode(beam_objs):
     beamlist.set_str_mode()
 
     uvb = beams[0]
-    if hasattr(beams[0], "_freq_interp_kind"):
-        # this can go away when we require pyuvdata version >= 2.4.2
-        uvb.freq_interp_kind = 'quartic'
-
-        with pytest.raises(ValueError, match='UVBeam parameters do not'):
-            beamlist.append(uvb)
-
-        uvb.freq_interp_kind = beamlist.uvb_params['freq_interp_kind']
-
     beamlist.append(uvb)
 
     assert isinstance(beamlist[-1], str)
-    beamlist.set_obj_mode()
-
-    # Check that parameters are set properly.
-    try:
-        new_pars = beamlist._scrape_uvb_params(beamlist._obj_beam_list, strict=True)
-        assert new_pars == beamlist.uvb_params
-    except ValueError:
-        pytest.fail("something went wrong with scraping uvb params")
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
@@ -207,24 +183,6 @@ def test_comparison(beam_objs):
     beamlist.set_obj_mode()
     beamlist2.set_obj_mode()
     assert beamlist == beamlist2
-
-
-def test_no_overwrite(beam_objs):
-    if not hasattr(beam_objs[0], "_freq_interp_kind"):
-        # this can go away when we require pyuvdata version >= 2.4.2
-        pytest.skip()
-    # Ensure UVBeam keywords are not overwritten by BeamList.uvb_params
-    # while in object mode.
-    newbeams = beam_objs
-    beamlist = pyuvsim.BeamList(newbeams)
-    assert beamlist.uvb_params['freq_interp_kind'] == 'cubic'
-
-    uvb = newbeams[0].copy()
-    uvb.freq_interp_kind = 'quintic'
-
-    beamlist.append(uvb)
-    assert uvb.freq_interp_kind == 'quintic'
-    assert beamlist.uvb_params['freq_interp_kind'] == 'cubic'
 
 
 def test_beamlist_errors(beam_objs):

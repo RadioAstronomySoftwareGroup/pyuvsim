@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: [3.8, 3.9, "3.10", "3.11"]
+        python-version: ["3.10", "3.11", "3.12"]
         env_name: [pyuvsim_tests_openmpi]
         include:
           - env_name: pyuvsim_tests_mpich
@@ -36,7 +36,7 @@ jobs:
           fetch-depth: 1
 
       - name: Setup Minimamba
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-variant: Mambaforge
           miniforge-version: latest
@@ -63,7 +63,7 @@ jobs:
           python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: Upload Coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -75,7 +75,7 @@ jobs:
   # do this on min_deps because it's hard to get mpi4py to install from pip
   min_deps:
     env:
-      PYTHON: "3.10"
+      PYTHON: "3.11"
     name: Min Deps Testing
     runs-on: ubuntu-latest
     steps:
@@ -106,7 +106,7 @@ jobs:
         run: |
           python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
 
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v4
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -115,7 +115,7 @@ jobs:
   min_versions:
     env:
       ENV_NAME: min_versions
-      PYTHON: 3.8
+      PYTHON: "3.10"
     name: Min Versions Testing
     defaults:
       run:
@@ -127,7 +127,7 @@ jobs:
         with:
           fetch-depth: 1
       - name: Setup Minimamba
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-variant: Mambaforge
           miniforge-version: latest
@@ -153,7 +153,7 @@ jobs:
         run: |
           python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v4
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -164,7 +164,7 @@ jobs:
   warning_test:
     env:
       ENV_NAME: pyuvsim_tests_mpich
-      PYTHON: 3.9
+      PYTHON: "3.11"
     name: Warning Test
     runs-on: ubuntu-latest
     defaults:
@@ -177,7 +177,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Minimamba
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-variant: Mambaforge
           miniforge-version: latest
@@ -204,7 +204,7 @@ jobs:
           python -m pytest -W error --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: Upload Coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required

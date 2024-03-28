@@ -1,0 +1,19 @@
+filing:
+  outdir: '.'
+  outfile_name: 'lunar_gauss'
+  output_format: 'uvh5'
+freq:
+  Nfreqs: 1
+  channel_width: 1000000.0
+  start_freq: 100000000.0
+sources:
+  catalog: "../test_catalogs/one_distant_point_2458178.5.txt"
+telescope:
+  array_layout: 'baseline_moon.csv'
+  telescope_config_name: 'bl_single_gauss.yaml'
+time:
+  Ntimes: 144
+  integration_time: 16800.0
+  start_time: 2458160.0
+select:
+  redundant_threshold: 0.1

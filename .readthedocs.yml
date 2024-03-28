@@ -15,6 +15,8 @@ build:
 sphinx:
   builder: html
   configuration: docs/conf.py
+# might want to do this in future:
+  # fail_on_warning: true
 
 # Do not build the docs in additional formats (e.g. PDF and ePub), use default
 formats: []

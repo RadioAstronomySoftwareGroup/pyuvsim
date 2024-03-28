@@ -677,7 +677,18 @@ def test_param_reader_errors(subdict, error, msg):
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
-def test_tele_parser():
+@pytest.mark.parametrize(
+    ("world", "selenoid"),
+    [
+        (None, None),
+        ("moon", "SPHERE"),
+        ("moon", "GSFC"),
+        ("moon", "GRAIL23"),
+        ("moon", "CE-1-LAM-GEO"),
+        ("moon", None),
+    ]
+)
+def test_tele_parser(world, selenoid):
     """
     Test minimal dict passed (not covered by param reader tests)
     """
@@ -686,10 +697,22 @@ def test_tele_parser():
         'telescope_location': '(-30.72152777777791, 21.428305555555557, 1073.0000000093132)',
         'telescope_name': "foo",
     }
+    if world is not None:
+        pytest.importorskip("lunarsky")
+        tdict["world"] = world
+        if selenoid is not None:
+            tdict["ellipsoid"] = selenoid
+
     tpars, blist, _ = pyuvsim.simsetup.parse_telescope_params(tdict)
 
     assert tpars['Nants_data'] == 6
     assert len(blist) == 0
+    if world is not None:
+        assert tpars["world"] == world
+        if selenoid is not None:
+            assert tpars["ellipsoid"] == selenoid
+        else:
+            assert tpars["ellipsoid"] == "SPHERE"
 
 
 @pytest.mark.parametrize(
@@ -726,6 +749,17 @@ def test_tele_parser():
             },
             ValueError,
             'array_layout must be a string or have options that parse as a dict.'
+        ),
+        (
+            {
+                'array_layout': os.path.join(SIM_DATA_PATH, 'test_layout_6ant.csv'),
+                'telescope_name': "foo",
+                'telescope_location':
+                    '(-30.72152777777791, 21.428305555555557, 1073.0000000093132)',
+                'world': "tatooine",
+            },
+            ValueError,
+            'Invalid world tatooine'
         ),
     ],
 )
@@ -1594,12 +1628,18 @@ def test_moon_lsts():
     times, time_inds = np.unique(uv_obj.time_array, return_inverse=True)
     assert np.all(lst_inds == time_inds)
 
-    # Confirm that the change in LST makes sense for a lunar month.
-    dlst = np.degrees(lsts[1] - lsts[0]) / 15 * 3600  # Hours per step.
-    tstep_per_lunar_month = 28 * 24 * 3600 / uv_obj.integration_time[0]
-    sec_per_tstep = 24 * 3600 / tstep_per_lunar_month
+    # Confirm that the LSTs match the zenith RAs for the telescope_location
+    loc = MoonLocation.from_selenocentric(*uv_obj.telescope_location, unit='m')
+    times_quant = LTime(times, format='jd', location=loc)
+    skycrds = SkyCoord(
+        alt=["90d"] * times.size,
+        az=["0d"] * times.size,
+        frame="lunartopo",
+        obstime=times_quant,
+        location=loc
+    ).transform_to('icrs')
 
-    assert np.isclose(dlst, sec_per_tstep, rtol=1e-2)
+    assert np.allclose(skycrds.ra.rad, lsts, atol=1e-7)
 
     # Unset the lst array and confirm that the call from _complete_uvdata returns the same.
     backup_lst_array = uv_obj.lst_array.copy()
@@ -1644,6 +1684,7 @@ def test_skymodeldata_with_quantity_stokes(unit, cat_with_some_pols):
         sky = cat_with_some_pols
     else:
         pytest.importorskip('analytic_diffuse')
+        pytest.importorskip("astropy_healpix")
         sky, _ = pyuvsim.simsetup.create_mock_catalog(
             Time.now(), arrangement='diffuse', diffuse_model='monopole', map_nside=16
         )
@@ -1767,23 +1808,6 @@ def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
     assert smd_copy.ra.base is smd.ra.base
     assert smd_copy.dec.base is smd.dec.base
     assert smd_copy.stokes_I.base is smd.stokes_I.base
-
-
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-def test_set_lsts_errors():
-    # Error cases on set_lsts function.
-    uv0 = UVData.from_file(longbl_uvfits_file)
-    uv0.use_future_array_shapes()
-    uv0.lst_array = None
-
-    uv0.extra_keywords['world'] = 'moon'
-    if not hasmoon:
-        with pytest.raises(ValueError, match="Cannot construct lsts for MoonLocation"):
-            pyuvsim.simsetup._set_lsts_on_uvdata(uv0)
-
-    uv0.extra_keywords['world'] = 'tatooine'
-    with pytest.raises(ValueError, match="Invalid world tatooine."):
-        pyuvsim.simsetup._set_lsts_on_uvdata(uv0)
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")

@@ -21,7 +21,6 @@ import warnings
 import astropy.units as units
 import numpy as np
 import pyradiosky
-import pyuvdata
 import yaml
 from astropy.coordinates import (ICRS, AltAz, Angle, EarthLocation, Latitude,
                                  Longitude, SkyCoord)
@@ -57,7 +56,6 @@ except ImportError:
 try:
     from lunarsky import LunarTopo, MoonLocation
     from lunarsky import SkyCoord as LunarSkyCoord
-    from lunarsky import Time as LTime
 
     hasmoon = True
 except ImportError:
@@ -173,26 +171,6 @@ def _config_str_to_dict(config_str):
     param_dict['obs_param_file'] = os.path.basename(config_str)
 
     return param_dict
-
-
-def _set_lsts_on_uvdata(uv_obj):
-    """Set the LSTs on a :class:`pyuvdata.UVData` object, with handling for MoonLocations."""
-    # If the telescope location is a MoonLocation,
-    # then uv_obj.extra_keywords['world'] == 'moon'.
-    world = uv_obj.extra_keywords.get('world', 'earth')
-
-    if world == 'earth':
-        uv_obj.set_lsts_from_time_array()
-    elif world == 'moon':
-        if not hasmoon:
-            raise ValueError("Cannot construct lsts for MoonLocation without lunarsky module")
-        un_jds, inv = np.unique(uv_obj.time_array, return_inverse=True)
-        loc = MoonLocation(*uv_obj.telescope_location, unit='m')
-        times = LTime(un_jds, format='jd', scale='utc', location=loc)
-        uv_obj.lst_array = times.sidereal_time('apparent').rad[inv]
-    else:
-        raise ValueError(f"Invalid world {world}.")
-    return uv_obj
 
 
 def _create_catalog_diffuse(
@@ -1119,10 +1097,6 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
         **bl_options,
     )
 
-    for key in beam_list_obj.uvb_params.keys():
-        if key in telconfig:
-            beam_list_obj.uvb_params[key] = telconfig[key]
-
     return beam_list_obj
 
 
@@ -1163,7 +1137,7 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
         * `antenna_location_file`: Path to csv layout file
         * `telescope_name`: observatory name
         * `x_orientation`: physical orientation of the dipole labelled as "x"
-        * `world`: Either "earth" or "moon".
+        * `world`: Either "earth" or "moon" (requires lunarsky).
     beam_list : :class:`pyuvsim.BeamList`
         This is a BeamList object in string mode.
         The strings provide either paths to beamfits files or the specifications to make
@@ -1190,6 +1164,12 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
             telconfig = yaml.safe_load(yf)
         telescope_location_latlonalt = ast.literal_eval(telconfig['telescope_location'])
         world = telconfig.pop('world', None)
+        # get the lunar ellipsoid. Default to None for earth or SPHERE for moon
+        if world == "moon":
+            ellipsoid = telconfig.pop('ellipsoid', "SPHERE")
+        else:
+            ellipsoid = telconfig.pop('ellipsoid', None)
+
         tele_params['telescope_name'] = telconfig['telescope_name']
     else:
         # if not provided, get bare-minumum keys from tele_params
@@ -1207,11 +1187,30 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
         if isinstance(telescope_location_latlonalt, str):
             telescope_location_latlonalt = ast.literal_eval(telescope_location_latlonalt)
         world = tele_params.pop('world', None)
+        # get the lunar ellipsoid. Default to None for earth or SPHERE for moon
+        if world == "moon":
+            ellipsoid = tele_params.pop('ellipsoid', "SPHERE")
+        else:
+            ellipsoid = tele_params.pop('ellipsoid', None)
 
-    telescope_location = np.array(telescope_location_latlonalt)
-    telescope_location[0] *= np.pi / 180.
-    telescope_location[1] *= np.pi / 180.  # Convert to radians
-    tele_params['telescope_location'] = uvutils.XYZ_from_LatLonAlt(*telescope_location)
+    lat_rad = telescope_location_latlonalt[0] * np.pi / 180.
+    long_rad = telescope_location_latlonalt[1] * np.pi / 180.
+    alt = telescope_location_latlonalt[2]
+
+    if world == "moon":
+        frame = "mcmf"
+    elif world == "earth" or world is None:
+        frame = "itrs"
+    else:
+        raise ValueError(f"Invalid world {world}")
+    tele_params["telescope_location"] = uvutils.XYZ_from_LatLonAlt(
+        latitude=lat_rad,
+        longitude=long_rad,
+        altitude=alt,
+        frame=frame,
+        ellipsoid=ellipsoid,
+    )
+
     telescope_name = tele_params['telescope_name']
 
     # get array layout
@@ -1251,12 +1250,21 @@ def parse_telescope_params(tele_params, config_path='', freq_range=None, force_b
     return_dict['antenna_names'] = np.array(antnames.tolist())
     return_dict['antenna_numbers'] = np.array(antnums)
     antpos_enu = np.vstack((E, N, U)).T
-    lat, lon, alt = telescope_location
     return_dict['antenna_positions'] = (
-        uvutils.ECEF_from_ENU(antpos_enu, latitude=lat, longitude=lon, altitude=alt)
-        - tele_params['telescope_location'])
+        uvutils.ECEF_from_ENU(
+            antpos_enu,
+            latitude=lat_rad,
+            longitude=long_rad,
+            altitude=alt,
+            frame=frame,
+            ellipsoid=ellipsoid,
+        )
+        - tele_params['telescope_location']
+    )
     if world is not None:
         return_dict['world'] = world
+    return_dict['telescope_frame'] = frame
+    return_dict['ellipsoid'] = ellipsoid
 
     return_dict['array_layout'] = layout_csv
     return_dict['telescope_location'] = np.asarray(tele_params['telescope_location'])
@@ -1753,10 +1761,8 @@ def initialize_uvdata_from_params(
     if 'Npols' not in uvparam_dict:
         uvparam_dict['Npols'] = len(uvparam_dict['polarization_array'])
 
-    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
-        uvparam_name = "cat_name"
-    else:
-        uvparam_name = "object_name"
+    uvparam_name = "cat_name"
+
     if "cat_name" not in param_dict and "object_name" not in param_dict:
         tloc = EarthLocation.from_geocentric(*uvparam_dict['telescope_location'], unit='m')
         time = Time(uvparam_dict['time_array'][0], scale='utc', format='jd')
@@ -1775,6 +1781,11 @@ def initialize_uvdata_from_params(
 
     uv_obj = UVData()
     uv_obj._set_future_array_shapes()
+
+    # Setting the frame and acceptable range for the moon
+    uv_obj._telescope_location.frame = uvparam_dict['telescope_frame']
+    uv_obj._telescope_location.ellipsoid = uvparam_dict['ellipsoid']
+
     # use the __iter__ function on UVData to get list of UVParameters on UVData
     valid_param_names = [getattr(uv_obj, param).name for param in uv_obj]
     for k in valid_param_names:
@@ -1801,20 +1812,14 @@ def initialize_uvdata_from_params(
     uv_obj.ant_1_array, uv_obj.ant_2_array = uv_obj.baseline_to_antnums(uv_obj.baseline_array)
 
     logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
-    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
+    cat_id = uv_obj._add_phase_center(
+        cat_name=uvparam_dict["cat_name"], cat_type="unprojected"
+    )
+    uv_obj.phase_center_id_array = np.full(uv_obj.Nblts, cat_id, dtype=int)
 
-        cat_id = uv_obj._add_phase_center(
-            cat_name=uvparam_dict["cat_name"], cat_type="unprojected"
-        )
-        uv_obj.phase_center_id_array = np.full(uv_obj.Nblts, cat_id, dtype=int)
-
-        _set_lsts_on_uvdata(uv_obj)
-        # set the apparent coordinates on the object
-        uv_obj._set_app_coords_helper()
-
-    else:
-        uv_obj._set_drift()
-        _set_lsts_on_uvdata(uv_obj)
+    uv_obj.set_lsts_from_time_array()
+    # set the apparent coordinates on the object
+    uv_obj._set_app_coords_helper()
 
     # add other required metadata to allow select to work without errors
     # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
@@ -1824,6 +1829,7 @@ def initialize_uvdata_from_params(
     logger.info(f"Integration Time: {uv_obj.integration_time.nbytes / 1024**3:.2f} GB")
     logger.info(f"       Ant1Array: {uv_obj.ant_1_array.nbytes / 1024**3:.2f} GB")
 
+    uv_obj.set_lsts_from_time_array()
     uv_obj.set_uvws_from_antenna_positions()
     logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
     logger.info("Set UVWs")
@@ -1909,7 +1915,7 @@ def _complete_uvdata(uv_in, inplace=False, check_kw=None):
     # but retain this functionality for now.
     # in most cases should be a no-op anyway.
     if uv_obj.lst_array is None:
-        _set_lsts_on_uvdata(uv_obj)
+        uv_obj.set_lsts_from_time_array()
 
     # Clear existing data, if any.
     _shape = (uv_obj.Nblts, uv_obj.Nfreqs, uv_obj.Npols)
