@@ -1097,10 +1097,6 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
         **bl_options,
     )
 
-    for key in beam_list_obj.uvb_params.keys():
-        if key in telconfig:
-            beam_list_obj.uvb_params[key] = telconfig[key]
-
     return beam_list_obj
 
 

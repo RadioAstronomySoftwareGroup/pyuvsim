@@ -16,14 +16,14 @@ jobs:
         shell: bash -l {0}
     env:
       ENV_NAME: publish
-      PYTHON: 3.9
+      PYTHON: "3.11"
     steps:
       - uses: actions/checkout@main
         with:
           fetch-depth: 0
 
       - name: Setup Minimamba
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-variant: Mambaforge
           miniforge-version: latest

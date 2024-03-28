@@ -2,24 +2,25 @@ name: pyuvsim_tests_mpich
 channels:
   - conda-forge
 dependencies:
-  - astropy>=5.2
-  - astropy-healpix>=0.6
+  - astropy>=6.0
+  - astropy-healpix>=1.0.2
   - coverage
   - line_profiler
   - mpich
-  - mpi4py>=3.0.0
-  - numpy>=1.20
+  - mpi4py>=3.1.1
+  - numpy>=1.23
   - pip
   - psutil
-  - python-casacore>=3.3
+  - python-casacore>=3.5.2
   - pytest
   - pytest-cov
   - pytest-xdist
-  - pyuvdata>=2.4.1
-  - pyyaml>=5.1
-  - scipy>=1.5
+  - pyuvdata>=2.4.3
+  - pyyaml>=5.4.1
+  - scipy>=1.7.3
+  - setuptools>=61
   - setuptools_scm>=7.0.3
   - pip:
     - pyradiosky>=0.2
-    - lunarsky>=0.2.1
+    - lunarsky>=0.2.2
     - git+https://github.com/aelanman/analytic_diffuse

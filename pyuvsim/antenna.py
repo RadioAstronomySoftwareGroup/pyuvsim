@@ -115,11 +115,7 @@ class Antenna:
             freq_interp_kind = bl_freq_interp_kind
 
         if freq_interp_kind is not None:
-            if hasattr(beam, "_freq_interp_kind"):
-                # this can go away when we require pyuvdata version >= 2.4.2
-                beam.freq_interp_kind = freq_interp_kind
-            else:
-                interp_kwargs["freq_interp_kind"] = freq_interp_kind
+            interp_kwargs["freq_interp_kind"] = freq_interp_kind
 
         interp_data, _ = beam.interp(**interp_kwargs)
 
