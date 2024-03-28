@@ -677,7 +677,18 @@ def test_param_reader_errors(subdict, error, msg):
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
-def test_tele_parser():
+@pytest.mark.parametrize(
+    ("world", "selenoid"),
+    [
+        (None, None),
+        ("moon", "SPHERE"),
+        ("moon", "GSFC"),
+        ("moon", "GRAIL23"),
+        ("moon", "CE-1-LAM-GEO"),
+        ("moon", None),
+    ]
+)
+def test_tele_parser(world, selenoid):
     """
     Test minimal dict passed (not covered by param reader tests)
     """
@@ -686,10 +697,22 @@ def test_tele_parser():
         'telescope_location': '(-30.72152777777791, 21.428305555555557, 1073.0000000093132)',
         'telescope_name': "foo",
     }
+    if world is not None:
+        pytest.importorskip("lunarsky")
+        tdict["world"] = world
+        if selenoid is not None:
+            tdict["ellipsoid"] = selenoid
+
     tpars, blist, _ = pyuvsim.simsetup.parse_telescope_params(tdict)
 
     assert tpars['Nants_data'] == 6
     assert len(blist) == 0
+    if world is not None:
+        assert tpars["world"] == world
+        if selenoid is not None:
+            assert tpars["ellipsoid"] == selenoid
+        else:
+            assert tpars["ellipsoid"] == "SPHERE"
 
 
 @pytest.mark.parametrize(
