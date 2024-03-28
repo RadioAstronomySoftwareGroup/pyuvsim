@@ -7,9 +7,12 @@
 - Added support for all UVBeam readable files rather than just beamfits.
 
 ### Changed
-- Require pyuvdata >= 2.4.1 to properly support lunar sims. Pass frame information
+- Require pyuvdata >= 2.4.3 to properly support lunar sims. Pass frame information
 to pyuvdata calls now that they support lunar frames.
-- Require scipy>1.5.
+- Updated minimum dependency versions: astropy>=6.0, numpy>=1.23, pyyaml>=5.4.1,
+scipy>=1.7.3, python>=3.10
+- Updated minimum optional dependency versions: python-casacore>=3.5.2,
+lunarsky>=0.2.2, mpi>=3.1.1, astropy-healpix>=1.0.2
 - Moved all necessary mpi broadcasts calls into `run_uvdata_uvsim` to make it more user friendly.
 - Changed the default file type for writing out UVData files to be the uvh5
 format rather than the uvfits format because it does not require phasing.
