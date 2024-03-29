@@ -7,15 +7,12 @@ import os
 import shutil
 
 import numpy as np
-import pyradiosky
 import pytest
-import pyuvdata
 import pyuvdata.tests as uvtest
 import yaml
 from astropy import units
 from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, SkyCoord
 from astropy.time import Time
-from packaging import version  # packaging is installed with setuptools
 from pyradiosky import SkyModel
 from pyradiosky.data import DATA_PATH as SKY_DATA_PATH
 from pyuvdata import UVBeam, UVData
@@ -531,22 +528,7 @@ def test_param_reader():
     uv_in = UVData.from_file(triangle_uvfits_file)
     uv_in.use_future_array_shapes()
 
-    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
-        uv_in.unproject_phase()
-    else:
-        uv_in.flex_spw_id_array = np.zeros_like(uv_in.freq_array, dtype=int)
-        cat_name = uv_in.phase_center_catalog[1]["cat_name"]
-
-        uv_in.multi_phase_center = False
-        uv_in._phase_center_id_array.required = False
-        uv_in._Nphase.required = False
-        uv_in._phase_center_catalog.required = False
-
-        uv_in.Nphase = None
-        uv_in.phase_center_catalog = None
-        uv_in.object_name = cat_name
-        uv_in.phase_center_id_array = None
-        uv_in.unphase_to_drift()
+    uv_in.unproject_phase()
 
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
@@ -614,10 +596,7 @@ def test_param_reader():
 
     uv_obj.reorder_blts(order="time", minor_order="baseline")
     # renumber/rename the phase centers so the equality check will pass.
-    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
-        uv_obj._consolidate_phase_center_catalogs(other=uv_in, ignore_name=True)
-    else:
-        uv_in.object_name = uv_obj.object_name
+    uv_obj._consolidate_phase_center_catalogs(other=uv_in, ignore_name=True)
 
     assert uv_obj == uv_in
 
@@ -1111,10 +1090,7 @@ def test_param_set_cat_name(key):
 
     param_dict[key] = "foo"
     uv_obj = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
-    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
-        assert uv_obj.phase_center_catalog[0]["cat_name"] == "foo"
-    else:
-        assert uv_obj.object_name == "foo"
+    assert uv_obj.phase_center_catalog[0]["cat_name"] == "foo"
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
@@ -1884,10 +1860,6 @@ def test_skymodeldata_pol_select(inds, cat_with_some_pols):
     assert np.all(full_q[..., inds] == test_q[..., inds])
 
 
-@pytest.mark.skipif(
-    version.parse(pyradiosky.__version__) < version.parse("0.1.3"),
-    reason="requires pyradiosky 0.1.3 or higher",
-)
 def test_skymodeldata_non_icrs(cat_with_some_pols):
     ra, dec = cat_with_some_pols.get_lon_lat()
     gcrs_coord = SkyCoord(ra, dec, frame="gcrs")

@@ -16,7 +16,6 @@ import yaml
 from astropy import units
 from astropy.coordinates import Latitude, Longitude
 from astropy.time import Time
-from packaging import version  # packaging is installed with setuptools
 from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
 from pyuvdata import UVData
 
@@ -41,6 +40,9 @@ def goto_tempdir(tmpdir):
 
 
 @pytest.mark.filterwarnings("ignore:antenna_diameters are not set")
+@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
+@pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
+@pytest.mark.filterwarnings("ignore:Fixing auto-correlations to be be real-only")
 @pytest.mark.parametrize(
     "paramfile", ["param_1time_1src_testcat.yaml", "param_1time_1src_testvot.yaml"]
 )
@@ -49,33 +51,10 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # Test vot and txt catalogs for parameter simulation
     # Compare to reference files.
     uv_ref = UVData()
-    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
-        # if we can, use the new file that has many things fixed
-        uv_ref.read(os.path.join(SIM_DATA_PATH, "testfile_singlesource.uvh5"))
-    else:
-        uv_ref.read(os.path.join(SIM_DATA_PATH, "testfile_singlesource.uvfits"))
-        uv_ref.unphase_to_drift(use_ant_pos=True)
-        uv_ref.reorder_blts()
-        # This is an old file with the bug that added one to the
-        # antenna numbers for uvfits files. Fix them (if pyuvdata is recent)
-        if np.min(np.union1d(uv_ref.ant_1_array, uv_ref.ant_2_array)) > 0:
-            uv_ref.ant_1_array = uv_ref.ant_1_array - 1
-            uv_ref.ant_2_array = uv_ref.ant_2_array - 1
-            uv_ref.antenna_numbers = uv_ref.antenna_numbers - 1
-            uv_ref.baseline_array = uv_ref.antnums_to_baseline(
-                uv_ref.ant_1_array, uv_ref.ant_2_array
-            )
-
-        # set the x_orientation
-        uv_ref.x_orientation = "east"
-
-        # fix the channel width, which doesn't match the channel width in the parameter file
-        uv_ref.channel_width = 1000000.0
-
-        # fix the telescope & instrument name
-        uv_ref.telescope_name = "Triangle"
-        uv_ref.instrument = "Triangle"
-        uv_ref.antenna_diameters = None
+    uv_ref.read(
+        os.path.join(SIM_DATA_PATH, "testfile_singlesource.uvh5"),
+        use_future_array_shapes=True,
+    )
 
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", paramfile)
     # This test obsparam file has "single_source.txt" as its catalog.
@@ -89,13 +68,10 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     ofilepath = os.path.join(path, "tempfile.uvfits")
 
     uv_new = UVData()
-    uv_new.read(ofilepath)
+    uv_new.read(ofilepath, use_future_array_shapes=True)
 
-    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
-        uv_new.unproject_phase(use_ant_pos=True)
-        uv_new._consolidate_phase_center_catalogs(other=uv_ref)
-    else:
-        uv_new.unphase_to_drift(use_ant_pos=True)
+    uv_new.unproject_phase(use_ant_pos=True)
+    uv_new._consolidate_phase_center_catalogs(other=uv_ref)
 
     assert uvutils._check_history_version(uv_new.history, pyradiosky.__version__)
     assert uvutils._check_history_version(uv_new.history, pyuvdata.__version__)
@@ -109,7 +85,6 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
 
     # Reset parts that will deviate
     uv_new.history = uv_ref.history
-    uv_new.object_name = uv_ref.object_name
     uv_ref.dut1 = uv_new.dut1
     uv_ref.gst0 = uv_new.gst0
     uv_ref.rdate = uv_new.rdate
@@ -204,11 +179,6 @@ def test_analytic_diffuse(model, tol, tmpdir):
 @pytest.mark.filterwarnings("ignore:Fixing auto polarization power beams")
 def test_powerbeam_sim(cst_beam):
     new_cst = copy.deepcopy(cst_beam)
-    if hasattr(new_cst, "_freq_interp_kind"):
-        # this can go away when we require pyuvdata version >= 2.4.2
-        new_cst.freq_interp_kind = (
-            "nearest"  # otherwise we get an error about freq interpolation
-        )
     new_cst.efield_to_power()
     beams = BeamList([new_cst] * 4)
     cfg = os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
@@ -299,14 +269,13 @@ def test_run_gleam_uvsim(spectral_type):
     uv_out = pyuvsim.run_uvsim(params, return_uv=True)
     assert uv_out.telescope_name == "Triangle"
 
-    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
-        file_name = f"gleam_triangle_{spectral_type}.uvh5"
-        uv_in = UVData.from_file(os.path.join(SIM_DATA_PATH, file_name))
-        uv_in.use_future_array_shapes()
-        # This just tests that we get the same answer as an earlier run, not that
-        # the data are correct (that's covered in other tests)
-        uv_out.history = uv_in.history
-        assert uv_in == uv_out
+    file_name = f"gleam_triangle_{spectral_type}.uvh5"
+    uv_in = UVData.from_file(os.path.join(SIM_DATA_PATH, file_name))
+    uv_in.use_future_array_shapes()
+    # This just tests that we get the same answer as an earlier run, not that
+    # the data are correct (that's covered in other tests)
+    uv_out.history = uv_in.history
+    assert uv_in == uv_out
 
 
 @pytest.mark.filterwarnings("ignore:The reference_frequency is aliased as `frequency`")
