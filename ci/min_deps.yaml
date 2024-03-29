@@ -8,7 +8,7 @@ dependencies:
   - numpy>=1.23
   - pip
   - pytest
-  - pytest-cov
+  - pytest-cov>=5.0
   - pytest-xdist
   - pyuvdata>=2.4.3
   - pyyaml>=5.4.1

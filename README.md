@@ -101,19 +101,40 @@ Optional:
 If you are developing `pyuvsim`, you will need to download and install the
 repository using `git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim.git`.
 
-If you use conda, you may wish to use a fresh environment, in which case you can
-use the included `environment.yaml` file to make a conda environment with all
-the extra dependencies required for testing/development as well as the
-standard ones using `conda env create -f environment.yml`. If you do not wish to
-make a fresh dedicated environment, you should verify that the environment you
-are using contains the packages listed in that file.
-Then do a developer install of pyuvsim using `pip install -e .` (or
-`pip install --no-deps -e .` if you do not want pip to install any missing
-requirements).
+Navigate into the pyuvsim directory and run `pip install .` or `pip install -e .`
+for a developer install (which makes it so that you don't have to reinstall
+every time you change the code)
+Note that this will attempt to automatically install any missing dependencies.
+If you use anaconda or another package manager you might prefer to first install
+the dependencies as described in [Dependencies](#dependencies) (as well as the
+developer dependencies listed below).
 
-If you do not use conda, after downloading the repository, install using
-`pip install -e .[dev]` to install all the extra dependencies required for
-testing/development as well as the standard ones.
+To install without dependencies, run `pip install --no-deps .`
+(optionally with the `-e` flag as well).
+
+If you want to do development on pyuvsim, in addition to the other dependencies
+you will need the following packages:
+
+* coverage
+* line-profiler
+* pre-commit
+* pytest
+* pytest-cov >= 5.0
+* pypandoc
+* sphinx
+
+One other package, pytest-xdist, is not required, but can be used to speed up running
+the test suite by running tests in parallel. To use it call pytest with the
+```-n auto``` option.
+
+One way to ensure you have all the needed packages is to use the included
+`environment.yaml` file to create a new environment that will
+contain all the optional dependencies along with dependencies required for
+testing and development (```conda env create -f environment.yaml```).
+Alternatively, you can specify `test`, `doc`, or `dev` when installing pyuvdata
+(as in `pip install .[dev]`) to install the packages needed for testing
+(including coverage and linting) and documentation development;
+`dev` includes everything in `test` and `doc`.
 
 Finally, install the pre-commit hook using `pre-commit install` to help prevent
 committing code that does not meet our style guidelines.

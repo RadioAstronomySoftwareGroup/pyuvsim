@@ -1,5 +1,24 @@
 [run]
-omit = */tests/*
+omit =
+    */tests/*
+    */docs/*
+    setup.py
+branch = true
+source =
+    pyuvsim
 
 [report]
-omit = */tests/*
+omit =
+    */tests/*
+    */docs/*
+    setup.py
+
+show_missing = true
+
+[paths]
+source =
+    src
+    */site-packages"
+tests =
+    tests
+    */tests

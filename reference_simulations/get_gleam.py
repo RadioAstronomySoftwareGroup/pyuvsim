@@ -13,7 +13,8 @@ import sys
 import warnings
 
 warnings.warn(
-    "This script is deprecated. Use scripts/download_gleam.py in pyradiosky instead.",
+    "This script is deprecated and it does not download all the required information. "
+    "Use scripts/download_gleam.py in pyradiosky instead.",
     DeprecationWarning,
 )
 try:
