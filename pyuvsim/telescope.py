@@ -136,7 +136,6 @@ class BeamList:
             else:
                 raise ValueError("Invalid beam list: " + str(beam_list))
 
-        # If any UVBeam objects are passed in, set uvb_read_kwargs:
         self.uvb_read_kwargs = uvb_read_kwargs or {}
         self.select_params = select_params or {}
         self.is_consistent = False

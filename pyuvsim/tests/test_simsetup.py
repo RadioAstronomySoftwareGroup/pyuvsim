@@ -681,6 +681,7 @@ def test_param_reader_errors(subdict, error, msg):
     ("world", "selenoid"),
     [
         (None, None),
+        ("earth", None),
         ("moon", "SPHERE"),
         ("moon", "GSFC"),
         ("moon", "GRAIL23"),
@@ -711,8 +712,10 @@ def test_tele_parser(world, selenoid):
         assert tpars["world"] == world
         if selenoid is not None:
             assert tpars["ellipsoid"] == selenoid
-        else:
+        elif world != "earth":
             assert tpars["ellipsoid"] == "SPHERE"
+        else:
+            assert tpars["ellipsoid"] is None
 
 
 @pytest.mark.parametrize(
