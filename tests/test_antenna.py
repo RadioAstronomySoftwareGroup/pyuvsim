@@ -6,7 +6,6 @@ import os
 
 import numpy as np
 import pytest
-import pyuvdata.tests as uvtest
 import yaml
 from astropy import units
 
@@ -19,9 +18,6 @@ def test_jones_set_spline(cst_beam, hera_loc):
     # Run get_beam_jones with spline options.
     array_location = hera_loc
     beam0 = cst_beam.copy()
-    if hasattr(beam0, "_freq_interp_kind"):
-        # this can go away when we require pyuvdata version >= 2.4.2
-        beam0.freq_interp_kind = "cubic"
     telescope_config_name = os.path.join(SIM_DATA_PATH, "mwa128_config.yaml")
     with open(telescope_config_name, "r") as yf:
         telconfig = yaml.safe_load(yf)
@@ -108,35 +104,6 @@ def test_jones_set_interp(cst_beam, hera_loc):
     assert np.all(jones2 == jones0)
     assert np.all(jones1 == jones)
     assert np.all(jones1 == jones0)
-
-
-def test_set_interps(cst_beam, hera_loc):
-    # This test can be removed when we require pyuvdata version >= 2.2.13
-    array_location = hera_loc
-
-    beam = cst_beam.copy()
-    interp_function_attr = hasattr(beam, "_interpolation_function")
-    if interp_function_attr:
-        beam.interpolation_function = None
-
-    beam_list = pyuvsim.BeamList([beam])
-    antenna1 = pyuvsim.Antenna("ant1", 1, np.array([0, 10, 0]), 0)
-    array = pyuvsim.Telescope("telescope_name", array_location, beam_list)
-    source_altaz = np.array([[0.0], [np.pi / 4.0]])
-    freq = 123e6 * units.Hz
-
-    if interp_function_attr:
-        warn_msg = "UVBeam interpolation_function is not set"
-        warn_type = UserWarning
-    else:
-        warn_msg = ""
-        warn_type = None
-
-    with uvtest.check_warnings(warn_type, match=warn_msg):
-        antenna1.get_beam_jones(array, source_altaz, freq)
-
-    if interp_function_attr:
-        assert beam.interpolation_function == "az_za_simple"
 
 
 def test_ant_comparison():

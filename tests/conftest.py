@@ -224,21 +224,6 @@ def _setup_and_teardown_package():
     iers.conf.auto_max_age = 30
 
 
-@pytest.fixture(autouse=True)
-def _ignore_deprecation():
-    warnings.filterwarnings(
-        "ignore",
-        message="Achromatic gaussian beams will not be supported",
-        category=PendingDeprecationWarning,
-    )
-    warnings.filterwarnings(
-        "ignore",
-        message='"initialize_catalog_from_params will not return'
-        " recarray by default in the future.",
-        category=PendingDeprecationWarning,
-    )
-
-
 @pytest.fixture(scope="session")
 def cst_beam():
     beam = UVBeam()
