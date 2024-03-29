@@ -1,8 +1,11 @@
 include *.md
 include LICENSE
-include pyuvsim/VERSION
-include pyuvsim/GIT_INFO
-recursive-include pyuvsim/data *
+include *.bib
+
+recursive-include src/pyuvsim/data *
+
+recursive-include tests *.py
+
 recursive-include docs *
 recursive-include reference_simulations *
 exclude docs/.DS_Store

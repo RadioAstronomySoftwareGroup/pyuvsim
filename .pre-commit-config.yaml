@@ -1,4 +1,4 @@
-exclude: '(^docs/conf.py|^user_data/External_tables/|^pyuvsim/data/.+uvfits|^pyuvsim/data/.+beamfits|^pyuvsim/data/.+hdf5|^pyuvsim/data/.+npz|^pyuvsim/data/.+vot|^benchmarking.+log)'
+exclude: '(^docs/conf.py|^user_data/External_tables/|^src/pyuvsim/data/|^benchmarking.+log)'
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

@@ -13,7 +13,8 @@ dependencies:
   - pypandoc
   - python-casacore>=3.5.2
   - pytest
-  - pytest-cov
+  - pytest-cov>=5.0.0
+  - pytest-xdist
   - pyuvdata>=2.4.3
   - pyyaml>=5.4.1
   - scipy>=1.7.3

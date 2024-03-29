@@ -4,13 +4,25 @@
 
 import glob
 import io
-import sys
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
-# add pyuvsim to our path in order to use the branch_scheme function
-sys.path.append("pyuvsim")
-from branch_scheme import branch_scheme  # noqa
+
+# define the branch scheme. Have to do it here so we don't have to modify the path
+def branch_scheme(version):
+    """
+    Local version scheme that adds the branch name for absolute reproducibility.
+
+    If and when this is added to setuptools_scm this function can be removed.
+    """
+    if version.exact or version.node is None:
+        return version.format_choice("", "+d{time:{time_format}}", time_format="%Y%m%d")
+    else:
+        if version.branch == "main":
+            return version.format_choice("+{node}", "+{node}.dirty")
+        else:
+            return version.format_choice("+{node}.{branch}", "+{node}.{branch}.dirty")
+
 
 with io.open("README.md", "r", encoding="utf-8") as readme_file:
     readme = readme_file.read()
@@ -24,7 +36,7 @@ test_reqs = (
     + moon_reqs
     + casa_reqs
     + healpix_reqs
-    + ["coverage", "line_profiler", "pre-commit", "pytest", "pytest-cov"]
+    + ["coverage", "line-profiler", "pre-commit", "pytest", "pytest-cov>=5.0"]
 )
 doc_reqs = ["sphinx", "pypandoc"]
 
@@ -36,8 +48,8 @@ setup_args = {
     "description": "A comprehensive simulation package for radio interferometers in python",
     "long_description": readme,
     "long_description_content_type": "text/markdown",
-    "package_dir": {"pyuvsim": "pyuvsim"},
-    "packages": ["pyuvsim", "pyuvsim.tests"],
+    "package_dir": {"": "src"},
+    "packages": find_packages(where="src"),
     "scripts": glob.glob("scripts/*"),
     "use_scm_version": {"local_scheme": branch_scheme},
     "include_package_data": True,

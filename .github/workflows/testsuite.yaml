@@ -200,8 +200,8 @@ jobs:
           pip install --no-deps .
 
       - name: Run Tests
-        run: |  # currently cannot use `-n auto` here because pytest-cov causes warnings when used with pytest-xdist
-          python -m pytest -W error --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+        run: |
+          python -m pytest -n auto -W error --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v4
