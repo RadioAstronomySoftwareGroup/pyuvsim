@@ -16,7 +16,7 @@ from . import __version__
 
 def get_version_string():
     """Get the current version string for pyuvsim."""
-    return ('Simulated with pyuvsim version: ' + __version__ + '.')
+    return "Simulated with pyuvsim version: " + __version__ + "."
 
 
 class progsteps:  # noqa This should be named with CapWords convention
@@ -54,17 +54,21 @@ class progsteps:  # noqa This should be named with CapWords convention
         """
         if count >= self.curval + self.step:
             doprint = False
-            if (not self.curval == count):
+            if not self.curval == count:
                 doprint = True
                 self.curval = count
             if doprint:
                 dt = pytime.time() - self.t0
                 frac_done = count / self.maxval
                 self.remain = dt * (1 / frac_done - 1)
-                print(("{:0.2f}% completed. {}  elapsed. "
-                       + "{} remaining. \n").format(
-                    frac_done * 100., str(timedelta(seconds=dt)),
-                    str(timedelta(seconds=self.remain))), flush=True)
+                print(
+                    ("{:0.2f}% completed. {}  elapsed. " + "{} remaining. \n").format(
+                        frac_done * 100.0,
+                        str(timedelta(seconds=dt)),
+                        str(timedelta(seconds=self.remain)),
+                    ),
+                    flush=True,
+                )
 
     def finish(self):
         """Finalize the progress steps info."""
@@ -92,7 +96,7 @@ def altaz_to_zenithangle_azimuth(altitude, azimuth):
     input_alt = np.asarray(altitude)
     input_az = np.asarray(azimuth)
     if input_alt.size != input_az.size:
-        raise ValueError('number of altitude and azimuth values must match.')
+        raise ValueError("number of altitude and azimuth values must match.")
 
     zenith_angle = np.pi / 2 - input_alt
     new_azimuth = np.pi / 2 - input_az
@@ -130,7 +134,7 @@ def zenithangle_azimuth_to_altaz(zenith_angle, azimuth):
     input_za = np.array(zenith_angle)
     input_az = np.array(azimuth)
     if input_za.size != input_az.size:
-        raise ValueError('number of zenith_angle and azimuth values must match.')
+        raise ValueError("number of zenith_angle and azimuth values must match.")
 
     altitude = np.pi / 2 - input_za
     new_azimuth = np.pi / 2 - input_az
@@ -155,9 +159,9 @@ def check_file_exists_and_increment(filepath):
 
     """
     base_filepath, ext = os.path.splitext(filepath)
-    bf_list = base_filepath.split('_')
+    bf_list = base_filepath.split("_")
     if bf_list[-1].isdigit():
-        base_filepath = '_'.join(bf_list[:-1])
+        base_filepath = "_".join(bf_list[:-1])
     n = 0
     while os.path.exists(filepath):
         filepath = "{}_{}".format(base_filepath, n) + ext
@@ -200,27 +204,27 @@ def write_uvdata(
         File path, if return_filename is True
 
     """
-    if 'filing' in param_dict.keys():
-        param_dict = param_dict['filing']
-    if 'outdir' not in param_dict:
-        param_dict['outdir'] = '.'
+    if "filing" in param_dict.keys():
+        param_dict = param_dict["filing"]
+    if "outdir" not in param_dict:
+        param_dict["outdir"] = "."
 
-    if 'outfile_name' not in param_dict or param_dict['outfile_name'] == '':
+    if "outfile_name" not in param_dict or param_dict["outfile_name"] == "":
         outfile_prefix = ""
         outfile_suffix = "results"
-        if 'outfile_prefix' in param_dict:
-            outfile_prefix = param_dict['outfile_prefix']
-        if 'outfile_suffix' in param_dict:
-            outfile_suffix = param_dict['outfile_suffix']
+        if "outfile_prefix" in param_dict:
+            outfile_prefix = param_dict["outfile_prefix"]
+        if "outfile_suffix" in param_dict:
+            outfile_suffix = param_dict["outfile_suffix"]
         outfile_name = "_".join([outfile_prefix, outfile_suffix])
-        outfile_name = os.path.join(param_dict['outdir'], outfile_name)
+        outfile_name = os.path.join(param_dict["outdir"], outfile_name)
     else:
-        outfile_name = os.path.join(param_dict['outdir'], param_dict['outfile_name'])
+        outfile_name = os.path.join(param_dict["outdir"], param_dict["outfile_name"])
 
     _, file_extension = os.path.splitext(outfile_name)
 
-    if 'output_format' in param_dict:
-        out_format = param_dict['output_format']
+    if "output_format" in param_dict:
+        out_format = param_dict["output_format"]
     elif file_extension in [".uvfits", ".uvh5", ".ms"]:
         out_format = file_extension[1:]
     elif out_format is None:
@@ -229,33 +233,31 @@ def write_uvdata(
             "No out format specified for uvdata file. Defaulting to uvh5 (note "
             "this is a defaulting change, it used to default to uvfits)."
         )
-        out_format = 'uvh5'
+        out_format = "uvh5"
 
-    if not os.path.exists(param_dict['outdir']):
-        os.makedirs(param_dict['outdir'])
+    if not os.path.exists(param_dict["outdir"]):
+        os.makedirs(param_dict["outdir"])
 
     if out_format in ["uvfits", "uvh5", "ms"]:
         if not outfile_name.endswith(f".{out_format}"):
             outfile_name = outfile_name + f".{out_format}"
 
-    noclobber = ('clobber' not in param_dict) or not bool(param_dict['clobber'])
+    noclobber = ("clobber" not in param_dict) or not bool(param_dict["clobber"])
     if noclobber:
         outfile_name = check_file_exists_and_increment(outfile_name)
 
     if not quiet:
-        print('Outfile path: ', outfile_name, flush=True)
+        print("Outfile path: ", outfile_name, flush=True)
     if not dryrun:
-        if out_format == 'uvfits':
-            uv_obj.write_uvfits(
-                outfile_name,
-                force_phase=True,
-                fix_autos=fix_autos,
+        if out_format == "uvfits":
+            uv_obj.write_uvfits(outfile_name, force_phase=True, fix_autos=fix_autos)
+        elif out_format == "miriad":
+            uv_obj.write_miriad(
+                outfile_name, clobber=not noclobber, fix_autos=fix_autos
             )
-        elif out_format == 'miriad':
-            uv_obj.write_miriad(outfile_name, clobber=not noclobber, fix_autos=fix_autos)
-        elif out_format == 'uvh5':
+        elif out_format == "uvh5":
             uv_obj.write_uvh5(outfile_name, clobber=not noclobber, fix_autos=fix_autos)
-        elif out_format == 'ms':
+        elif out_format == "ms":
             try:
                 import casacore.tables  # noqa
                 import casacore.tables.tableutil  # noqa
@@ -267,7 +269,8 @@ def write_uvdata(
             uv_obj.write_ms(outfile_name, clobber=not noclobber, fix_autos=fix_autos)
         else:
             raise ValueError(
-                "Invalid output format. Options are 'uvfits', 'uvh5', 'miriad' or 'ms'.")
+                "Invalid output format. Options are 'uvfits', 'uvh5', 'miriad' or 'ms'."
+            )
     if return_filename:
         return outfile_name
 
@@ -282,7 +285,7 @@ def get_avail_memory():
     using psutils methods.
 
     """
-    slurm_key = 'SLURM_MEM_PER_NODE'
+    slurm_key = "SLURM_MEM_PER_NODE"
     if slurm_key in os.environ:
         return float(os.environ[slurm_key]) * 1e6  # MB -> B
 
@@ -336,18 +339,28 @@ def estimate_skymodel_memory_usage(Ncomponents, Nfreqs):
         Estimate of memory usage in bytes
 
     """
-    base_float = [1.5]    # A float
+    base_float = [1.5]  # A float
     base_bool = [True]
     base_str = ["source_name"]
 
-    Ncomp_attrs = {'ra': base_float, 'dec': base_float,
-                   'alt_az': 2 * base_float, 'rise_lst': base_float, 'set_lst': base_float,
-                   'pos_lmn': 3 * base_float, 'name': base_str, 'horizon_mask': base_bool}
-    Ncomp_Nfreq_attrs = {'stokes': 4 * base_float,
-                         'coherency_radec': 4 * base_float,
-                         'coherency_local': 4 * base_float}
+    Ncomp_attrs = {
+        "ra": base_float,
+        "dec": base_float,
+        "alt_az": 2 * base_float,
+        "rise_lst": base_float,
+        "set_lst": base_float,
+        "pos_lmn": 3 * base_float,
+        "name": base_str,
+        "horizon_mask": base_bool,
+    }
+    Ncomp_Nfreq_attrs = {
+        "stokes": 4 * base_float,
+        "coherency_radec": 4 * base_float,
+        "coherency_local": 4 * base_float,
+    }
 
     mem_est = np.sum([sys.getsizeof(v) * Ncomponents for k, v in Ncomp_attrs.items()])
-    mem_est += np.sum([sys.getsizeof(v) * Ncomponents * Nfreqs
-                       for k, v in Ncomp_Nfreq_attrs.items()])
+    mem_est += np.sum(
+        [sys.getsizeof(v) * Ncomponents * Nfreqs for k, v in Ncomp_Nfreq_attrs.items()]
+    )
     return mem_est

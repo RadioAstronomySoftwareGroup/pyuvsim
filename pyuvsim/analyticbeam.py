@@ -8,7 +8,7 @@ import pyuvdata.utils as uvutils
 from astropy.constants import c as speed_of_light
 from scipy.special import j1
 
-c_ms = speed_of_light.to('m/s').value
+c_ms = speed_of_light.to("m/s").value
 
 
 def diameter_to_sigma(diam, freqs):
@@ -78,25 +78,29 @@ class AnalyticBeam:
 
     """
 
-    supported_types = ['uniform', 'gaussian', 'airy']
+    supported_types = ["uniform", "gaussian", "airy"]
 
-    def __init__(self, type_, sigma=None, diameter=None, spectral_index=0.0, ref_freq=None):
+    def __init__(
+        self, type_, sigma=None, diameter=None, spectral_index=0.0, ref_freq=None
+    ):
         if type_ in self.supported_types:
             self.type = type_
         else:
-            raise ValueError('type not recognized')
+            raise ValueError("type not recognized")
 
         self.sigma = sigma
         if (spectral_index != 0.0) and (ref_freq is None):
-            raise ValueError("ref_freq must be set for nonzero gaussian beam spectral index")
+            raise ValueError(
+                "ref_freq must be set for nonzero gaussian beam spectral index"
+            )
         elif ref_freq is None:
             ref_freq = 1.0
         self.ref_freq = ref_freq
         self.spectral_index = spectral_index
         self.diameter = diameter
-        self.data_normalization = 'peak'
-        self.freq_interp_kind = 'linear'
-        self.beam_type = 'efield'
+        self.data_normalization = "peak"
+        self.freq_interp_kind = "linear"
+        self.beam_type = "efield"
 
     def peak_normalize(self):
         """Do nothing, mocks the :meth:`pyuvdata.UVBeam.peak_normalize` method."""
@@ -104,17 +108,13 @@ class AnalyticBeam:
 
     def efield_to_power(self):
         """Tell :meth:`~.interp` to return values corresponding with a power beam."""
-        self.beam_type = 'power'
-        pol_strings = ['XX', 'XY', 'YX', 'YY']
-        self.polarization_array = np.array([uvutils.polstr2num(ps.upper()) for ps in pol_strings])
+        self.beam_type = "power"
+        pol_strings = ["XX", "XY", "YX", "YY"]
+        self.polarization_array = np.array(
+            [uvutils.polstr2num(ps.upper()) for ps in pol_strings]
+        )
 
-    def interp(
-        self,
-        az_array,
-        za_array,
-        freq_array,
-        **kwargs,
-    ):
+    def interp(self, az_array, za_array, freq_array, **kwargs):
         """
         Evaluate the primary beam at given sky coordinates and frequencies.
 
@@ -150,12 +150,14 @@ class AnalyticBeam:
 
         """
         if az_array.ndim > 1 or za_array.ndim > 1 or freq_array.ndim > 1:
-            raise ValueError("az_array, za_array and freq_array must all be one dimensional.")
+            raise ValueError(
+                "az_array, za_array and freq_array must all be one dimensional."
+            )
 
         if az_array.shape != za_array.shape:
             raise ValueError("az_array and za_array must have the same shape.")
 
-        if self.type == 'uniform':
+        if self.type == "uniform":
             interp_data = np.zeros((2, 2, freq_array.size, az_array.size), dtype=float)
             interp_data[1, 0, :, :] = 1
             interp_data[0, 1, :, :] = 1
@@ -166,7 +168,7 @@ class AnalyticBeam:
             values = interp_data[0, 0]
 
             interp_basis_vector = None
-        elif self.type == 'gaussian':
+        elif self.type == "gaussian":
             if (self.diameter is None) and (self.sigma is None):
                 raise ValueError(
                     "Antenna diameter (meters) or sigma (radians) needed for gaussian beams."
@@ -178,37 +180,42 @@ class AnalyticBeam:
             if self.diameter is not None:
                 sigmas = diameter_to_sigma(self.diameter, freq_array)
             elif self.sigma is not None:
-                sigmas = self.sigma * (freq_array / self.ref_freq) ** self.spectral_index
-            values = np.exp(-(za_array[np.newaxis, ...] ** 2) / (2 * sigmas[:, np.newaxis] ** 2))
+                sigmas = (
+                    self.sigma * (freq_array / self.ref_freq) ** self.spectral_index
+                )
+            values = np.exp(
+                -(za_array[np.newaxis, ...] ** 2) / (2 * sigmas[:, np.newaxis] ** 2)
+            )
             interp_data[1, 0, :, :] = values
             interp_data[0, 1, :, :] = values
             interp_basis_vector = None
-        elif self.type == 'airy':
+        elif self.type == "airy":
             if self.diameter is None:
-                raise ValueError("Antenna diameter needed for airy beam -- units: meters")
+                raise ValueError(
+                    "Antenna diameter needed for airy beam -- units: meters"
+                )
             interp_data = np.zeros((2, 2, freq_array.size, az_array.size), dtype=float)
             za_grid, f_grid = np.meshgrid(za_array, freq_array)
-            xvals = self.diameter / 2. * np.sin(za_grid) * 2. * np.pi * f_grid / c_ms
+            xvals = self.diameter / 2.0 * np.sin(za_grid) * 2.0 * np.pi * f_grid / c_ms
             values = np.zeros_like(xvals)
-            nz = xvals != 0.
-            ze = xvals == 0.
-            values[nz] = 2. * j1(xvals[nz]) / xvals[nz]
-            values[ze] = 1.
+            nz = xvals != 0.0
+            ze = xvals == 0.0
+            values[nz] = 2.0 * j1(xvals[nz]) / xvals[nz]
+            values[ze] = 1.0
             interp_data[1, 0, :, :] = values
             interp_data[0, 1, :, :] = values
             interp_basis_vector = None
         else:
-            raise ValueError('no interp for this type: {}'.format(self.type))
+            raise ValueError("no interp for this type: {}".format(self.type))
 
-        if self.beam_type == 'power':
+        if self.beam_type == "power":
             # Cross-multiplying feeds, adding vector components
             pairs = [(i, j) for i in range(2) for j in range(2)]
             power_data = np.zeros((1, 4) + values.shape, dtype=float)
             for pol_i, pair in enumerate(pairs):
                 power_data[:, pol_i] = (
-                    (interp_data[0, pair[0]] * np.conj(interp_data[0, pair[1]]))
-                    + (interp_data[1, pair[0]] * np.conj(interp_data[1, pair[1]]))
-                )
+                    interp_data[0, pair[0]] * np.conj(interp_data[0, pair[1]])
+                ) + (interp_data[1, pair[0]] * np.conj(interp_data[1, pair[1]]))
             interp_data = power_data
 
         return interp_data, interp_basis_vector
@@ -217,13 +224,11 @@ class AnalyticBeam:
         """Define equality for Analytic Beams."""
         if not isinstance(other, self.__class__):
             return False
-        if self.type == 'gaussian':
-            return ((self.type == other.type)
-                    and (self.sigma == other.sigma))
-        elif self.type == 'uniform':
-            return other.type == 'uniform'
-        elif self.type == 'airy':
-            return ((self.type == other.type)
-                    and (self.diameter == other.diameter))
+        if self.type == "gaussian":
+            return (self.type == other.type) and (self.sigma == other.sigma)
+        elif self.type == "uniform":
+            return other.type == "uniform"
+        elif self.type == "airy":
+            return (self.type == other.type) and (self.diameter == other.diameter)
         else:
             return False

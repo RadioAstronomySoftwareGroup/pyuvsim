@@ -16,7 +16,7 @@ from pyuvdata import UVData
 from pyuvsim import utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
-triangle_uvfits_file = os.path.join(SIM_DATA_PATH, '28m_triangle_10time_10chan.uvfits')
+triangle_uvfits_file = os.path.join(SIM_DATA_PATH, "28m_triangle_10time_10chan.uvfits")
 
 
 def test_altaz_to_za_az():
@@ -86,13 +86,17 @@ def test_single_za_az_to_altaz():
 
 
 def test_altaz_za_az_errors():
-    with pytest.raises(ValueError, match='number of altitude and azimuth values must match.'):
+    with pytest.raises(
+        ValueError, match="number of altitude and azimuth values must match."
+    ):
         simutils.altaz_to_zenithangle_azimuth(0, [0, np.pi / 2])
-    with pytest.raises(ValueError, match='number of zenith_angle and azimuth values must match.'):
+    with pytest.raises(
+        ValueError, match="number of zenith_angle and azimuth values must match."
+    ):
         simutils.zenithangle_azimuth_to_altaz(0, [0, np.pi / 2])
 
 
-@pytest.mark.parametrize('ext', ['.ext', '.uvfits', '.uvh5', '.yaml', ''])
+@pytest.mark.parametrize("ext", [".ext", ".uvfits", ".uvh5", ".yaml", ""])
 def test_file_namer(tmpdir, ext):
     """
     File name incrementer utility, with extensions.
@@ -100,8 +104,8 @@ def test_file_namer(tmpdir, ext):
     fnames = []
     for i in range(111):
         fname = str(tmpdir.join(f"file_{i}{ext}"))
-        with open(fname, 'w') as f:
-            f.write(' ')
+        with open(fname, "w") as f:
+            f.write(" ")
         fnames.append(fname)
     existing_file = fnames[0]
     new_filepath = simutils.check_file_exists_and_increment(existing_file)
@@ -113,17 +117,17 @@ def test_file_namer(tmpdir, ext):
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
-@pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5', 'ms'])
+@pytest.mark.parametrize("save_format", [None, "uvfits", "miriad", "uvh5", "ms"])
 def test_write_uvdata(save_format, tmpdir):
-    """ Test function that defines filenames from parameter dict """
+    """Test function that defines filenames from parameter dict"""
     if save_format == "ms":
         pytest.importorskip("casacore")
 
     uv = UVData.from_file(triangle_uvfits_file)
     uv.use_future_array_shapes()
 
-    ofname = str(tmpdir.join('test_file'))
-    filing_dict = {'outfile_name': ofname}
+    ofname = str(tmpdir.join("test_file"))
+    filing_dict = {"outfile_name": ofname}
     if save_format is None:
         warn_str = [
             "No out format specified for uvdata file. Defaulting to uvh5 (note "
@@ -140,9 +144,9 @@ def test_write_uvdata(save_format, tmpdir):
         warn_str = ""
     try:
         with uvtest.check_warnings(warn_type, match=warn_str):
-            expected_ofname = simutils.write_uvdata(uv, filing_dict,
-                                                    return_filename=True,
-                                                    out_format=save_format)
+            expected_ofname = simutils.write_uvdata(
+                uv, filing_dict, return_filename=True, out_format=save_format
+            )
     except AssertionError:
         # handling for old pyuvdata versions
         if save_format in ["miriad", "ms"]:
@@ -163,18 +167,18 @@ def test_write_uvdata(save_format, tmpdir):
             warn_type = None
             warn_str = ""
         with uvtest.check_warnings(warn_type, match=warn_str):
-            expected_ofname = simutils.write_uvdata(uv, filing_dict,
-                                                    return_filename=True,
-                                                    out_format=save_format)
+            expected_ofname = simutils.write_uvdata(
+                uv, filing_dict, return_filename=True, out_format=save_format
+            )
 
-    ofname = os.path.join('.', ofname)
+    ofname = os.path.join(".", ofname)
 
-    if save_format == 'uvfits':
-        assert ofname + '.uvfits' == expected_ofname
-    elif save_format == 'uvh5' or save_format is None:
-        assert ofname + '.uvh5' == expected_ofname
-    elif save_format == 'ms':
-        assert ofname + '.ms' == expected_ofname
+    if save_format == "uvfits":
+        assert ofname + ".uvfits" == expected_ofname
+    elif save_format == "uvh5" or save_format is None:
+        assert ofname + ".uvh5" == expected_ofname
+    elif save_format == "ms":
+        assert ofname + ".ms" == expected_ofname
     else:
         assert ofname == expected_ofname
 
@@ -185,7 +189,7 @@ def test_write_uvdata(save_format, tmpdir):
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 @pytest.mark.filterwarnings("ignore:writing default values for restfreq, vsource")
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
-@pytest.mark.parametrize("save_format", [None, 'uvfits', 'miriad', 'uvh5', 'ms'])
+@pytest.mark.parametrize("save_format", [None, "uvfits", "miriad", "uvh5", "ms"])
 def test_write_uvdata_clobber(save_format, tmpdir):
     """Test overwriting a uvdata object yields the expected results."""
     if save_format == "ms":
@@ -198,9 +202,9 @@ def test_write_uvdata_clobber(save_format, tmpdir):
 
     uv.set_lsts_from_time_array()
     filing_dict = {
-        'outdir': tmpdir.join('test_dir'),
-        'outfile_prefix': 'test',
-        'outfile_suffix': 'file',
+        "outdir": tmpdir.join("test_dir"),
+        "outfile_prefix": "test",
+        "outfile_suffix": "file",
     }
     if save_format is None:
         warn_str = [
@@ -220,17 +224,10 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     try:
         with uvtest.check_warnings(warn_type, match=warn_str):
             with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", "`np.int` is a deprecated alias"
-                )
-                warnings.filterwarnings(
-                    "ignore", "`np.bool` is a deprecated alias"
-                )
+                warnings.filterwarnings("ignore", "`np.int` is a deprecated alias")
+                warnings.filterwarnings("ignore", "`np.bool` is a deprecated alias")
                 expected_ofname = simutils.write_uvdata(
-                    uv,
-                    filing_dict,
-                    return_filename=True,
-                    out_format=save_format,
+                    uv, filing_dict, return_filename=True, out_format=save_format
                 )
     except AssertionError:
         # handling for old pyuvdata versions
@@ -241,10 +238,7 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         warn_str = ""
         with uvtest.check_warnings(warn_type, match=warn_str):
             expected_ofname = simutils.write_uvdata(
-                uv,
-                filing_dict,
-                return_filename=True,
-                out_format=save_format,
+                uv, filing_dict, return_filename=True, out_format=save_format
             )
 
     assert os.path.exists(expected_ofname)
@@ -288,11 +282,7 @@ def test_write_uvdata_clobber(save_format, tmpdir):
 
     filing_dict["clobber"] = True
     with uvtest.check_warnings(warn_type, match=warn_str):
-        simutils.write_uvdata(
-            uv,
-            filing_dict,
-            out_format=save_format,
-        )
+        simutils.write_uvdata(uv, filing_dict, out_format=save_format)
 
     uv2.read(expected_ofname)
     uv2.use_future_array_shapes()
@@ -332,13 +322,13 @@ def test_write_fix_autos(tmpdir):
     uv.data_array[auto_screen] = 1
     uv.data_array[auto_screen] += 1e-11 * complex(0, 1)
 
-    ofname = str(tmpdir.join('test_file'))
-    filing_dict = {'outfile_name': ofname}
+    ofname = str(tmpdir.join("test_file"))
+    filing_dict = {"outfile_name": ofname}
 
     with uvtest.check_warnings(
         UserWarning, match="Fixing auto-correlations to be be real-only"
     ):
-        simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='uvh5')
+        simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format="uvh5")
 
 
 # TODO: remove the "LST values stored" filter when pyuvdata > 2.4
@@ -351,13 +341,10 @@ def test_write_error_with_no_format(tmpdir):
     uv = UVData.from_file(triangle_uvfits_file)
     uv.use_future_array_shapes()
 
-    ofname = str(tmpdir.join('test_file'))
-    filing_dict = {'outfile_name': ofname}
-    with pytest.raises(
-        ValueError,
-        match='Invalid output format. Options are'
-    ):
-        simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format='')
+    ofname = str(tmpdir.join("test_file"))
+    filing_dict = {"outfile_name": ofname}
+    with pytest.raises(ValueError, match="Invalid output format. Options are"):
+        simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format="")
 
 
 # TODO: remove the "LST values stored" filter when pyuvdata > 2.4
@@ -370,14 +357,14 @@ def test_file_format_in_filing_dict(tmpdir):
     uv = UVData.from_file(triangle_uvfits_file)
     uv.use_future_array_shapes()
 
-    ofname = str(tmpdir.join('test_file'))
-    filing_dict = {'outfile_name': ofname}
-    filing_dict['output_format'] = 'uvfits'
+    ofname = str(tmpdir.join("test_file"))
+    filing_dict = {"outfile_name": ofname}
+    filing_dict["output_format"] = "uvfits"
     expected_ofname = simutils.write_uvdata(uv, filing_dict, return_filename=True)
-    assert ofname + '.uvfits' == expected_ofname
+    assert ofname + ".uvfits" == expected_ofname
 
     # Cleanup
-    os.remove(ofname + '.uvfits')
+    os.remove(ofname + ".uvfits")
 
 
 def test_progsteps_error():

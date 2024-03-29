@@ -21,13 +21,24 @@ except ImportError:
 try:
     from line_profiler import LineProfiler
 except ImportError:
+
     def LineProfiler():  # noqa
         """Mock to fix imports."""
         return None
 
-default_profile_funcs = ['interp', 'get_beam_jones', 'initialize_uvdata_from_params',
-                         'apply_beam', 'make_visibility', 'update_positions', 'coherency_calc',
-                         'uvdata_to_task_iter', 'run_uvdata_uvsim', 'run_uvsim']
+
+default_profile_funcs = [
+    "interp",
+    "get_beam_jones",
+    "initialize_uvdata_from_params",
+    "apply_beam",
+    "make_visibility",
+    "update_positions",
+    "coherency_calc",
+    "uvdata_to_task_iter",
+    "run_uvdata_uvsim",
+    "run_uvsim",
+]
 
 prof = None
 
@@ -37,8 +48,13 @@ prof = None
 # These "nocover" comments will need to remain until issue 179 on line_profiler is resolved.
 # https://github.com/rkern/line_profiler/issues/179
 
-def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_profile.out',
-                 dump_raw=False):
+
+def set_profiler(
+    func_list=default_profile_funcs,
+    rank=0,
+    outfile_prefix="time_profile.out",
+    dump_raw=False,
+):
     """
     Apply a line profiler to the listed functions, wherever they appear in pyuvsim.
 
@@ -66,20 +82,22 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
     global prof
 
     if outfile_prefix.endswith(".out"):
-        outfile_prefix = outfile_prefix[:-4]    # Strip extension
+        outfile_prefix = outfile_prefix[:-4]  # Strip extension
 
-    outfile_name = outfile_prefix + '.out'
+    outfile_name = outfile_prefix + ".out"
 
     # Can only set up profiling once per Python session.
-    if prof is not None:    # pragma: nocover
+    if prof is not None:  # pragma: nocover
         warnings.warn("Profiler already set. Returning now.")
         return
 
     prof = LineProfiler()
     if mpi is None or prof is None:
-        raise ImportError("You need mpi4py and line_profiler to use the "
-                          "profiling module. Install them both by running pip "
-                          "install pyuvsim[all].")
+        raise ImportError(
+            "You need mpi4py and line_profiler to use the "
+            "profiling module. Install them both by running pip "
+            "install pyuvsim[all]."
+        )
 
     mpi.start_mpi()
 
@@ -97,14 +115,14 @@ def set_profiler(func_list=default_profile_funcs, rank=0, outfile_prefix='time_p
 
     # Write out profiling report to file.
     if mpi.get_rank() == rank:
-        ofile = open(outfile_name, 'w')
+        ofile = open(outfile_name, "w")
         atexit.register(ofile.close)
         atexit.register(prof.print_stats, stream=ofile)
         if dump_raw:
             outfile_raw_name = outfile_prefix + ".lprof"
             atexit.register(prof.dump_stats, outfile_raw_name)
         prof.rank = rank  # Add "rank" as an attribute to the profiler.
-        prof.meta_file = outfile_prefix + '_meta.out'
+        prof.meta_file = outfile_prefix + "_meta.out"
 
         prof.enable_by_count()
 

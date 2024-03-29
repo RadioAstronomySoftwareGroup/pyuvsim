@@ -12,7 +12,7 @@ from astropy import units  # noqa
 from astropy.coordinates import Latitude, Longitude
 from astropy.time import Time
 
-pytest.importorskip('mpi4py')
+pytest.importorskip("mpi4py")
 import mpi4py  # noqa
 
 mpi4py.rc.initialize = False  # noqa
@@ -22,37 +22,39 @@ import pyuvsim  # noqa
 from pyuvsim import mpi  # noqa
 
 
-@pytest.fixture(scope='module', autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def _start_mpi():
     mpi.start_mpi(False)
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def single_source():
     sky = pyradiosky.SkyModel(
-        name='src',
-        ra=Longitude('10d'),
-        dec=Latitude('5d'),
+        name="src",
+        ra=Longitude("10d"),
+        dec=Latitude("5d"),
         frame="icrs",
         stokes=np.array([1, 0, 0, 0]) * units.Jy,
-        spectral_type='spectral_index',
+        spectral_type="spectral_index",
         reference_frequency=np.array([100e6]) * units.Hz,
         spectral_index=np.array([-0.74]),
     )
     return sky
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def fake_tasks(single_source):
     sky = single_source.copy()
     n_tasks = 30
     t0 = Time.now()
     freq = 50 * units.Hz
-    objs = [pyuvsim.UVTask(sky, t0, freq, None, None, freq_i=ii) for ii in range(n_tasks)]
+    objs = [
+        pyuvsim.UVTask(sky, t0, freq, None, None, freq_i=ii) for ii in range(n_tasks)
+    ]
     for ti, task in enumerate(objs):
         task.visibility_vector = np.random.uniform(0, 3) + np.random.uniform(0, 3) * 1j
         task.uvdata_index = (ti, 0, 0)
-        task.sources = 1     # Replace with something easier to compare later.
+        task.sources = 1  # Replace with something easier to compare later.
         objs[ti] = task
 
     return objs
@@ -99,12 +101,14 @@ def test_mem_usage():
     # increases memory usage by the expected amount.
 
     scale = 1.0
-    if 'linux' in sys.platform:
+    if "linux" in sys.platform:
         scale = 2**10
 
-    memory_usage_GiB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 2**30
+    memory_usage_GiB = (
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 2**30
+    )
     assert np.isclose(memory_usage_GiB, mpi.get_max_node_rss())
-    incsize = 50 * 2**20    # 50 MiB
+    incsize = 50 * 2**20  # 50 MiB
     arr = bytearray(incsize)
     time.sleep(1)
     change = mpi.get_max_node_rss() - memory_usage_GiB
@@ -127,7 +131,7 @@ def test_mpi_counter(count_rank):
     count.free()
 
 
-@pytest.mark.parametrize('max_bytes', [mpi.INT_MAX, 100])
+@pytest.mark.parametrize("max_bytes", [mpi.INT_MAX, 100])
 def test_big_gather(max_bytes, fake_tasks):
 
     objs = fake_tasks
@@ -146,13 +150,13 @@ def test_big_gather(max_bytes, fake_tasks):
     if mpi.rank == 0:
         assert result2 == result
 
-        assert split_info['MAX_BYTES'] == max_bytes
+        assert split_info["MAX_BYTES"] == max_bytes
         if max_bytes < 200:
-            assert len(split_info['ranges']) > 1
+            assert len(split_info["ranges"]) > 1
 
 
 @pytest.mark.parallel(3)
-@pytest.mark.parametrize('max_bytes', [mpi.INT_MAX, 100])
+@pytest.mark.parametrize("max_bytes", [mpi.INT_MAX, 100])
 def test_big_bcast(max_bytes, fake_tasks):
 
     objs = fake_tasks
@@ -172,9 +176,9 @@ def test_big_bcast(max_bytes, fake_tasks):
 
     if mpi.rank == 0:
         assert result2 == result
-        assert split_info['MAX_BYTES'] == max_bytes
+        assert split_info["MAX_BYTES"] == max_bytes
         if max_bytes < 200:
-            assert len(split_info['ranges']) > 1
+            assert len(split_info["ranges"]) > 1
 
 
 @pytest.mark.parallel(3)

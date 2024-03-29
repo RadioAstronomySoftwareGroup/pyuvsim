@@ -7,8 +7,7 @@ import os
 import pickle as pkl
 import re
 import warnings
-from subprocess import (DEVNULL, CalledProcessError, TimeoutExpired,
-                        check_output)
+from subprocess import DEVNULL, CalledProcessError, TimeoutExpired, check_output
 
 import pytest
 from _pytest._code.code import ExceptionChainRepr
@@ -23,11 +22,12 @@ from pyuvsim import mpi
 
 try:
     from lunarsky import MoonLocation
+
     hasmoon = True
 except ImportError:
     hasmoon = False
 
-issubproc = os.environ.get('TEST_IN_PARALLEL', 0)
+issubproc = os.environ.get("TEST_IN_PARALLEL", 0)
 try:
     issubproc = bool(int(issubproc))
 except ValueError:
@@ -41,11 +41,11 @@ def pytest_collection_modifyitems(session, config, items):
         return
     profiler_index = None
     for ii, it in enumerate(items):
-        if 'profiler' in it.name:
+        if "profiler" in it.name:
             profiler_index = ii
             break
     if profiler_index is not None:
-        items.append(items.pop(profiler_index))     # Move profiler tests to the end.
+        items.append(items.pop(profiler_index))  # Move profiler tests to the end.
 
 
 def pytest_configure(config):
@@ -53,19 +53,21 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers",
         "parallel(n, timeout=70): mark test to run in n parallel mpi processes."
-        " Optionally, set a timeout in seconds."
+        " Optionally, set a timeout in seconds.",
     )
 
 
 def pytest_addoption(parser):
-    parser.addoption("--nompi", action="store_true", help="skip mpi-parallelized tests.")
+    parser.addoption(
+        "--nompi", action="store_true", help="skip mpi-parallelized tests."
+    )
 
 
 def pytest_runtest_setup(item):
-    if 'parallel' in item.keywords:
+    if "parallel" in item.keywords:
         if mpi is None:
             pytest.skip("Need mpi4py to run parallelized tests.")
-        elif item.config.getoption('nompi', False):
+        elif item.config.getoption("nompi", False):
             pytest.skip("Skipping parallelized tests with --nompi option.")
 
 
@@ -73,13 +75,14 @@ def pytest_runtest_setup(item):
 def pytest_exception_interact(node, call, report):
     if issubproc:
         from pyuvsim import mpi  # noqa
+
         if report.failed:
             pth = f"/tmp/mpitest_{report.head_line}"
             try:
                 os.makedirs(pth)
             except OSError:
                 pass
-            with open(os.path.join(pth, f"report_rank{mpi.rank}.pkl"), 'wb') as ofile:
+            with open(os.path.join(pth, f"report_rank{mpi.rank}.pkl"), "wb") as ofile:
                 pkl.dump(report, ofile)
             raise call.excinfo.value
     yield
@@ -98,29 +101,41 @@ def pytest_runtest_call(item):
             raise ValueError(f"Invalid number of processes: {parmark.args[0]}")
 
     timeout = 70
-    if 'timeout' in parmark.kwargs:
-        timeout = float(parmark.kwargs['timeout'])
+    if "timeout" in parmark.kwargs:
+        timeout = float(parmark.kwargs["timeout"])
 
-    call = ['mpirun', '--host', 'localhost:10', '-n', str(nproc),
-            "python", "-m", "pytest", "{:s}::{:s}".format(str(item.fspath), str(item.name))]
+    call = [
+        "mpirun",
+        "--host",
+        "localhost:10",
+        "-n",
+        str(nproc),
+        "python",
+        "-m",
+        "pytest",
+        "{:s}::{:s}".format(str(item.fspath), str(item.name)),
+    ]
     if not issubproc:
         try:
             envcopy = os.environ.copy()
-            envcopy['TEST_IN_PARALLEL'] = '1'
+            envcopy["TEST_IN_PARALLEL"] = "1"
             check_output(call, env=envcopy, stderr=DEVNULL, timeout=timeout)
         except (TimeoutExpired, CalledProcessError) as err:
             message = f"Parallelized test {item.name} failed"
             if isinstance(err, TimeoutExpired):
-                message += (f" after {timeout} seconds due to timeout. \nThe timeout may be set"
-                            " via the ``timeout`` keyword in the ``parallel`` decorator. \n"
-                            "A stalled test may be caused by an inconsistent MPI state. Check"
-                            " that blocking operations are reached by all processes")
+                message += (
+                    f" after {timeout} seconds due to timeout. \nThe timeout may be set"
+                    " via the ``timeout`` keyword in the ``parallel`` decorator. \n"
+                    "A stalled test may be caused by an inconsistent MPI state. Check"
+                    " that blocking operations are reached by all processes"
+                )
             message += "."
             raise AssertionError(message) from err
 
         # If passing, do not run after this function.
         def blank_func(*args, **kwargs):
             return
+
         item.obj = blank_func
 
 
@@ -148,7 +163,7 @@ class _MPIExceptionChainRepr(ExceptionChainRepr):
         for ii, element in enumerate(self.chain):
             rank = self.mpi_ranks[ii]
             tw.line("")
-            tw.sep('— ', f"MPI Rank = {rank}", cyan=True)
+            tw.sep("— ", f"MPI Rank = {rank}", cyan=True)
             element[0].toterminal(tw)
             if element[2] is not None:
                 tw.line("")
@@ -161,14 +176,19 @@ def pytest_runtest_makereport(item, call):
     parmark = item.get_closest_marker("parallel")
 
     # Is a parallel test but not currently within the subprocess.
-    if report.failed and (not issubproc) and (parmark is not None) and (report.when == 'call'):
+    if (
+        report.failed
+        and (not issubproc)
+        and (parmark is not None)
+        and (report.when == "call")
+    ):
         pth = f"/tmp/mpitest_{report.head_line}"
         if os.path.exists(pth):
             for ii, repf in enumerate(os.listdir(pth)):
                 if not repf.endswith(".pkl"):
                     continue
-                rank = int(re.findall('(?<=rank)[0-9]+', repf)[0])
-                rank_report = pkl.load(open(os.path.join(pth, repf), 'rb'))
+                rank = int(re.findall("(?<=rank)[0-9]+", repf)[0])
+                rank_report = pkl.load(open(os.path.join(pth, repf), "rb"))
                 os.remove(os.path.join(pth, repf))
                 if ii == 0:
                     report = rank_report
@@ -195,7 +215,7 @@ def _setup_and_teardown_package():
     try:
         t1 = Time.now()
         t1.ut1
-    except (Exception):
+    except Exception:
         iers.conf.auto_max_age = None
 
     # yield to allow tests to run
@@ -206,44 +226,56 @@ def _setup_and_teardown_package():
 
 @pytest.fixture(autouse=True)
 def _ignore_deprecation():
-    warnings.filterwarnings('ignore', message='Achromatic gaussian beams will not be supported',
-                            category=PendingDeprecationWarning)
-    warnings.filterwarnings('ignore', message='"initialize_catalog_from_params will not return'
-                                              ' recarray by default in the future.',
-                            category=PendingDeprecationWarning)
+    warnings.filterwarnings(
+        "ignore",
+        message="Achromatic gaussian beams will not be supported",
+        category=PendingDeprecationWarning,
+    )
+    warnings.filterwarnings(
+        "ignore",
+        message='"initialize_catalog_from_params will not return'
+        " recarray by default in the future.",
+        category=PendingDeprecationWarning,
+    )
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def cst_beam():
     beam = UVBeam()
 
     freqs = [150e6, 123e6]
 
-    cst_files = ['HERA_NicCST_150MHz.txt', 'HERA_NicCST_123MHz.txt']
-    beam_files = [os.path.join(DATA_PATH, 'NicCSTbeams', f) for f in cst_files]
+    cst_files = ["HERA_NicCST_150MHz.txt", "HERA_NicCST_123MHz.txt"]
+    beam_files = [os.path.join(DATA_PATH, "NicCSTbeams", f) for f in cst_files]
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore", "The shapes of several attributes will be changing"
         )
         beam.read_cst_beam(
-            beam_files, beam_type='efield', frequency=freqs,
-            telescope_name='HERA', feed_name='PAPER', feed_version='0.1', feed_pol=['x'],
-            model_name='E-field pattern - Rigging height 4.9m', model_version='1.0'
+            beam_files,
+            beam_type="efield",
+            frequency=freqs,
+            telescope_name="HERA",
+            feed_name="PAPER",
+            feed_version="0.1",
+            feed_pol=["x"],
+            model_name="E-field pattern - Rigging height 4.9m",
+            model_version="1.0",
         )
     beam.use_future_array_shapes()
-    beam.x_orientation = 'east'
+    beam.x_orientation = "east"
     if hasattr(beam, "_interpolation_function"):
-        beam.interpolation_function = 'az_za_simple'
+        beam.interpolation_function = "az_za_simple"
     beam.peak_normalize()
     return beam
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def hera_loc():
-    return EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s', height=1073.)
+    return EarthLocation(lat="-30d43m17.5s", lon="21d25m41.9s", height=1073.0)
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def apollo_loc():
     if hasmoon:
         return MoonLocation(lat=0.6875, lon=24.433, height=0)

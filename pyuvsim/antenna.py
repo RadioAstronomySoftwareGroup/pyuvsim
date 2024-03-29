@@ -83,21 +83,21 @@ class Antenna:
         )
 
         if isinstance(frequency, units.Quantity):
-            freq = np.array([frequency.to('Hz').value])
+            freq = np.array([frequency.to("Hz").value])
         else:
             freq = np.array([frequency])
 
         beam = array.beam_list[self.beam_id]
 
-        if beam.data_normalization != 'peak':
+        if beam.data_normalization != "peak":
             beam.peak_normalize()
 
         interp_kwargs = {
-            'az_array' : source_az,
-            'za_array' : source_za,
-            'freq_array' : freq,
-            'reuse_spline' : reuse_spline,
-            'check_azza_domain' : beam_interp_check,
+            "az_array": source_az,
+            "za_array": source_za,
+            "freq_array": freq,
+            "reuse_spline": reuse_spline,
+            "check_azza_domain": beam_interp_check,
         }
 
         if interpolation_function is not None:
@@ -135,17 +135,21 @@ class Antenna:
 
     def __eq__(self, other):
         """Test for equality of objects."""
-        return ((self.name == other.name)
-                and np.allclose(self.pos_enu.to('m').value, other.pos_enu.to('m').value, atol=1e-3)
-                and (self.beam_id == other.beam_id))
+        return (
+            (self.name == other.name)
+            and np.allclose(
+                self.pos_enu.to("m").value, other.pos_enu.to("m").value, atol=1e-3
+            )
+            and (self.beam_id == other.beam_id)
+        )
 
     def __gt__(self, other):
         """Test for larger antenna number."""
-        return (self.number > other.number)
+        return self.number > other.number
 
     def __ge__(self, other):
         """Test for larger or equal antenna number."""
-        return (self.number >= other.number)
+        return self.number >= other.number
 
     def __lt__(self, other):
         """Test for smaller antenna number."""

@@ -102,20 +102,24 @@ class BeamList:
 
     """
 
-    _float_params = {'sig': 'sigma', 'diam': 'diameter',
-                     'reff': 'ref_freq', 'ind': 'spectral_index'}
+    _float_params = {
+        "sig": "sigma",
+        "diam": "diameter",
+        "reff": "ref_freq",
+        "ind": "spectral_index",
+    }
 
     string_mode = True
 
     def __init__(
         self,
         beam_list=None,
-        uvb_read_kwargs: dict[str: tuple[float, float]] | None = None,
-        select_params: dict[str: tuple[float, float]] | None = None,
-        spline_interp_opts: dict[str: int] | None = None,
+        uvb_read_kwargs: dict[str : tuple[float, float]] | None = None,
+        select_params: dict[str : tuple[float, float]] | None = None,
+        spline_interp_opts: dict[str:int] | None = None,
         freq_interp_kind: str = "cubic",
         check: bool = True,
-        force_check: bool = False
+        force_check: bool = False,
     ):
 
         self.spline_interp_opts = spline_interp_opts
@@ -211,7 +215,9 @@ class BeamList:
             if item == "basis":
                 items = self._get_beam_basis_type()
             else:
-                items = {i: getattr(b, item) for i, b in enumerate(self) if hasattr(b, item)}
+                items = {
+                    i: getattr(b, item) for i, b in enumerate(self) if hasattr(b, item)
+                }
 
             if not items:
                 # If none of the beams has this item, move on.
@@ -255,9 +261,9 @@ class BeamList:
                 axis2_diff = np.diff(beam.axis2_array)[0]
                 max_axis_diff = np.max([axis1_diff, axis2_diff])
                 if not (
-                    np.max(beam.axis2_array) >= np.pi / 2. - max_axis_diff * 2.0
+                    np.max(beam.axis2_array) >= np.pi / 2.0 - max_axis_diff * 2.0
                     and np.min(beam.axis1_array) <= max_axis_diff * 2.0
-                    and np.max(beam.axis1_array) >= 2. * np.pi - max_axis_diff * 2.0
+                    and np.max(beam.axis1_array) >= 2.0 * np.pi - max_axis_diff * 2.0
                 ):
                     all_azza_full_sky = False
                     break
@@ -289,7 +295,7 @@ class BeamList:
             return xorient
 
         for b in self:
-            if hasattr(b, 'x_orientation'):
+            if hasattr(b, "x_orientation"):
                 xorient = b.x_orientation
                 break
         else:
@@ -376,9 +382,9 @@ class BeamList:
 
         """
         if self.string_mode:
-            self._str_beam_list.append('')
+            self._str_beam_list.append("")
         else:
-            self._obj_beam_list.append('')
+            self._obj_beam_list.append("")
         try:
             self.__setitem__(-1, value, uvb_read_kwargs=uvb_read_kwargs)
         except ValueError as err:
@@ -395,13 +401,13 @@ class BeamList:
         """Convert beam strings to objects."""
         if isinstance(beam_model, (AnalyticBeam, UVBeam)):
             return beam_model
-        if beam_model.startswith('analytic'):
-            bspl = beam_model.split('_')
+        if beam_model.startswith("analytic"):
+            bspl = beam_model.split("_")
             model = bspl[1]
 
             to_set = {}
             for extra in bspl[2:]:
-                par, val = extra.split('=')
+                par, val = extra.split("=")
                 full = self._float_params[par]
                 to_set[full] = float(val)
 
@@ -412,7 +418,8 @@ class BeamList:
                 "You need mpi4py to use shared memory. Either call this method with "
                 "use_shared_mem=False or install mpi4py. You can install it by running "
                 "pip install pyuvsim[sim] or pip install pyuvsim[all] if you also want "
-                "the line_profiler installed.")
+                "the line_profiler installed."
+            )
 
         path = beam_model  # beam_model = path to UVBeam readable file
         uvb = UVBeam()
@@ -433,22 +440,19 @@ class BeamList:
                 # If file type is not recognized, assume beamfits,
                 # which was originally the only option.
                 uvb.read_beamfits(path, **read_kwargs)
-                warnings.warn(
-                    weird_beamfits_extension_warning,
-                    DeprecationWarning,
-                )
+                warnings.warn(weird_beamfits_extension_warning, DeprecationWarning)
             uvb.peak_normalize()
 
         if use_shared_mem and (mpi.world_comm is not None):
             for key, attr in uvb.__dict__.items():
                 if not isinstance(attr, parameter.UVParameter):
                     continue
-                if key == '_data_array':
+                if key == "_data_array":
                     uvb.__dict__[key].value = mpi.shared_mem_bcast(attr.value, root=0)
                 else:
                     uvb.__dict__[key].value = mpi.world_comm.bcast(attr.value, root=0)
             mpi.world_comm.Barrier()
-        uvb.extra_keywords['beam_path'] = path
+        uvb.extra_keywords["beam_path"] = path
         return uvb
 
     def _obj_to_str(self, beam_model):
@@ -458,18 +462,20 @@ class BeamList:
         if isinstance(beam_model, AnalyticBeam):
             btype = beam_model.type
 
-            bm_str = 'analytic_' + btype
+            bm_str = "analytic_" + btype
             for abbrv, full in self._float_params.items():
                 val = getattr(beam_model, full)
                 if val is not None:
-                    bm_str += '_' + abbrv + '=' + str(val)
+                    bm_str += "_" + abbrv + "=" + str(val)
             return bm_str
 
         # If not AnalyticBeam, it's UVBeam.
         try:
-            path = beam_model.extra_keywords['beam_path']
+            path = beam_model.extra_keywords["beam_path"]
         except KeyError:
-            raise ValueError("Need to set 'beam_path' key in extra_keywords for UVBeam objects.")
+            raise ValueError(
+                "Need to set 'beam_path' key in extra_keywords for UVBeam objects."
+            )
 
         return path
 
@@ -497,7 +503,9 @@ class BeamList:
         """
         if self._obj_beam_list != []:
             # Convert object beams to string definitions
-            self._str_beam_list = [self._obj_to_str(bobj) for bobj in self._obj_beam_list]
+            self._str_beam_list = [
+                self._obj_to_str(bobj) for bobj in self._obj_beam_list
+            ]
         self._obj_beam_list = []
         self.string_mode = True
 
@@ -519,7 +527,9 @@ class BeamList:
         if self._str_beam_list != []:
             beam_list = []
             for bid, bstr in enumerate(self._str_beam_list):
-                beam_list.append(self._str_to_obj(bid, bstr, use_shared_mem=use_shared_mem))
+                beam_list.append(
+                    self._str_to_obj(bid, bstr, use_shared_mem=use_shared_mem)
+                )
             self._obj_beam_list = beam_list
         self._str_beam_list = []
         self.string_mode = False
@@ -556,19 +566,30 @@ class Telescope:
 
     def __eq__(self, other):
         """Define Telescope equality."""
-        this_vector_loc = np.array([self.location.x.to('m').value,
-                                    self.location.y.to('m').value,
-                                    self.location.z.to('m').value])
-        other_vector_loc = np.array([other.location.x.to('m').value,
-                                     other.location.y.to('m').value,
-                                     other.location.z.to('m').value])
+        this_vector_loc = np.array(
+            [
+                self.location.x.to("m").value,
+                self.location.y.to("m").value,
+                self.location.z.to("m").value,
+            ]
+        )
+        other_vector_loc = np.array(
+            [
+                other.location.x.to("m").value,
+                other.location.y.to("m").value,
+                other.location.z.to("m").value,
+            ]
+        )
         Nbeams_self = len(self.beam_list)
         Nbeams_other = len(other.beam_list)
         if Nbeams_self == Nbeams_other:
             return (
                 np.allclose(this_vector_loc, other_vector_loc, atol=1e-3)
                 and np.all(
-                    [self.beam_list[bi] == other.beam_list[bi] for bi in range(Nbeams_self)]
+                    [
+                        self.beam_list[bi] == other.beam_list[bi]
+                        for bi in range(Nbeams_self)
+                    ]
                 )
                 and self.name == other.name
             )
