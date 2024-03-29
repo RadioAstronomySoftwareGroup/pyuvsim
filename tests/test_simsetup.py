@@ -27,9 +27,10 @@ except ImportError:
     hasmoon = False
 
 import pyuvsim
-import pyuvsim.tests as simtest
 from pyuvsim import simsetup
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+
+from . import compare_dictionaries
 
 herabeam_default = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
@@ -1294,7 +1295,7 @@ def test_uvfits_to_config(tmp_path):
     assert param_dict["obs_param_file"] == second_param_filename
     assert orig_param_dict["obs_param_file"] == param_filename
     orig_param_dict["obs_param_file"] = second_param_filename
-    assert simtest.compare_dictionaries(param_dict, orig_param_dict)
+    assert compare_dictionaries(param_dict, orig_param_dict)
 
 
 @pytest.mark.parametrize(
