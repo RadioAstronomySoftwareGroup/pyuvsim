@@ -39,10 +39,12 @@ class Baseline:
 
     def __eq__(self, other):
         """Define baseline equality."""
-        return ((self.antenna1 == other.antenna1)
-                and (self.antenna2 == other.antenna2)
-                and np.allclose(self.enu.to('m').value, other.enu.to('m').value, atol=1e-3)
-                and np.allclose(self.uvw.to('m').value, other.uvw.to('m').value, atol=1e-3))
+        return (
+            (self.antenna1 == other.antenna1)
+            and (self.antenna2 == other.antenna2)
+            and np.allclose(self.enu.to("m").value, other.enu.to("m").value, atol=1e-3)
+            and np.allclose(self.uvw.to("m").value, other.uvw.to("m").value, atol=1e-3)
+        )
 
     def __gt__(self, other):
         """Check if baseline is greater than another based on antenna numbers."""

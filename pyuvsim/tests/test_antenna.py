@@ -22,10 +22,10 @@ def test_jones_set_spline(cst_beam, hera_loc):
     if hasattr(beam0, "_freq_interp_kind"):
         # this can go away when we require pyuvdata version >= 2.4.2
         beam0.freq_interp_kind = "cubic"
-    telescope_config_name = os.path.join(SIM_DATA_PATH, 'mwa128_config.yaml')
-    with open(telescope_config_name, 'r') as yf:
+    telescope_config_name = os.path.join(SIM_DATA_PATH, "mwa128_config.yaml")
+    with open(telescope_config_name, "r") as yf:
         telconfig = yaml.safe_load(yf)
-    telconfig['spline_interp_opts'] = {'kx' : 1, 'ky' : 1}
+    telconfig["spline_interp_opts"] = {"kx": 1, "ky": 1}
 
     beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(1), telconfig)
     beam_list.set_obj_mode()
@@ -34,8 +34,8 @@ def test_jones_set_spline(cst_beam, hera_loc):
     assert beam0 is beam_list[-1]
 
     # Make antenna that uses beam #1
-    antenna = pyuvsim.Antenna('ant1', 1, np.array([0, 10, 0]), 1)
-    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+    antenna = pyuvsim.Antenna("ant1", 1, np.array([0, 10, 0]), 1)
+    array = pyuvsim.Telescope("telescope_name", array_location, beam_list)
 
     altaz = [[0.0134], [1.0]]
 
@@ -49,7 +49,7 @@ def test_jones_set_spline(cst_beam, hera_loc):
     altaz[:, 1] = azs.flatten()
 
     jones_matrix = antenna.get_beam_jones(
-        array, altaz, 150e6, interpolation_function='az_za_simple'
+        array, altaz, 150e6, interpolation_function="az_za_simple"
     )
 
     # These are just values from a run, so this just tests for unexpected changes.
@@ -59,21 +59,24 @@ def test_jones_set_spline(cst_beam, hera_loc):
                 [
                     -4.57061296e-04 - 3.88626249e-04j,
                     -7.28285993e-05 - 1.45479743e-04j,
-                    -7.28285993e-05 - 1.45479743e-04j
-                ], [
+                    -7.28285993e-05 - 1.45479743e-04j,
+                ],
+                [
                     -3.35886569e-02 - 1.83636844e-02j,
                     -3.36205621e-02 - 1.84105336e-02j,
-                    -3.36205621e-02 - 1.84105336e-02j
+                    -3.36205621e-02 - 1.84105336e-02j,
                 ],
-            ], [
+            ],
+            [
                 [
                     -1.04000784e-02 - 1.11629186e-02j,
                     -1.03973090e-02 - 1.11516998e-02j,
-                    -1.03973090e-02 - 1.11516998e-02j
-                ], [
+                    -1.03973090e-02 - 1.11516998e-02j,
+                ],
+                [
                     5.32870283e-04 + 1.16831373e-04j,
                     1.26946128e-06 - 1.22843330e-06j,
-                    1.26946128e-06 - 1.22843330e-06j
+                    1.26946128e-06 - 1.22843330e-06j,
                 ],
             ],
         ]
@@ -90,14 +93,16 @@ def test_jones_set_interp(cst_beam, hera_loc):
     beam = cst_beam.copy()
 
     beam_list = pyuvsim.BeamList([beam])
-    antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 10, 0]), 0)
-    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
-    source_altaz = np.array([[0.0], [np.pi / 4.]])
+    antenna1 = pyuvsim.Antenna("ant1", 1, np.array([0, 10, 0]), 0)
+    array = pyuvsim.Telescope("telescope_name", array_location, beam_list)
+    source_altaz = np.array([[0.0], [np.pi / 4.0]])
     freq = 123e6 * units.Hz
 
-    jones = antenna1.get_beam_jones(array, source_altaz, freq, freq_interp_kind='cubic')
+    jones = antenna1.get_beam_jones(array, source_altaz, freq, freq_interp_kind="cubic")
     jones0 = antenna1.get_beam_jones(array, source_altaz, freq)
-    jones1 = antenna1.get_beam_jones(array, source_altaz, freq, freq_interp_kind='linear')
+    jones1 = antenna1.get_beam_jones(
+        array, source_altaz, freq, freq_interp_kind="linear"
+    )
     jones2 = antenna1.get_beam_jones(array, source_altaz, freq)
 
     assert np.all(jones2 == jones0)
@@ -115,9 +120,9 @@ def test_set_interps(cst_beam, hera_loc):
         beam.interpolation_function = None
 
     beam_list = pyuvsim.BeamList([beam])
-    antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 10, 0]), 0)
-    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
-    source_altaz = np.array([[0.0], [np.pi / 4.]])
+    antenna1 = pyuvsim.Antenna("ant1", 1, np.array([0, 10, 0]), 0)
+    array = pyuvsim.Telescope("telescope_name", array_location, beam_list)
+    source_altaz = np.array([[0.0], [np.pi / 4.0]])
     freq = 123e6 * units.Hz
 
     if interp_function_attr:
@@ -127,18 +132,16 @@ def test_set_interps(cst_beam, hera_loc):
         warn_msg = ""
         warn_type = None
 
-    with uvtest.check_warnings(
-        warn_type, match=warn_msg
-    ):
+    with uvtest.check_warnings(warn_type, match=warn_msg):
         antenna1.get_beam_jones(array, source_altaz, freq)
 
     if interp_function_attr:
-        assert beam.interpolation_function == 'az_za_simple'
+        assert beam.interpolation_function == "az_za_simple"
 
 
 def test_ant_comparison():
-    antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 10, 0]), 1)
-    antenna2 = pyuvsim.Antenna('ant2', 2, np.array([0, 20, 0]), 1)
+    antenna1 = pyuvsim.Antenna("ant1", 1, np.array([0, 10, 0]), 1)
+    antenna2 = pyuvsim.Antenna("ant2", 2, np.array([0, 20, 0]), 1)
 
     ant1_copy = copy.deepcopy(antenna1)
 

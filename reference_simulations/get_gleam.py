@@ -14,12 +14,14 @@ import warnings
 
 warnings.warn(
     "This script is deprecated. Use scripts/download_gleam.py in pyradiosky instead.",
-    DeprecationWarning
+    DeprecationWarning,
 )
 try:
     from astroquery.vizier import Vizier
 except ImportError as e:
-    raise ImportError("astroquery module required to use the download_gleam script") from e
+    raise ImportError(
+        "astroquery module required to use the download_gleam script"
+    ) from e
 
 catalog_dir = "first_generation/catalog_files/"
 name = "gleam.vot"
@@ -29,9 +31,9 @@ if os.path.exists(opath):
     print("GLEAM already downloaded to {}.".format(opath))
     sys.exit()
 Vizier.ROW_LIMIT = -1
-Vizier.columns = ['GLEAM', 'RAJ2000', 'DEJ2000', 'Fintwide']
-catname = 'VIII/100/gleamegc'
+Vizier.columns = ["GLEAM", "RAJ2000", "DEJ2000", "Fintwide"]
+catname = "VIII/100/gleamegc"
 tab = Vizier.get_catalogs(catname)[0]
-tab.write(opath, format='votable')
+tab.write(opath, format="votable")
 
 print("GLEAM catalog downloaded and saved to " + opath)

@@ -27,7 +27,7 @@ def compare_dictionaries(d1, d2):
                     data1_type=type(d1[key][0]),
                     data1_val=d1[key],
                     data2_type=type(d2[key][0]),
-                    data2_val=d2[key]
+                    data2_val=d2[key],
                 )
             )
 
@@ -45,7 +45,7 @@ def compare_dictionaries(d1, d2):
                         data1_type=type(d1[key][0]),
                         data1_val=d1[key],
                         data2_type=type(d2[key][0]),
-                        data2_val=d2[key]
+                        data2_val=d2[key],
                     )
                 )
         elif isinstance(d1[key], dict):
@@ -61,7 +61,7 @@ def compare_dictionaries(d1, d2):
                     data1_type=type(d1[key][0]),
                     data1_val=d1[key],
                     data2_type=type(d2[key][0]),
-                    data2_val=d2[key]
+                    data2_val=d2[key],
                 )
             )
         else:
@@ -75,7 +75,7 @@ def compare_dictionaries(d1, d2):
                     data1_type=type(d1[key][0]),
                     data1_val=d1[key],
                     data2_type=type(d2[key][0]),
-                    data2_val=d2[key]
+                    data2_val=d2[key],
                 )
             )
     return True

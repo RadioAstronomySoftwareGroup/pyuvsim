@@ -1,4 +1,3 @@
-
 import copy
 import os
 import shutil
@@ -16,14 +15,15 @@ from pyuvsim.telescope import BeamConsistencyError
 
 try:
     import mpi4py  # noqa
+
     has_mpi = True
 except ImportError:
     has_mpi = False
 
-herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.beamfits')
+herabeam_default = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def beam_objs_main():
     uvb = UVBeam()
     with warnings.catch_warnings():
@@ -32,7 +32,7 @@ def beam_objs_main():
         )
         uvb.read_beamfits(herabeam_default)
     uvb.use_future_array_shapes()
-    uvb.extra_keywords['beam_path'] = herabeam_default
+    uvb.extra_keywords["beam_path"] = herabeam_default
 
     # beams are always peak normalized inside BeamList
     uvb.peak_normalize()
@@ -41,15 +41,17 @@ def beam_objs_main():
 
     beams = [uvb, uvb2]
 
-    beams.append(pyuvsim.AnalyticBeam('uniform'))
-    diameter_m = 14.
-    beams.append(pyuvsim.AnalyticBeam('airy', diameter=diameter_m))
+    beams.append(pyuvsim.AnalyticBeam("uniform"))
+    diameter_m = 14.0
+    beams.append(pyuvsim.AnalyticBeam("airy", diameter=diameter_m))
     sigma = 0.03
     # Ignore warnings of pending sigma deprecation
-    beams.append(pyuvsim.AnalyticBeam('gaussian', sigma=sigma))
+    beams.append(pyuvsim.AnalyticBeam("gaussian", sigma=sigma))
     ref_freq, alpha = 100e6, -0.5
     beams.append(
-        pyuvsim.AnalyticBeam('gaussian', sigma=sigma, ref_freq=ref_freq, spectral_index=alpha)
+        pyuvsim.AnalyticBeam(
+            "gaussian", sigma=sigma, ref_freq=ref_freq, spectral_index=alpha
+        )
     )
     return beams
 
@@ -66,8 +68,8 @@ def test_convert_loop(beam_objs):
 
     if hasattr(beams[0], "_freq_interp_kind"):
         # this can go away when we require pyuvdata version >= 2.4.2
-        beams[0].freq_interp_kind = 'linear'
-        beams[1].freq_interp_kind = 'cubic'
+        beams[0].freq_interp_kind = "linear"
+        beams[1].freq_interp_kind = "cubic"
 
         # Should warn about inconsistent params on UVBeams.
         with uvtest.check_warnings(UserWarning, match="Conflicting settings for"):
@@ -75,10 +77,10 @@ def test_convert_loop(beam_objs):
 
         # Convert beams to strings:
         # Fail, because UVBeams are inconsistent.
-        with pytest.raises(ValueError, match='Conflicting settings for'):
+        with pytest.raises(ValueError, match="Conflicting settings for"):
             beamlist.set_str_mode()
 
-        beams[1].freq_interp_kind = 'linear'
+        beams[1].freq_interp_kind = "linear"
     else:
         beamlist = pyuvsim.BeamList(beams)
 
@@ -106,17 +108,17 @@ def test_object_mode(beam_objs, tmp_path):
     beams = beam_objs
     beamlist = pyuvsim.BeamList(beams)
 
-    beamfits_file = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.beamfits')
+    beamfits_file = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
-    new_beam_file = os.path.join(tmp_path, 'HERA_NicCST.uvbeam')
+    new_beam_file = os.path.join(tmp_path, "HERA_NicCST.uvbeam")
     shutil.copyfile(beamfits_file, new_beam_file)
 
     uvb = copy.deepcopy(beams[0])
-    uvb.extra_keywords['beam_path'] = new_beam_file
+    uvb.extra_keywords["beam_path"] = new_beam_file
     if hasattr(beams[0], "_freq_interp_kind"):
         # this can go away when we require pyuvdata version >= 2.4.2
-        beamlist[0].freq_interp_kind = 'cubic'
-        uvb.freq_interp_kind = 'quartic'
+        beamlist[0].freq_interp_kind = "cubic"
+        uvb.freq_interp_kind = "quartic"
         warn_type = UserWarning
         msg = "Conflicting settings for"
     else:
@@ -129,7 +131,7 @@ def test_object_mode(beam_objs, tmp_path):
 
     if hasattr(beams[0], "_freq_interp_kind"):
         # Error if converting to string mode with mismatched keywords:
-        with pytest.raises(ValueError, match='Conflicting settings '):
+        with pytest.raises(ValueError, match="Conflicting settings "):
             beamlist.set_str_mode()
     else:
         # otherwise check that looping str/obj modes works
@@ -145,12 +147,12 @@ def test_object_mode(beam_objs, tmp_path):
             beamlist.set_obj_mode()
 
     # Error if converting to string mode without beam_paths:
-    beamlist[0].extra_keywords.pop('beam_path')
-    with pytest.raises(ValueError, match='Need to set '):
+    beamlist[0].extra_keywords.pop("beam_path")
+    with pytest.raises(ValueError, match="Need to set "):
         beamlist.set_str_mode()
 
     # Insert string -- Converts to object
-    new_anabeam = 'analytic_gaussian_sig=3.0'
+    new_anabeam = "analytic_gaussian_sig=3.0"
     beamlist[-1] = new_anabeam
 
     assert isinstance(beamlist[-1], pyuvsim.AnalyticBeam)
@@ -193,19 +195,19 @@ def test_beamlist_errors(beam_objs):
     # Try to make a BeamList with a mixture of strings and objects.
     newlist = copy.deepcopy(beamlist._obj_beam_list)
     newlist[2] = beamlist._obj_to_str(newlist[2])
-    with pytest.raises(ValueError, match='Invalid beam list:'):
+    with pytest.raises(ValueError, match="Invalid beam list:"):
         pyuvsim.BeamList(newlist)
 
     # Try to append an invalid beam path while in object mode.
-    beam_path = 'invalid_file.beamfits'
-    with pytest.raises(ValueError, match='Invalid file path'):
+    beam_path = "invalid_file.beamfits"
+    with pytest.raises(ValueError, match="Invalid file path"):
         beamlist.append(beam_path)
 
     # test error on beams with different x_orientation
     beams[0].x_orientation = None
     with pytest.raises(
         BeamConsistencyError,
-        match='x_orientation of beam 2 is not consistent with beam 1'
+        match="x_orientation of beam 2 is not consistent with beam 1",
     ):
         pyuvsim.BeamList(beams, check=True)
 
@@ -222,10 +224,9 @@ def test_beamlist_errors(beam_objs):
     # Compare Telescopes with beamlists of different lengths
 
     del beams[0]
-    array_location = EarthLocation(lat='-30d43m17.5s', lon='21d25m41.9s',
-                                   height=1073.)
-    tel0 = pyuvsim.Telescope('tel0', array_location, beams)
-    tel1 = pyuvsim.Telescope('tel1', array_location, beam_objs)
+    array_location = EarthLocation(lat="-30d43m17.5s", lon="21d25m41.9s", height=1073.0)
+    tel0 = pyuvsim.Telescope("tel0", array_location, beams)
+    tel1 = pyuvsim.Telescope("tel1", array_location, beam_objs)
     assert tel0 != tel1
 
 
@@ -278,14 +279,13 @@ def test_beam_basis_type_errors(beam_objs):
     with pytest.raises(
         ValueError,
         match="pyuvsim currently only supports UVBeams with 'az_za' or "
-            "'healpix' pixel coordinate systems."
+        "'healpix' pixel coordinate systems.",
     ):
         beamlist.check_consistency()
 
     beamlist.set_str_mode()
     with pytest.raises(
-        ValueError,
-        match="Cannot get beam basis type from a string-mode BeamList."
+        ValueError, match="Cannot get beam basis type from a string-mode BeamList."
     ):
         beamlist._get_beam_basis_type()
 
@@ -310,8 +310,8 @@ def test_beam_basis_non_orthogonal_error(beam_objs):
     with pytest.raises(
         ValueError,
         match="pyuvsim currently only supports beams with basis vectors that"
-            "are aligned with the azimuth and zenith angle in each pixel."
-            "Work is in progress to add other basis vector systems."
+        "are aligned with the azimuth and zenith angle in each pixel."
+        "Work is in progress to add other basis vector systems.",
     ):
         beamlist.check_consistency()
 

@@ -15,8 +15,7 @@ import pyuvdata
 import pyuvdata.tests as uvtest
 import pyuvdata.utils as uvutils
 from astropy import units
-from astropy.coordinates import (Angle, EarthLocation, Latitude, Longitude,
-                                 SkyCoord)
+from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, SkyCoord
 from astropy.time import Time
 from packaging import version  # packaging is installed with setuptools
 from pyuvdata import UVBeam, UVData
@@ -33,10 +32,10 @@ import pyuvsim.utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.uvsim import _set_nsky_parts
 
-EW_uvfits_file = os.path.join(SIM_DATA_PATH, '28mEWbl_1time_1chan.uvfits')
-EW_uvfits_10time10chan = os.path.join(SIM_DATA_PATH, '28mEWbl_10time_10chan.uvfits')
-longbl_uvfits_file = os.path.join(SIM_DATA_PATH, '5km_triangle_1time_1chan.uvfits')
-herabeam_default = os.path.join(SIM_DATA_PATH, 'HERA_NicCST.beamfits')
+EW_uvfits_file = os.path.join(SIM_DATA_PATH, "28mEWbl_1time_1chan.uvfits")
+EW_uvfits_10time10chan = os.path.join(SIM_DATA_PATH, "28mEWbl_10time_10chan.uvfits")
+longbl_uvfits_file = os.path.join(SIM_DATA_PATH, "5km_triangle_1time_1chan.uvfits")
+herabeam_default = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
 
 def multi_beams():
@@ -47,19 +46,19 @@ def multi_beams():
         )
         beam0.read_beamfits(herabeam_default)
     beam0.use_future_array_shapes()
-    beam0.extra_keywords['beam_path'] = herabeam_default
+    beam0.extra_keywords["beam_path"] = herabeam_default
 
     if hasattr(beam0, "_freq_interp_kind"):
         # this can go away when we require pyuvdata version >= 2.4.2
         beam0.freq_interp_kind = "cubic"
 
     if hasattr(beam0, "_interpolation_function"):
-        beam0.interpolation_function = 'az_za_simple'
-    beam1 = pyuvsim.AnalyticBeam('uniform')
+        beam0.interpolation_function = "az_za_simple"
+    beam1 = pyuvsim.AnalyticBeam("uniform")
     with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=0.02)
-    beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.6)
+        warnings.simplefilter("ignore")
+        beam2 = pyuvsim.AnalyticBeam("gaussian", sigma=0.02)
+    beam3 = pyuvsim.AnalyticBeam("airy", diameter=14.6)
     beams = [beam0, beam1, beam2, beam3]
 
     try:
@@ -70,7 +69,7 @@ def multi_beams():
         ):
             beam4.to_healpix(nside=8)
         if hasattr(beam4, "_interpolation_function"):
-            beam4.interpolation_function = 'healpix_simple'
+            beam4.interpolation_function = "healpix_simple"
         beams.append(beam4)
     except ImportError:
         pass
@@ -81,14 +80,14 @@ def multi_beams():
 multi_beams = multi_beams()
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def triangle_pos():
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore", "The shapes of several attributes will be changing"
         )
         # consists of a right triangle of baselines with w term
-        hera_uv = UVData.from_file(longbl_uvfits_file, ant_str='cross')
+        hera_uv = UVData.from_file(longbl_uvfits_file, ant_str="cross")
     hera_uv.use_future_array_shapes()
     if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
         hera_uv.unproject_phase(use_ant_pos=True)
@@ -96,7 +95,7 @@ def triangle_pos():
         hera_uv.unphase_to_drift(use_ant_pos=True)
 
     enu = hera_uv.get_ENU_antpos()[0]
-    uvw = hera_uv.uvw_array[:hera_uv.Nbls]
+    uvw = hera_uv.uvw_array[: hera_uv.Nbls]
 
     return enu, uvw
 
@@ -104,9 +103,11 @@ def triangle_pos():
 @pytest.fixture()
 def uvobj_beams_srcs():
     # A uvdata object, beam list, beam dict, and source array.
-    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
+    param_filename = os.path.join(
+        SIM_DATA_PATH, "test_config", "obsparam_hex37_14.6m.yaml"
+    )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    param_dict['select'] = {'redundant_threshold': 0.1}
+    param_dict["select"] = {"redundant_threshold": 0.1}
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
         param_dict, return_beams=True, force_beam_check=True
     )
@@ -115,20 +116,23 @@ def uvobj_beams_srcs():
     # Add more beams to the list.
     # Don't use the uniform beam (need to see coherency change with positions).
     ref_freq, alpha = 100e6, -0.5
-    beam_list[0] = pyuvsim.AnalyticBeam('airy', diameter=13.0)
-    beam_list.append(pyuvsim.AnalyticBeam('airy', diameter=14.6))
-    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.3))
-    beam_list.append(pyuvsim.AnalyticBeam('gaussian', sigma=0.8,
-                     ref_freq=ref_freq, spectral_index=alpha))
+    beam_list[0] = pyuvsim.AnalyticBeam("airy", diameter=13.0)
+    beam_list.append(pyuvsim.AnalyticBeam("airy", diameter=14.6))
+    beam_list.append(pyuvsim.AnalyticBeam("gaussian", sigma=0.3))
+    beam_list.append(
+        pyuvsim.AnalyticBeam(
+            "gaussian", sigma=0.8, ref_freq=ref_freq, spectral_index=alpha
+        )
+    )
 
     # Assign the last few antennas to use these other beams.
-    beam_dict['ANT36'] = 1
-    beam_dict['ANT35'] = 2
-    beam_dict['ANT34'] = 3
+    beam_dict["ANT36"] = 1
+    beam_dict["ANT35"] = 2
+    beam_dict["ANT34"] = 3
 
-    time = Time(uv_obj.time_array[0], format='jd', scale='utc')
+    time = Time(uv_obj.time_array[0], format="jd", scale="utc")
     sources, kwds = pyuvsim.create_mock_catalog(
-        time, arrangement='long-line', Nsrcs=30, return_data=True
+        time, arrangement="long-line", Nsrcs=30, return_data=True
     )
 
     sources.polarized = np.array([15, 16, 17])  # 15 -- 17th sources have polarization.
@@ -142,7 +146,9 @@ def uvobj_beams_srcs():
 @pytest.fixture()
 def uvdata_two_redundant_bls_triangle_sources():
     # A uvdata object, beam list, beam dict, and source array.
-    param_filename = os.path.join(SIM_DATA_PATH, 'test_config', 'obsparam_hex37_14.6m.yaml')
+    param_filename = os.path.join(
+        SIM_DATA_PATH, "test_config", "obsparam_hex37_14.6m.yaml"
+    )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
         param_dict, return_beams=True
@@ -151,11 +157,11 @@ def uvdata_two_redundant_bls_triangle_sources():
 
     uv_obj.select(freq_chans=[0], antenna_nums=[0, 1, 2], inplace=True)
 
-    beam_list[0] = pyuvsim.AnalyticBeam('airy', diameter=13.0)
+    beam_list[0] = pyuvsim.AnalyticBeam("airy", diameter=13.0)
 
-    time = Time(uv_obj.time_array[0], format='jd', scale='utc')
+    time = Time(uv_obj.time_array[0], format="jd", scale="utc")
     sources, kwds = pyuvsim.create_mock_catalog(
-        time, arrangement='triangle', Nsrcs=3, return_data=True
+        time, arrangement="triangle", Nsrcs=3, return_data=True
     )
 
     return uv_obj, beam_list, beam_dict, sources
@@ -165,28 +171,28 @@ def test_visibility_single_zenith_source(cst_beam, hera_loc):
     """Test single zenith source."""
 
     beam0 = cst_beam.copy()
-    beam1 = pyuvsim.AnalyticBeam('uniform')
-    beam2 = pyuvsim.AnalyticBeam('gaussian', sigma=np.radians(10.0))
-    beam3 = pyuvsim.AnalyticBeam('airy', diameter=14.0)
+    beam1 = pyuvsim.AnalyticBeam("uniform")
+    beam2 = pyuvsim.AnalyticBeam("gaussian", sigma=np.radians(10.0))
+    beam3 = pyuvsim.AnalyticBeam("airy", diameter=14.0)
 
-    time = Time('2018-03-01 00:00:00', scale='utc')
+    time = Time("2018-03-01 00:00:00", scale="utc")
 
     array_location = hera_loc
 
     time.location = array_location
 
-    freq = (150e6 * units.Hz)
-    source, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith')
+    freq = 150e6 * units.Hz
+    source, _ = pyuvsim.create_mock_catalog(time, arrangement="zenith")
     source.update_positions(time, array_location)
 
-    antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
-    antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
+    antenna1 = pyuvsim.Antenna("ant1", 1, np.array([0, 0, 0]), 0)
+    antenna2 = pyuvsim.Antenna("ant2", 2, np.array([107, 0, 0]), 0)
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
     for beam in [beam0, beam1, beam2, beam3]:
         beam_list = pyuvsim.BeamList([beam])
-        array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+        array = pyuvsim.Telescope("telescope_name", array_location, beam_list)
 
         task = pyuvsim.UVTask(source, time, freq, baseline, array)
 
@@ -197,30 +203,32 @@ def test_visibility_single_zenith_source(cst_beam, hera_loc):
         engine.apply_beam()
 
         visibility = engine.make_visibility()
-        assert np.allclose(visibility, np.array([.5, .5, 0, 0]), atol=5e-3)
+        assert np.allclose(visibility, np.array([0.5, 0.5, 0, 0]), atol=5e-3)
 
 
 def test_visibility_source_below_horizon(cst_beam, hera_loc):
-    time = Time('2018-03-01 00:00:00', scale='utc')
+    time = Time("2018-03-01 00:00:00", scale="utc")
 
     array_location = hera_loc
     time.location = array_location
 
-    freq = (150e6 * units.Hz)
+    freq = 150e6 * units.Hz
 
-    src_alt = Angle('-40d')
+    src_alt = Angle("-40d")
 
-    source_arr, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
+    source_arr, _ = pyuvsim.create_mock_catalog(
+        time, arrangement="off-zenith", alt=src_alt.deg
+    )
 
-    antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
-    antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
+    antenna1 = pyuvsim.Antenna("ant1", 1, np.array([0, 0, 0]), 0)
+    antenna2 = pyuvsim.Antenna("ant2", 2, np.array([107, 0, 0]), 0)
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
     beam = cst_beam.copy()
 
     beam_list = pyuvsim.BeamList([beam])
-    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+    array = pyuvsim.Telescope("telescope_name", array_location, beam_list)
 
     task = pyuvsim.UVTask(source_arr, time, freq, baseline, array)
 
@@ -242,32 +250,37 @@ def test_visibility_source_below_horizon(cst_beam, hera_loc):
 
 def test_visibility_source_below_horizon_radec(cst_beam, hera_loc):
     # redo with RA/Dec defined source
-    time = Time(2458098.27471265, format='jd')
+    time = Time(2458098.27471265, format="jd")
 
     array_location = hera_loc
 
     time.location = array_location
-    freq = (150e6 * units.Hz)
+    freq = 150e6 * units.Hz
 
-    source_coord = SkyCoord(ra=Angle('13h20m'), dec=Angle('-30d43m17.5s'),
-                            obstime=time, frame='icrs', location=array_location)
-
-    source = pyradiosky.SkyModel(
-        name='src_down',
-        skycoord=source_coord,
-        stokes=np.array([1.0, 0, 0, 0]).reshape(4, 1) * units.Jy,
-        spectral_type='flat'
+    source_coord = SkyCoord(
+        ra=Angle("13h20m"),
+        dec=Angle("-30d43m17.5s"),
+        obstime=time,
+        frame="icrs",
+        location=array_location,
     )
 
-    antenna1 = pyuvsim.Antenna('ant1', 1, np.array([0, 0, 0]), 0)
-    antenna2 = pyuvsim.Antenna('ant2', 2, np.array([107, 0, 0]), 0)
+    source = pyradiosky.SkyModel(
+        name="src_down",
+        skycoord=source_coord,
+        stokes=np.array([1.0, 0, 0, 0]).reshape(4, 1) * units.Jy,
+        spectral_type="flat",
+    )
+
+    antenna1 = pyuvsim.Antenna("ant1", 1, np.array([0, 0, 0]), 0)
+    antenna2 = pyuvsim.Antenna("ant2", 2, np.array([107, 0, 0]), 0)
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
     beam = cst_beam
 
     beam_list = pyuvsim.BeamList([beam])
-    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+    array = pyuvsim.Telescope("telescope_name", array_location, beam_list)
 
     task = pyuvsim.UVTask(source, time, freq, baseline, array)
 
@@ -279,33 +292,35 @@ def test_visibility_source_below_horizon_radec(cst_beam, hera_loc):
 
 
 def test_redundant_baselines(cst_beam, hera_loc):
-    """Check that two perfectly redundant baselines are truly redundant. """
+    """Check that two perfectly redundant baselines are truly redundant."""
 
-    time = Time(2458098.27471265, format='jd')
+    time = Time(2458098.27471265, format="jd")
     array_location = hera_loc
     time.location = array_location
-    freq = (150e6 * units.Hz)
-    src_alt = Angle('85.0d')
+    freq = 150e6 * units.Hz
+    src_alt = Angle("85.0d")
 
     # Set up antenna positions in ENU:
     antpos = np.array([[0, 0, 0], [28, 0, 0]], dtype=float)
 
-    en_shift = [5., 5., 0]
-    antenna1 = pyuvsim.Antenna('ant1', 1, antpos[0, :], 0)
-    antenna2 = pyuvsim.Antenna('ant2', 2, antpos[1, :], 0)
-    antenna3 = pyuvsim.Antenna('ant3', 3, antpos[0, :] + en_shift, 0)
-    antenna4 = pyuvsim.Antenna('ant4', 4, antpos[1, :] + en_shift, 0)
+    en_shift = [5.0, 5.0, 0]
+    antenna1 = pyuvsim.Antenna("ant1", 1, antpos[0, :], 0)
+    antenna2 = pyuvsim.Antenna("ant2", 2, antpos[1, :], 0)
+    antenna3 = pyuvsim.Antenna("ant3", 3, antpos[0, :] + en_shift, 0)
+    antenna4 = pyuvsim.Antenna("ant4", 4, antpos[1, :] + en_shift, 0)
 
     # make a source off zenith
     time.location = array_location
-    source, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
+    source, _ = pyuvsim.create_mock_catalog(
+        time, arrangement="off-zenith", alt=src_alt.deg
+    )
 
     beam_list = pyuvsim.BeamList([cst_beam])
 
     baseline1 = pyuvsim.Baseline(antenna1, antenna2)
     baseline2 = pyuvsim.Baseline(antenna3, antenna4)
 
-    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+    array = pyuvsim.Telescope("telescope_name", array_location, beam_list)
 
     task1 = pyuvsim.UVTask(source, time, freq, baseline1, array)
     engine = pyuvsim.UVEngine(task1)
@@ -320,18 +335,18 @@ def test_redundant_baselines(cst_beam, hera_loc):
     assert np.allclose(visibility1, visibility2)
 
 
-@pytest.mark.parametrize('beam', multi_beams)
+@pytest.mark.parametrize("beam", multi_beams)
 def test_single_offzenith_source(beam, hera_loc):
     """Test single off-zenith source."""
 
-    time = Time(2458098.27471265, format='jd')
+    time = Time(2458098.27471265, format="jd")
     array_location = hera_loc
     time.location = array_location
-    freq = (123e6 * units.Hz)
+    freq = 123e6 * units.Hz
 
-    src_az = Angle('90.0d')
-    src_alt = Angle('85.0d')
-    src_za = Angle('90.0d') - src_alt
+    src_az = Angle("90.0d")
+    src_alt = Angle("85.0d")
+    src_za = Angle("90.0d") - src_alt
 
     src_l = np.sin(src_az.rad) * np.sin(src_za.rad)
     src_m = np.cos(src_az.rad) * np.sin(src_za.rad)
@@ -339,14 +354,16 @@ def test_single_offzenith_source(beam, hera_loc):
 
     antpos = np.array([[0, 0, 0], [28, 0, 0]], dtype=float)
 
-    antenna1 = pyuvsim.Antenna('ant1', 1, np.array(antpos[0, :]), 0)
-    antenna2 = pyuvsim.Antenna('ant2', 2, np.array(antpos[1, :]), 0)
+    antenna1 = pyuvsim.Antenna("ant1", 1, np.array(antpos[0, :]), 0)
+    antenna2 = pyuvsim.Antenna("ant2", 2, np.array(antpos[1, :]), 0)
 
     # setup the things that don't come from pyuvdata:
     # make a source off zenith
     time.location = array_location
     # create_mock_catalog uses azimuth of 90
-    source, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
+    source, _ = pyuvsim.create_mock_catalog(
+        time, arrangement="off-zenith", alt=src_alt.deg
+    )
 
     source.update_positions(time, array_location)
     src_alt_az = source.alt_az
@@ -362,7 +379,7 @@ def test_single_offzenith_source(beam, hera_loc):
 
     baseline = pyuvsim.Baseline(antenna1, antenna2)
 
-    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+    array = pyuvsim.Telescope("telescope_name", array_location, beam_list)
     task = pyuvsim.UVTask(source, time, freq, baseline, array)
     engine = pyuvsim.UVEngine(task)
 
@@ -370,14 +387,18 @@ def test_single_offzenith_source(beam, hera_loc):
 
     # analytically calculate visibility
     beam_za, beam_az = simutils.altaz_to_zenithangle_azimuth(src_alt.rad, src_az.rad)
-    beam_za2, beam_az2 = simutils.altaz_to_zenithangle_azimuth(src_alt_az[0], src_alt_az[1])
+    beam_za2, beam_az2 = simutils.altaz_to_zenithangle_azimuth(
+        src_alt_az[0], src_alt_az[1]
+    )
 
     assert np.isclose(beam_za, beam_za2)
     assert np.isclose(beam_az, beam_az2)
 
     interpolated_beam, _ = beam.interp(
-        az_array=np.array([beam_az]), za_array=np.array([beam_za]),
-        freq_array=np.array([freq.to_value('Hz')]))
+        az_array=np.array([beam_az]),
+        za_array=np.array([beam_za]),
+        freq_array=np.array([freq.to_value("Hz")]),
+    )
 
     jones = np.zeros((2, 2, 1), dtype=np.complex64)
     jones[0, 0] = interpolated_beam[1, 0, 0, 0]
@@ -388,56 +409,66 @@ def test_single_offzenith_source(beam, hera_loc):
     beam_jones = antenna1.get_beam_jones(array, src_alt_az, freq)
     assert np.allclose(beam_jones, jones)
 
-    uvw_array = units.Quantity([[28., 0., 0.]], unit='m')
-    uvw_wavelength_array = uvw_array / const.c * freq.to('1/s')
+    uvw_array = units.Quantity([[28.0, 0.0, 0.0]], unit="m")
+    uvw_wavelength_array = uvw_array / const.c * freq.to("1/s")
     # Remove source axis from jones matrix
     jones = jones.squeeze()
-    vis_analytic = 0.5 * np.dot(jones, np.conj(jones).T) * np.exp(
-        2j * np.pi * (
-            uvw_wavelength_array[0, 0] * src_l
-            + uvw_wavelength_array[0, 1] * src_m
-            + uvw_wavelength_array[0, 2] * src_n
+    vis_analytic = (
+        0.5
+        * np.dot(jones, np.conj(jones).T)
+        * np.exp(
+            2j
+            * np.pi
+            * (
+                uvw_wavelength_array[0, 0] * src_l
+                + uvw_wavelength_array[0, 1] * src_m
+                + uvw_wavelength_array[0, 2] * src_n
+            )
         )
     )
     vis_analytic = np.array(
         [vis_analytic[0, 0], vis_analytic[1, 1], vis_analytic[0, 1], vis_analytic[1, 0]]
     )
 
-    assert np.allclose(baseline.uvw.to_value('m'), uvw_array.value)
+    assert np.allclose(baseline.uvw.to_value("m"), uvw_array.value)
     assert np.allclose(visibility, vis_analytic)
 
 
-@pytest.mark.parametrize('beam', multi_beams)
+@pytest.mark.parametrize("beam", multi_beams)
 def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
     """Calculate visibilities for a baseline triangle of an off-zenith source."""
 
     enu_antpos, uvw_array = triangle_pos
-    time = Time(2458098.27471265, format='jd')
-    src_az = Angle('90.0d')
-    src_alt = Angle('85.0d')
-    src_za = Angle('90.0d') - src_alt
+    time = Time(2458098.27471265, format="jd")
+    src_az = Angle("90.0d")
+    src_alt = Angle("85.0d")
+    src_za = Angle("90.0d") - src_alt
 
     src_l = np.sin(src_az.rad) * np.sin(src_za.rad)
     src_m = np.cos(src_az.rad) * np.sin(src_za.rad)
     src_n = np.cos(src_za.rad)
 
     array_location = hera_loc
-    freq = (123e6 * units.Hz)
+    freq = 123e6 * units.Hz
 
-    antenna1 = pyuvsim.Antenna('ant1', 0, np.array(enu_antpos[0, :]), 0)
-    antenna2 = pyuvsim.Antenna('ant2', 1, np.array(enu_antpos[1, :]), 0)
-    antenna3 = pyuvsim.Antenna('ant3', 2, np.array(enu_antpos[2, :]), 0)
+    antenna1 = pyuvsim.Antenna("ant1", 0, np.array(enu_antpos[0, :]), 0)
+    antenna2 = pyuvsim.Antenna("ant2", 1, np.array(enu_antpos[1, :]), 0)
+    antenna3 = pyuvsim.Antenna("ant3", 2, np.array(enu_antpos[2, :]), 0)
 
     # make a source off zenith
     time.location = array_location
-    source, _ = pyuvsim.create_mock_catalog(time, arrangement='off-zenith', alt=src_alt.deg)
+    source, _ = pyuvsim.create_mock_catalog(
+        time, arrangement="off-zenith", alt=src_alt.deg
+    )
 
     beam_list = pyuvsim.BeamList([beam])
 
-    baselines = [pyuvsim.Baseline(antenna2, antenna1),
-                 pyuvsim.Baseline(antenna3, antenna1),
-                 pyuvsim.Baseline(antenna3, antenna2)]
-    array = pyuvsim.Telescope('telescope_name', array_location, beam_list)
+    baselines = [
+        pyuvsim.Baseline(antenna2, antenna1),
+        pyuvsim.Baseline(antenna3, antenna1),
+        pyuvsim.Baseline(antenna3, antenna2),
+    ]
+    array = pyuvsim.Telescope("telescope_name", array_location, beam_list)
     tasks = [pyuvsim.UVTask(source, time, freq, bl, array) for bl in baselines]
     visibilities = []
     uvws = []
@@ -451,8 +482,9 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
     # analytically calculate visibilities
     beam.peak_normalize()
     interpolated_beam, _ = beam.interp(
-        az_array=np.array([0.0]), za_array=np.array([src_za.rad]),
-        freq_array=np.array([freq.to_value('Hz')])
+        az_array=np.array([0.0]),
+        za_array=np.array([src_za.rad]),
+        freq_array=np.array([freq.to_value("Hz")]),
     )
     jones = np.zeros((2, 2, 1), dtype=np.complex64)
     jones[0, 0] = interpolated_beam[1, 0, 0, :]
@@ -460,13 +492,18 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
     jones[1, 0] = interpolated_beam[1, 1, 0, :]
     jones[0, 1] = interpolated_beam[0, 0, 0, :]
 
-    uvw_wavelength_array = uvw_array * units.m / const.c * freq.to('1/s')
+    uvw_wavelength_array = uvw_array * units.m / const.c * freq.to("1/s")
 
     visibilities_analytic = []
     for u, v, w in uvw_wavelength_array:
-        vis = 0.5 * np.dot(jones[..., 0], np.conj(jones[..., 0]).T) * np.exp(
-            2j * np.pi * (u * src_l + v * src_m + w * src_n))
-        visibilities_analytic.append(np.array([vis[0, 0], vis[1, 1], vis[0, 1], vis[1, 0]]))
+        vis = (
+            0.5
+            * np.dot(jones[..., 0], np.conj(jones[..., 0]).T)
+            * np.exp(2j * np.pi * (u * src_l + v * src_m + w * src_n))
+        )
+        visibilities_analytic.append(
+            np.array([vis[0, 0], vis[1, 1], vis[0, 1], vis[1, 0]])
+        )
 
     assert np.allclose(uvws, uvw_array)
     assert np.allclose(visibilities, visibilities_analytic)
@@ -479,8 +516,10 @@ def test_file_to_tasks(cst_beam, future_shapes):
     hera_uv = UVData.from_file(EW_uvfits_file)
     if future_shapes:
         hera_uv.use_future_array_shapes()
-    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', Nsrcs=5, return_data=True)
+    time = Time(hera_uv.time_array[0], scale="utc", format="jd")
+    sources, _ = pyuvsim.create_mock_catalog(
+        time, arrangement="zenith", Nsrcs=5, return_data=True
+    )
 
     beam_list = pyuvsim.BeamList([cst_beam])
 
@@ -514,7 +553,7 @@ def test_file_to_tasks(cst_beam, future_shapes):
     assert task1 >= task0
     assert task0 <= task1
 
-    tel_loc = EarthLocation.from_geocentric(*hera_uv.telescope_location, unit='m')
+    tel_loc = EarthLocation.from_geocentric(*hera_uv.telescope_location, unit="m")
 
     telescope = pyuvsim.Telescope(hera_uv.telescope_name, tel_loc, beam_list)
 
@@ -548,7 +587,9 @@ def test_file_to_tasks(cst_beam, future_shapes):
     for idx, antenna1 in enumerate(antennas1):
         antenna2 = antennas2[idx]
         baseline = pyuvsim.Baseline(antenna1, antenna2)
-        task = pyuvsim.UVTask(sources, time.jd, hera_uv.freq_array[0], baseline, telescope)
+        task = pyuvsim.UVTask(
+            sources, time.jd, hera_uv.freq_array[0], baseline, telescope
+        )
         task.uvdata_index = (idx, 0)
         expected_task_list.append(task)
 
@@ -563,8 +604,10 @@ def test_file_to_tasks(cst_beam, future_shapes):
 def test_gather():
     hera_uv = UVData.from_file(EW_uvfits_file)
     hera_uv.use_future_array_shapes()
-    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
-    sources, _ = pyuvsim.create_mock_catalog(time, arrangement='zenith', return_data=True)
+    time = Time(hera_uv.time_array[0], scale="utc", format="jd")
+    sources, _ = pyuvsim.create_mock_catalog(
+        time, arrangement="zenith", return_data=True
+    )
 
     beam_list = pyuvsim.BeamList([multi_beams[1]])
 
@@ -573,8 +616,9 @@ def test_gather():
 
     Ntasks = Nblts * Nfreqs
     beam_dict = dict(zip(hera_uv.antenna_names, [0] * hera_uv.Nants_data))
-    taskiter = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv, sources, beam_list,
-                                           beam_dict)
+    taskiter = pyuvsim.uvdata_to_task_iter(
+        np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict
+    )
     uvtask_list = list(taskiter)
 
     uv_out = pyuvsim.simsetup._complete_uvdata(hera_uv, inplace=False)
@@ -588,14 +632,14 @@ def test_gather():
 
         blti, freq_ind = task.uvdata_index
 
-        flat_ind = np.ravel_multi_index(
-            (blti, freq_ind, 0), uv_out.data_array.shape
-        )
+        flat_ind = np.ravel_multi_index((blti, freq_ind, 0), uv_out.data_array.shape)
         offset = flat_ind * size_complex
-        val = np.frombuffer(visbuf[offset:offset + vis.nbytes], dtype=np.complex128)
+        val = np.frombuffer(visbuf[offset : offset + vis.nbytes], dtype=np.complex128)
         val += vis
-        visbuf[offset:offset + vis.nbytes] = bytearray(val)[:]
-    uv_out.data_array = np.frombuffer(visbuf, dtype=complex).reshape(uv_out.data_array.shape)
+        visbuf[offset : offset + vis.nbytes] = bytearray(val)[:]
+    uv_out.data_array = np.frombuffer(visbuf, dtype=complex).reshape(
+        uv_out.data_array.shape
+    )
 
     assert np.allclose(uv_out.data_array, hera_uv.data_array, atol=5e-3)
 
@@ -606,9 +650,9 @@ def test_local_task_gen():
     hera_uv = UVData.from_file(EW_uvfits_10time10chan)
     hera_uv.use_future_array_shapes()
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
-    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    time = Time(hera_uv.time_array[0], scale="utc", format="jd")
     sources, kwds = pyuvsim.create_mock_catalog(
-        time, arrangement='random', Nsrcs=5, return_data=True
+        time, arrangement="random", Nsrcs=5, return_data=True
     )
 
     beam_list = pyuvsim.BeamList([multi_beams[1]])
@@ -620,13 +664,14 @@ def test_local_task_gen():
 
     # Check error conditions
     uv_iter0 = pyuvsim.uvdata_to_task_iter(
-        np.arange(Ntasks), 'not_uvdata', sources, beam_list, beam_dict
+        np.arange(Ntasks), "not_uvdata", sources, beam_list, beam_dict
     )
-    with pytest.raises(TypeError, match='input_uv must be UVData object'):
+    with pytest.raises(TypeError, match="input_uv must be UVData object"):
         next(uv_iter0)
-    uv_iter1 = pyuvsim.uvdata_to_task_iter(np.arange(Ntasks), hera_uv,
-                                           'not_skydata', beam_list, beam_dict)
-    with pytest.raises(TypeError, match='catalog must be a SkyModelData'):
+    uv_iter1 = pyuvsim.uvdata_to_task_iter(
+        np.arange(Ntasks), hera_uv, "not_skydata", beam_list, beam_dict
+    )
+    with pytest.raises(TypeError, match="catalog must be a SkyModelData"):
         next(uv_iter1)
 
     # Copy sources and beams so we don't accidentally reuse quantities.
@@ -636,8 +681,11 @@ def test_local_task_gen():
     uvtask_list = list(taskiter)
 
     uvtask_iter = pyuvsim.uvdata_to_task_iter(
-        np.arange(Ntasks), hera_uv, copy.deepcopy(sources),
-        copy.deepcopy(beam_list), beam_dict
+        np.arange(Ntasks),
+        hera_uv,
+        copy.deepcopy(sources),
+        copy.deepcopy(beam_list),
+        beam_dict,
     )
 
     engine0 = pyuvsim.UVEngine(reuse_spline=False)
@@ -653,13 +701,13 @@ def test_local_task_gen():
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_nsky_parts_large(capsys):
     """Check that we get the same visibilities no matter what Nsky_parts is set to."""
-    pytest.importorskip('mpi4py')
+    pytest.importorskip("mpi4py")
     hera_uv = UVData.from_file(EW_uvfits_10time10chan)
     hera_uv.use_future_array_shapes()
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
-    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    time = Time(hera_uv.time_array[0], scale="utc", format="jd")
     sources, kwds = pyuvsim.create_mock_catalog(
-        time, arrangement='random', Nsrcs=25, return_data=True, rseed=100
+        time, arrangement="random", Nsrcs=25, return_data=True, rseed=100
     )
 
     beam_list = pyuvsim.BeamList([multi_beams[1]])
@@ -687,8 +735,9 @@ def test_nsky_parts_large(capsys):
 
 
 def test_set_nsky_parts_errors():
-    pytest.importorskip('mpi4py')
+    pytest.importorskip("mpi4py")
     from pyuvsim import mpi
+
     mpi.start_mpi(block_nonroot_stdout=False)
 
     # Spoof environmental parameters.
@@ -696,15 +745,16 @@ def test_set_nsky_parts_errors():
     # large Nsky_parts_calc
     Npus_node = 2000  # Absurdly large
     mpi.Npus_node = Npus_node
-    mem_per_node = str(100000.)  # 1GB of memory per node
-    os.environ['SLURM_MEM_PER_NODE'] = mem_per_node
+    mem_per_node = str(100000.0)  # 1GB of memory per node
+    os.environ["SLURM_MEM_PER_NODE"] = mem_per_node
     assert simutils.get_avail_memory() == float(mem_per_node) * 1e6  # convert to bytes
 
     Nsrcs = 1e12
     cat_nfreqs = 1e3
 
-    mem_avail = (simutils.get_avail_memory()
-                 - mpi.get_max_node_rss(return_per_node=True) * 2**30)
+    mem_avail = (
+        simutils.get_avail_memory() - mpi.get_max_node_rss(return_per_node=True) * 2**30
+    )
     # This used to happen sometimes because the mem_per_node was too low.
     assert mem_avail > 0, "Computed available memory was negative."
     Npus_node = mpi.node_comm.Get_size()
@@ -718,7 +768,7 @@ def test_set_nsky_parts_errors():
 
     with pytest.raises(
         ValueError,
-        match="Nsky_parts is too small, it will lead to out of memory errors."
+        match="Nsky_parts is too small, it will lead to out of memory errors.",
     ):
         _set_nsky_parts(Nsrcs, cat_nfreqs, 1)
 
@@ -732,14 +782,11 @@ def test_set_nsky_parts_errors():
     Nsky_parts_calc = np.ceil(skymodel_mem_footprint / float(skymodel_mem_max))
     assert Nsky_parts_calc > Nsrcs
 
-    with pytest.raises(
-        ValueError,
-        match="Insufficient memory for simulation."
-    ):
+    with pytest.raises(ValueError, match="Insufficient memory for simulation."):
         _set_nsky_parts(Nsrcs, cat_nfreqs, 5)
 
     # Reset spoofed parameters.
-    del os.environ['SLURM_MEM_PER_NODE']
+    del os.environ["SLURM_MEM_PER_NODE"]
     pyuvsim.mpi.Npus_node = 1
 
 
@@ -762,15 +809,17 @@ def test_task_coverage():
         Nbltf = Nbls * Ntimes * Nfreqs
 
         # List of pairs -- (bl/t/f index, source index)
-        srci, bltfi = map(np.ndarray.flatten, np.meshgrid(np.arange(Nsrcs), np.arange(Nbltf)))
+        srci, bltfi = map(
+            np.ndarray.flatten, np.meshgrid(np.arange(Nsrcs), np.arange(Nbltf))
+        )
 
         tasks_expected = np.column_stack((bltfi, srci))
         tasks_all = []
         for rank in range(Npus):
-            task_inds, src_inds, Ntasks_local, Nsrcs_local = pyuvsim.uvsim._make_task_inds(
-                Nbls * Ntimes, Nfreqs, Nsrcs, rank, Npus
+            task_inds, src_inds, Ntasks_local, Nsrcs_local = (
+                pyuvsim.uvsim._make_task_inds(Nbls * Ntimes, Nfreqs, Nsrcs, rank, Npus)
             )
-            src_inds = np.arange(Nsrcs)[src_inds]   # Turn slice into iterator
+            src_inds = np.arange(Nsrcs)[src_inds]  # Turn slice into iterator
             tasks = itertools.product(task_inds, src_inds)
             tasks_all.append(tasks)
         tasks_all = itertools.chain(*tasks_all)
@@ -789,13 +838,15 @@ def test_task_coverage():
 
         Nbltf = Nbls * Ntimes * Nfreqs
 
-        bltfi, srci = map(np.ndarray.flatten, np.meshgrid(np.arange(Nbltf), np.arange(Nsrcs)))
+        bltfi, srci = map(
+            np.ndarray.flatten, np.meshgrid(np.arange(Nbltf), np.arange(Nsrcs))
+        )
 
         tasks_expected = np.column_stack((bltfi, srci))
         tasks_all = []
         for rank in range(Npus):
-            task_inds, src_inds, Ntasks_local, Nsrcs_local = pyuvsim.uvsim._make_task_inds(
-                Nbls * Ntimes, Nfreqs, Nsrcs, rank, Npus
+            task_inds, src_inds, Ntasks_local, Nsrcs_local = (
+                pyuvsim.uvsim._make_task_inds(Nbls * Ntimes, Nfreqs, Nsrcs, rank, Npus)
             )
 
             tasks = itertools.product(task_inds, src_inds)
@@ -812,13 +863,13 @@ def test_task_coverage():
 def test_source_splitting():
     # Check that if the available memory is less than the expected size of the source catalog,
     # then the task iterator will loop over chunks of the source array.
-    pytest.importorskip('mpi4py')
+    pytest.importorskip("mpi4py")
     hera_uv = UVData.from_file(EW_uvfits_10time10chan)
     hera_uv.use_future_array_shapes()
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
-    time = Time(hera_uv.time_array[0], scale='utc', format='jd')
+    time = Time(hera_uv.time_array[0], scale="utc", format="jd")
     sources, kwds = pyuvsim.create_mock_catalog(
-        time, arrangement='random', Nsrcs=30, return_data=True
+        time, arrangement="random", Nsrcs=30, return_data=True
     )
 
     # Spoof environmental parameters.
@@ -827,9 +878,9 @@ def test_source_splitting():
     # The alternative would be to make a very large source catalog, but that's not ideal in a test.
     Npus_node = 2000
     pyuvsim.mpi.Npus_node = Npus_node  # Absurdly large
-    os.environ['SLURM_MEM_PER_NODE'] = str(400.0)  # Only 4MB of memory
+    os.environ["SLURM_MEM_PER_NODE"] = str(400.0)  # Only 4MB of memory
 
-    beam = pyuvsim.analyticbeam.AnalyticBeam('uniform')
+    beam = pyuvsim.analyticbeam.AnalyticBeam("uniform")
     beam_list = pyuvsim.BeamList([beam])
 
     Nblts = hera_uv.Nblts
@@ -840,8 +891,7 @@ def test_source_splitting():
 
     skymodel = sources.get_skymodel()
     skymodel_mem_footprint = (
-        simutils.estimate_skymodel_memory_usage(
-            skymodel.Ncomponents, skymodel.Nfreqs)
+        simutils.estimate_skymodel_memory_usage(skymodel.Ncomponents, skymodel.Nfreqs)
         * Npus_node
     )
     mem_avail = pyuvsim.utils.get_avail_memory()
@@ -862,7 +912,7 @@ def test_source_splitting():
     assert len(uvtask_list) == Ntasks * Nsky_parts
 
     # Reset spoofed parameters.
-    del os.environ['SLURM_MEM_PER_NODE']
+    del os.environ["SLURM_MEM_PER_NODE"]
     pyuvsim.mpi.Npus_node = 1
 
 
@@ -905,10 +955,15 @@ def test_quantity_reuse(uvobj_beams_srcs):
         engine.set_task(task)
         engine.make_visibility()
 
-        apcoh_changed = not allclose_or_none(engine.apparent_coherency, prev_apparent_coherency)
-        jones_changed = (not allclose_or_none(engine.beam1_jones, prev_jones1)
-                         or not allclose_or_none(engine.beam2_jones, prev_jones2))
-        locoh_changed = not allclose_or_none(engine.local_coherency, prev_local_coherency)
+        apcoh_changed = not allclose_or_none(
+            engine.apparent_coherency, prev_apparent_coherency
+        )
+        jones_changed = not allclose_or_none(
+            engine.beam1_jones, prev_jones1
+        ) or not allclose_or_none(engine.beam2_jones, prev_jones2)
+        locoh_changed = not allclose_or_none(
+            engine.local_coherency, prev_local_coherency
+        )
         srcpos_changed = not allclose_or_none(sky.alt_az, prev_source_pos)
 
         freq = task.freq.to_value("Hz")
@@ -1012,15 +1067,15 @@ def test_fullfreq_check(uvobj_beams_srcs):
     stokes = np.zeros((4, uv_obj.Nfreqs, Nsrcs)) * units.Jy
     stokes[0, :, :] = 1.0 * units.Jy
 
-    ra = Longitude(np.linspace(0, 2 * np.pi, Nsrcs), 'rad')
-    dec = Latitude(np.linspace(-np.pi / 2, np.pi / 3, Nsrcs), 'rad')
+    ra = Longitude(np.linspace(0, 2 * np.pi, Nsrcs), "rad")
+    dec = Latitude(np.linspace(-np.pi / 2, np.pi / 3, Nsrcs), "rad")
 
     sky0 = pyradiosky.SkyModel(
         name=np.arange(Nsrcs).astype(str),
         ra=ra,
         dec=dec,
         stokes=stokes,
-        spectral_type='full',
+        spectral_type="full",
         freq_array=freqs0,
         frame="icrs",
     )
@@ -1030,7 +1085,7 @@ def test_fullfreq_check(uvobj_beams_srcs):
         ra=ra,
         dec=dec,
         stokes=stokes,
-        spectral_type='full',
+        spectral_type="full",
         freq_array=freqs1,
         frame="icrs",
     )
@@ -1053,40 +1108,54 @@ def test_fullfreq_check(uvobj_beams_srcs):
     next(taskiter1)
 
 
-@pytest.mark.skipif('hasmoon')
+@pytest.mark.skipif("hasmoon")
 def test_moonloc_error(uvobj_beams_srcs):
     # Break if the uvobj indicates that the sim is on the Moon, but lunarsky is not available.
 
     uv_obj, beam_list, beam_dict, sources = uvobj_beams_srcs
 
-    uv_obj.extra_keywords['world'] = 'moon'
+    uv_obj.extra_keywords["world"] = "moon"
 
-    with pytest.raises(ValueError, match='Need lunarsky module to simulate'):
-        next(pyuvsim.uvsim.uvdata_to_task_iter(range(5), uv_obj, sources, beam_list, beam_dict))
+    with pytest.raises(ValueError, match="Need lunarsky module to simulate"):
+        next(
+            pyuvsim.uvsim.uvdata_to_task_iter(
+                range(5), uv_obj, sources, beam_list, beam_dict
+            )
+        )
 
-    uv_obj.extra_keywords['world'] = 'gallifrey'
+    uv_obj.extra_keywords["world"] = "gallifrey"
 
     with pytest.raises(ValueError, match="If world keyword is set, it must "):
-        next(pyuvsim.uvsim.uvdata_to_task_iter(range(5), uv_obj, sources, beam_list, beam_dict))
+        next(
+            pyuvsim.uvsim.uvdata_to_task_iter(
+                range(5), uv_obj, sources, beam_list, beam_dict
+            )
+        )
 
 
 def test_run_mpierr():
     params = pyuvsim.simsetup._config_str_to_dict(
-        os.path.join(SIM_DATA_PATH, 'test_config', 'param_1time_1src_testcat.yaml')
+        os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
     )
     if pyuvsim.mpi is None:
-        with pytest.raises(ImportError, match='You need mpi4py to use the uvsim module'):
+        with pytest.raises(
+            ImportError, match="You need mpi4py to use the uvsim module"
+        ):
             pyuvsim.run_uvsim(params, return_uv=True)
 
-        with pytest.raises(ImportError, match='You need mpi4py to use the uvsim module'):
-            pyuvsim.run_uvdata_uvsim(UVData(), ['beamlist'], {}, pyuvsim.SkyModelData())
+        with pytest.raises(
+            ImportError, match="You need mpi4py to use the uvsim module"
+        ):
+            pyuvsim.run_uvdata_uvsim(UVData(), ["beamlist"], {}, pyuvsim.SkyModelData())
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("order", [("bda",), ("baseline", "time"), ("ant2", "time")])
 def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
-    pytest.importorskip('mpi4py')
-    uvdata_linear, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
+    pytest.importorskip("mpi4py")
+    uvdata_linear, beam_list, beam_dict, sky_model = (
+        uvdata_two_redundant_bls_triangle_sources
+    )
 
     if len(order) == 2:
         minor_order = order[1]
@@ -1105,11 +1174,11 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
 
     uvdata_linear.data_array = out_uv.data_array
 
-    uvdata_linear.reorder_blts(order="time", minor_order="baseline", conj_convention="ant1<ant2")
-
-    assert np.allclose(
-        uvdata_linear.get_data((0, 1)), uvdata_linear.get_data((1, 2))
+    uvdata_linear.reorder_blts(
+        order="time", minor_order="baseline", conj_convention="ant1<ant2"
     )
+
+    assert np.allclose(uvdata_linear.get_data((0, 1)), uvdata_linear.get_data((1, 2)))
     assert not np.allclose(
         uvdata_linear.get_data((0, 1)), uvdata_linear.get_data((0, 2))
     )
@@ -1118,8 +1187,10 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("order", [("bda",), ("baseline", "time"), ("ant2", "time")])
 def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
-    pytest.importorskip('mpi4py')
-    uvdata_linear, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
+    pytest.importorskip("mpi4py")
+    uvdata_linear, beam_list, beam_dict, sky_model = (
+        uvdata_two_redundant_bls_triangle_sources
+    )
 
     if len(order) == 2:
         minor_order = order[1]
@@ -1144,8 +1215,10 @@ def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("cut_beam", [10, 85, 90])
 def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources, cut_beam):
-    pytest.importorskip('mpi4py')
-    uvdata_linear, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
+    pytest.importorskip("mpi4py")
+    uvdata_linear, beam_list, beam_dict, sky_model = (
+        uvdata_two_redundant_bls_triangle_sources
+    )
 
     beam_list[0] = multi_beams[0]
     beam_list.set_obj_mode()
@@ -1174,7 +1247,7 @@ def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources, cut_beam):
         # There's a source out at ~80 degrees
         with pytest.raises(
             ValueError,
-            match="at least one interpolation location is outside of the UVBeam"
+            match="at least one interpolation location is outside of the UVBeam",
         ):
             out_uv = pyuvsim.uvsim.run_uvdata_uvsim(
                 input_uv=uvdata_linear.copy(),
@@ -1190,8 +1263,10 @@ def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources, cut_beam):
             catalog=sky_model,
         )
 
-        assert np.allclose(
-            out_uv.get_data((0, 1)), out_uv.get_data((1, 2))
-        )
+        assert np.allclose(out_uv.get_data((0, 1)), out_uv.get_data((1, 2)))
         # make sure (0, 2) has fewer times
-        assert out_uv.get_data((0, 2)).shape == (out_uv.Ntimes // 2, out_uv.Nfreqs, out_uv.Npols)
+        assert out_uv.get_data((0, 2)).shape == (
+            out_uv.Ntimes // 2,
+            out_uv.Nfreqs,
+            out_uv.Npols,
+        )

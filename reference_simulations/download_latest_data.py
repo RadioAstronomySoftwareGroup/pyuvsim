@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser(
     description="A script to download the latest archived reference simulation data."
 )
 parser.add_argument(
-    'generation',
+    "generation",
     type=int,
     nargs="?",
     help="Generation of reference sims to download (1 or 2).",
@@ -35,7 +35,7 @@ parser.add_argument(
         "Additionally download input data from the google drive for simulations whose "
         "inputs cannot be stored on github directly."
     ),
-    default=False
+    default=False,
 )
 args = parser.parse_args()
 
@@ -44,18 +44,18 @@ if args.generation not in [1, 2]:
 
 version = f"gen{args.generation}"
 
-target_dir = os.path.join('latest_ref_data', version)
+target_dir = os.path.join("latest_ref_data", version)
 
 if not os.path.exists(target_dir):
     os.makedirs(target_dir)
 
-urlbase = 'https://drive.google.com/uc?export=download'
+urlbase = "https://drive.google.com/uc?export=download"
 
-fileids = 'gdrive_file_ids.dat'
+fileids = "gdrive_file_ids.dat"
 
 dat = []
 
-with open(fileids, 'r') as dfile:
+with open(fileids, "r") as dfile:
     for line in dfile:
         line = line.strip()
         # fileid name type size size_unit date time
@@ -63,16 +63,16 @@ with open(fileids, 'r') as dfile:
         d = line.split()
         fname = d[1]
         if args.generation == 1:
-            if 'ref_2.' in fname:
+            if "ref_2." in fname:
                 continue
         elif args.generation == 2:
-            if 'ref_1.' in fname:
+            if "ref_1." in fname:
                 continue
         fid = d[0]
-        r = requests.get(urlbase, params={'id': fid})
+        r = requests.get(urlbase, params={"id": fid})
         print(fname)
         fname = os.path.join(target_dir, fname)
-        with open(fname, 'wb') as ofile:
+        with open(fname, "wb") as ofile:
             ofile.write(r.content)
 
 if args.inputs:

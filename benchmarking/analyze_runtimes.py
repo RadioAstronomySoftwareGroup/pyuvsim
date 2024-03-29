@@ -26,15 +26,22 @@ def _func_times(timings, Nlist, dt=1e-6):
         for _, nhits, time in values:
             if nhits in Nlist:
                 ind = Nlist.index(nhits)
-                outarr[ind] += dt * time / nhits    # Time per hit.
+                outarr[ind] += dt * time / nhits  # Time per hit.
     return outarr
 
 
 # Only include functions that are called in loops.
-funcs_to_check = ['interp', 'get_beam_jones', 'apply_beam', 'make_visibility',
-                  'uvdata_to_task_iter', 'update_positions', 'coherency_calc']
-profname = 'profdata/time_profile.lprof'
-axesname = 'profdata/time_profile_axes.npz'
+funcs_to_check = [
+    "interp",
+    "get_beam_jones",
+    "apply_beam",
+    "make_visibility",
+    "uvdata_to_task_iter",
+    "update_positions",
+    "coherency_calc",
+]
+profname = "profdata/time_profile.lprof"
+axesname = "profdata/time_profile_axes.npz"
 
 # Prepend path
 basepath = sys.argv[1]
@@ -48,14 +55,10 @@ axes = {k: axes_npz[k][0] for k in axes_npz.keys()}
 # Set up combinations of axes.
 Naxes = len(axes)
 
-combos = [
-    ('Ntimes',),
-    ('Ntimes', 'Nfreqs'),
-    ('Ntimes', 'Nfreqs', 'Nbls')
-]
+combos = [("Ntimes",), ("Ntimes", "Nfreqs"), ("Ntimes", "Nfreqs", "Nbls")]
 
-if not axes['Nsrcs_loc'] == 1:
-    combos.append(('Ntimes', 'Nfreqs', 'Nbls', 'Nsrcs_loc'))
+if not axes["Nsrcs_loc"] == 1:
+    combos.append(("Ntimes", "Nfreqs", "Nbls", "Nsrcs_loc"))
 
 Nlist = []
 for comb in combos:

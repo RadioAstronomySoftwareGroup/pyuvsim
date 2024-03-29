@@ -31,6 +31,7 @@ shared_window_list = []
 
 def set_mpi_excepthook(mpi_comm):
     """Kill the whole job on an uncaught python exception."""
+
     def mpi_excepthook(exctype, value, traceback):  # pragma: no cover
         sys.__excepthook__(exctype, value, traceback)
         sys.stderr.flush()
@@ -54,7 +55,9 @@ def start_mpi(block_nonroot_stdout=True):
     """
     global world_comm, node_comm, rank_comm, rank, Npus
     if not MPI.Is_initialized():
-        MPI.Init_thread(MPI.THREAD_SERIALIZED)     # RMA is incompatible with THREAD_MULTIPLE.
+        MPI.Init_thread(
+            MPI.THREAD_SERIALIZED
+        )  # RMA is incompatible with THREAD_MULTIPLE.
         atexit.register(MPI.Finalize)
     world_comm = MPI.COMM_WORLD
     node_comm = world_comm.Split_type(MPI.COMM_TYPE_SHARED)
@@ -68,7 +71,7 @@ def start_mpi(block_nonroot_stdout=True):
 
     if (not rank == 0) and block_nonroot_stdout:  # pragma: no cover
         # For non-root ranks, do not print to stdout.
-        sys.stdout = open('/dev/null', 'w')
+        sys.stdout = open("/dev/null", "w")
         atexit.register(sys.stdout.close)
     atexit.register(free_shared)
 
@@ -137,7 +140,7 @@ def shared_mem_bcast(arr, root=0):
 
     # Access is not synchronized, so no process
     # should be allowed to overwrite.
-    sh_arr.flags['WRITEABLE'] = False
+    sh_arr.flags["WRITEABLE"] = False
 
     world_comm.Barrier()
     return sh_arr
@@ -231,7 +234,7 @@ def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
     else:
         result = loads(buf)
 
-    split_info_dict = {'MAX_BYTES': MAX_BYTES, 'ranges': ranges}
+    split_info_dict = {"MAX_BYTES": MAX_BYTES, "ranges": ranges}
 
     if return_split_info:
         return result, split_info_dict
@@ -293,7 +296,7 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
         displ = np.array([sum(counts[:p]) for p in range(comm.size + 1)])
 
     # Position in the output buffer for the current send buffer.
-    start_loc = sum(counts[:comm.rank])
+    start_loc = sum(counts[: comm.rank])
 
     start = 0
     end = 0
@@ -312,11 +315,15 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
             loc_disp = max(start_loc - start, 0)
         else:
             loc_disp = 0
-        cur_displ = comm.gather(loc_disp, root=0)       # Displacements into current chunk.
+        cur_displ = comm.gather(loc_disp, root=0)  # Displacements into current chunk.
 
-        cur_rbuf = np.empty(end - start, dtype=bytes)   # Buffer to receive current chunk.
-        comm.Gatherv(sendbuf=(cur_sbuf, MPI.BYTE), recvbuf=(
-            cur_rbuf, cur_counts, cur_displ, MPI.BYTE), root=root
+        cur_rbuf = np.empty(
+            end - start, dtype=bytes
+        )  # Buffer to receive current chunk.
+        comm.Gatherv(
+            sendbuf=(cur_sbuf, MPI.BYTE),
+            recvbuf=(cur_rbuf, cur_counts, cur_displ, MPI.BYTE),
+            root=root,
         )
         if comm.rank == 0:
             rbuf[start:end] = cur_rbuf[:]
@@ -324,11 +331,13 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
     per_proc = None
     if comm.rank == root:
         per_proc = []
-        per_proc = [loads(rbuf[displ[ii]:displ[ii] + counts[ii]]) for ii in range(comm.size)]
+        per_proc = [
+            loads(rbuf[displ[ii] : displ[ii] + counts[ii]]) for ii in range(comm.size)
+        ]
 
     split_info_dict = None
     if comm.rank == root:
-        split_info_dict = {'MAX_BYTES': MAX_BYTES, 'ranges': ranges}
+        split_info_dict = {"MAX_BYTES": MAX_BYTES, "ranges": ranges}
 
     if return_split_info:
         return per_proc, split_info_dict
@@ -371,11 +380,10 @@ class Counter:
         nint = 0
         if rank == count_rank:
             nint = 1
-        self.win = MPI.Win.Allocate(nint * itemsize, itemsize,
-                                    MPI.INFO_NULL, comm)
+        self.win = MPI.Win.Allocate(nint * itemsize, itemsize, MPI.INFO_NULL, comm)
         if rank == count_rank:
             mem = self.win.tomemory()
-            mem[:] = _struct.pack('i', 0)
+            mem[:] = _struct.pack("i", 0)
 
         comm.Barrier()
 
@@ -383,7 +391,8 @@ class Counter:
         """Free counter."""
         self.win.Free()
 
-    def next(self, increment=1):  # noqa this is shadowing a built in. Maybe should be changed?
+    # This is shadowing a built in. Maybe should be changed?
+    def next(self, increment=1):  # noqa
         """
         Add to the counter and return new value.
 
@@ -393,19 +402,19 @@ class Counter:
             Step size to take. Default: 1
 
         """
-        incr = _array('i', [increment])
-        nval = _array('i', [0])
+        incr = _array("i", [increment])
+        nval = _array("i", [0])
         self.win.Lock(self.count_rank)
-        self.win.Get_accumulate([incr, 1, MPI.INT],
-                                [nval, 1, MPI.INT],
-                                self.count_rank, op=MPI.SUM)
+        self.win.Get_accumulate(
+            [incr, 1, MPI.INT], [nval, 1, MPI.INT], self.count_rank, op=MPI.SUM
+        )
         self.win.Unlock(self.count_rank)
         return nval[0]
 
     def current_value(self):
         """Get current value of counter."""
         self.win.Lock(self.count_rank)
-        nval = _array('i', [0])
+        nval = _array("i", [0])
         self.win.Get([nval, 1, MPI.INT], self.count_rank)
         self.win.Unlock(self.count_rank)
         return nval[0]
@@ -429,10 +438,12 @@ def get_max_node_rss(return_per_node=False):
     # On linux, getrusage returns in kiB
     # On Mac systems, getrusage returns in B
     scale = 1.0
-    if 'linux' in sys.platform:
+    if "linux" in sys.platform:
         scale = 2**10
 
-    memory_usage_GiB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 2**30
+    memory_usage_GiB = (
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 2**30
+    )
     node_mem_tot = node_comm.allreduce(memory_usage_GiB, op=MPI.SUM)
     if return_per_node:
         return node_mem_tot

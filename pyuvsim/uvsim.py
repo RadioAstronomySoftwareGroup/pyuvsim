@@ -39,7 +39,7 @@ from .baseline import Baseline
 from .simsetup import SkyModelData
 from .telescope import Telescope
 
-__all__ = ['UVTask', 'UVEngine', 'uvdata_to_task_iter', 'run_uvsim', 'run_uvdata_uvsim']
+__all__ = ["UVTask", "UVEngine", "uvdata_to_task_iter", "run_uvsim", "run_uvdata_uvsim"]
 
 
 class UVTask:
@@ -100,10 +100,10 @@ class UVTask:
         self.uvdata_index = None  # Where to add the visibility in the uvdata object.
 
         if isinstance(self.time, float):
-            self.time = Time(self.time, format='jd')
+            self.time = Time(self.time, format="jd")
         if isinstance(self.freq, float):
             self.freq = self.freq * units.Hz
-        if sources.spectral_type == 'flat':
+        if sources.spectral_type == "flat":
             self.freq_i = 0
 
     def __repr__(self) -> str:
@@ -124,13 +124,15 @@ class UVTask:
             The other
 
         """
-        return (np.isclose(self.time.jd, other.time.jd, atol=1e-4)
-                and np.isclose(self.freq.value, other.freq.value, atol=1e-4)
-                and (self.sources == other.sources)
-                and (self.baseline == other.baseline)
-                and (self.visibility_vector == other.visibility_vector)
-                and (self.uvdata_index == other.uvdata_index)
-                and (self.telescope == other.telescope))
+        return (
+            np.isclose(self.time.jd, other.time.jd, atol=1e-4)
+            and np.isclose(self.freq.value, other.freq.value, atol=1e-4)
+            and (self.sources == other.sources)
+            and (self.baseline == other.baseline)
+            and (self.visibility_vector == other.visibility_vector)
+            and (self.uvdata_index == other.uvdata_index)
+            and (self.telescope == other.telescope)
+        )
 
     def __gt__(self, other):
         """
@@ -245,7 +247,9 @@ class UVEngine:
         The task currently being calculated.
     """
 
-    def __init__(self, task=None, update_positions=True, update_beams=True, reuse_spline=True):
+    def __init__(
+        self, task=None, update_positions=True, update_beams=True, reuse_spline=True
+    ):
         self.reuse_spline = reuse_spline  # Reuse spline fits in beam interpolation
         self.update_positions = update_positions
         self.update_beams = update_beams
@@ -282,7 +286,9 @@ class UVEngine:
         baseline = self.task.baseline
         beam_pair = (baseline.antenna1.beam_id, baseline.antenna2.beam_id)
 
-        if (not self.current_time == task.time.jd) or (self.sources is not task.sources):
+        if (not self.current_time == task.time.jd) or (
+            self.sources is not task.sources
+        ):
             self.update_positions = True
             self.update_local_coherency = True
             self.update_beams = True
@@ -291,7 +297,7 @@ class UVEngine:
             self.update_positions = False
             self.update_local_coherency = False
 
-        if not self.current_freq == task.freq.to('Hz').value:
+        if not self.current_freq == task.freq.to("Hz").value:
             self.update_beams = True
 
         if not self.current_beam_pair == beam_pair:
@@ -355,7 +361,9 @@ class UVEngine:
 
         coherency = self.local_coherency[:, :, self.task.freq_i, :]
 
-        self.beam2_jones = np.swapaxes(self.beam2_jones, 0, 1).conj()  # Transpose at each component
+        self.beam2_jones = np.swapaxes(
+            self.beam2_jones, 0, 1
+        ).conj()  # Transpose at each component
 
         self.apparent_coherency = np.einsum(
             "abz,bcz,cdz->adz", self.beam1_jones, coherency, self.beam2_jones
@@ -363,17 +371,14 @@ class UVEngine:
 
     def make_visibility(self):
         """Calculate visibility contribution from a set of source components."""
-        assert (isinstance(self.task.freq, Quantity))
+        assert isinstance(self.task.freq, Quantity)
         srcs = self.task.sources
         time = self.task.time
         location = self.task.telescope.location
 
         if self.update_positions:
             with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore",
-                    message="The get_frame_attr_names",
-                )
+                warnings.filterwarnings("ignore", message="The get_frame_attr_names")
                 srcs.update_positions(time, location)
 
         if self.update_beams:
@@ -382,7 +387,9 @@ class UVEngine:
         pos_lmn = srcs.pos_lmn[..., srcs.above_horizon]
 
         # need to convert uvws from meters to wavelengths
-        uvw_wavelength = self.task.baseline.uvw / speed_of_light * self.task.freq.to('1/s')
+        uvw_wavelength = (
+            self.task.baseline.uvw / speed_of_light * self.task.freq.to("1/s")
+        )
         fringe = np.exp(2j * np.pi * np.dot(uvw_wavelength, pos_lmn))
         vij = self.apparent_coherency * fringe
 
@@ -438,7 +445,9 @@ def _make_task_inds(Nblts, Nfreqs, Nsrcs, rank, Npus):
     return task_inds, src_inds, Ntasks_local, Nsrcs_local
 
 
-def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_parts=1):
+def uvdata_to_task_iter(
+    task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_parts=1
+):
     """
     Generate UVTask objects.
 
@@ -476,8 +485,10 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     Nsrcs_total = catalog.Ncomponents
     if Nsky_parts > 1:
         Nsky_parts = int(Nsky_parts)
-        src_iter = [simutils.iter_array_split(s, Nsrcs_total, Nsky_parts)[0]
-                    for s in range(Nsky_parts)]
+        src_iter = [
+            simutils.iter_array_split(s, Nsrcs_total, Nsky_parts)[0]
+            for s in range(Nsky_parts)
+        ]
     else:
         src_iter = [range(Nsrcs_total)]
     # Build the antenna list.
@@ -511,18 +522,15 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     # flat returns an iterator object.
     # no overhead from these calls.
     _times = np.broadcast_to(
-        input_uv.time_array.reshape(-1, 1),
-        (input_uv.Nblts, input_uv.Nfreqs),
+        input_uv.time_array.reshape(-1, 1), (input_uv.Nblts, input_uv.Nfreqs)
     ).flat
 
     _bls = np.broadcast_to(
-        input_uv.baseline_array.reshape(-1, 1),
-        (input_uv.Nblts, input_uv.Nfreqs),
+        input_uv.baseline_array.reshape(-1, 1), (input_uv.Nblts, input_uv.Nfreqs)
     ).flat
 
     _freqs = np.broadcast_to(
-        input_uv.freq_array.flatten().reshape(1, -1),
-        (input_uv.Nblts, input_uv.Nfreqs),
+        input_uv.freq_array.flatten().reshape(1, -1), (input_uv.Nblts, input_uv.Nfreqs)
     ).flat
 
     # indexing with the slice should return a view,
@@ -535,17 +543,19 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
 
     tloc = [np.float64(x) for x in input_uv.telescope_location]
 
-    world = input_uv.extra_keywords.get('world', 'earth')
+    world = input_uv.extra_keywords.get("world", "earth")
 
-    if world.lower() == 'earth':
-        location = EarthLocation.from_geocentric(*tloc, unit='m')
-    elif world.lower() == 'moon':
+    if world.lower() == "earth":
+        location = EarthLocation.from_geocentric(*tloc, unit="m")
+    elif world.lower() == "moon":
         if not hasmoon:
             raise ValueError("Need lunarsky module to simulate an array on the Moon.")
-        location = MoonLocation.from_selenocentric(*tloc, unit='m')
+        location = MoonLocation.from_selenocentric(*tloc, unit="m")
         location.ellipsoid = input_uv._telescope_location.ellipsoid
     else:
-        raise ValueError("If world keyword is set, it must be either 'moon' or 'earth'.")
+        raise ValueError(
+            "If world keyword is set, it must be either 'moon' or 'earth'."
+        )
     telescope = Telescope(input_uv.telescope_name, location, beam_list)
     freq_array = input_uv.freq_array * units.Hz
     if hasmoon and isinstance(location, MoonLocation):
@@ -553,19 +563,19 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
     else:
         tclass = Time
     time_array = tclass(
-        input_uv.time_array, scale='utc', format='jd', location=location
+        input_uv.time_array, scale="utc", format="jd", location=location
     )
     for src_i in src_iter:
         sky = catalog.get_skymodel(src_i)
         if (
-            sky.spectral_type == 'flat'
+            sky.spectral_type == "flat"
             and sky.freq_array is None
             and sky.reference_frequency is None
         ):
             sky.freq_array = freq_array
-        if sky.component_type == 'healpix' and hasattr(sky, 'healpix_to_point'):
+        if sky.component_type == "healpix" and hasattr(sky, "healpix_to_point"):
             sky.healpix_to_point()
-        if sky.spectral_type != 'flat':
+        if sky.spectral_type != "flat":
             sky.at_frequencies(freq_array)
 
         # Use flat here to get a 1D iterator
@@ -592,7 +602,7 @@ def uvdata_to_task_iter(task_ids, input_uv, catalog, beam_list, beam_dict, Nsky_
             freq = freq_array[freq_i]  # 0 = spw axis
 
             task = UVTask(sky, time, freq, bl, telescope, freq_i)
-            task.uvdata_index = (blt_i, freq_i)    # 0 = spectral window index
+            task.uvdata_index = (blt_i, freq_i)  # 0 = spectral window index
 
             yield task
         del sky
@@ -624,8 +634,9 @@ def _check_ntasks_valid(Ntasks_tot):
 def _set_nsky_parts(Nsrcs, cat_nfreqs, Nsky_parts):
     """Set the Nsky_parts."""
     # Estimating required memory to decide how to split source array.
-    mem_avail = (simutils.get_avail_memory()
-                 - mpi.get_max_node_rss(return_per_node=True) * 2**30)
+    mem_avail = (
+        simutils.get_avail_memory() - mpi.get_max_node_rss(return_per_node=True) * 2**30
+    )
 
     Npus_node = mpi.node_comm.Get_size()
     skymodel_mem_footprint = (
@@ -699,10 +710,12 @@ def run_uvdata_uvsim(
 
     """
     if mpi is None:
-        raise ImportError("You need mpi4py to use the uvsim module. "
-                          "Install it by running pip install pyuvsim[sim] "
-                          "or pip install pyuvsim[all] if you also want the "
-                          "line_profiler installed.")
+        raise ImportError(
+            "You need mpi4py to use the uvsim module. "
+            "Install it by running pip install pyuvsim[sim] "
+            "or pip install pyuvsim[all] if you also want the "
+            "line_profiler installed."
+        )
 
     mpi.start_mpi(block_nonroot_stdout=block_nonroot_stdout)
     rank = mpi.get_rank()
@@ -717,7 +730,10 @@ def run_uvdata_uvsim(
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
 
-    if not ((input_uv.Npols == 4) and (input_uv.polarization_array.tolist() == [-5, -6, -7, -8])):
+    if not (
+        (input_uv.Npols == 4)
+        and (input_uv.polarization_array.tolist() == [-5, -6, -7, -8])
+    ):
         raise ValueError("input_uv must have XX,YY,XY,YX polarization")
 
     if not input_uv.future_array_shapes:
@@ -730,15 +746,17 @@ def run_uvdata_uvsim(
     # The root node will initialize our simulation
     # Read input file and make uvtask list
     if rank == 0 and not quiet:
-        print('Nbls:', input_uv.Nbls, flush=True)
-        print('Ntimes:', input_uv.Ntimes, flush=True)
-        print('Nfreqs:', input_uv.Nfreqs, flush=True)
-        print('Nsrcs:', catalog.Ncomponents, flush=True)
+        print("Nbls:", input_uv.Nbls, flush=True)
+        print("Ntimes:", input_uv.Ntimes, flush=True)
+        print("Nfreqs:", input_uv.Nfreqs, flush=True)
+        print("Nsrcs:", catalog.Ncomponents, flush=True)
     if rank == 0:
         uv_container = simsetup._complete_uvdata(input_uv, inplace=False)
-        if 'world' in input_uv.extra_keywords:
-            uv_container.extra_keywords['world'] = input_uv.extra_keywords['world']
-        vis_data = mpi.MPI.Win.Create(uv_container._data_array.value, comm=mpi.world_comm)
+        if "world" in input_uv.extra_keywords:
+            uv_container.extra_keywords["world"] = input_uv.extra_keywords["world"]
+        vis_data = mpi.MPI.Win.Create(
+            uv_container._data_array.value, comm=mpi.world_comm
+        )
     else:
         vis_data = mpi.MPI.Win.Create(None, comm=mpi.world_comm)
 
@@ -760,7 +778,7 @@ def run_uvdata_uvsim(
         # In case the user created the beam list without checking consistency:
         beam_list.check_consistency()
 
-        if beam_list.beam_type != 'efield':
+        if beam_list.beam_type != "efield":
             raise ValueError("Beam type must be efield!")
 
         if beam_interp_check is None:
@@ -773,8 +791,12 @@ def run_uvdata_uvsim(
         Nsky_parts = _set_nsky_parts(Nsrcs, catalog.Nfreqs, Nsky_parts)
 
         local_task_iter = uvdata_to_task_iter(
-            task_inds, input_uv, catalog.subselect(src_inds),
-            beam_list, beam_dict, Nsky_parts=Nsky_parts
+            task_inds,
+            input_uv,
+            catalog.subselect(src_inds),
+            beam_list,
+            beam_dict,
+            Nsky_parts=Nsky_parts,
         )
 
         Ntasks_tot = Ntasks_local * Nsky_parts
@@ -805,9 +827,7 @@ def run_uvdata_uvsim(
 
             uvdata_indices.append(task.uvdata_index)
 
-            flat_ind = np.ravel_multi_index(
-                (blti, freq_ind, 0), data_array_shape
-            )
+            flat_ind = np.ravel_multi_index((blti, freq_ind, 0), data_array_shape)
             offset = flat_ind * size_complex
 
             vis_data.Lock(0)
@@ -832,7 +852,8 @@ def run_uvdata_uvsim(
 
         # If profiling is active, save meta data:
         from .profiling import prof  # noqa
-        if hasattr(prof, 'meta_file'):  # pragma: nocover
+
+        if hasattr(prof, "meta_file"):  # pragma: nocover
             # Saving axis sizes on current rank (local) and for the whole job (global).
             # These lines are affected by issue 179 of line_profiler, so the nocover
             # above will need to stay until this issue is resolved (see profiling.py).
@@ -843,14 +864,14 @@ def run_uvdata_uvsim(
             Nbls_loc = np.unique(bl_inds).size
             Nfreqs_loc = np.unique(task_inds[:, 1]).size
             axes_dict = {
-                'Ntimes_loc': Ntimes_loc,
-                'Nbls_loc': Nbls_loc,
-                'Nfreqs_loc': Nfreqs_loc,
-                'Nsrcs_loc': Nsky_parts,
-                'prof_rank': prof.rank
+                "Ntimes_loc": Ntimes_loc,
+                "Nbls_loc": Nbls_loc,
+                "Nfreqs_loc": Nfreqs_loc,
+                "Nsrcs_loc": Nsky_parts,
+                "prof_rank": prof.rank,
             }
 
-            with open(prof.meta_file, 'w') as afile:
+            with open(prof.meta_file, "w") as afile:
                 for k, v in axes_dict.items():
                     afile.write("{} \t {:d}\n".format(k, int(v)))
     finally:
@@ -864,8 +885,7 @@ def run_uvdata_uvsim(
             # Don't call the function if we're already expecting (time, baseline)
             if input_order != ("time", "baseline"):
                 uv_container.reorder_blts(
-                    order=input_order[0],
-                    minor_order=input_order[1],
+                    order=input_order[0], minor_order=input_order[1]
                 )
         else:
             warnings.warn(
@@ -877,16 +897,26 @@ def run_uvdata_uvsim(
         # Updating file history.
         history = simutils.get_version_string()
         if catalog.filename is not None:
-            history += ' Sources from source list(s): [' + ', '.join(catalog.filename) + '].'
-        if 'obsparam' in input_uv.extra_keywords:
-            obs_param_file = input_uv.extra_keywords['obsparam']
-            telescope_config_file = input_uv.extra_keywords['telecfg']
-            antenna_location_file = input_uv.extra_keywords['layout']
-            history += (' Based on config files: ' + obs_param_file + ', '
-                        + telescope_config_file + ', ' + antenna_location_file)
+            history += (
+                " Sources from source list(s): [" + ", ".join(catalog.filename) + "]."
+            )
+        if "obsparam" in input_uv.extra_keywords:
+            obs_param_file = input_uv.extra_keywords["obsparam"]
+            telescope_config_file = input_uv.extra_keywords["telecfg"]
+            antenna_location_file = input_uv.extra_keywords["layout"]
+            history += (
+                " Based on config files: "
+                + obs_param_file
+                + ", "
+                + telescope_config_file
+                + ", "
+                + antenna_location_file
+            )
         elif hasattr(uv_container, "filename") and uv_container.filename is not None:
-            history += ' Based on uvdata file(s): [' + ', '.join(uv_container.filename) + '].'
-        history += ' Npus = ' + str(mpi.Npus) + '.'
+            history += (
+                " Based on uvdata file(s): [" + ", ".join(uv_container.filename) + "]."
+            )
+        history += " Npus = " + str(mpi.Npus) + "."
 
         # add pyradiosky version
         history += catalog.pyradiosky_version_str
@@ -900,7 +930,11 @@ def run_uvdata_uvsim(
 
 
 def run_uvsim(
-    params, return_uv=False, beam_interp_check=None, quiet=False, block_nonroot_stdout=True,
+    params,
+    return_uv=False,
+    beam_interp_check=None,
+    quiet=False,
+    block_nonroot_stdout=True,
 ):
     """
     Run a simulation off of an obsparam yaml file.
@@ -932,10 +966,12 @@ def run_uvsim(
 
     """
     if mpi is None:
-        raise ImportError("You need mpi4py to use the uvsim module. "
-                          "Install it by running pip install pyuvsim[sim] "
-                          "or pip install pyuvsim[all] if you also want the "
-                          "line_profiler installed.")
+        raise ImportError(
+            "You need mpi4py to use the uvsim module. "
+            "Install it by running pip install pyuvsim[sim] "
+            "or pip install pyuvsim[all] if you also want the "
+            "line_profiler installed."
+        )
 
     mpi.start_mpi(block_nonroot_stdout=block_nonroot_stdout)
     rank = mpi.get_rank()
@@ -975,7 +1011,7 @@ def run_uvsim(
 
     if rank == 0:
         if isinstance(params, str):
-            with open(params, 'r') as pfile:
+            with open(params, "r") as pfile:
                 param_dict = yaml.safe_load(pfile)
         else:
             param_dict = params
