@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2024-07-17
+
 ### Added
 - Tests verifying accuracy of Lunar simulations.
 - Added support for all UVBeam readable files rather than just beamfits.
@@ -27,7 +29,7 @@ pyuvdata versions.
 and specifying global beam shape options like diameter and sigma (they must now
 be specified per beam.)
 
-## [1.2.6] - 2022-07-17
+## [1.2.6] - 2023-07-17
 
 ### Changed
 - Require pyradiosky >= 0.2.0
@@ -40,7 +42,7 @@ deprecation warnings.
 on pyradiosky's `SkyModel` object and calls to functions removed from pyradiosky.
 - Better handling of lunarsky imports, required for the newest version of pyradiosky
 
-## [1.2.5] - 2022-06-01
+## [1.2.5] - 2023-04-10
 
 ### Changed
 - Initial ordering of blt axis in `initialize_uvdata_from_params`
