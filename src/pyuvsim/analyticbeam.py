@@ -63,6 +63,7 @@ class AnalyticBeam:
             * If given a `sigma`, `ref_freq`, and `spectral_index`, then this will make
               a chromatic beam with standard deviation defined by a power law:
               `stddev(f) = sigma * (f/ref_freq)**(spectral_index)`
+        * Function-based beam: Generate beam from a function of zenith, azimuth and frequency.
 
     Parameters
     ----------
@@ -75,13 +76,19 @@ class AnalyticBeam:
         Scale gaussian beam width as a power law with frequency.
     ref_freq : float
         If set, this sets the reference frequency for the beam width power law.
+    func: function
+        If set, this function is used to generate beams.
+        The function must take the following three arguments:
+            func(az_array, za_array, freq_array)
+            Where az_array and za_array are in radians,
+            and freq_array is in Hz
 
     """
 
-    supported_types = ["uniform", "gaussian", "airy"]
+    supported_types = ["uniform", "gaussian", "airy", "func"]
 
     def __init__(
-        self, type_, sigma=None, diameter=None, spectral_index=0.0, ref_freq=None
+        self, type_, sigma=None, diameter=None, spectral_index=0.0, ref_freq=None, func=None
     ):
         if type_ in self.supported_types:
             self.type = type_
@@ -101,6 +108,7 @@ class AnalyticBeam:
         self.data_normalization = "peak"
         self.freq_interp_kind = "linear"
         self.beam_type = "efield"
+        self.func = func
 
     def peak_normalize(self):
         """Do nothing, mocks the :meth:`pyuvdata.UVBeam.peak_normalize` method."""
@@ -205,6 +213,16 @@ class AnalyticBeam:
             interp_data[1, 0, :, :] = values
             interp_data[0, 1, :, :] = values
             interp_basis_vector = None
+        elif self.type == "func":
+            interp_data = np.zeros((2, 2, freq_array.size, az_array.size), dtype=float)
+            az_grid, f_grid = np.meshgrid(az_array, freq_array)
+            za_grid, f_grid = np.meshgrid(za_array, freq_array)
+
+            values = self.func(az_grid, za_grid, f_grid)
+            interp_data[1, 0, :, :] = values
+            interp_data[0, 1, :, :] = values
+            interp_basis_vector = None
+
         else:
             raise ValueError("no interp for this type: {}".format(self.type))
 
@@ -230,5 +248,7 @@ class AnalyticBeam:
             return other.type == "uniform"
         elif self.type == "airy":
             return (self.type == other.type) and (self.diameter == other.diameter)
+        elif self.type == "func":
+            return (self.type == other.type) and (self.func == other.func)
         else:
             return False
