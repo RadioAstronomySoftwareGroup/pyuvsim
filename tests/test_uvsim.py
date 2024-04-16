@@ -100,7 +100,7 @@ def triangle_pos():
     return enu, uvw
 
 
-@pytest.fixture()
+@pytest.fixture
 def uvobj_beams_srcs():
     # A uvdata object, beam list, beam dict, and source array.
     param_filename = os.path.join(
@@ -143,7 +143,7 @@ def uvobj_beams_srcs():
     return uv_obj, beam_list, beam_dict, sources
 
 
-@pytest.fixture()
+@pytest.fixture
 def uvdata_two_redundant_bls_triangle_sources():
     # A uvdata object, beam list, beam dict, and source array.
     param_filename = os.path.join(

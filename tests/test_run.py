@@ -27,7 +27,7 @@ from pyuvsim.telescope import BeamList
 pytest.importorskip("mpi4py")  # noqa
 
 
-@pytest.fixture()
+@pytest.fixture
 def goto_tempdir(tmpdir):
     # Run test within temporary directory.
     newpath = str(tmpdir)
