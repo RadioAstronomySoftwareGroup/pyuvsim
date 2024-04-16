@@ -22,7 +22,7 @@ EW_uvfits_file = os.path.join(SIM_DATA_PATH, "28mEWbl_1time_1chan.uvfits")
 c_ms = pyuvsim.analyticbeam.c_ms
 
 
-@pytest.fixture()
+@pytest.fixture
 def heratext_posfreq():
     time = Time("2018-03-01 00:00:00", scale="utc")
     array_location = EarthLocation(lat="-30d43m17.5s", lon="21d25m41.9s", height=1073.0)

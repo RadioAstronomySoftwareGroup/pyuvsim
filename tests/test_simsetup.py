@@ -61,7 +61,7 @@ def times_and_freqs():
     del (times, freqs)
 
 
-@pytest.fixture()
+@pytest.fixture
 def time_dict_base():
     daysperhour = 1 / 24.0
     dayspersec = 1 / (24 * 3600.0)
@@ -120,7 +120,7 @@ def cat_with_some_pols():
     return sky
 
 
-@pytest.fixture()
+@pytest.fixture
 def uvdata_keyword_dict():
     return {
         "antenna_layout_filepath": os.path.join(

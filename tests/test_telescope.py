@@ -56,7 +56,7 @@ def beam_objs_main():
     return beams
 
 
-@pytest.fixture()
+@pytest.fixture
 def beam_objs(beam_objs_main):
     beams_copy = copy.deepcopy(beam_objs_main)
 
