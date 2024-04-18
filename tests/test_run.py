@@ -40,7 +40,6 @@ def goto_tempdir(tmpdir):
 
 
 @pytest.mark.filterwarnings("ignore:antenna_diameters are not set")
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 @pytest.mark.filterwarnings("ignore:Fixing auto-correlations to be be real-only")
 @pytest.mark.parametrize(
@@ -97,7 +96,6 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
 
 
 @pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:invalid value encountered in divide")
 # Set the tolerances as low as we can achieve currently. Ideally these tolerances
 # would be lower, but it's complicated.
@@ -179,7 +177,6 @@ def test_analytic_diffuse(model, tol, tmpdir):
     np.testing.assert_allclose(ana / 2, dat, atol=tol, rtol=0)
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:Fixing auto polarization power beams")
 def test_powerbeam_sim(cst_beam):
     new_cst = copy.deepcopy(cst_beam)
@@ -197,7 +194,6 @@ def test_powerbeam_sim(cst_beam):
         pyuvsim.run_uvdata_uvsim(input_uv, beams, beam_dict, catalog=sky_model)
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("rename_beamfits", [True, False])
 def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
     # Running a simulation from parameter dictionary.
@@ -205,8 +201,6 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
         SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml"
     )
 
-    msg = ["Cannot check consistency of a string-mode BeamList"]
-    warn_type = [UserWarning]
     if rename_beamfits:
         os.makedirs(os.path.join(tmp_path, "test_config"))
         new_param_file = os.path.join(
@@ -247,18 +241,19 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
             yaml.dump(tele_param_dict, yfile, default_flow_style=False)
 
         n_beam_warnings = 3
-        warn_type += [DeprecationWarning] * n_beam_warnings
-        msg += [pyuvsim.telescope.weird_beamfits_extension_warning] * n_beam_warnings
+        warn_type = [DeprecationWarning] * n_beam_warnings
+        msg = [pyuvsim.telescope.weird_beamfits_extension_warning] * n_beam_warnings
 
         params = pyuvsim.simsetup._config_str_to_dict(new_param_file)
     else:
+        warn_type = None
+        msg = ""
         params = pyuvsim.simsetup._config_str_to_dict(param_file)
 
     with uvtest.check_warnings(warn_type, match=msg):
         pyuvsim.run_uvsim(params, return_uv=True)
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 @pytest.mark.parametrize("spectral_type", ["flat", "subband", "spectral_index"])
@@ -298,7 +293,6 @@ def test_run_gleam_uvsim(spectral_type):
 
 
 @pytest.mark.filterwarnings("ignore:The reference_frequency is aliased as `frequency`")
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("spectral_type", ["subband", "spectral_index"])
 def test_zenith_spectral_sim(spectral_type, tmpdir):
     # Make a power law source at zenith in three ways.
@@ -369,7 +363,6 @@ def test_input_uv_error():
 
 # several of these filters should be removed once we require pyuvdata>=3.0
 @pytest.mark.filterwarnings("ignore:Setting the location attribute post initialization")
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:This method will be removed in version 3.0")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 @pytest.mark.filterwarnings("ignore:Telescope apollo11 is not in known_telescopes.")
@@ -488,7 +481,6 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
     os.remove(uv_filename)
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:This method will be removed in version 3.0")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 @pytest.mark.parametrize("selenoid", ["SPHERE", "GSFC", "GRAIL23", "CE-1-LAM-GEO"])

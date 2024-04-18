@@ -928,7 +928,6 @@ def test_source_splitting():
     pyuvsim.mpi.Npus_node = 1
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_quantity_reuse(uvobj_beams_srcs):
     # Check that the right quantities on the UVEngine are changed when
     # the time/frequency/antenna pair change.
@@ -992,7 +991,6 @@ def test_quantity_reuse(uvobj_beams_srcs):
             assert locoh_changed
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_update_flags(uvobj_beams_srcs):
     # Ensure that the right update flags are set when certain
     # task attributes change.
@@ -1063,7 +1061,6 @@ def test_overflow_check():
         pyuvsim.uvsim._check_ntasks_valid(should_fail)
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_fullfreq_check(uvobj_beams_srcs):
     # Check that the task iter will error if 'spectral_type' is 'full'
     # and the frequencies on the catalog do not match the simulation's.
@@ -1161,7 +1158,6 @@ def test_run_mpierr():
             pyuvsim.run_uvdata_uvsim(UVData(), ["beamlist"], {}, pyuvsim.SkyModelData())
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("order", [("bda",), ("baseline", "time"), ("ant2", "time")])
 def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
     pytest.importorskip("mpi4py")
@@ -1196,7 +1192,6 @@ def test_ordering(uvdata_two_redundant_bls_triangle_sources, order):
     )
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("order", [("bda",), ("baseline", "time"), ("ant2", "time")])
 def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
     pytest.importorskip("mpi4py")
@@ -1224,7 +1219,6 @@ def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
 
 
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("cut_beam", [10, 85, 90])
 def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources, cut_beam):
     pytest.importorskip("mpi4py")

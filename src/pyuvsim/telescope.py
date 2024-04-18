@@ -147,7 +147,8 @@ class BeamList:
         self.uvb_read_kwargs = uvb_read_kwargs or {}
         self.select_params = select_params or {}
         self.is_consistent = False
-        if check:
+        if check and (not self.string_mode or force_check):
+            # only call the check if it will do something. This avoids an annoying warning.
             self.check_consistency(force=force_check)
 
     def _get_beam_basis_type(self):
