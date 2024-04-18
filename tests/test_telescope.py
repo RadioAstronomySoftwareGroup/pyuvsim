@@ -180,7 +180,6 @@ def test_string_mode(beam_objs):
     assert isinstance(beamlist[-1], str)
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_comparison(beam_objs):
     beamlist = pyuvsim.BeamList(beam_objs)
     beamlist.set_str_mode()

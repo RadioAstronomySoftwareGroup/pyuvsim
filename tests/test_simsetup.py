@@ -554,7 +554,7 @@ def test_param_reader():
 
     # Check default configuration
     with uvtest.check_warnings(
-        [DeprecationWarning, DeprecationWarning, DeprecationWarning, UserWarning],
+        [DeprecationWarning, DeprecationWarning, DeprecationWarning],
         match=[
             "The return_beams parameter currently defaults to True, but starting in"
             "version 1.4 it will default to False.",
@@ -563,8 +563,6 @@ def test_param_reader():
             "version 1.5",
             "The check_kw parameter is deprecated and has no effect. This will "
             "become an error in version 1.5",
-            "Cannot check consistency of a string-mode BeamList! Set force=True to "
-            "force consistency checking.",
         ],
     ):
         uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(
@@ -1515,7 +1513,6 @@ def test_keyword_param_loop(tmpdir):
     assert uv2 == uvd
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_multi_analytic_beams(tmpdir):
     # Test inline definitions of beam attributes.
     # eg. (in beam configuration file):
@@ -1597,7 +1594,6 @@ def test_direct_fname(tmpdir):
     os.chdir(cwd)
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize(
     ("beam_dict", "err_msg"),
     [
@@ -1630,7 +1626,6 @@ def test_beamlist_init_errors(beam_dict, err_msg):
             pyuvsim.simsetup._construct_beam_list([0], telconfig)
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_beamlist_init_spline():
     telescope_config_name = os.path.join(SIM_DATA_PATH, "bl_lite_mixed.yaml")
     with open(telescope_config_name, "r") as yf:
@@ -1655,13 +1650,12 @@ def test_beamlist_init_spline():
             "they must be parsed as dicts. For examples see the parameter_files "
             "documentation. This will become an error in version 1.4"
         ]
-        * 3,
+        * 2,
     ):
         beam_list = pyuvsim.simsetup._construct_beam_list(beam_ids, telconfig)
     assert beam_list.spline_interp_opts == {"kx": 2, "ky": 2}
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize(
     ("rename_beamfits", "pass_beam_type"), [(True, False), (True, True), (False, False)]
 )
@@ -1695,6 +1689,10 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
     )
 
     nbeams = len(telconfig["beam_paths"])
+    if pass_beam_type:
+        n_entries_warn = 2
+    else:
+        n_entries_warn = 3
     warn_list = [
         "Beam shape options diameter and sigma should be specified per "
         "beamID in the 'beam_paths' section not as globals. For examples see "
@@ -1704,14 +1702,8 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
         "Entries in 'beam_paths' can no longer be specified as simple strings, "
         "they must be parsed as dicts. For examples see the parameter_files "
         "documentation. This will become an error in version 1.4"
-    ] * 3
-    warn_types = [DeprecationWarning] * 4
-    if not pass_beam_type:
-        warn_list += [
-            "Cannot check consistency of a string-mode BeamList! Set force=True "
-            "to force consistency checking."
-        ]
-        warn_types += [UserWarning]
+    ] * n_entries_warn
+    warn_types = [DeprecationWarning] * (n_entries_warn + 1)
     with uvtest.check_warnings(warn_types, match=warn_list):
         beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(nbeams), telconfig)
 
@@ -1735,7 +1727,6 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
     assert len(beam_list.uvb_read_kwargs) > 0
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_beamlist_init_freqrange():
     telescope_config_name = os.path.join(SIM_DATA_PATH, "bl_lite_mixed.yaml")
     with open(telescope_config_name, "r") as yf:
@@ -1744,7 +1735,7 @@ def test_beamlist_init_freqrange():
     telconfig["beam_paths"][0] = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
     with uvtest.check_warnings(
-        [DeprecationWarning] * 4 + [UserWarning],
+        [DeprecationWarning] * 4,
         match=[
             "Beam shape options diameter and sigma should be specified per "
             "beamID in the 'beam_paths' section not as globals. For examples see "
@@ -1756,11 +1747,7 @@ def test_beamlist_init_freqrange():
             "they must be parsed as dicts. For examples see the parameter_files "
             "documentation. This will become an error in version 1.4"
         ]
-        * 3
-        + [
-            "Cannot check consistency of a string-mode BeamList! Set force=True "
-            "to force consistency checking."
-        ],
+        * 3,
     ):
         beam_list = pyuvsim.simsetup._construct_beam_list(
             np.arange(6), telconfig, freq_range=(117e6, 148e6)
@@ -1976,7 +1963,6 @@ def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
     assert smd_copy.stokes_I.base is smd.stokes_I.base
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_simsetup_with_freq_buffer():
     fl = os.path.join(SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky_freqbuf.yaml")
 
