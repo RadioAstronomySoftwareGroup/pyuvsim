@@ -37,8 +37,8 @@ these are passed into a simulation.
           1.0064e+08, 1.0072e+08]
       bandwidth: 800000.0
     sources:
-      catalog: '../pyuvsim/data/gleam_50srcs.vot' # Path to catalog file (txt, vot, hdf5, etc.) readable with pyradiosky.
-      filetype : "gleam" # optionally specify the catalog filetype (skyh5, gleam, vot, text, hdf5). If not specified, the code attempt to guess the type.
+      catalog: '../pyuvsim/data/gleam_50srcs.vot' # Path to catalog file (txt, vot, skyh5, fhd, etc.) readable with pyradiosky.
+      filetype : "gleam" # optionally specify the catalog filetype (skyh5, gleam, vot, text, fhd). If not specified, the code attempt to guess the type.
       spectral_type: flat # If using the GLEAM catalog, specify the spectral type (flat, subband or spectral_index). Defaults to flat.
       table_name: single  # Required for non-GLEAM VO table files
       id_column: name  # Required for non-GLEAM VO table files
@@ -293,7 +293,7 @@ Sources
       * ``lat_column`` : The name of the column to use for the source latitudes (required, ``ra_column`` is a deprecated synonym).
       * ``frame`` : The name of the ``astropy`` frame to use.
 
-    Optionally specify the ``filetype`` as one of ['skyh5', 'gleam', 'vot', 'text', 'hdf5'].
+    Optionally specify the ``filetype`` as one of ['skyh5', 'gleam', 'vot', 'text', 'fhd'].
     If this is not specified, the code attempts to guess what file type it is.
 
     Alternatively, you can specify a ``mock`` and provide the ``mock_arrangement``

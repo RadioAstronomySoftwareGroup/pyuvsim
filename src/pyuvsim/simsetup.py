@@ -880,7 +880,7 @@ def initialize_catalog_from_params(
     input_uv: :class:`pyuvdata.UVData`
         Used to set location for mock catalogs and for horizon cuts.
     filetype : str
-        One of ['skyh5', 'gleam', 'vot', 'text', 'hdf5'] or None.
+        One of ['skyh5', 'gleam', 'vot', 'text', 'fhd'] or None.
         If None, the code attempts to guess what the file type is.
     return_catname: bool
         Return the catalog name. Defaults to True currently but will default to False
