@@ -34,7 +34,7 @@ from astropy.coordinates import (
 from astropy.time import Time
 from packaging import version  # packaging is installed with setuptools
 from pyradiosky import SkyModel
-from pyuvdata import UVData
+from pyuvdata import Telescope, UVData
 from pyuvdata import utils as uvutils
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -946,9 +946,13 @@ def initialize_catalog_from_params(
 
         if "array_location" not in mock_keywords:
             if input_uv is not None:
-                mock_keywords["array_location"] = EarthLocation.from_geocentric(
-                    *input_uv.telescope_location, unit="m"
-                )
+                if hasattr(input_uv, "telescope"):
+                    mock_keywords["array_location"] = input_uv.telescope.location
+                else:
+                    # this can be removed when we require pyuvdata >= 3.0
+                    mock_keywords["array_location"] = EarthLocation.from_geocentric(
+                        *input_uv.telescope_location, unit="m"
+                    )
             else:
                 warnings.warn(
                     "No array_location specified. Defaulting to the HERA site."
@@ -1013,7 +1017,11 @@ def initialize_catalog_from_params(
         sky = SkyModel.from_file(catalog, **read_params)
 
     if input_uv is not None:
-        telescope_lat_deg = input_uv.telescope_location_lat_lon_alt_degrees[0]
+        if hasattr(input_uv, "telescope"):
+            telescope_lat_deg = input_uv.telescope.location.lat.to("deg").value
+        else:
+            # this can be removed when we require pyuvdata >= 3.0
+            telescope_lat_deg = input_uv.telescope_location_lat_lon_alt_degrees[0]
     else:
         telescope_lat_deg = None
     # Do source selections, if any.
@@ -1788,7 +1796,7 @@ def initialize_uvdata_from_params(
     obs_params,
     return_beams=None,
     reorder_blt_kw=None,
-    check_kw=None,
+    bl_conjugation_convention=None,
     force_beam_check=False,
 ):
     """
@@ -1814,10 +1822,9 @@ def initialize_uvdata_from_params(
         Keyword arguments to send to the ``uvdata.reorder_blts`` method at the end of
         the setup process. Typical parameters include "order" and "minor_order". Default
         values are ``order='time'`` and ``minor_order='baseline'``.
-    check_kw : dict (optional)
-        Keyword arguments to send to the ``uvdata.check()`` method at the end of the
-        setup process. Typical parameters include `run_check_acceptability` and
-        `check_extra`, which are both True by default.
+    bl_conjugation_convention : str, optional
+        Baseline conjugation convention. In the past this was always "ant2<ant1".
+        Now it defaults to "ant1<ant2" but with a warning if it is not set explicitly.
     force_beam_check : bool
         The beam consistency check is only possible for object-beams (not string mode).
         If `force_beam_check` is True, it will convert beams to object-mode to force
@@ -1854,13 +1861,15 @@ def initialize_uvdata_from_params(
 
     # Parse frequency structure
     freq_dict = param_dict["freq"]
-    uvparam_dict.update(parse_frequency_params(freq_dict))
-    freq_array = uvparam_dict["freq_array"]
+    parsed_freq_dict = parse_frequency_params(freq_dict)
+    uvparam_dict["freq_array"] = parsed_freq_dict["freq_array"]
+    uvparam_dict["channel_width"] = parsed_freq_dict["channel_width"]
+
+    freq_array = parsed_freq_dict["freq_array"]
     logger.info("Finished reading frequency info")
 
     # Parse telescope parameters
     tele_dict = param_dict["telescope"]
-    uvparam_dict.update(tele_dict)
     beamselect = tele_dict.pop("select", {})
     freq_buffer = beamselect.pop("freq_buffer", None)
     if freq_buffer:
@@ -1875,8 +1884,7 @@ def initialize_uvdata_from_params(
         force_beam_check=force_beam_check,
     )
 
-    uvparam_dict.update(tele_params)
-    uvparam_dict["x_orientation"] = beam_list.x_orientation
+    tele_params["x_orientation"] = beam_list.x_orientation
     logger.info("Finished Setup of BeamList")
 
     # Use extra_keywords to pass along required paths for file history.
@@ -1896,7 +1904,9 @@ def initialize_uvdata_from_params(
 
     # Parse time structure
     time_dict = param_dict["time"]
-    uvparam_dict.update(parse_time_params(time_dict))
+    parsed_time_dict = parse_time_params(time_dict)
+    uvparam_dict["times"] = parsed_time_dict["time_array"]
+    uvparam_dict["integration_time"] = parsed_time_dict["integration_time"]
     logger.info("Finished Setup of Time Dict")
 
     # There does not seem to be any way to get polarization_array into uvparam_dict, so
@@ -1911,73 +1921,95 @@ def initialize_uvdata_from_params(
     if "Npols" not in uvparam_dict:
         uvparam_dict["Npols"] = len(uvparam_dict["polarization_array"])
 
-    uvparam_name = "cat_name"
+    if tele_params["telescope_frame"] == "itrs":
+        telescope_location = EarthLocation.from_geocentric(
+            *tele_params["telescope_location"], unit="m"
+        )
+    elif tele_params["telescope_frame"] == "mcmf":
+        if not hasmoon:
+            raise ValueError("Need lunarsky module to for arrays on the Moon.")
+
+        telescope_location = MoonLocation.from_selenocentric(
+            *tele_params["telescope_location"], unit="m"
+        )
+        telescope_location.ellipsoid = tele_params["ellipsoid"]
+    else:
+        raise ValueError(f"unknown telescope_frame {tele_params["telescope_frame"]}")
 
     if "cat_name" not in param_dict and "object_name" not in param_dict:
         tloc = EarthLocation.from_geocentric(
-            *uvparam_dict["telescope_location"], unit="m"
+            *tele_params["telescope_location"], unit="m"
         )
-        time = Time(uvparam_dict["time_array"][0], scale="utc", format="jd")
+        time = Time(parsed_time_dict["time_array"][0], scale="utc", format="jd")
         src, _ = create_mock_catalog(time, arrangement="zenith", array_location=tloc)
         if "sources" in param_dict:
             source_file_name = os.path.basename(param_dict["sources"]["catalog"])
-            uvparam_dict[uvparam_name] = "{}_ra{:.4f}_dec{:.4f}".format(
+            cat_name = "{}_ra{:.4f}_dec{:.4f}".format(
                 source_file_name, src.ra.deg[0], src.dec.deg[0]
             )
         else:
-            uvparam_dict[uvparam_name] = "unprojected"
+            cat_name = "unprojected"
     elif "object_name" in param_dict:
-        uvparam_dict[uvparam_name] = param_dict["object_name"]
+        cat_name = param_dict["object_name"]
     else:
-        uvparam_dict[uvparam_name] = param_dict["cat_name"]
+        cat_name = param_dict["cat_name"]
+    phase_center_catalog = {0: {"cat_name": cat_name, "cat_type": "unprojected"}}
 
     uv_obj = UVData()
-    uv_obj._set_future_array_shapes()
+    if hasattr(uv_obj, "telescope"):
+        tel_init_params = {"location": telescope_location}
 
-    # Setting the frame and acceptable range for the moon
-    uv_obj._telescope_location.frame = uvparam_dict["telescope_frame"]
-    uv_obj._telescope_location.ellipsoid = uvparam_dict["ellipsoid"]
+        telescope_param_map = {
+            "telescope_name": "name",
+            "antenna_names": "antenna_names",
+            "antenna_numbers": "antenna_numbers",
+            "antenna_positions": "antenna_positions",
+            "antenna_diameters": "antenna_diameters",
+            "x_orientation": "x_orientation",
+            "instrument": "instrument",
+        }
+        for key, tel_key in telescope_param_map.items():
+            if key in param_dict:
+                tel_init_params[tel_key] = param_dict[key]
+            if key in tele_params:
+                tel_init_params[tel_key] = tele_params[key]
+        if "instrument" not in tel_init_params:
+            tel_init_params["instrument"] = tel_init_params["name"]
 
-    # use the __iter__ function on UVData to get list of UVParameters on UVData
-    valid_param_names = [getattr(uv_obj, param).name for param in uv_obj]
-    for k in valid_param_names:
-        if k in param_dict:
-            setattr(uv_obj, k, param_dict[k])
-        if k in uvparam_dict:
-            setattr(uv_obj, k, uvparam_dict[k])
+        uv_obj = UVData.new(
+            telescope=Telescope.new(**tel_init_params),
+            phase_center_catalog=phase_center_catalog,
+            vis_units="Jy",
+            history="",
+            do_blt_outer=True,
+            **uvparam_dict,
+        )
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        uvparam_dict["telescope_name"] = tele_params["telescope_name"]
+        uvparam_dict["antenna_numbers"] = tele_params["antenna_numbers"]
+        uvparam_dict["antenna_names"] = tele_params["antenna_names"]
+        uvparam_dict["antenna_positions"] = tele_params["antenna_positions"]
+        uvparam_dict["x_orientation"] = tele_params["x_orientation"]
+
+        uvparam_dict["ellipsoid"] = tele_params["ellipsoid"]
+
+        uv_obj = UVData.new(
+            telescope_location=telescope_location,
+            phase_center_catalog=phase_center_catalog,
+            vis_units="Jy",
+            history="",
+            do_blt_outer=True,
+            **uvparam_dict,
+        )
+        uv_obj.telescope_location = np.asarray(uv_obj.telescope_location)
+
+        # This has to be changed to avoid a bug in uvfits for 1 freq channel.
+        # The bug is fixed in v3.0
+        uv_obj.flex_spw = False
+        uv_obj._flex_spw_id_array.required = False
+
     logger.info("Initialized UVData object")
-
-    bls = np.array(
-        [
-            uv_obj.antnums_to_baseline(
-                uv_obj.antenna_numbers[j], uv_obj.antenna_numbers[i]
-            )
-            for i in range(0, uv_obj.Nants_data)
-            for j in range(i, uv_obj.Nants_data)
-        ]
-    )
-
-    uv_obj.baseline_array = np.tile(bls, uv_obj.Ntimes)
-    uv_obj.Nbls = bls.size
-    uv_obj.time_array = np.repeat(uv_obj.time_array, uv_obj.Nbls)
-    uv_obj.integration_time = np.repeat(
-        uv_obj.integration_time, uv_obj.Nbls * uv_obj.Ntimes
-    )
-    uv_obj.Nblts = uv_obj.Nbls * uv_obj.Ntimes
-    uv_obj.blt_order = ("time", "ant1")
-    uv_obj.ant_1_array, uv_obj.ant_2_array = uv_obj.baseline_to_antnums(
-        uv_obj.baseline_array
-    )
-
-    logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
-    cat_id = uv_obj._add_phase_center(
-        cat_name=uvparam_dict["cat_name"], cat_type="unprojected"
-    )
-    uv_obj.phase_center_id_array = np.full(uv_obj.Nblts, cat_id, dtype=int)
-
-    uv_obj.set_lsts_from_time_array()
-    # set the apparent coordinates on the object
-    uv_obj._set_app_coords_helper()
 
     # add other required metadata to allow select to work without errors
     # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
@@ -1987,33 +2019,22 @@ def initialize_uvdata_from_params(
     logger.info(f"Integration Time: {uv_obj.integration_time.nbytes / 1024**3:.2f} GB")
     logger.info(f"       Ant1Array: {uv_obj.ant_1_array.nbytes / 1024**3:.2f} GB")
 
-    uv_obj.set_lsts_from_time_array()
-    uv_obj.set_uvws_from_antenna_positions()
     logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
     logger.info("Set UVWs")
 
-    uv_obj.history = ""
-
-    uv_obj.vis_units = "Jy"
-
-    uv_obj.instrument = uv_obj.telescope_name
-
-    uv_obj.spw_array = np.array([0])
-    uv_obj.flex_spw_id_array = np.full(uv_obj.Nfreqs, uv_obj.spw_array[0], dtype=int)
-    if uv_obj.Ntimes == 1:
-        uv_obj.integration_time = np.ones_like(
-            uv_obj.time_array, dtype=np.float64
-        )  # Second
-    else:
-        # Note: currently only support a constant spacing of times
-        uv_obj.integration_time = (
-            np.ones_like(uv_obj.time_array, dtype=np.float64)
-            * np.diff(np.unique(uv_obj.time_array))[0]
-            * (24.0 * 60**2)  # Seconds
-        )
-
     subselect(uv_obj, param_dict)
     logger.info("After Select")
+
+    if bl_conjugation_convention is None:
+        warnings.warn(
+            "The default baseline conjugation convention has changed. In the past "
+            "it was 'ant2<ant1', it now defaults to 'ant1<ant2'. You can specify "
+            "the baseline conjugation convention using the bl_conjugation_convention "
+            "parameter (which will also silence this warning). This warning will "
+            "go away in version 1.5."
+        )
+    elif bl_conjugation_convention != "ant1<ant2":
+        uv_obj.conjugate_bls(convention=bl_conjugation_convention)
 
     # we construct uvdata objects in (time, ant1) order
     # but the simulator will force (time, baseline) later
@@ -2021,18 +2042,16 @@ def initialize_uvdata_from_params(
     if reorder_blt_kw is None:
         reorder_blt_kw = {"order": "time", "minor_order": "baseline"}
 
-    if reorder_blt_kw and reorder_blt_kw != {
-        "order": uv_obj.blt_order[0],
-        "minor_order": uv_obj.blt_order[1],
-    }:
+    if uv_obj.blt_order is not None:
+        blt_order = {"order": uv_obj.blt_order[0], "minor_order": uv_obj.blt_order[1]}
+    else:
+        blt_order = None
+
+    if reorder_blt_kw and reorder_blt_kw != blt_order:
         uv_obj.reorder_blts(**reorder_blt_kw)
 
     logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
     logger.info("After Re-order BLTS")
-
-    if check_kw is None:
-        check_kw = {}
-    uv_obj.check(**check_kw)
 
     logger.info("After Check")
     logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
@@ -2329,7 +2348,10 @@ def initialize_uvdata_from_keywords(
     param_dict["obs_param_file"] = os.path.basename(output_yaml_filename)
     param_dict["telescope"].update(layout_params)
     uv_obj = initialize_uvdata_from_params(
-        param_dict, return_beams=False, force_beam_check=force_beam_check
+        param_dict,
+        return_beams=False,
+        force_beam_check=force_beam_check,
+        bl_conjugation_convention="ant1<ant2",
     )
 
     if complete:
@@ -2381,33 +2403,40 @@ def uvdata_to_telescope_config(
         if return_names, returns (path, telescope_config_name, layout_csv_name)
 
     """
+    if hasattr(uvdata_in, "telescope"):
+        tel_name = uvdata_in.telescope.name
+        antpos_enu = uvdata_in.telescope.get_enu_antpos()
+        ant_names = uvdata_in.telescope.antenna_names
+        ant_numbers = uvdata_in.telescope.antenna_numbers
+        tel_lla_deg = uvdata_in.telescope.location_lat_lon_alt_degrees
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        tel_name = uvdata_in.telescope_name
+        antpos_enu, _ = uvdata_in.get_ENU_antpos()
+        ant_names = uvdata_in.antenna_names
+        ant_numbers = uvdata_in.antenna_numbers
+        tel_lla_deg = uvdata_in.telescope_location_lat_lon_alt_degrees
+
     if telescope_config_name is None:
         telescope_config_path = check_file_exists_and_increment(
-            os.path.join(path_out, "telescope_config_{uvdata_in.telescope_name}.yaml")
+            os.path.join(path_out, f"telescope_config_{tel_name}.yaml")
         )
         telescope_config_name = os.path.basename(telescope_config_path)
 
     if layout_csv_name is None:
         layout_csv_path = check_file_exists_and_increment(
-            os.path.join(path_out, uvdata_in.telescope_name + "_layout.csv")
+            os.path.join(path_out, tel_name + "_layout.csv")
         )
         layout_csv_name = os.path.basename(layout_csv_path)
 
-    antpos_enu, _ = uvdata_in.get_ENU_antpos()
-
     _write_layout_csv(
-        os.path.join(path_out, layout_csv_name),
-        antpos_enu,
-        uvdata_in.antenna_names,
-        uvdata_in.antenna_numbers,
+        os.path.join(path_out, layout_csv_name), antpos_enu, ant_names, ant_numbers
     )
 
     # Write the rest to a yaml file.
     yaml_dict = {
-        "telescope_name": uvdata_in.telescope_name,
-        "telescope_location": repr(
-            tuple(uvdata_in.telescope_location_lat_lon_alt_degrees)
-        ),
+        "telescope_name": tel_name,
+        "telescope_location": repr(tel_lla_deg),
         "Nants": uvdata_in.Nants_telescope,
         "beam_paths": {0: {"filename": beam_filepath}},
     }

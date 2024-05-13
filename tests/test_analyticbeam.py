@@ -184,9 +184,13 @@ def test_gaussbeam_values():
     hera_uv.read_uvfits(EW_uvfits_file)
     hera_uv.use_future_array_shapes()
 
-    array_location = EarthLocation.from_geocentric(
-        *hera_uv.telescope_location, unit="m"
-    )
+    if hasattr(hera_uv, "telescope"):
+        array_location = hera_uv.telescope.location
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        array_location = EarthLocation.from_geocentric(
+            *hera_uv.telescope_location, unit="m"
+        )
     freq = hera_uv.freq_array[0] * units.Hz
 
     time = Time(hera_uv.time_array[0], scale="utc", format="jd")

@@ -303,9 +303,15 @@ def test_initialize_catalog_from_params(
         source_dict["horizon_buffer"] = 0.04364
 
     if pass_array_loc:
-        source_dict["array_location"] = ",".join(
-            [str(coord) for coord in uv_in.telescope_location_lat_lon_alt_degrees]
-        )
+        if hasattr(uv_in, "telescope"):
+            source_dict["array_location"] = ",".join(
+                [str(coord) for coord in uv_in.telescope.location_lat_lon_alt_degrees]
+            )
+        else:
+            # this can be removed when we require pyuvdata >= 3.0
+            source_dict["array_location"] = ",".join(
+                [str(coord) for coord in uv_in.telescope_location_lat_lon_alt_degrees]
+            )
 
     warn_type = []
     warn_str = []
@@ -519,20 +525,20 @@ def test_gleam_catalog_spectral_type(spectral_type):
 @pytest.mark.filterwarnings(
     "ignore:LST values stored in this file are not self-consistent"
 )
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 def test_param_reader():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml"
     )
-    uv_in = UVData.from_file(triangle_uvfits_file)
-    uv_in.use_future_array_shapes()
-
+    uv_in = UVData.from_file(triangle_uvfits_file, use_future_array_shapes=True)
+    if hasattr(uv_in, "telescope"):
+        # This can be removed when we require pyuvdata >= 3.0
+        uv_in._set_flex_spw()
     uv_in.unproject_phase()
 
     beam0 = UVBeam()
-    beam0.read_beamfits(herabeam_default)
+    beam0.read_beamfits(herabeam_default, use_future_array_shapes=True)
     beam0.extra_keywords["beam_path"] = herabeam_default
     beam1 = pyuvsim.AnalyticBeam("uniform")
     beam2 = pyuvsim.AnalyticBeam("gaussian", sigma=0.02)
@@ -556,10 +562,16 @@ def test_param_reader():
         ],
     ):
         uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(
-            param_filename
+            param_filename,
+            bl_conjugation_convention="ant2<ant1",
+            reorder_blt_kw={"order": "time", "minor_order": "baseline"},
         )
     new_beam_list.set_obj_mode()
-    assert uv_obj.x_orientation == "east"
+    if hasattr(uv_obj, "telescope"):
+        assert uv_obj.telescope.x_orientation == "east"
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        assert uv_obj.x_orientation == "east"
 
     pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
 
@@ -578,14 +590,7 @@ def test_param_reader():
     # Spoof attributes that won't match.
     uv_obj.history = uv_in.history
 
-    uvfits_required_extra = [
-        "_antenna_positions",
-        "_gst0",
-        "_rdate",
-        "_earth_omega",
-        "_dut1",
-        "_timesys",
-    ]
+    uvfits_required_extra = ["_gst0", "_rdate", "_earth_omega", "_dut1", "_timesys"]
     for attr in uvfits_required_extra:
         param = getattr(uv_obj, attr)
         if param.value is None:
@@ -595,7 +600,6 @@ def test_param_reader():
     assert new_beam_dict == beam_dict
     assert new_beam_list == beam_list
 
-    uv_obj.reorder_blts(order="time", minor_order="baseline")
     # renumber/rename the phase centers so the equality check will pass.
     uv_obj._consolidate_phase_center_catalogs(other=uv_in, ignore_name=True)
 
@@ -1036,12 +1040,31 @@ def test_param_select_cross():
         SIM_DATA_PATH, "test_config", "obsparam_mwa_nocore.yaml"
     )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    with uvtest.check_warnings(
+        UserWarning,
+        match=[
+            "Cannot check consistency of a string-mode BeamList! Set force=True "
+            "to force consistency checking.",
+            "The default baseline conjugation convention has changed. In the "
+            "past it was 'ant2<ant1', it now defaults to 'ant1<ant2'. You can specify "
+            "the baseline conjugation convention using the bl_conjugation_convention "
+            "parameter (which will also silence this warning). This warning will go "
+            "away in version 1.5.",
+        ],
+    ):
+        uv_obj_full = pyuvsim.initialize_uvdata_from_params(
+            param_dict, return_beams=False
+        )
 
     # test only keeping cross pols
     param_dict["select"] = {"ant_str": "cross"}
-    uv_obj_cross = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv_obj_cross = pyuvsim.initialize_uvdata_from_params(
+        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
+    )
     uv_obj_cross2 = uv_obj_full.select(ant_str="cross", inplace=False)
+
+    # histories are different because of time stamp from UVData.new() method
+    uv_obj_cross2.history = uv_obj_cross.history
 
     assert uv_obj_cross == uv_obj_cross2
 
@@ -1052,11 +1075,15 @@ def test_param_select_bls():
         SIM_DATA_PATH, "test_config", "obsparam_mwa_nocore.yaml"
     )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv_obj_full = pyuvsim.initialize_uvdata_from_params(
+        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
+    )
 
     # test only keeping certain baselines
     param_dict["select"] = {"bls": "[(40, 41), (42, 43), (44, 45)]"}  # Test as string
-    uv_obj_bls = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv_obj_bls = pyuvsim.initialize_uvdata_from_params(
+        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
+    )
 
     uv_obj_bls2 = uv_obj_full.select(bls=[(40, 41), (42, 43), (44, 45)], inplace=False)
     uv_obj_bls.history, uv_obj_bls2.history = "", ""
@@ -1069,11 +1096,15 @@ def test_param_select_redundant():
         SIM_DATA_PATH, "test_config", "obsparam_hex37_14.6m.yaml"
     )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv_obj_full = pyuvsim.initialize_uvdata_from_params(
+        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
+    )
 
     # test only keeping one baseline per redundant group
     param_dict["select"] = {"redundant_threshold": 0.1}
-    uv_obj_red = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv_obj_red = pyuvsim.initialize_uvdata_from_params(
+        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
+    )
     uv_obj_red2 = uv_obj_full.compress_by_redundancy(tol=0.1, inplace=False)
     uv_obj_red.history, uv_obj_red2.history = "", ""
 
@@ -1090,7 +1121,9 @@ def test_param_set_cat_name(key):
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
 
     param_dict[key] = "foo"
-    uv_obj = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv_obj = pyuvsim.initialize_uvdata_from_params(
+        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
+    )
     assert uv_obj.phase_center_catalog[0]["cat_name"] == "foo"
 
 
@@ -1098,17 +1131,22 @@ def test_param_set_cat_name(key):
 def test_uvdata_keyword_init(uvdata_keyword_dict):
     # check it runs through
     uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
-    np.testing.assert_allclose(
-        uvdata_keyword_dict["telescope_location"],
-        uvd.telescope_location_lat_lon_alt_degrees,
-    )
+    if hasattr(uvd, "telescope"):
+        lla_deg = uvd.telescope.location_lat_lon_alt_degrees
+        tel_name = uvd.telescope.name
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        lla_deg = uvd.telescope_location_lat_lon_alt_degrees
+        tel_name = uvd.telescope_name
+
+    np.testing.assert_allclose(uvdata_keyword_dict["telescope_location"], lla_deg)
     np.testing.assert_allclose(
         uvdata_keyword_dict["integration_time"],
         uvd.integration_time,
         rtol=uvd._integration_time.tols[0],
         atol=uvd._integration_time.tols[1],
     )
-    assert uvdata_keyword_dict["telescope_name"] == uvd.telescope_name
+    assert uvdata_keyword_dict["telescope_name"] == tel_name
     assert uvdata_keyword_dict["start_freq"] == uvd.freq_array[0]
     assert uvdata_keyword_dict["start_time"] == uvd.time_array[0]
     assert uvdata_keyword_dict["Ntimes"] == uvd.Ntimes
@@ -1120,7 +1158,7 @@ def test_uvdata_keyword_init(uvdata_keyword_dict):
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_uvdata_keyword_init_select_bls(uvdata_keyword_dict):
     # check bls and antenna_nums selections work
-    bls = [(1, 0), (2, 0), (3, 0)]
+    bls = [(0, 1), (0, 2), (0, 3)]
     uvdata_keyword_dict["bls"] = bls
     uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
     antpairs = uvd.get_antpairs()
@@ -1156,7 +1194,12 @@ def test_uvdata_keyword_init_time_freq_override(uvdata_keyword_dict):
 def test_uvdata_keyword_init_layout_dict(uvdata_keyword_dict, tmpdir):
     # test feeding array layout as dictionary
     uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
-    antpos, ants = uvd.get_ENU_antpos()
+    if hasattr(uvd, "telescope"):
+        antpos = uvd.telescope.get_enu_antpos()
+        ants = uvd.telescope.antenna_numbers
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        antpos, ants = uvd.get_ENU_antpos()
     antpos_d = dict(zip(ants, antpos))
     layout_fname = "temp_layout.csv"
     obsparam_fname = "temp_obsparam.yaml"
@@ -1175,9 +1218,14 @@ def test_uvdata_keyword_init_layout_dict(uvdata_keyword_dict, tmpdir):
 
     assert uvd.Nbls == 6
     assert uvd.Nants_data == 4
-    ap, a = uvd.get_ENU_antpos()
-    apd = dict(zip(a, ap))
-    assert np.all([np.isclose(antpos_d[ant], apd[ant]) for ant in ants])
+    if hasattr(uvd, "telescope"):
+        antpos2 = uvd.telescope.get_enu_antpos()
+        ants2 = uvd.telescope.antenna_numbers
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        antpos2, ants2 = uvd.get_ENU_antpos()
+    antpos_d2 = dict(zip(ants2, antpos2))
+    assert np.all([np.isclose(antpos_d[ant], antpos_d2[ant]) for ant in ants])
 
 
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
@@ -1192,7 +1240,12 @@ def test_uvdata_keyword_init_write(pass_layout, uvdata_keyword_dict, tmpdir):
     )
 
     uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
-    antpos, ants = uvd.get_ENU_antpos()
+    if hasattr(uvd, "telescope"):
+        antpos = uvd.telescope.get_enu_antpos()
+        ants = uvd.telescope.antenna_numbers
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        antpos, ants = uvd.get_ENU_antpos()
     antpos_d = dict(zip(ants, antpos))
     # Checking -- Default to a copy of the original layout, if layout is provided.
     obsparam_fname = os.path.join(tmpdir, "obsparam.yaml")
@@ -1268,7 +1321,9 @@ def test_uvfits_to_config(tmp_path):
     orig_param_dict = copy.deepcopy(
         param_dict
     )  # The parameter dictionary gets modified in the function below.
-    uv1 = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv1 = pyuvsim.initialize_uvdata_from_params(
+        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
+    )
     # Generate parameters from new uvfits and compare with old.
     path, telescope_config, layout_fname = pyuvsim.simsetup.uvdata_to_telescope_config(
         uv1,
@@ -1424,11 +1479,15 @@ def test_keyword_param_loop(tmpdir):
     )
 
     uv2 = pyuvsim.simsetup.initialize_uvdata_from_params(
-        os.path.join(path_out, obsparam_fname), return_beams=False
+        os.path.join(path_out, obsparam_fname),
+        return_beams=False,
+        bl_conjugation_convention="ant1<ant2",
     )
 
     uv2.extra_keywords = {}
     uvd.extra_keywords = {}  # These will not match
+
+    uv2.history = uvd.history
 
     assert uv2 == uvd
 
@@ -1510,7 +1569,9 @@ def test_direct_fname(tmpdir):
     os.chdir(tmpdir)
 
     pyuvsim.simsetup.initialize_uvdata_from_params(
-        "param_100times_1.5days_triangle.yaml", return_beams=False
+        "param_100times_1.5days_triangle.yaml",
+        return_beams=False,
+        bl_conjugation_convention="ant1<ant2",
     )
 
     os.chdir(cwd)
@@ -1701,7 +1762,9 @@ def test_moon_lsts():
         SIM_DATA_PATH, "test_config", "obsparam_tranquility_hex.yaml"
     )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv_obj = pyuvsim.initialize_uvdata_from_params(
+        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
+    )
     assert "world" in uv_obj.extra_keywords.keys()
     assert uv_obj.extra_keywords["world"] == "moon"
 
@@ -1711,7 +1774,11 @@ def test_moon_lsts():
     assert np.all(lst_inds == time_inds)
 
     # Confirm that the LSTs match the zenith RAs for the telescope_location
-    loc = MoonLocation.from_selenocentric(*uv_obj.telescope_location, unit="m")
+    if hasattr(uv_obj, "telescope"):
+        loc = uv_obj.telescope.location
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        loc = MoonLocation.from_selenocentric(*uv_obj.telescope_location, unit="m")
     times_quant = LTime(times, format="jd", location=loc)
     skycrds = SkyCoord(
         alt=["90d"] * times.size,
@@ -1896,7 +1963,9 @@ def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
 def test_simsetup_with_freq_buffer():
     fl = os.path.join(SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky_freqbuf.yaml")
 
-    _, beams, _ = simsetup.initialize_uvdata_from_params(fl, return_beams=True)
+    _, beams, _ = simsetup.initialize_uvdata_from_params(
+        fl, return_beams=True, bl_conjugation_convention="ant1<ant2"
+    )
 
     beams.set_obj_mode()
     assert beams[0].freq_array.max() < 101e6

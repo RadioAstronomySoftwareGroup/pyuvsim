@@ -89,6 +89,10 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     uv_ref.gst0 = uv_new.gst0
     uv_ref.rdate = uv_new.rdate
 
+    uv_ref.conjugate_bls()
+    uv_ref.reorder_blts()
+    uv_ref.integration_time = np.full_like(uv_ref.integration_time, 11.0)
+
     assert uv_new == uv_ref
 
 
@@ -182,7 +186,9 @@ def test_powerbeam_sim(cst_beam):
     new_cst.efield_to_power()
     beams = BeamList([new_cst] * 4)
     cfg = os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
-    input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(cfg, return_beams=False)
+    input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(
+        cfg, return_beams=False, bl_conjugation_convention="ant1<ant2"
+    )
     sky_model = pyuvsim.simsetup.initialize_catalog_from_params(
         cfg, return_catname=False
     )
@@ -267,14 +273,29 @@ def test_run_gleam_uvsim(spectral_type):
     params["sources"].pop("max_flux")
 
     uv_out = pyuvsim.run_uvsim(params, return_uv=True)
-    assert uv_out.telescope_name == "Triangle"
+    if hasattr(uv_out, "telescope"):
+        assert uv_out.telescope.name == "Triangle"
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        assert uv_out.telescope_name == "Triangle"
 
     file_name = f"gleam_triangle_{spectral_type}.uvh5"
     uv_in = UVData.from_file(os.path.join(SIM_DATA_PATH, file_name))
     uv_in.use_future_array_shapes()
+    if hasattr(uv_in, "telescope"):
+        # This can be removed when we require pyuvdata >= 3.0
+        uv_in._set_flex_spw()
+    uv_in.conjugate_bls()
+    uv_in.reorder_blts()
+    uv_in.integration_time = np.full_like(uv_in.integration_time, 11.0)
     # This just tests that we get the same answer as an earlier run, not that
     # the data are correct (that's covered in other tests)
     uv_out.history = uv_in.history
+    if hasattr(uv_out, "telescope"):
+        assert uv_in.telescope._location == uv_out.telescope._location
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        assert uv_in._telescope_location == uv_out._telescope_location
     assert uv_in == uv_out
 
 
@@ -392,9 +413,13 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     param_dict["select"] = {"redundant_threshold": 0.1}
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=True
+        param_dict, return_beams=True, bl_conjugation_convention="ant1<ant2"
     )
-    assert uv_obj._telescope_location.ellipsoid == selenoid
+    if hasattr(uv_obj, "telescope"):
+        assert uv_obj.telescope.location.ellipsoid == selenoid
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        assert uv_obj._telescope_location.ellipsoid == selenoid
 
     # set the filename to make sure it ends up in the history,
     # remove the parameter file info from extra_keywords
@@ -406,10 +431,15 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
     uv_obj.check()
 
     uv_obj.select(times=uv_obj.time_array[0])
-    tranquility_base = MoonLocation.from_selenocentric(
-        *uv_obj.telescope_location, "meter"
-    )
-    tranquility_base.ellipsoid = selenoid
+
+    if hasattr(uv_obj, "telescope"):
+        tranquility_base = uv_obj.telescope.location
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        tranquility_base = MoonLocation.from_selenocentric(
+            *uv_obj.telescope_location, "meter"
+        )
+        tranquility_base.ellipsoid = selenoid
 
     time = Time(uv_obj.time_array[0], format="jd", scale="utc")
     sources, _ = pyuvsim.create_mock_catalog(
@@ -432,20 +462,27 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
     assert uvutils._check_history_version(uv_out.history, "Npus =")
 
     assert uv_out.extra_keywords["world"] == "moon"
-    assert uv_out._telescope_location.ellipsoid == selenoid
+    if hasattr(uv_out, "telescope"):
+        assert uv_out.telescope.location.ellipsoid == selenoid
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        assert uv_out._telescope_location.ellipsoid == selenoid
     assert np.allclose(uv_out.data_array[:, :, 0], 0.5)
 
     # Lunar Frame Roundtripping
     param_dict["filing"]["outdir"] = str(tmpdir)
-
     uv_filename = pyuvsim.utils.write_uvdata(
         uv_out, param_dict, return_filename=True, quiet=True
     )
     uv_compare = UVData()
     uv_compare.read(uv_filename, use_future_array_shapes=future_shapes)
-    assert np.allclose(uv_out.telescope_location, uv_compare.telescope_location)
-    assert uv_out._telescope_location.frame == uv_compare._telescope_location.frame
-    assert uv_compare._telescope_location.ellipsoid == selenoid
+    if hasattr(uv_obj, "telescope"):
+        assert uv_out.telescope._location == uv_compare.telescope._location
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        assert np.allclose(uv_out.telescope_location, uv_compare.telescope_location)
+        assert uv_out._telescope_location.frame == uv_compare._telescope_location.frame
+        assert uv_compare._telescope_location.ellipsoid == selenoid
 
     # Cleanup
     os.remove(uv_filename)
@@ -505,7 +542,11 @@ def test_lunar_gauss(goto_tempdir, selenoid):
     except SpiceUNKNOWNFRAME as err:
         pytest.skip("SpiceUNKNOWNFRAME error: " + str(err))
 
-    assert uv_out._telescope_location.ellipsoid == selenoid
+    if hasattr(uv_out, "telescope"):
+        assert uv_out.telescope.location.ellipsoid == selenoid
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        assert uv_out._telescope_location.ellipsoid == selenoid
 
     # Skymodel and update positions
 
@@ -519,7 +560,11 @@ def test_lunar_gauss(goto_tempdir, selenoid):
         frame="fk5",
     )
 
-    pos = uv_out.telescope_location_lat_lon_alt_degrees
+    if hasattr(uv_out, "telescope"):
+        pos = uv_out.telescope.location_lat_lon_alt_degrees
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        pos = uv_out.telescope_location_lat_lon_alt_degrees
 
     # Creating the analytical gaussian
     Alt = np.zeros(uv_out.Ntimes)
