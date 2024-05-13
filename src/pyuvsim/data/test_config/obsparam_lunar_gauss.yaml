@@ -17,3 +17,6 @@ time:
   start_time: 2458160.0
 select:
   redundant_threshold: 0.1
+ordering:
+  conjugation_convention: ant1<ant2
+  blt_order: [time, baseline]

@@ -113,10 +113,7 @@ def uvobj_beams_srcs():
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     param_dict["select"] = {"redundant_threshold": 0.1}
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
-        param_dict,
-        return_beams=True,
-        force_beam_check=True,
-        bl_conjugation_convention="ant1<ant2",
+        param_dict, return_beams=True, force_beam_check=True
     )
     assert uv_obj.future_array_shapes
 
@@ -158,7 +155,7 @@ def uvdata_two_redundant_bls_triangle_sources():
     )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=True, bl_conjugation_convention="ant1<ant2"
+        param_dict, return_beams=True
     )
     pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
 
@@ -182,11 +179,8 @@ def test_visibility_single_zenith_source(cst_beam, hera_loc):
     beam2 = pyuvsim.AnalyticBeam("gaussian", sigma=np.radians(10.0))
     beam3 = pyuvsim.AnalyticBeam("airy", diameter=14.0)
 
-    time = Time("2018-03-01 00:00:00", scale="utc")
-
     array_location = hera_loc
-
-    time.location = array_location
+    time = Time("2018-03-01 00:00:00", scale="utc", location=array_location)
 
     freq = 150e6 * units.Hz
     source, _ = pyuvsim.create_mock_catalog(time, arrangement="zenith")
@@ -214,10 +208,8 @@ def test_visibility_single_zenith_source(cst_beam, hera_loc):
 
 
 def test_visibility_source_below_horizon(cst_beam, hera_loc):
-    time = Time("2018-03-01 00:00:00", scale="utc")
-
     array_location = hera_loc
-    time.location = array_location
+    time = Time("2018-03-01 00:00:00", scale="utc", location=array_location)
 
     freq = 150e6 * units.Hz
 
@@ -257,11 +249,9 @@ def test_visibility_source_below_horizon(cst_beam, hera_loc):
 
 def test_visibility_source_below_horizon_radec(cst_beam, hera_loc):
     # redo with RA/Dec defined source
-    time = Time(2458098.27471265, format="jd")
-
     array_location = hera_loc
+    time = Time(2458098.27471265, format="jd", location=array_location)
 
-    time.location = array_location
     freq = 150e6 * units.Hz
 
     source_coord = SkyCoord(
@@ -301,9 +291,9 @@ def test_visibility_source_below_horizon_radec(cst_beam, hera_loc):
 def test_redundant_baselines(cst_beam, hera_loc):
     """Check that two perfectly redundant baselines are truly redundant."""
 
-    time = Time(2458098.27471265, format="jd")
     array_location = hera_loc
-    time.location = array_location
+    time = Time(2458098.27471265, format="jd", location=array_location)
+
     freq = 150e6 * units.Hz
     src_alt = Angle("85.0d")
 
@@ -317,7 +307,6 @@ def test_redundant_baselines(cst_beam, hera_loc):
     antenna4 = pyuvsim.Antenna("ant4", 4, antpos[1, :] + en_shift, 0)
 
     # make a source off zenith
-    time.location = array_location
     source, _ = pyuvsim.create_mock_catalog(
         time, arrangement="off-zenith", alt=src_alt.deg
     )
@@ -346,9 +335,9 @@ def test_redundant_baselines(cst_beam, hera_loc):
 def test_single_offzenith_source(beam, hera_loc):
     """Test single off-zenith source."""
 
-    time = Time(2458098.27471265, format="jd")
     array_location = hera_loc
-    time.location = array_location
+    time = Time(2458098.27471265, format="jd", location=array_location)
+
     freq = 123e6 * units.Hz
 
     src_az = Angle("90.0d")
@@ -366,7 +355,6 @@ def test_single_offzenith_source(beam, hera_loc):
 
     # setup the things that don't come from pyuvdata:
     # make a source off zenith
-    time.location = array_location
     # create_mock_catalog uses azimuth of 90
     source, _ = pyuvsim.create_mock_catalog(
         time, arrangement="off-zenith", alt=src_alt.deg
@@ -446,7 +434,8 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
     """Calculate visibilities for a baseline triangle of an off-zenith source."""
 
     enu_antpos, uvw_array = triangle_pos
-    time = Time(2458098.27471265, format="jd")
+    array_location = hera_loc
+    time = Time(2458098.27471265, format="jd", location=array_location)
     src_az = Angle("90.0d")
     src_alt = Angle("85.0d")
     src_za = Angle("90.0d") - src_alt
@@ -455,7 +444,6 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
     src_m = np.cos(src_az.rad) * np.sin(src_za.rad)
     src_n = np.cos(src_za.rad)
 
-    array_location = hera_loc
     freq = 123e6 * units.Hz
 
     antenna1 = pyuvsim.Antenna("ant1", 0, np.array(enu_antpos[0, :]), 0)
@@ -463,7 +451,6 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
     antenna3 = pyuvsim.Antenna("ant3", 2, np.array(enu_antpos[2, :]), 0)
 
     # make a source off zenith
-    time.location = array_location
     source, _ = pyuvsim.create_mock_catalog(
         time, arrangement="off-zenith", alt=src_alt.deg
     )

@@ -994,7 +994,7 @@ def run_uvsim(
     if rank == 0:
         start = Time.now()
         input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(
-            params, return_beams=True, bl_conjugation_convention="ant1<ant2"
+            params, return_beams=True
         )
         skydata = simsetup.initialize_catalog_from_params(
             params, input_uv, return_catname=False

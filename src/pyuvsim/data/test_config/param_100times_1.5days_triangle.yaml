@@ -11,3 +11,6 @@ time:
   #  end_time: 2457459.5
   integration_time: 1296.0
 object_name: 'scattered_sources'
+ordering:
+  conjugation_convention: ant2<ant1
+  blt_order: [time, baseline]

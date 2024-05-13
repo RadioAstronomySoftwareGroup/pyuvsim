@@ -186,9 +186,7 @@ def test_powerbeam_sim(cst_beam):
     new_cst.efield_to_power()
     beams = BeamList([new_cst] * 4)
     cfg = os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
-    input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(
-        cfg, return_beams=False, bl_conjugation_convention="ant1<ant2"
-    )
+    input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(cfg, return_beams=False)
     sky_model = pyuvsim.simsetup.initialize_catalog_from_params(
         cfg, return_catname=False
     )
@@ -413,7 +411,7 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     param_dict["select"] = {"redundant_threshold": 0.1}
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=True, bl_conjugation_convention="ant1<ant2"
+        param_dict, return_beams=True
     )
     if hasattr(uv_obj, "telescope"):
         assert uv_obj.telescope.location.ellipsoid == selenoid

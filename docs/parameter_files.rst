@@ -61,6 +61,9 @@ these are passed into a simulation.
       ant_str: 'cross'
       antenna_nums: [1, 7, 9, 15]
       redundant_threshold: 0.1 # redundancy threshold in meters. Only simulate one baseline per redundant group
+    ordering: # specify the baseline-time order and baseling conjugation convention
+      conjugation_convention: ant1<ant2
+      blt_order: [time, baseline]
 
 **Note** The example above is shown with all allowed keywords, but many of these are
 redundant. This will be further explained below. Only one source catalog will be used
@@ -329,3 +332,24 @@ Select
     baseline vectors can be to still be called redundant -- the magnitude of the vector
     differences must be less than or equal to the threshold. The vector differences are
     calculated for a phase center of zenith (i.e. in drift mode).
+
+Ordering
+^^^^^^^^
+    Specify how data on the UVData object is ordered.
+
+    The baseline conjugation convention (specified as ``conjugation_convention``)
+    defaults to ``"ant1<ant2"`` (which is a change in versions 1.3.1, in earlier
+    versions it defaulted to ``"ant2<ant1"``).
+    If it is set to something other than ``"ant1<ant2"``, it is passed to the
+    :meth:`pyuvdata.UVData.conjugate_bls` method, see those docs for more
+    information.
+
+    The ordering along the baseline-time axis (specified as ``blt_order``) defaults
+    to ``["time", "baseline"]`` (meaning it is ordered first by time and then by
+    baseline number).  If it is set to anything else, it is passed to the
+    :meth:`pyuvdata.UVData.reorder_blts` method, see those docs for more
+    information.
+    Note that the object is required to be in the ``["time", "baseline"]`` order
+    to actually run a simulation, so if it is set to anything else, the uvdata
+    object will be reordered before the simulation and then ordered back as
+    specified after the simulation is complete.
