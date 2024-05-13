@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+### Added
+- A new "ordering" section to the parameter yaml file to specify the UVData
+conjugation convention and ordering along the baseline-time axis.
+- Support for pyuvdata version 3.0 and later.
+
+### Changed
+- Use UVData.new method to do the UVData object initialization. This leads to a
+change in the default conjugation convention from `"ant2<ant1"` to `"ant1<ant2"`.
+
+### Deprecated
+- The `"reorder_blt_kw"` parameter in the `simsetup.initialize_uvdata_from_params`
+function in favor of setting the ordering via the new "ordering" section in the
+parameter yaml file.
+
 ## [1.3.0] - 2024-07-17
 
 ### Added
