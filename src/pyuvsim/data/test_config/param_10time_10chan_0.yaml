@@ -17,3 +17,6 @@ time:
   integration_time: 11.0  # Time step size  (seconds)
   start_time: 2457458.1738949567    # Start and end times (Julian date)
   end_time: 2457458.1750407889
+ordering:
+  conjugation_convention: ant2<ant1
+  blt_order: [time, baseline]

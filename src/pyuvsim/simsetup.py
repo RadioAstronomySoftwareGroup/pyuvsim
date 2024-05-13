@@ -1184,7 +1184,11 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
 
 
 def parse_telescope_params(
-    tele_params, config_path="", freq_range=None, force_beam_check=False
+    tele_params,
+    config_path="",
+    freq_range=None,
+    return_beams=True,
+    force_beam_check=False,
 ):
     """
     Parse the "telescope" section of obsparam.
@@ -1199,6 +1203,8 @@ def parse_telescope_params(
         Path to directory holding configuration and layout files.
     freq_range : float
         If given, select frequencies on reading the beam.
+    return_beams : bool
+        Option to return the beam_list and beam_dict.
     force_beam_check : bool
         The beam consistency check is only possible for object-beams (not string mode).
         If `force_beam_check` is True, it will convert beams to object-mode to force
@@ -1224,11 +1230,11 @@ def parse_telescope_params(
         * `x_orientation`: physical orientation of the dipole labelled as "x"
         * `world`: Either "earth" or "moon" (requires lunarsky).
     beam_list : :class:`pyuvsim.BeamList`
-        This is a BeamList object in string mode.
+        This is a BeamList object in string mode, only returned if return_beams is True.
         The strings provide either paths to beamfits files or the specifications to make
         a :class:`pyuvsim.AnalyticBeam`.
     beam_dict : dict
-        Antenna numbers to beam indices
+        Antenna numbers to beam indices, only returned if return_beams is True.
 
     """
     tele_params = copy.deepcopy(tele_params)
@@ -1332,8 +1338,9 @@ def parse_telescope_params(
 
     # fill in outputs with just array info
     return_dict = {}
-    beam_list = BeamList([])
-    beam_dict = {}
+    if return_beams:
+        beam_list = BeamList([])
+        beam_dict = {}
     return_dict["Nants_data"] = antnames.size
     return_dict["Nants_telescope"] = antnames.size
     return_dict["antenna_names"] = np.array(antnames.tolist())
@@ -1362,10 +1369,13 @@ def parse_telescope_params(
     )
     return_dict["telescope_name"] = telescope_name
 
-    if not tele_config:
+    if not tele_config or not return_beams:
         # if no info on beams, just return what we have
         beam_dict = {n: 0 for n in antnames}
-        return return_dict, beam_list, beam_dict
+        if not return_beams:
+            return return_dict
+        else:
+            return return_dict, beam_list, beam_dict
 
     # if provided, parse sections related to beam files and types
     return_dict["telescope_config_name"] = telescope_config_name
@@ -1749,8 +1759,22 @@ def time_array_to_params(time_array):
 
 
 def subselect(uv_obj, param_dict):
-    """Make sub-selection on a UVData object."""
-    # select on object
+    """Do selection on a UVData object.
+
+    Parameters
+    ----------
+    uv_obj : UVData
+        UVData object to do the selection on.
+    param_dict : dict
+        Dict of parameters that can include a `select` section.
+
+    """
+    # downselect baselines (or anything that can be passed to pyuvdata's select method)
+    # Note: polarization selection is allowed here, but will cause an error if the incorrect pols
+    # are passed to pyuvsim.
+    if "select" not in param_dict:
+        return
+
     valid_select_keys = [
         "antenna_nums",
         "antenna_names",
@@ -1762,42 +1786,83 @@ def subselect(uv_obj, param_dict):
         "blt_inds",
     ]
 
-    # downselect baselines (or anything that can be passed to pyuvdata's select method)
-    # Note: polarization selection is allowed here, but will cause an error if the incorrect pols
-    # are passed to pyuvsim.
-    if "select" in param_dict:
-        select_params = param_dict["select"]
-        no_autos = bool(select_params.pop("no_autos", False))
-        select_params = {
-            k: v for k, v in select_params.items() if k in valid_select_keys
-        }
-        if "antenna_nums" in select_params:
-            select_params["antenna_nums"] = list(
-                map(int, select_params["antenna_nums"])
-            )
-        redundant_threshold = param_dict["select"].get("redundant_threshold", None)
-        if "bls" in select_params:
-            bls = select_params["bls"]
-            if isinstance(bls, str):
-                # If read from file, this should be a string.
-                bls = ast.literal_eval(bls)
-                select_params["bls"] = bls
-        if len(select_params) > 0:
-            uv_obj.select(**select_params)
+    select_params = param_dict["select"]
+    no_autos = bool(select_params.pop("no_autos", False))
+    select_params = {k: v for k, v in select_params.items() if k in valid_select_keys}
+    if "antenna_nums" in select_params:
+        select_params["antenna_nums"] = list(map(int, select_params["antenna_nums"]))
+    redundant_threshold = param_dict["select"].get("redundant_threshold", None)
+    if "bls" in select_params:
+        bls = select_params["bls"]
+        if isinstance(bls, str):
+            # If read from file, this should be a string.
+            bls = ast.literal_eval(bls)
+            select_params["bls"] = bls
+    if len(select_params) > 0:
+        uv_obj.select(**select_params)
 
-        if no_autos:
-            uv_obj.select(ant_str="cross")
+    if no_autos:
+        uv_obj.select(ant_str="cross")
 
-        if redundant_threshold is not None:
-            uv_obj.compress_by_redundancy(tol=redundant_threshold)
+    if redundant_threshold is not None:
+        uv_obj.compress_by_redundancy(tol=redundant_threshold)
+
+
+def ordering(uv_obj, param_dict, reorder_blt_kw):
+    """Do conjugation/reordering on a UVData object.
+
+    Parameters
+    ----------
+    uv_obj : UVData
+        UVData object to do the selection on.
+    param_dict : dict
+        Dict of parameters that can include an `order` section.
+    reorder_blt_kw : dict
+        Dict giving order & minor order for blt reordering.
+
+    """
+    bl_conjugation_convention = None
+    if "ordering" in param_dict:
+        ordering_dict = param_dict["ordering"]
+
+        bl_conjugation_convention = ordering_dict.pop("conjugation_convention", None)
+        if "blt_order" in ordering_dict and reorder_blt_kw is None:
+            blt_order = ordering_dict["blt_order"]
+
+            if isinstance(blt_order, str):
+                reorder_blt_kw = {"order": blt_order}
+            if isinstance(blt_order, (tuple, list, np.ndarray)):
+                reorder_blt_kw = {"order": blt_order[0]}
+                if len(blt_order) > 1:
+                    reorder_blt_kw["minor_order"] = blt_order[1]
+    if bl_conjugation_convention is None:
+        warnings.warn(
+            "The default baseline conjugation convention has changed. In the past "
+            "it was 'ant2<ant1', it now defaults to 'ant1<ant2'. You can specify "
+            "the baseline conjugation convention in `obs_param` by setting the "
+            "obs_param['orderding']['conjugation_convention'] field. This warning will go "
+            "away in version 1.5."
+        )
+    elif bl_conjugation_convention != "ant1<ant2":
+        uv_obj.conjugate_bls(convention=bl_conjugation_convention)
+
+    # we construct uvdata objects in (time, ant1) order
+    # but the simulator will force (time, baseline) later
+    # so order this now so we don't get any warnings.
+    if reorder_blt_kw is None:
+        reorder_blt_kw = {"order": "time", "minor_order": "baseline"}
+
+    if uv_obj.blt_order is not None:
+        blt_order = {"order": uv_obj.blt_order[0], "minor_order": uv_obj.blt_order[1]}
+    else:
+        blt_order = None
+
+    if reorder_blt_kw and reorder_blt_kw != blt_order:
+        uv_obj.reorder_blts(**reorder_blt_kw)
 
 
 def initialize_uvdata_from_params(
-    obs_params,
-    return_beams=None,
-    reorder_blt_kw=None,
-    bl_conjugation_convention=None,
-    force_beam_check=False,
+    obs_params, return_beams=None, reorder_blt_kw=None, force_beam_check=False
 ):
     """
     Construct a :class:`pyuvdata.UVData` object from parameters in a valid yaml file.
@@ -1819,12 +1884,10 @@ def initialize_uvdata_from_params(
         Option to return the beam_list and beam_dict. Currently defaults to True, but
         will default to False starting in version 1.4.
     reorder_blt_kw : dict (optional)
+        Deprecated. Use obs_param['orderding']['blt_order'] instead.
         Keyword arguments to send to the ``uvdata.reorder_blts`` method at the end of
         the setup process. Typical parameters include "order" and "minor_order". Default
         values are ``order='time'`` and ``minor_order='baseline'``.
-    bl_conjugation_convention : str, optional
-        Baseline conjugation convention. In the past this was always "ant2<ant1".
-        Now it defaults to "ant1<ant2" but with a warning if it is not set explicitly.
     force_beam_check : bool
         The beam consistency check is only possible for object-beams (not string mode).
         If `force_beam_check` is True, it will convert beams to object-mode to force
@@ -1850,6 +1913,14 @@ def initialize_uvdata_from_params(
             DeprecationWarning,
         )
         return_beams = True
+
+    if reorder_blt_kw is not None:
+        warnings.warn(
+            "The reorder_blt_kw parameter is deprecated in favor of setting "
+            "obs_param['orderding']['blt_order']. This will become an error in "
+            "version 1.5",
+            DeprecationWarning,
+        )
 
     uvparam_dict = {}  # Parameters that will go into UVData
     if isinstance(obs_params, str):
@@ -1877,14 +1948,20 @@ def initialize_uvdata_from_params(
     else:
         freq_range = None
 
-    tele_params, beam_list, beam_dict = parse_telescope_params(
+    ptp_ret = parse_telescope_params(
         tele_dict,
         config_path=param_dict["config_path"],
         freq_range=freq_range,
+        return_beams=return_beams,
         force_beam_check=force_beam_check,
     )
+    if return_beams:
+        tele_params, beam_list, beam_dict = ptp_ret
+        # overwrite x_orientation with the beam list x_orientation if we have it
+        tele_params["x_orientation"] = beam_list.x_orientation
+    else:
+        tele_params = ptp_ret
 
-    tele_params["x_orientation"] = beam_list.x_orientation
     logger.info("Finished Setup of BeamList")
 
     # Use extra_keywords to pass along required paths for file history.
@@ -2009,46 +2086,17 @@ def initialize_uvdata_from_params(
         uv_obj.flex_spw = False
         uv_obj._flex_spw_id_array.required = False
 
-    logger.info("Initialized UVData object")
-
-    # add other required metadata to allow select to work without errors
-    # these will all be overwritten in uvsim._complete_uvdata, so it's ok to hardcode them here
-    logger.info("Set Metadata")
     logger.info(f"  Baseline Array: {uv_obj.baseline_array.nbytes / 1024**3:.2f} GB")
     logger.info(f"      Time Array: {uv_obj.time_array.nbytes / 1024**3:.2f} GB")
     logger.info(f"Integration Time: {uv_obj.integration_time.nbytes / 1024**3:.2f} GB")
     logger.info(f"       Ant1Array: {uv_obj.ant_1_array.nbytes / 1024**3:.2f} GB")
-
     logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
-    logger.info("Set UVWs")
+    logger.info("Initialized UVData object")
 
     subselect(uv_obj, param_dict)
     logger.info("After Select")
 
-    if bl_conjugation_convention is None:
-        warnings.warn(
-            "The default baseline conjugation convention has changed. In the past "
-            "it was 'ant2<ant1', it now defaults to 'ant1<ant2'. You can specify "
-            "the baseline conjugation convention using the bl_conjugation_convention "
-            "parameter (which will also silence this warning). This warning will "
-            "go away in version 1.5."
-        )
-    elif bl_conjugation_convention != "ant1<ant2":
-        uv_obj.conjugate_bls(convention=bl_conjugation_convention)
-
-    # we construct uvdata objects in (time, ant1) order
-    # but the simulator will force (time, baseline) later
-    # so order this now so we don't get any warnings.
-    if reorder_blt_kw is None:
-        reorder_blt_kw = {"order": "time", "minor_order": "baseline"}
-
-    if uv_obj.blt_order is not None:
-        blt_order = {"order": uv_obj.blt_order[0], "minor_order": uv_obj.blt_order[1]}
-    else:
-        blt_order = None
-
-    if reorder_blt_kw and reorder_blt_kw != blt_order:
-        uv_obj.reorder_blts(**reorder_blt_kw)
+    ordering(uv_obj, param_dict, reorder_blt_kw)
 
     logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
     logger.info("After Re-order BLTS")
@@ -2134,6 +2182,8 @@ def initialize_uvdata_from_keywords(
     polarization_array=None,
     no_autos=False,
     redundant_threshold=None,
+    conjugation_convention=None,
+    blt_order=None,
     write_files=True,
     path_out=None,
     complete=False,
@@ -2197,6 +2247,14 @@ def initialize_uvdata_from_keywords(
         List of polarization strings (or ints) to insert into object
     no_autos : bool
         If True, eliminate all auto correlations
+    conjugation_convention : str, optional
+        A convention for the directions of the baselines, options are:
+        'ant1<ant2', 'ant2<ant1', 'u<0', 'u>0', 'v<0', 'v>0'
+    blt_order : str or array-like of str, optional
+        Specifies the ordering along the blt axis. Defaults to ['time', 'baseline'].
+        If set to anything else, it is passed to :meth:`pyuvdata.UVData.reorder_blts`.
+        A single string specifies the order, a list of two strings specifies the
+        [order, minor_order]. See the docs on the UVData method for more information.
     write_files : bool
         If True, write out the parameter information to yaml files.
     path_out : str (optional)
@@ -2305,11 +2363,17 @@ def initialize_uvdata_from_keywords(
         "array_layout": array_layout,
     }
 
+    ordering_params = {
+        "conjugation_convention": conjugation_convention,
+        "blt_order": blt_order,
+    }
+
     freq_params = {k: v for k, v in freq_params.items() if v is not None}
     time_params = {k: v for k, v in time_params.items() if v is not None}
     selection_params = {k: v for k, v in selection_params.items() if v is not None}
     tele_params = {k: v for k, v in tele_params.items() if v is not None}
     layout_params = {k: v for k, v in layout_params.items() if v is not None}
+    ordering_params = {k: v for k, v in ordering_params.items() if v is not None}
 
     uv_obj = UVData()
 
@@ -2329,6 +2393,7 @@ def initialize_uvdata_from_keywords(
         "time": time_params,
         "freq": freq_params,
         "select": selection_params,
+        "ordering": ordering_params,
         "telescope": tele_params,
         "config_path": path_out,
         "polarization_array": polarization_array,
@@ -2348,10 +2413,7 @@ def initialize_uvdata_from_keywords(
     param_dict["obs_param_file"] = os.path.basename(output_yaml_filename)
     param_dict["telescope"].update(layout_params)
     uv_obj = initialize_uvdata_from_params(
-        param_dict,
-        return_beams=False,
-        force_beam_check=force_beam_check,
-        bl_conjugation_convention="ant1<ant2",
+        param_dict, return_beams=False, force_beam_check=force_beam_check
     )
 
     if complete:
@@ -2466,7 +2528,10 @@ def uvdata_to_config_file(
     When used with :func:`~uvdata_to_telescope_config`, this will produce all the necessary
     configuration yaml and csv file to make an "empty" :class:`pyuvdata.UVData` object comparable to
     the argument `uvdata_in`. The generated file will match `uvdata_in` in frequency, time,
-    antenna positions, and uvw coordinates.
+    antenna positions, and uvw coordinates. Note that it may be different in the
+    baseline conjugation convention and the ordering of the baseline-time axis,
+    but those can be modified using the :meth:`pyuvdata.UVData.conjugate_bls` and
+    :meth:`pyuvdata.UVData.reorder_blt` methods.
 
     Parameters
     ----------
@@ -2512,6 +2577,12 @@ def uvdata_to_config_file(
             "array_layout": layout_csv_name,
         },
         "filing": {"outdir": ".", "outfile_name": "", "outfile_prefix": ""},
+        # Add this in to prevent warnings and make it explicit, these are just
+        # the default values.
+        "ordering": {
+            "conjugation_convention": "ant1<ant2",
+            "blt_order": ["time", "baseline"],
+        },
     }
 
     if catalog == "mock":

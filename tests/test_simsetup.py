@@ -140,6 +140,8 @@ def uvdata_keyword_dict():
         "start_time": 2458101.0,
         "polarization_array": ["xx"],
         "no_autos": True,
+        "conjugation_convention": "ant1<ant2",
+        "blt_order": ["time", "baseline"],
         "write_files": False,
         "run_check": True,
     }
@@ -521,7 +523,6 @@ def test_gleam_catalog_spectral_type(spectral_type):
     assert gleam_catalog.Ncomponents == 50
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings(
     "ignore:LST values stored in this file are not self-consistent"
 )
@@ -553,18 +554,19 @@ def test_param_reader():
 
     # Check default configuration
     with uvtest.check_warnings(
-        [DeprecationWarning, UserWarning],
+        [DeprecationWarning, DeprecationWarning, UserWarning],
         match=[
             "The return_beams parameter currently defaults to True, but starting in"
             "version 1.4 it will default to False.",
+            "The reorder_blt_kw parameter is deprecated in favor of setting "
+            "obs_param['orderding']['blt_order']. This will become an error in "
+            "version 1.5",
             "Cannot check consistency of a string-mode BeamList! Set force=True to "
             "force consistency checking.",
         ],
     ):
         uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(
-            param_filename,
-            bl_conjugation_convention="ant2<ant1",
-            reorder_blt_kw={"order": "time", "minor_order": "baseline"},
+            param_filename, reorder_blt_kw={"order": "time", "minor_order": "baseline"}
         )
     new_beam_list.set_obj_mode()
     if hasattr(uv_obj, "telescope"):
@@ -606,7 +608,6 @@ def test_param_reader():
     assert uv_obj == uv_in
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize(
     ("subdict", "error", "msg"),
     [
@@ -692,10 +693,9 @@ def test_param_reader_errors(subdict, error, msg):
             params_bad[key] = value
 
     with pytest.raises(error, match=msg):
-        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad, return_beams=False)
+        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad, return_beams=True)
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize(
     ("world", "selenoid"),
     [
@@ -1034,33 +1034,16 @@ def test_single_freq_array_to_params(times_and_freqs):
     assert fdict["start_freq"] == freqs
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_param_select_cross():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_mwa_nocore.yaml"
     )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    with uvtest.check_warnings(
-        UserWarning,
-        match=[
-            "Cannot check consistency of a string-mode BeamList! Set force=True "
-            "to force consistency checking.",
-            "The default baseline conjugation convention has changed. In the "
-            "past it was 'ant2<ant1', it now defaults to 'ant1<ant2'. You can specify "
-            "the baseline conjugation convention using the bl_conjugation_convention "
-            "parameter (which will also silence this warning). This warning will go "
-            "away in version 1.5.",
-        ],
-    ):
-        uv_obj_full = pyuvsim.initialize_uvdata_from_params(
-            param_dict, return_beams=False
-        )
+    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     # test only keeping cross pols
     param_dict["select"] = {"ant_str": "cross"}
-    uv_obj_cross = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
-    )
+    uv_obj_cross = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
     uv_obj_cross2 = uv_obj_full.select(ant_str="cross", inplace=False)
 
     # histories are different because of time stamp from UVData.new() method
@@ -1069,42 +1052,32 @@ def test_param_select_cross():
     assert uv_obj_cross == uv_obj_cross2
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_param_select_bls():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_mwa_nocore.yaml"
     )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj_full = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
-    )
+    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     # test only keeping certain baselines
     param_dict["select"] = {"bls": "[(40, 41), (42, 43), (44, 45)]"}  # Test as string
-    uv_obj_bls = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
-    )
+    uv_obj_bls = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     uv_obj_bls2 = uv_obj_full.select(bls=[(40, 41), (42, 43), (44, 45)], inplace=False)
     uv_obj_bls.history, uv_obj_bls2.history = "", ""
     assert uv_obj_bls == uv_obj_bls2
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_param_select_redundant():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_hex37_14.6m.yaml"
     )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj_full = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
-    )
+    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     # test only keeping one baseline per redundant group
     param_dict["select"] = {"redundant_threshold": 0.1}
-    uv_obj_red = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
-    )
+    uv_obj_red = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
     uv_obj_red2 = uv_obj_full.compress_by_redundancy(tol=0.1, inplace=False)
     uv_obj_red.history, uv_obj_red2.history = "", ""
 
@@ -1112,7 +1085,48 @@ def test_param_select_redundant():
     assert uv_obj_red.Nbls < uv_obj_full.Nbls
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
+@pytest.mark.parametrize(
+    "order_dict",
+    [
+        None,
+        {"conjugation_convention": "v>0", "blt_order": ["ant1", "ant2"]},
+        {"conjugation_convention": "ant2<ant1", "blt_order": ["baseline"]},
+        {"conjugation_convention": "ant2<ant1", "blt_order": "baseline"},
+    ],
+)
+def test_param_ordering(order_dict):
+    param_filename = os.path.join(
+        SIM_DATA_PATH, "test_config", "obsparam_mwa_nocore.yaml"
+    )
+    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
+    uv_obj_orig = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+
+    param_dict2 = copy.deepcopy(param_dict)
+    if order_dict is None:
+        param_dict2.pop("ordering")
+        warn_str = (
+            "The default baseline conjugation convention has changed. In the past "
+            "it was 'ant2<ant1', it now defaults to 'ant1<ant2'. You can specify "
+            "the baseline conjugation convention in `obs_param` by setting the "
+            "obs_param['orderding']['conjugation_convention'] field. This warning "
+            "will go away in version 1.5."
+        )
+        warn_type = UserWarning
+    else:
+        warn_type = None
+        warn_str = ""
+        param_dict2["ordering"] = order_dict
+    with uvtest.check_warnings(warn_type, match=warn_str):
+        uv_obj2 = pyuvsim.initialize_uvdata_from_params(param_dict2, return_beams=False)
+
+    if order_dict is not None:
+        uv_obj2.reorder_blts(
+            order="time", minor_order="baseline", conj_convention="ant1<ant2"
+        )
+    uv_obj2.history = uv_obj_orig.history
+    assert uv_obj2 == uv_obj_orig
+
+
 @pytest.mark.parametrize("key", ["cat_name", "object_name"])
 def test_param_set_cat_name(key):
     param_filename = os.path.join(
@@ -1121,13 +1135,10 @@ def test_param_set_cat_name(key):
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
 
     param_dict[key] = "foo"
-    uv_obj = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
-    )
+    uv_obj = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
     assert uv_obj.phase_center_catalog[0]["cat_name"] == "foo"
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_uvdata_keyword_init(uvdata_keyword_dict):
     # check it runs through
     uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
@@ -1155,7 +1166,6 @@ def test_uvdata_keyword_init(uvdata_keyword_dict):
     assert not np.any(uvd.ant_1_array == uvd.ant_2_array)
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_uvdata_keyword_init_select_bls(uvdata_keyword_dict):
     # check bls and antenna_nums selections work
     bls = [(0, 1), (0, 2), (0, 3)]
@@ -1165,7 +1175,6 @@ def test_uvdata_keyword_init_select_bls(uvdata_keyword_dict):
     assert antpairs == bls
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_uvdata_keyword_init_select_antnum_str(uvdata_keyword_dict):
     # check that '1' gets converted to [1]
     uvdata_keyword_dict["polarization_array"] = ["xx", "yy"]
@@ -1177,7 +1186,6 @@ def test_uvdata_keyword_init_select_antnum_str(uvdata_keyword_dict):
     assert uvd.get_pols() == uvdata_keyword_dict["polarization_array"]
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_uvdata_keyword_init_time_freq_override(uvdata_keyword_dict):
     # check time and freq array definitions supersede other parameters
     fa = np.linspace(100, 200, 11) * 1e6
@@ -1190,7 +1198,6 @@ def test_uvdata_keyword_init_time_freq_override(uvdata_keyword_dict):
     np.testing.assert_allclose(uvd.freq_array, fa)
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_uvdata_keyword_init_layout_dict(uvdata_keyword_dict, tmpdir):
     # test feeding array layout as dictionary
     uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
@@ -1228,7 +1235,6 @@ def test_uvdata_keyword_init_layout_dict(uvdata_keyword_dict, tmpdir):
     assert np.all([np.isclose(antpos_d[ant], antpos_d2[ant]) for ant in ants])
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.parametrize("pass_layout", [True, False])
 def test_uvdata_keyword_init_write(pass_layout, uvdata_keyword_dict, tmpdir):
     # Check defaults when writing to file.
@@ -1279,7 +1285,6 @@ def test_initialize_uvdata_from_keywords_errors(uvdata_keyword_dict):
         pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_uvfits_to_config(tmp_path):
     """
@@ -1321,9 +1326,7 @@ def test_uvfits_to_config(tmp_path):
     orig_param_dict = copy.deepcopy(
         param_dict
     )  # The parameter dictionary gets modified in the function below.
-    uv1 = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
-    )
+    uv1 = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
     # Generate parameters from new uvfits and compare with old.
     path, telescope_config, layout_fname = pyuvsim.simsetup.uvdata_to_telescope_config(
         uv1,
@@ -1451,7 +1454,6 @@ def test_mock_catalog_error():
         pyuvsim.create_mock_catalog(time, "invalid_catalog_name")
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_keyword_param_loop(tmpdir):
     # Check that yaml/csv files made by intialize_uvdata_from_keywords will work
     # on their own.
@@ -1473,15 +1475,14 @@ def test_keyword_param_loop(tmpdir):
         integration_time=100.0,
         start_time=2458101.0,
         no_autos=True,
+        conjugation_convention="ant1<ant2",
         path_out=path_out,
         antenna_layout_filepath=layout_fname,
         output_yaml_filename=obsparam_fname,
     )
 
     uv2 = pyuvsim.simsetup.initialize_uvdata_from_params(
-        os.path.join(path_out, obsparam_fname),
-        return_beams=False,
-        bl_conjugation_convention="ant1<ant2",
+        os.path.join(path_out, obsparam_fname), return_beams=False
     )
 
     uv2.extra_keywords = {}
@@ -1548,7 +1549,6 @@ def test_multi_analytic_beams(tmpdir):
         assert beam_list[bid] == expected[bid]
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 def test_direct_fname(tmpdir):
     shutil.copyfile(
         os.path.join(SIM_DATA_PATH, "test_config", "28m_triangle_10time_10chan.yaml"),
@@ -1569,9 +1569,7 @@ def test_direct_fname(tmpdir):
     os.chdir(tmpdir)
 
     pyuvsim.simsetup.initialize_uvdata_from_params(
-        "param_100times_1.5days_triangle.yaml",
-        return_beams=False,
-        bl_conjugation_convention="ant1<ant2",
+        "param_100times_1.5days_triangle.yaml", return_beams=False
     )
 
     os.chdir(cwd)
@@ -1752,7 +1750,6 @@ def test_beamlist_init_freqrange():
     assert len(beam_list[0].freq_array) == 2
 
 
-@pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 def test_moon_lsts():
     # Check that setting lsts for a Moon simulation works as expected.
@@ -1762,9 +1759,7 @@ def test_moon_lsts():
         SIM_DATA_PATH, "test_config", "obsparam_tranquility_hex.yaml"
     )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=False, bl_conjugation_convention="ant1<ant2"
-    )
+    uv_obj = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
     assert "world" in uv_obj.extra_keywords.keys()
     assert uv_obj.extra_keywords["world"] == "moon"
 
@@ -1963,9 +1958,7 @@ def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
 def test_simsetup_with_freq_buffer():
     fl = os.path.join(SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky_freqbuf.yaml")
 
-    _, beams, _ = simsetup.initialize_uvdata_from_params(
-        fl, return_beams=True, bl_conjugation_convention="ant1<ant2"
-    )
+    _, beams, _ = simsetup.initialize_uvdata_from_params(fl, return_beams=True)
 
     beams.set_obj_mode()
     assert beams[0].freq_array.max() < 101e6
