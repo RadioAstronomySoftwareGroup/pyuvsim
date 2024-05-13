@@ -492,9 +492,37 @@ def uvdata_to_task_iter(
     else:
         src_iter = [range(Nsrcs_total)]
     # Build the antenna list.
-    antenna_names = input_uv.antenna_names
+    if hasattr(input_uv, "telescope"):
+        antenna_names = input_uv.telescope.antenna_names
+        antpos_enu = input_uv.telescope.get_enu_antpos()
+        antenna_numbers = input_uv.telescope.antenna_numbers
+        tel_loc = input_uv.telescope.location
+        telescope = Telescope(input_uv.telescope.name, tel_loc, beam_list)
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        antenna_names = input_uv.antenna_names
+        antpos_enu, _ = input_uv.get_ENU_antpos()
+        antenna_numbers = input_uv.antenna_numbers
+        tloc = [np.float64(x) for x in input_uv.telescope_location]
+
+        world = input_uv.extra_keywords.get("world", "earth")
+
+        if world.lower() == "earth":
+            tel_loc = EarthLocation.from_geocentric(*tloc, unit="m")
+        elif world.lower() == "moon":
+            if not hasmoon:
+                raise ValueError(
+                    "Need lunarsky module to simulate an array on the Moon."
+                )
+            tel_loc = MoonLocation.from_selenocentric(*tloc, unit="m")
+            tel_loc.ellipsoid = input_uv._telescope_location.ellipsoid
+        else:
+            raise ValueError(
+                "If world keyword is set, it must be either 'moon' or 'earth'."
+            )
+        telescope = Telescope(input_uv.telescope_name, tel_loc, beam_list)
+
     antennas = []
-    antpos_enu, antnums = input_uv.get_ENU_antpos()
     for num, antname in enumerate(antenna_names):
         if beam_dict is None:
             beam_id = 0
@@ -541,30 +569,12 @@ def uvdata_to_task_iter(
     # based on the reference simulations.
     order = np.lexsort((_bls[task_slice], _freqs[task_slice], _times[task_slice]))
 
-    tloc = [np.float64(x) for x in input_uv.telescope_location]
-
-    world = input_uv.extra_keywords.get("world", "earth")
-
-    if world.lower() == "earth":
-        location = EarthLocation.from_geocentric(*tloc, unit="m")
-    elif world.lower() == "moon":
-        if not hasmoon:
-            raise ValueError("Need lunarsky module to simulate an array on the Moon.")
-        location = MoonLocation.from_selenocentric(*tloc, unit="m")
-        location.ellipsoid = input_uv._telescope_location.ellipsoid
-    else:
-        raise ValueError(
-            "If world keyword is set, it must be either 'moon' or 'earth'."
-        )
-    telescope = Telescope(input_uv.telescope_name, location, beam_list)
     freq_array = input_uv.freq_array * units.Hz
-    if hasmoon and isinstance(location, MoonLocation):
+    if hasmoon and isinstance(tel_loc, MoonLocation):
         tclass = LTime
     else:
         tclass = Time
-    time_array = tclass(
-        input_uv.time_array, scale="utc", format="jd", location=location
-    )
+    time_array = tclass(input_uv.time_array, scale="utc", format="jd", location=tel_loc)
     for src_i in src_iter:
         sky = catalog.get_skymodel(src_i)
         if (
@@ -593,8 +603,8 @@ def uvdata_to_task_iter(
             if bl_num not in baselines.keys():
                 antnum1 = input_uv.ant_1_array[blt_i]
                 antnum2 = input_uv.ant_2_array[blt_i]
-                index1 = np.where(input_uv.antenna_numbers == antnum1)[0][0]
-                index2 = np.where(input_uv.antenna_numbers == antnum2)[0][0]
+                index1 = np.where(antenna_numbers == antnum1)[0][0]
+                index2 = np.where(antenna_numbers == antnum2)[0][0]
                 baselines[bl_num] = Baseline(antennas[index1], antennas[index2])
 
             time = time_array[blt_i]
@@ -984,7 +994,7 @@ def run_uvsim(
     if rank == 0:
         start = Time.now()
         input_uv, beam_list, beam_dict = simsetup.initialize_uvdata_from_params(
-            params, return_beams=True
+            params, return_beams=True, bl_conjugation_convention="ant1<ant2"
         )
         skydata = simsetup.initialize_catalog_from_params(
             params, input_uv, return_catname=False

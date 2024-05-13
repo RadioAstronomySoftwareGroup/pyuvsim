@@ -94,7 +94,11 @@ def triangle_pos():
     else:
         hera_uv.unphase_to_drift(use_ant_pos=True)
 
-    enu = hera_uv.get_ENU_antpos()[0]
+    if hasattr(hera_uv, "telescope"):
+        enu = hera_uv.telescope.get_enu_antpos()
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        enu = hera_uv.get_ENU_antpos()[0]
     uvw = hera_uv.uvw_array[: hera_uv.Nbls]
 
     return enu, uvw
@@ -109,7 +113,10 @@ def uvobj_beams_srcs():
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     param_dict["select"] = {"redundant_threshold": 0.1}
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=True, force_beam_check=True
+        param_dict,
+        return_beams=True,
+        force_beam_check=True,
+        bl_conjugation_convention="ant1<ant2",
     )
     assert uv_obj.future_array_shapes
 
@@ -151,7 +158,7 @@ def uvdata_two_redundant_bls_triangle_sources():
     )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
-        param_dict, return_beams=True
+        param_dict, return_beams=True, bl_conjugation_convention="ant1<ant2"
     )
     pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
 
@@ -553,18 +560,29 @@ def test_file_to_tasks(cst_beam, future_shapes):
     assert task1 >= task0
     assert task0 <= task1
 
-    tel_loc = EarthLocation.from_geocentric(*hera_uv.telescope_location, unit="m")
-
-    telescope = pyuvsim.Telescope(hera_uv.telescope_name, tel_loc, beam_list)
-
-    ant_pos = hera_uv.antenna_positions + hera_uv.telescope_location
-    lat, lon, alt = hera_uv.telescope_location_lat_lon_alt
-    ant_pos_enu = uvutils.ENU_from_ECEF(
-        ant_pos, latitude=lat, longitude=lon, altitude=alt
-    )
+    if hasattr(hera_uv, "telescope"):
+        telescope = pyuvsim.Telescope(
+            hera_uv.telescope.name, hera_uv.telescope.location, beam_list
+        )
+        ant_pos_enu = hera_uv.telescope.get_enu_antpos()
+        antenna_names = hera_uv.telescope.antenna_names
+        antenna_numbers = hera_uv.telescope.antenna_numbers
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        telescope = pyuvsim.Telescope(
+            hera_uv.telescope_name,
+            EarthLocation.from_geocentric(*hera_uv.telescope_location, unit="m"),
+            beam_list,
+        )
+        ant_pos = hera_uv.antenna_positions + hera_uv.telescope_location
+        lat, lon, alt = hera_uv.telescope_location_lat_lon_alt
+        ant_pos_enu = uvutils.ENU_from_ECEF(
+            ant_pos, latitude=lat, longitude=lon, altitude=alt
+        )
+        antenna_names = hera_uv.antenna_names
+        antenna_numbers = hera_uv.antenna_numbers
 
     expected_task_list = []
-    antenna_names = hera_uv.antenna_names
     antennas = []
     for num, antname in enumerate(antenna_names):
         beam_id = 0
@@ -572,12 +590,12 @@ def test_file_to_tasks(cst_beam, future_shapes):
 
     antennas1 = []
     for antnum in hera_uv.ant_1_array:
-        index = np.where(hera_uv.antenna_numbers == antnum)[0][0]
+        index = np.where(antenna_numbers == antnum)[0][0]
         antennas1.append(antennas[index])
 
     antennas2 = []
     for antnum in hera_uv.ant_2_array:
-        index = np.where(hera_uv.antenna_numbers == antnum)[0][0]
+        index = np.where(antenna_numbers == antnum)[0][0]
         antennas2.append(antennas[index])
 
     sources = sources.get_skymodel()
@@ -615,7 +633,14 @@ def test_gather():
     Nfreqs = hera_uv.Nfreqs
 
     Ntasks = Nblts * Nfreqs
-    beam_dict = dict(zip(hera_uv.antenna_names, [0] * hera_uv.Nants_data))
+
+    if hasattr(hera_uv, "telescope"):
+        antenna_names = hera_uv.telescope.antenna_names
+    else:
+        # this can be removed when we require pyuvdata >= 3.0
+        antenna_names = hera_uv.antenna_names
+
+    beam_dict = dict(zip(antenna_names, [0] * hera_uv.Nants_data))
     taskiter = pyuvsim.uvdata_to_task_iter(
         np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict
     )
