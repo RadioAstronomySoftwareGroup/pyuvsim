@@ -104,6 +104,16 @@ def test_convert_loop(beam_objs):
     assert beamlist._str_beam_list == []
 
 
+@pytest.mark.filterwarnings("ignore:This method will be removed in version 3.0")
+def test_force_future_shapes(beam_objs):
+    if hasattr(beam_objs[0], "future_array_shapes"):
+        beam_objs[0].use_current_array_shapes()
+
+        beamlist = pyuvsim.BeamList(beam_objs)
+
+        assert beamlist[0].future_array_shapes
+
+
 def test_object_mode(beam_objs, tmp_path):
     beams = beam_objs
     beamlist = pyuvsim.BeamList(beams)
