@@ -1854,7 +1854,9 @@ def ordering(uv_obj, param_dict, reorder_blt_kw):
     if reorder_blt_kw is None:
         reorder_blt_kw = {"order": "time", "minor_order": "baseline"}
 
-    if uv_obj.blt_order is not None:
+    # remove the pragma below after pyuvdata v3.0 is released.
+    # The blt_order attribute is set in UVData.new in version 3.0
+    if uv_obj.blt_order is not None:  # pragma: nocover
         blt_order = {"order": uv_obj.blt_order[0], "minor_order": uv_obj.blt_order[1]}
     else:
         blt_order = None
