@@ -1120,13 +1120,31 @@ def test_param_ordering(order_dict):
         warn_type = None
         warn_str = ""
         param_dict2["ordering"] = order_dict
+
     with uvtest.check_warnings(warn_type, match=warn_str):
         uv_obj2 = pyuvsim.initialize_uvdata_from_params(param_dict2, return_beams=False)
 
     if order_dict is not None:
+        if order_dict["blt_order"] == "baseline" or order_dict["blt_order"] == [
+            "baseline"
+        ]:
+            expected_blt_order = ("baseline", "time")
+        else:
+            expected_blt_order = tuple(order_dict["blt_order"])
+        assert uv_obj2.blt_order == expected_blt_order
+
+        temp_uv = uv_obj_orig.copy()
+        temp_uv.conjugate_bls(order_dict["conjugation_convention"])
+        temp_uv.reorder_blts(
+            order=expected_blt_order[0], minor_order=expected_blt_order[1]
+        )
+        temp_uv.history = uv_obj2.history
+        assert uv_obj2 == temp_uv
+
         uv_obj2.reorder_blts(
             order="time", minor_order="baseline", conj_convention="ant1<ant2"
         )
+
     uv_obj2.history = uv_obj_orig.history
     assert uv_obj2 == uv_obj_orig
 
