@@ -492,7 +492,8 @@ def uvdata_to_task_iter(
     else:
         src_iter = [range(Nsrcs_total)]
     # Build the antenna list.
-    if hasattr(input_uv, "telescope"):
+    # remove the pragma below after pyuvdata v3.0 is released
+    if hasattr(input_uv, "telescope"):  # pragma: nocover
         antenna_names = input_uv.telescope.antenna_names
         antpos_enu = input_uv.telescope.get_enu_antpos()
         antenna_numbers = input_uv.telescope.antenna_numbers

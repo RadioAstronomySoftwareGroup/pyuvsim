@@ -946,7 +946,8 @@ def initialize_catalog_from_params(
 
         if "array_location" not in mock_keywords:
             if input_uv is not None:
-                if hasattr(input_uv, "telescope"):
+                # remove the pragma below after pyuvdata v3.0 is released
+                if hasattr(input_uv, "telescope"):  # pragma: nocover
                     mock_keywords["array_location"] = input_uv.telescope.location
                 else:
                     # this can be removed when we require pyuvdata >= 3.0
@@ -1017,7 +1018,8 @@ def initialize_catalog_from_params(
         sky = SkyModel.from_file(catalog, **read_params)
 
     if input_uv is not None:
-        if hasattr(input_uv, "telescope"):
+        # remove the pragma below after pyuvdata v3.0 is released
+        if hasattr(input_uv, "telescope"):  # pragma: nocover
             telescope_lat_deg = input_uv.telescope.location.lat.to("deg").value
         else:
             # this can be removed when we require pyuvdata >= 3.0
@@ -2010,21 +2012,17 @@ def initialize_uvdata_from_params(
     if "Npols" not in uvparam_dict:
         uvparam_dict["Npols"] = len(uvparam_dict["polarization_array"])
 
+    # telescope frame is set from world in parse_telescope_params.
+    # Can only be itrs or (if lunarsky is installed) mcmf
     if tele_params["telescope_frame"] == "itrs":
         telescope_location = EarthLocation.from_geocentric(
             *tele_params["telescope_location"], unit="m"
         )
     elif tele_params["telescope_frame"] == "mcmf":
-        if not hasmoon:
-            raise ValueError("Need lunarsky module to for arrays on the Moon.")
-
         telescope_location = MoonLocation.from_selenocentric(
             *tele_params["telescope_location"], unit="m"
         )
         telescope_location.ellipsoid = tele_params["ellipsoid"]
-    else:
-        tel_frame = tele_params["telescope_frame"]
-        raise ValueError(f"unknown telescope_frame {tel_frame}")
 
     if "cat_name" not in param_dict and "object_name" not in param_dict:
         tloc = EarthLocation.from_geocentric(
@@ -2046,7 +2044,8 @@ def initialize_uvdata_from_params(
     phase_center_catalog = {0: {"cat_name": cat_name, "cat_type": "unprojected"}}
 
     uv_obj = UVData()
-    if hasattr(uv_obj, "telescope"):
+    # remove the pragma below after pyuvdata v3.0 is released
+    if hasattr(uv_obj, "telescope"):  # pragma: nocover
         tel_init_params = {"location": telescope_location}
 
         telescope_param_map = {
@@ -2479,7 +2478,8 @@ def uvdata_to_telescope_config(
         if return_names, returns (path, telescope_config_name, layout_csv_name)
 
     """
-    if hasattr(uvdata_in, "telescope"):
+    # remove the pragma below after pyuvdata v3.0 is released
+    if hasattr(uvdata_in, "telescope"):  # pragma: nocover
         tel_name = uvdata_in.telescope.name
         antpos_enu = uvdata_in.telescope.get_enu_antpos()
         ant_names = uvdata_in.telescope.antenna_names
