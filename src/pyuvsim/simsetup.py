@@ -1840,7 +1840,7 @@ def ordering(uv_obj, param_dict, reorder_blt_kw):
             "The default baseline conjugation convention has changed. In the past "
             "it was 'ant2<ant1', it now defaults to 'ant1<ant2'. You can specify "
             "the baseline conjugation convention in `obs_param` by setting the "
-            "obs_param['orderding']['conjugation_convention'] field. This warning will go "
+            "obs_param['ordering']['conjugation_convention'] field. This warning will go "
             "away in version 1.5."
         )
     elif bl_conjugation_convention != "ant1<ant2":
@@ -1862,7 +1862,11 @@ def ordering(uv_obj, param_dict, reorder_blt_kw):
 
 
 def initialize_uvdata_from_params(
-    obs_params, return_beams=None, reorder_blt_kw=None, force_beam_check=False
+    obs_params,
+    return_beams=None,
+    reorder_blt_kw=None,
+    check_kw=None,
+    force_beam_check=False,
 ):
     """
     Construct a :class:`pyuvdata.UVData` object from parameters in a valid yaml file.
@@ -1884,10 +1888,12 @@ def initialize_uvdata_from_params(
         Option to return the beam_list and beam_dict. Currently defaults to True, but
         will default to False starting in version 1.4.
     reorder_blt_kw : dict (optional)
-        Deprecated. Use obs_param['orderding']['blt_order'] instead.
+        Deprecated. Use obs_param['ordering']['blt_order'] instead.
         Keyword arguments to send to the ``uvdata.reorder_blts`` method at the end of
         the setup process. Typical parameters include "order" and "minor_order". Default
         values are ``order='time'`` and ``minor_order='baseline'``.
+    check_kw : dict (optional)
+        Deprecated and has no effect.
     force_beam_check : bool
         The beam consistency check is only possible for object-beams (not string mode).
         If `force_beam_check` is True, it will convert beams to object-mode to force
@@ -1917,11 +1923,17 @@ def initialize_uvdata_from_params(
     if reorder_blt_kw is not None:
         warnings.warn(
             "The reorder_blt_kw parameter is deprecated in favor of setting "
-            "obs_param['orderding']['blt_order']. This will become an error in "
+            "obs_param['ordering']['blt_order']. This will become an error in "
             "version 1.5",
             DeprecationWarning,
         )
 
+    if check_kw is not None:
+        warnings.warn(
+            "The check_kw parameter is deprecated and has no effect. This will "
+            "become an error in version 1.5",
+            DeprecationWarning,
+        )
     uvparam_dict = {}  # Parameters that will go into UVData
     if isinstance(obs_params, str):
         param_dict = _config_str_to_dict(obs_params)  # Container for received settings.
@@ -2011,7 +2023,8 @@ def initialize_uvdata_from_params(
         )
         telescope_location.ellipsoid = tele_params["ellipsoid"]
     else:
-        raise ValueError(f"unknown telescope_frame {tele_params["telescope_frame"]}")
+        tel_frame = tele_params["telescope_frame"]
+        raise ValueError(f"unknown telescope_frame {tel_frame}")
 
     if "cat_name" not in param_dict and "object_name" not in param_dict:
         tloc = EarthLocation.from_geocentric(
@@ -2067,7 +2080,8 @@ def initialize_uvdata_from_params(
         uvparam_dict["antenna_numbers"] = tele_params["antenna_numbers"]
         uvparam_dict["antenna_names"] = tele_params["antenna_names"]
         uvparam_dict["antenna_positions"] = tele_params["antenna_positions"]
-        uvparam_dict["x_orientation"] = tele_params["x_orientation"]
+        if "x_orientation" in tele_params:
+            uvparam_dict["x_orientation"] = tele_params["x_orientation"]
 
         uvparam_dict["ellipsoid"] = tele_params["ellipsoid"]
 

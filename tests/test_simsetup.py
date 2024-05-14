@@ -554,19 +554,23 @@ def test_param_reader():
 
     # Check default configuration
     with uvtest.check_warnings(
-        [DeprecationWarning, DeprecationWarning, UserWarning],
+        [DeprecationWarning, DeprecationWarning, DeprecationWarning, UserWarning],
         match=[
             "The return_beams parameter currently defaults to True, but starting in"
             "version 1.4 it will default to False.",
             "The reorder_blt_kw parameter is deprecated in favor of setting "
-            "obs_param['orderding']['blt_order']. This will become an error in "
+            "obs_param['ordering']['blt_order']. This will become an error in "
             "version 1.5",
+            "The check_kw parameter is deprecated and has no effect. This will "
+            "become an error in version 1.5",
             "Cannot check consistency of a string-mode BeamList! Set force=True to "
             "force consistency checking.",
         ],
     ):
         uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(
-            param_filename, reorder_blt_kw={"order": "time", "minor_order": "baseline"}
+            param_filename,
+            reorder_blt_kw={"order": "time", "minor_order": "baseline"},
+            check_kw={"run_check_acceptability": True},
         )
     new_beam_list.set_obj_mode()
     if hasattr(uv_obj, "telescope"):
@@ -1108,7 +1112,7 @@ def test_param_ordering(order_dict):
             "The default baseline conjugation convention has changed. In the past "
             "it was 'ant2<ant1', it now defaults to 'ant1<ant2'. You can specify "
             "the baseline conjugation convention in `obs_param` by setting the "
-            "obs_param['orderding']['conjugation_convention'] field. This warning "
+            "obs_param['ordering']['conjugation_convention'] field. This warning "
             "will go away in version 1.5."
         )
         warn_type = UserWarning
