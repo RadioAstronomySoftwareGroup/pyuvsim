@@ -1822,6 +1822,7 @@ def ordering(uv_obj, param_dict, reorder_blt_kw):
     """
     bl_conjugation_convention = None
 
+    # this is the order required by the simulator. Might as well default to it.
     default_blt_order = ["time", "baseline"]
     if "ordering" in param_dict:
         ordering_dict = param_dict["ordering"]
@@ -1850,12 +1851,6 @@ def ordering(uv_obj, param_dict, reorder_blt_kw):
         )
     elif bl_conjugation_convention != "ant1<ant2":
         uv_obj.conjugate_bls(convention=bl_conjugation_convention)
-
-    # we construct uvdata objects in (time, ant1) order
-    # but the simulator will force (time, baseline) later
-    # so order this now so we don't get any warnings.
-    if reorder_blt_kw is None:
-        reorder_blt_kw = {"order": "time", "minor_order": "baseline"}
 
     # remove the pragma below after pyuvdata v3.0 is released.
     # The blt_order attribute is set in UVData.new in version 3.0
