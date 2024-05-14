@@ -57,6 +57,27 @@ def test_uniform_beam(heratext_posfreq):
     np.testing.assert_allclose(interpolated_beam, expected_data)
 
 
+def test_func_beam(heratext_posfreq):
+    def cos_squared(a,z,f):
+        return np.cos(z)**2
+    beam = pyuvsim.AnalyticBeam("func", func=cos_squared)
+
+    beam.peak_normalize()
+
+    az_vals, za_vals, freqs = heratext_posfreq
+
+    nsrcs = az_vals.size
+    n_freqs = freqs.size
+
+    interpolated_beam, _ = beam.interp(
+        az_array=az_vals, za_array=za_vals, freq_array=freqs
+    )
+    expected_data = np.zeros((2, 2, n_freqs, nsrcs), dtype=float)
+    expected_data[1, 0, :, :] = cos_squared(az_vals, za_vals, freqs)
+    expected_data[0, 1, :, :] = cos_squared(az_vals, za_vals, freqs)
+    np.testing.assert_allclose(interpolated_beam, expected_data)
+
+
 def test_airy_beam_values(heratext_posfreq):
     diameter_m = 14.0
     beam = pyuvsim.AnalyticBeam("airy", diameter=diameter_m)
@@ -300,6 +321,16 @@ def test_comparison():
     not_beam = UVData()
     assert beam1 != not_beam
     assert beam2 != beam1
+
+    def cos_squared(a,z,f):
+        return np.cos(z)**2
+    def sin_squared(a,z,f):
+        return np.sin(z)**2
+    beam1 = pyuvsim.AnalyticBeam("func", func=cos_squared)
+    beam2 = pyuvsim.AnalyticBeam("func", func=cos_squared)
+    beam3 = pyuvsim.AnalyticBeam("func", func=sin_squared)
+    assert beam1 == beam2
+    assert beam1 != beam3
 
 
 def test_beam_init_errs():
