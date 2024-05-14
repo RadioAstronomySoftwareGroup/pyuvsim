@@ -1340,9 +1340,6 @@ def parse_telescope_params(
 
     # fill in outputs with just array info
     return_dict = {}
-    if return_beams:
-        beam_list = BeamList([])
-        beam_dict = {}
     return_dict["Nants_data"] = antnames.size
     return_dict["Nants_telescope"] = antnames.size
     return_dict["antenna_names"] = np.array(antnames.tolist())
@@ -1377,7 +1374,7 @@ def parse_telescope_params(
         if not return_beams:
             return return_dict
         else:
-            return return_dict, beam_list, beam_dict
+            return return_dict, BeamList([]), {}
 
     # if provided, parse sections related to beam files and types
     return_dict["telescope_config_name"] = telescope_config_name
@@ -1824,19 +1821,25 @@ def ordering(uv_obj, param_dict, reorder_blt_kw):
 
     """
     bl_conjugation_convention = None
+
+    default_blt_order = ["time", "baseline"]
     if "ordering" in param_dict:
         ordering_dict = param_dict["ordering"]
+        if "blt_order" not in ordering_dict:
+            ordering_dict["blt_order"] = default_blt_order
+    else:
+        ordering_dict = {"blt_order": default_blt_order}
 
-        bl_conjugation_convention = ordering_dict.pop("conjugation_convention", None)
-        if "blt_order" in ordering_dict and reorder_blt_kw is None:
-            blt_order = ordering_dict["blt_order"]
+    bl_conjugation_convention = ordering_dict.pop("conjugation_convention", None)
+    if reorder_blt_kw is None:
+        blt_order = ordering_dict["blt_order"]
 
-            if isinstance(blt_order, str):
-                reorder_blt_kw = {"order": blt_order}
-            if isinstance(blt_order, (tuple, list, np.ndarray)):
-                reorder_blt_kw = {"order": blt_order[0]}
-                if len(blt_order) > 1:
-                    reorder_blt_kw["minor_order"] = blt_order[1]
+        if isinstance(blt_order, str):
+            reorder_blt_kw = {"order": blt_order}
+        if isinstance(blt_order, (tuple, list, np.ndarray)):
+            reorder_blt_kw = {"order": blt_order[0]}
+            if len(blt_order) > 1:
+                reorder_blt_kw["minor_order"] = blt_order[1]
     if bl_conjugation_convention is None:
         warnings.warn(
             "The default baseline conjugation convention has changed. In the past "
@@ -2045,9 +2048,8 @@ def initialize_uvdata_from_params(
         cat_name = param_dict["cat_name"]
     phase_center_catalog = {0: {"cat_name": cat_name, "cat_type": "unprojected"}}
 
-    uv_obj = UVData()
     # remove the pragma below after pyuvdata v3.0 is released
-    if hasattr(uv_obj, "telescope"):  # pragma: nocover
+    if hasattr(UVData(), "telescope"):  # pragma: nocover
         tel_init_params = {"location": telescope_location}
 
         telescope_param_map = {
@@ -2073,6 +2075,7 @@ def initialize_uvdata_from_params(
             vis_units="Jy",
             history="",
             do_blt_outer=True,
+            time_axis_faster_than_bls=True,
             **uvparam_dict,
         )
     else:
@@ -2092,6 +2095,7 @@ def initialize_uvdata_from_params(
             vis_units="Jy",
             history="",
             do_blt_outer=True,
+            time_axis_faster_than_bls=True,
             **uvparam_dict,
         )
         uv_obj.telescope_location = np.asarray(uv_obj.telescope_location)
@@ -2390,9 +2394,7 @@ def initialize_uvdata_from_keywords(
     layout_params = {k: v for k, v in layout_params.items() if v is not None}
     ordering_params = {k: v for k, v in ordering_params.items() if v is not None}
 
-    uv_obj = UVData()
-
-    valid_param_names = [getattr(uv_obj, param).name for param in uv_obj]
+    valid_param_names = [getattr(UVData(), param).name for param in UVData()]
 
     extra_kwds = {k: v for k, v in kwargs.items() if k in valid_param_names}
 
