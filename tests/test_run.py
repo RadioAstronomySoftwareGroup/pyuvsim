@@ -367,6 +367,8 @@ def test_input_uv_error():
         pyuvsim.run_uvdata_uvsim(None, None, {}, catalog=pyuvsim.SkyModelData())
 
 
+# several of these filters should be removed once we require pyuvdata>=3.0
+@pytest.mark.filterwarnings("ignore:Setting the location attribute post initialization")
 @pytest.mark.filterwarnings("ignore:Cannot check consistency of a string-mode BeamList")
 @pytest.mark.filterwarnings("ignore:This method will be removed in version 3.0")
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
