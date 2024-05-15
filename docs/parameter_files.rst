@@ -350,6 +350,6 @@ Ordering
     :meth:`pyuvdata.UVData.reorder_blts` method, see those docs for more
     information.
     Note that the object is required to be in the ``["time", "baseline"]`` order
-    to actually run a simulation, so if it is set to anything else, the uvdata
-    object will be reordered before the simulation and then ordered back as
-    specified after the simulation is complete.
+    for running simulations with the pyuvsim simulator, so if it is set to
+    anything else, the uvdata object will be reordered before the simulation and
+    then ordered back as specified after the simulation is complete.
