@@ -1807,7 +1807,7 @@ def subselect(uv_obj, param_dict):
         uv_obj.compress_by_redundancy(tol=redundant_threshold)
 
 
-def ordering(uv_obj, param_dict, reorder_blt_kw):
+def set_ordering(uv_obj, param_dict, reorder_blt_kw):
     """Do conjugation/reordering on a UVData object.
 
     Parameters
@@ -2070,7 +2070,7 @@ def initialize_uvdata_from_params(
             vis_units="Jy",
             history="",
             do_blt_outer=True,
-            time_axis_faster_than_bls=True,
+            time_axis_faster_than_bls=False,
             **uvparam_dict,
         )
     else:
@@ -2110,7 +2110,7 @@ def initialize_uvdata_from_params(
     subselect(uv_obj, param_dict)
     logger.info("After Select")
 
-    ordering(uv_obj, param_dict, reorder_blt_kw)
+    set_ordering(uv_obj, param_dict, reorder_blt_kw)
 
     logger.info(f"BLT-ORDER: {uv_obj.blt_order}")
     logger.info("After Re-order BLTS")
