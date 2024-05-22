@@ -478,7 +478,7 @@ def uvdata_to_task_iter(
         raise TypeError("catalog must be a SkyModelData object.")
 
     # use future array shapes
-    if not input_uv.future_array_shapes:
+    if hasattr(input_uv, "use_current_array_shapes"):
         input_uv.use_future_array_shapes()
 
     # Splitting the catalog for memory's sake.
@@ -747,7 +747,7 @@ def run_uvdata_uvsim(
     ):
         raise ValueError("input_uv must have XX,YY,XY,YX polarization")
 
-    if not input_uv.future_array_shapes:
+    if hasattr(input_uv, "use_current_array_shapes"):
         input_uv.use_future_array_shapes()
 
     input_order = input_uv.blt_order

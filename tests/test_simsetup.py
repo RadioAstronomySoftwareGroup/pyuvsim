@@ -298,7 +298,8 @@ def test_initialize_catalog_from_params(
 ):
     # Pass in parameter dictionary as dict
     uv_in = UVData.from_file(triangle_uvfits_file)
-    uv_in.use_future_array_shapes()
+    if hasattr(uv_in, "use_current_array_shapes"):
+        uv_in.use_future_array_shapes()
 
     source_dict = {"catalog": "mock", "mock_arrangement": "zenith", "Nsrcs": 5}
     if horizon_buffer:
@@ -528,18 +529,20 @@ def test_gleam_catalog_spectral_type(spectral_type):
 )
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
+@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_param_reader():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml"
     )
-    uv_in = UVData.from_file(triangle_uvfits_file, use_future_array_shapes=True)
-    if hasattr(uv_in, "telescope"):
-        # This can be removed when we require pyuvdata >= 3.0
-        uv_in._set_flex_spw()
+    uv_in = UVData.from_file(triangle_uvfits_file)
+    if hasattr(uv_in, "use_current_array_shapes"):
+        uv_in.use_future_array_shapes()
     uv_in.unproject_phase()
 
     beam0 = UVBeam()
-    beam0.read_beamfits(herabeam_default, use_future_array_shapes=True)
+    beam0.read_beamfits(herabeam_default)
+    if hasattr(beam0, "use_current_array_shapes"):
+        beam0.use_future_array_shapes()
     beam0.extra_keywords["beam_path"] = herabeam_default
     beam1 = pyuvsim.AnalyticBeam("uniform")
     beam2 = pyuvsim.AnalyticBeam("gaussian", sigma=0.02)
@@ -1319,7 +1322,8 @@ def test_uvfits_to_config(tmp_path):
 
     # Read uvfits file to params.
     uv0 = UVData.from_file(longbl_uvfits_file)
-    uv0.use_future_array_shapes()
+    if hasattr(uv0, "use_current_array_shapes"):
+        uv0.use_future_array_shapes()
 
     path, telescope_config, layout_fname = pyuvsim.simsetup.uvdata_to_telescope_config(
         uv0, herabeam_default, path_out=opath, return_names=True

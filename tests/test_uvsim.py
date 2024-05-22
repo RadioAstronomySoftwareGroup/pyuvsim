@@ -32,6 +32,10 @@ import pyuvsim.utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.uvsim import _set_nsky_parts
 
+future_shapes_options = [True]
+if hasattr(UVData(), "use_current_array_shapes"):
+    future_shapes_options += [False]
+
 EW_uvfits_file = os.path.join(SIM_DATA_PATH, "28mEWbl_1time_1chan.uvfits")
 EW_uvfits_10time10chan = os.path.join(SIM_DATA_PATH, "28mEWbl_10time_10chan.uvfits")
 longbl_uvfits_file = os.path.join(SIM_DATA_PATH, "5km_triangle_1time_1chan.uvfits")
@@ -45,7 +49,8 @@ def multi_beams():
             "ignore", "The shapes of several attributes will be changing"
         )
         beam0.read_beamfits(herabeam_default)
-    beam0.use_future_array_shapes()
+    if hasattr(beam0, "use_current_array_shapes"):
+        beam0.use_future_array_shapes()
     beam0.extra_keywords["beam_path"] = herabeam_default
 
     if hasattr(beam0, "_freq_interp_kind"):
@@ -88,7 +93,9 @@ def triangle_pos():
         )
         # consists of a right triangle of baselines with w term
         hera_uv = UVData.from_file(longbl_uvfits_file, ant_str="cross")
-    hera_uv.use_future_array_shapes()
+    if hasattr(hera_uv, "use_current_array_shapes"):
+        hera_uv.use_future_array_shapes()
+
     if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
         hera_uv.unproject_phase(use_ant_pos=True)
     else:
@@ -115,7 +122,8 @@ def uvobj_beams_srcs():
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
         param_dict, return_beams=True, force_beam_check=True
     )
-    assert uv_obj.future_array_shapes
+    if hasattr(uv_obj, "use_current_array_shapes"):
+        assert uv_obj.future_array_shapes
 
     # Add more beams to the list.
     # Don't use the uniform beam (need to see coherency change with positions).
@@ -505,10 +513,10 @@ def test_offzenith_source_multibl(beam, hera_loc, triangle_pos):
 
 @pytest.mark.filterwarnings("ignore:UVW orientation appears to be flipped")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-@pytest.mark.parametrize("future_shapes", [True, False])
+@pytest.mark.parametrize("future_shapes", future_shapes_options)
 def test_file_to_tasks(cst_beam, future_shapes):
     hera_uv = UVData.from_file(EW_uvfits_file)
-    if future_shapes:
+    if hasattr(hera_uv, "use_current_array_shapes") and future_shapes:
         hera_uv.use_future_array_shapes()
     time = Time(hera_uv.time_array[0], scale="utc", format="jd")
     sources, _ = pyuvsim.create_mock_catalog(
@@ -608,7 +616,8 @@ def test_file_to_tasks(cst_beam, future_shapes):
 @pytest.mark.filterwarnings("ignore:UVW orientation appears to be flipped")
 def test_gather():
     hera_uv = UVData.from_file(EW_uvfits_file)
-    hera_uv.use_future_array_shapes()
+    if hasattr(hera_uv, "use_current_array_shapes"):
+        hera_uv.use_future_array_shapes()
     time = Time(hera_uv.time_array[0], scale="utc", format="jd")
     sources, _ = pyuvsim.create_mock_catalog(
         time, arrangement="zenith", return_data=True
@@ -660,7 +669,8 @@ def test_gather():
 def test_local_task_gen():
     # Confirm I get the same results looping over the task list as I do with the generator function.
     hera_uv = UVData.from_file(EW_uvfits_10time10chan)
-    hera_uv.use_future_array_shapes()
+    if hasattr(hera_uv, "use_current_array_shapes"):
+        hera_uv.use_future_array_shapes()
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
     time = Time(hera_uv.time_array[0], scale="utc", format="jd")
     sources, kwds = pyuvsim.create_mock_catalog(
@@ -715,7 +725,8 @@ def test_nsky_parts_large(capsys):
     """Check that we get the same visibilities no matter what Nsky_parts is set to."""
     pytest.importorskip("mpi4py")
     hera_uv = UVData.from_file(EW_uvfits_10time10chan)
-    hera_uv.use_future_array_shapes()
+    if hasattr(hera_uv, "use_current_array_shapes"):
+        hera_uv.use_future_array_shapes()
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
     time = Time(hera_uv.time_array[0], scale="utc", format="jd")
     sources, kwds = pyuvsim.create_mock_catalog(
@@ -877,7 +888,8 @@ def test_source_splitting():
     # then the task iterator will loop over chunks of the source array.
     pytest.importorskip("mpi4py")
     hera_uv = UVData.from_file(EW_uvfits_10time10chan)
-    hera_uv.use_future_array_shapes()
+    if hasattr(hera_uv, "use_current_array_shapes"):
+        hera_uv.use_future_array_shapes()
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
     time = Time(hera_uv.time_array[0], scale="utc", format="jd")
     sources, kwds = pyuvsim.create_mock_catalog(

@@ -136,7 +136,7 @@ class BeamList:
                     # always use future shapes
                     if (
                         isinstance(beam, UVBeam)
-                        and hasattr(beam, "future_array_shapes")
+                        and hasattr(beam, "use_current_array_shapes")
                         and not beam.future_array_shapes
                     ):
                         beam.use_future_array_shapes()
@@ -430,8 +430,9 @@ class BeamList:
         uvb = UVBeam()
         read_kwargs = {**self.select_params, **self.uvb_read_kwargs.get(beam_id, {})}
 
-        # always use future shapes
-        read_kwargs["use_future_array_shapes"] = True
+        # always use future shapes if it's an option
+        if hasattr(uvb, "use_current_array_shapes"):
+            read_kwargs["use_future_array_shapes"] = True
 
         if (
             (use_shared_mem and mpi.world_comm is not None and mpi.rank == 0)

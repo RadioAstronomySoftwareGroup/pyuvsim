@@ -182,7 +182,8 @@ def test_gaussbeam_values():
     sigma = 0.05
     hera_uv = UVData()
     hera_uv.read_uvfits(EW_uvfits_file)
-    hera_uv.use_future_array_shapes()
+    if hasattr(hera_uv, "use_current_array_shapes"):
+        hera_uv.use_future_array_shapes()
 
     if hasattr(hera_uv, "telescope"):
         array_location = hera_uv.telescope.location
