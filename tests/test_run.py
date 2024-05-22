@@ -26,6 +26,10 @@ from pyuvsim.telescope import BeamList
 
 pytest.importorskip("mpi4py")  # noqa
 
+future_shapes_options = [True]
+if hasattr(UVData(), "use_current_array_shapes"):
+    future_shapes_options += [False]
+
 
 @pytest.fixture
 def goto_tempdir(tmpdir):
@@ -50,10 +54,9 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # Test vot and txt catalogs for parameter simulation
     # Compare to reference files.
     uv_ref = UVData()
-    uv_ref.read(
-        os.path.join(SIM_DATA_PATH, "testfile_singlesource.uvh5"),
-        use_future_array_shapes=True,
-    )
+    uv_ref.read(os.path.join(SIM_DATA_PATH, "testfile_singlesource.uvh5"))
+    if hasattr(uv_ref, "use_current_array_shapes"):
+        uv_ref.use_future_array_shapes()
 
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", paramfile)
     # This test obsparam file has "single_source.txt" as its catalog.
@@ -66,8 +69,9 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     path = goto_tempdir
     ofilepath = os.path.join(path, "tempfile.uvfits")
 
-    uv_new = UVData()
-    uv_new.read(ofilepath, use_future_array_shapes=True)
+    uv_new = UVData.from_file(ofilepath)
+    if hasattr(uv_new, "use_current_array_shapes"):
+        uv_new.use_future_array_shapes()
 
     uv_new.unproject_phase(use_ant_pos=True)
     uv_new._consolidate_phase_center_catalogs(other=uv_ref)
@@ -274,10 +278,9 @@ def test_run_gleam_uvsim(spectral_type):
 
     file_name = f"gleam_triangle_{spectral_type}.uvh5"
     uv_in = UVData.from_file(os.path.join(SIM_DATA_PATH, file_name))
-    uv_in.use_future_array_shapes()
-    if hasattr(uv_in, "telescope"):
-        # This can be removed when we require pyuvdata >= 3.0
-        uv_in._set_flex_spw()
+    # This can be removed when we require pyuvdata >= 3.0
+    if hasattr(uv_in, "use_current_array_shapes"):
+        uv_in.use_future_array_shapes()
     uv_in.conjugate_bls()
     uv_in.reorder_blts()
     uv_in.integration_time = np.full_like(uv_in.integration_time, 11.0)
@@ -367,7 +370,7 @@ def test_input_uv_error():
 @pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 @pytest.mark.filterwarnings("ignore:Telescope apollo11 is not in known_telescopes.")
 @pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-@pytest.mark.parametrize("future_shapes", [True, False])
+@pytest.mark.parametrize("future_shapes", future_shapes_options)
 @pytest.mark.parametrize("selenoid", ["SPHERE", "GSFC", "GRAIL23", "CE-1-LAM-GEO"])
 def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
     pytest.importorskip("lunarsky")
@@ -468,7 +471,9 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
         uv_out, param_dict, return_filename=True, quiet=True
     )
     uv_compare = UVData()
-    uv_compare.read(uv_filename, use_future_array_shapes=future_shapes)
+    uv_compare.read(uv_filename)
+    if hasattr(uv_compare, "use_current_array_shapes") and future_shapes:
+        uv_compare.use_future_array_shapes()
     if hasattr(uv_obj, "telescope"):
         assert uv_out.telescope._location == uv_compare.telescope._location
     else:

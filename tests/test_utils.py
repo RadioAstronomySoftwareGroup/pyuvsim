@@ -124,7 +124,8 @@ def test_write_uvdata(save_format, tmpdir):
         pytest.importorskip("casacore")
 
     uv = UVData.from_file(triangle_uvfits_file)
-    uv.use_future_array_shapes()
+    if hasattr(uv, "use_current_array_shapes"):
+        uv.use_future_array_shapes()
 
     ofname = str(tmpdir.join("test_file"))
     filing_dict = {"outfile_name": ofname}
@@ -198,7 +199,8 @@ def test_write_uvdata_clobber(save_format, tmpdir):
             pytest.skip()
 
     uv = UVData.from_file(triangle_uvfits_file)
-    uv.use_future_array_shapes()
+    if hasattr(uv, "use_current_array_shapes"):
+        uv.use_future_array_shapes()
 
     uv.set_lsts_from_time_array()
     filing_dict = {
@@ -244,7 +246,8 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     assert os.path.exists(expected_ofname)
 
     uv2 = UVData.from_file(expected_ofname)
-    uv2.use_future_array_shapes()
+    if hasattr(uv2, "use_current_array_shapes"):
+        uv2.use_future_array_shapes()
 
     if save_format == "ms":
         # MS adds some stuff to history & extra keywords
@@ -285,7 +288,8 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         simutils.write_uvdata(uv, filing_dict, out_format=save_format)
 
     uv2.read(expected_ofname)
-    uv2.use_future_array_shapes()
+    if hasattr(uv2, "use_current_array_shapes"):
+        uv2.use_future_array_shapes()
 
     if save_format == "ms":
         # MS adds some stuff to history & extra keywords
@@ -313,7 +317,8 @@ def test_write_uvdata_clobber(save_format, tmpdir):
 @pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 def test_write_fix_autos(tmpdir):
     uv = UVData.from_file(triangle_uvfits_file)
-    uv.use_future_array_shapes()
+    if hasattr(uv, "use_current_array_shapes"):
+        uv.use_future_array_shapes()
 
     uv.set_lsts_from_time_array()
 
@@ -339,7 +344,8 @@ def test_write_fix_autos(tmpdir):
 def test_write_error_with_no_format(tmpdir):
     """Test write_uvdata will error if no format is given."""
     uv = UVData.from_file(triangle_uvfits_file)
-    uv.use_future_array_shapes()
+    if hasattr(uv, "use_current_array_shapes"):
+        uv.use_future_array_shapes()
 
     ofname = str(tmpdir.join("test_file"))
     filing_dict = {"outfile_name": ofname}
@@ -355,7 +361,8 @@ def test_write_error_with_no_format(tmpdir):
 def test_file_format_in_filing_dict(tmpdir):
     """Test file is written out when output_format is set in filing dict."""
     uv = UVData.from_file(triangle_uvfits_file)
-    uv.use_future_array_shapes()
+    if hasattr(uv, "use_current_array_shapes"):
+        uv.use_future_array_shapes()
 
     ofname = str(tmpdir.join("test_file"))
     filing_dict = {"outfile_name": ofname}

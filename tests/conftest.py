@@ -247,7 +247,8 @@ def cst_beam():
             model_name="E-field pattern - Rigging height 4.9m",
             model_version="1.0",
         )
-    beam.use_future_array_shapes()
+    if hasattr(beam, "use_current_array_shapes"):
+        beam.use_future_array_shapes()
     beam.x_orientation = "east"
     if hasattr(beam, "_interpolation_function"):
         beam.interpolation_function = "az_za_simple"

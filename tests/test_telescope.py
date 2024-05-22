@@ -31,7 +31,9 @@ def beam_objs_main():
             "ignore", "The shapes of several attributes will be changing"
         )
         uvb.read_beamfits(herabeam_default)
-    uvb.use_future_array_shapes()
+    if hasattr(uvb, "use_current_array_shapes"):
+        uvb.use_future_array_shapes()
+
     uvb.extra_keywords["beam_path"] = herabeam_default
 
     # beams are always peak normalized inside BeamList
@@ -106,7 +108,7 @@ def test_convert_loop(beam_objs):
 
 @pytest.mark.filterwarnings("ignore:This method will be removed in version 3.0")
 def test_force_future_shapes(beam_objs):
-    if hasattr(beam_objs[0], "future_array_shapes"):
+    if hasattr(beam_objs[0], "use_current_array_shapes"):
         beam_objs[0].use_current_array_shapes()
 
         beamlist = pyuvsim.BeamList(beam_objs)
