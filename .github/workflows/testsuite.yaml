@@ -91,10 +91,11 @@ jobs:
         with:
           python-version: ${{ env.PYTHON }}
 
-      # need to install the testing packages but not the other optional ones
+      # Just install the test requirements, also install pytest-xdist for speed
       - name: Install
         run: |
           pip install -e .[test]
+          pip install pytest-xdist
 
       - name: Environment Info
         run: |
