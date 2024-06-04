@@ -94,8 +94,7 @@ jobs:
       # need to install the testing packages but not the other optional ones
       - name: Install
         run: |
-          pip install coverage pytest pytest-cov pytest-xdist
-          pip install -e .
+          pip install -e .[test]
 
       - name: Environment Info
         run: |
