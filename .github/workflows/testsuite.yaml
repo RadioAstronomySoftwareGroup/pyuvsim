@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@main
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Setup Minimamba
         uses: conda-incubator/setup-miniconda@v3
@@ -55,8 +55,11 @@ jobs:
           fi
 
       - name: Install
+        # calling git right before the install seems to prevent a time-out within setuptools_scm on MacOS
         run: |
-          pip install --no-deps .
+          git describe --tags
+          git version
+          SETUPTOOLS_SCM_DEBUG=1 pip install --no-deps .
 
       - name: Run Tests
         run: |
@@ -125,7 +128,7 @@ jobs:
     steps:
       - uses: actions/checkout@main
         with:
-          fetch-depth: 1
+          fetch-depth: 0
       - name: Setup Minimamba
         uses: conda-incubator/setup-miniconda@v3
         with:
