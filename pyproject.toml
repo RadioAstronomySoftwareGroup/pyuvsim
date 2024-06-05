@@ -12,6 +12,7 @@ authors = [
     {name = "Jonathan Pober", email = "jonathan_pober@brown.edu"},
     {name = "James Aguirre", email = "jaguirre@sas.upenn.edu"},
     {name = "Nithyanandan Thyagarajan", email = "nithyanandan.t@gmail.com"},
+    {name = "Steven Murray", email = "murray.steveng@gmail.com"},
 ]
 maintainers = [
     {name = "Bryna Hazelton", email = "brynah@phys.washington.edu"},
