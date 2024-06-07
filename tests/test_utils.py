@@ -268,6 +268,8 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         # ordering gets changes in `write_miriad`
         uv.reorder_blts()
         uv2.reorder_blts()
+    elif save_format == "uvfits":
+        uv.rdate = uv2.rdate
 
     if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
         uv2._consolidate_phase_center_catalogs(other=uv, ignore_name=True)
