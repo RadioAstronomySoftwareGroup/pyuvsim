@@ -10,7 +10,6 @@ import numpy as np
 import pyradiosky
 import pytest
 import pyuvdata
-import pyuvdata.tests as uvtest
 import pyuvdata.utils as uvutils
 import yaml
 from astropy import units
@@ -23,6 +22,12 @@ import pyuvsim
 from pyuvsim.analyticbeam import c_ms
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.telescope import BeamList
+
+try:
+    from pyuvdata.testing import check_warnings
+except ImportError:
+    # this can be removed once we require pyuvdata >= v3.0
+    from pyuvdata.tests import check_warnings
 
 pytest.importorskip("mpi4py")  # noqa
 
@@ -254,7 +259,7 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
         msg = ""
         params = pyuvsim.simsetup._config_str_to_dict(param_file)
 
-    with uvtest.check_warnings(warn_type, match=msg):
+    with check_warnings(warn_type, match=msg):
         pyuvsim.run_uvsim(params, return_uv=True)
 
 

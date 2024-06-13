@@ -12,13 +12,18 @@ import numpy as np
 import pyradiosky
 import pytest
 import pyuvdata
-import pyuvdata.tests as uvtest
 import pyuvdata.utils as uvutils
 from astropy import units
 from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, SkyCoord
 from astropy.time import Time
 from packaging import version  # packaging is installed with setuptools
 from pyuvdata import UVBeam, UVData
+
+try:
+    from pyuvdata.testing import check_warnings
+except ImportError:
+    # this can be removed once we require pyuvdata >= v3.0
+    from pyuvdata.tests import check_warnings
 
 try:
     import lunarsky  # noqa
@@ -68,7 +73,7 @@ def multi_beams():
 
     try:
         beam4 = beam0.copy()
-        with uvtest.check_warnings(
+        with check_warnings(
             UserWarning,
             match="key beam_path in extra_keywords is longer than 8 characters.",
         ):
@@ -1218,7 +1223,7 @@ def test_order_warning(uvdata_two_redundant_bls_triangle_sources, order):
     uvdata_linear.reorder_blts(order=order[0], minor_order=minor_order)
     # delete the order like we forgot to set it
     uvdata_linear.blt_order = None
-    with uvtest.check_warnings(
+    with check_warnings(
         UserWarning, match="The parameter `blt_order` could not be identified."
     ):
         out_uv = pyuvsim.uvsim.run_uvdata_uvsim(

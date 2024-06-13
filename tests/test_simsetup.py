@@ -8,7 +8,6 @@ import shutil
 
 import numpy as np
 import pytest
-import pyuvdata.tests as uvtest
 import yaml
 from astropy import units
 from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, SkyCoord
@@ -17,6 +16,12 @@ from pyradiosky import SkyModel
 from pyradiosky.data import DATA_PATH as SKY_DATA_PATH
 from pyuvdata import UVBeam, UVData
 from pyuvdata.data import DATA_PATH as UV_DATA_PATH
+
+try:
+    from pyuvdata.testing import check_warnings
+except ImportError:
+    # this can be removed once we require pyuvdata >= v3.0
+    from pyuvdata.tests import check_warnings
 
 try:
     from lunarsky import MoonLocation
@@ -233,7 +238,7 @@ def test_mock_diffuse_maps_errors():
         with pytest.raises(ValueError, match="Diffuse arrangement selected"):
             pyuvsim.simsetup.create_mock_catalog(Time.now(), arrangement="diffuse")
 
-        with uvtest.check_warnings(UserWarning, match="No nside chosen"):
+        with check_warnings(UserWarning, match="No nside chosen"):
             pyuvsim.simsetup.create_mock_catalog(
                 Time.now(), arrangement="diffuse", diffuse_model="monopole"
             )
@@ -345,7 +350,7 @@ def test_initialize_catalog_from_params(
         warn_type = None
         warn_str = ""
 
-    with uvtest.check_warnings(warn_type, match=warn_str):
+    with check_warnings(warn_type, match=warn_str):
         catalog_uv = pyuvsim.simsetup.initialize_catalog_from_params(
             {"sources": source_dict}, input_uv=uv_use, return_catname=return_catname
         )
@@ -391,7 +396,7 @@ def test_initialize_catalog_from_params_errors(
         warn_type = None
     else:
         warn_type = UserWarning
-    with uvtest.check_warnings(warn_type, match=warn_msg):
+    with check_warnings(warn_type, match=warn_msg):
         with pytest.raises(err_type, match=err_msg):
             pyuvsim.simsetup.initialize_catalog_from_params(
                 {"sources": source_dict}, input_uv=input_uv, return_catname=False
@@ -452,7 +457,7 @@ def test_gleam_catalog(filetype, flux_cut):
         "this default will change to 'subband' to match pyradiosky's default."
     ]
     warnings = [DeprecationWarning]
-    with uvtest.check_warnings(warnings, match=warn_messages):
+    with check_warnings(warnings, match=warn_messages):
         gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
             params_use, filetype=filetype, return_catname=False
         )
@@ -556,7 +561,7 @@ def test_param_reader():
     beam_dict = {"ANT1": 0, "ANT2": 1, "ANT3": 2, "ANT4": 3}
 
     # Check default configuration
-    with uvtest.check_warnings(
+    with check_warnings(
         [DeprecationWarning, DeprecationWarning, DeprecationWarning],
         match=[
             "The return_beams parameter currently defaults to True, but starting in"
@@ -584,7 +589,7 @@ def test_param_reader():
 
     with open(param_filename, "r") as fhandle:
         param_dict = yaml.safe_load(fhandle)
-    with uvtest.check_warnings(
+    with check_warnings(
         UserWarning,
         match="No out format specified for uvdata file. Defaulting to uvh5 "
         "(note this is a defaulting change, it used to default to uvfits).",
@@ -1122,7 +1127,7 @@ def test_param_ordering(order_dict):
         warn_str = ""
         param_dict2["ordering"] = order_dict
 
-    with uvtest.check_warnings(warn_type, match=warn_str):
+    with check_warnings(warn_type, match=warn_str):
         uv_obj2 = pyuvsim.initialize_uvdata_from_params(param_dict2, return_beams=False)
 
     if order_dict is not None:
@@ -1330,7 +1335,7 @@ def test_uvfits_to_config(tmp_path):
     )
 
     uv0.integration_time[-1] += 2  # Test case of non-uniform integration times
-    with uvtest.check_warnings(
+    with check_warnings(
         UserWarning,
         match="The integration time is not constant. "
         "Using the shortest integration time",
@@ -1619,7 +1624,7 @@ def test_beamlist_init_errors(beam_dict, err_msg):
         telconfig = yaml.safe_load(yf)
 
     telconfig["beam_paths"] = beam_dict
-    with uvtest.check_warnings(
+    with check_warnings(
         DeprecationWarning,
         match="Beam shape options diameter and sigma should be specified per "
         "beamID in the 'beam_paths' section not as globals. For examples see "
@@ -1641,7 +1646,7 @@ def test_beamlist_init_spline():
 
     # Check that spline_interp_opts is passed along correctly to BeamList
     telconfig["spline_interp_opts"] = {"kx": 2, "ky": 2}
-    with uvtest.check_warnings(
+    with check_warnings(
         DeprecationWarning,
         match=[
             "Beam shape options diameter and sigma should be specified per "
@@ -1708,10 +1713,10 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
         "documentation. This will become an error in version 1.4"
     ] * n_entries_warn
     warn_types = [DeprecationWarning] * (n_entries_warn + 1)
-    with uvtest.check_warnings(warn_types, match=warn_list):
+    with check_warnings(warn_types, match=warn_list):
         beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(nbeams), telconfig)
 
-    with uvtest.check_warnings(warn_type, match=msg):
+    with check_warnings(warn_type, match=msg):
         beam_list.set_obj_mode()
 
     # How the beam attributes should turn out for this file:
@@ -1738,7 +1743,7 @@ def test_beamlist_init_freqrange():
 
     telconfig["beam_paths"][0] = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
-    with uvtest.check_warnings(
+    with check_warnings(
         [DeprecationWarning] * 4,
         match=[
             "Beam shape options diameter and sigma should be specified per "
