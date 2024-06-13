@@ -9,12 +9,17 @@ import warnings
 import numpy as np
 import pytest
 import pyuvdata
-import pyuvdata.tests as uvtest
 from packaging import version  # packaging is installed with setuptools
 from pyuvdata import UVData
 
 from pyuvsim import utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+
+try:
+    from pyuvdata.testing import check_warnings
+except ImportError:
+    # this can be removed once we require pyuvdata >= v3.0
+    from pyuvdata.tests import check_warnings
 
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, "28m_triangle_10time_10chan.uvfits")
 
@@ -144,7 +149,7 @@ def test_write_uvdata(save_format, tmpdir):
         warn_type = None
         warn_str = ""
     try:
-        with uvtest.check_warnings(warn_type, match=warn_str):
+        with check_warnings(warn_type, match=warn_str):
             expected_ofname = simutils.write_uvdata(
                 uv, filing_dict, return_filename=True, out_format=save_format
             )
@@ -167,7 +172,7 @@ def test_write_uvdata(save_format, tmpdir):
         if len(warn_type) < 1:
             warn_type = None
             warn_str = ""
-        with uvtest.check_warnings(warn_type, match=warn_str):
+        with check_warnings(warn_type, match=warn_str):
             expected_ofname = simutils.write_uvdata(
                 uv, filing_dict, return_filename=True, out_format=save_format
             )
@@ -224,7 +229,7 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         warn_str = ""
 
     try:
-        with uvtest.check_warnings(warn_type, match=warn_str):
+        with check_warnings(warn_type, match=warn_str):
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", "`np.int` is a deprecated alias")
                 warnings.filterwarnings("ignore", "`np.bool` is a deprecated alias")
@@ -238,7 +243,7 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         shutil.rmtree(expected_ofname)
         warn_type = None
         warn_str = ""
-        with uvtest.check_warnings(warn_type, match=warn_str):
+        with check_warnings(warn_type, match=warn_str):
             expected_ofname = simutils.write_uvdata(
                 uv, filing_dict, return_filename=True, out_format=save_format
             )
@@ -286,7 +291,7 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     uv.data_array += 1
 
     filing_dict["clobber"] = True
-    with uvtest.check_warnings(warn_type, match=warn_str):
+    with check_warnings(warn_type, match=warn_str):
         simutils.write_uvdata(uv, filing_dict, out_format=save_format)
 
     uv2.read(expected_ofname)
@@ -332,7 +337,7 @@ def test_write_fix_autos(tmpdir):
     ofname = str(tmpdir.join("test_file"))
     filing_dict = {"outfile_name": ofname}
 
-    with uvtest.check_warnings(
+    with check_warnings(
         UserWarning, match="Fixing auto-correlations to be be real-only"
     ):
         simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format="uvh5")

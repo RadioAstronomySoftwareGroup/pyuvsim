@@ -5,13 +5,18 @@ import warnings
 
 import numpy as np
 import pytest
-import pyuvdata.tests as uvtest
 from astropy.coordinates import EarthLocation
 from pyuvdata import UVBeam
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.telescope import BeamConsistencyError
+
+try:
+    from pyuvdata.testing import check_warnings
+except ImportError:
+    # this can be removed once we require pyuvdata >= v3.0
+    from pyuvdata.tests import check_warnings
 
 try:
     import mpi4py  # noqa
@@ -74,7 +79,7 @@ def test_convert_loop(beam_objs):
         beams[1].freq_interp_kind = "cubic"
 
         # Should warn about inconsistent params on UVBeams.
-        with uvtest.check_warnings(UserWarning, match="Conflicting settings for"):
+        with check_warnings(UserWarning, match="Conflicting settings for"):
             beamlist = pyuvsim.BeamList(beams)
 
         # Convert beams to strings:
@@ -137,7 +142,7 @@ def test_object_mode(beam_objs, tmp_path):
         warn_type = None
         msg = ""
     # Warn if inserted object mismatches.
-    with uvtest.check_warnings(warn_type, match=msg):
+    with check_warnings(warn_type, match=msg):
         beamlist.append(uvb, uvb_read_kwargs={"file_type": "beamfits"})
     assert len(beamlist) == 7
 
@@ -148,7 +153,7 @@ def test_object_mode(beam_objs, tmp_path):
     else:
         # otherwise check that looping str/obj modes works
         beamlist.set_str_mode()
-        with uvtest.check_warnings(
+        with check_warnings(
             DeprecationWarning,
             match="This beamfits file does not have a '.fits' or '.beamfits' "
             "extension, so UVBeam does not recognize it as a beamfits file. "
@@ -225,7 +230,7 @@ def test_beamlist_errors(beam_objs):
     # test warning on beams with no x_orientation
     beams[0].x_orientation = None
     beams[1].x_orientation = None
-    with uvtest.check_warnings(
+    with check_warnings(
         UserWarning,
         match="All polarized beams have x_orientation set to None. This will make it "
         "hard to interpret the polarizations of the simulated visibilities.",
@@ -261,7 +266,7 @@ def test_beamlist_consistency_stringmode(beam_objs):
     beamlist.set_str_mode()
     beamlist.check_consistency(force=True)
     assert beamlist.string_mode
-    with uvtest.check_warnings(
+    with check_warnings(
         UserWarning, match="Cannot check consistency of a string-mode BeamList!"
     ):
         beamlist.check_consistency(force=False)

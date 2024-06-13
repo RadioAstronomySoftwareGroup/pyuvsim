@@ -7,11 +7,16 @@ import re
 import shutil
 
 import pytest
-import pyuvdata.tests as uvtest
 from numpy import unique
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+
+try:
+    from pyuvdata.testing import check_warnings
+except ImportError:
+    # this can be removed once we require pyuvdata >= v3.0
+    from pyuvdata.tests import check_warnings
 
 
 def profdata_dir_setup(tmpdir):
@@ -30,7 +35,7 @@ def test_profiler(tmpdir):
     outpath = profdata_dir_setup(tmpdir)
     testprof_fname = str(outpath.join("time_profile.out"))
     pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname, dump_raw=True)
-    with uvtest.check_warnings(UserWarning, match="Profiler already set"):
+    with check_warnings(UserWarning, match="Profiler already set"):
         pyuvsim.profiling.set_profiler(
             outfile_prefix=testprof_fname[:-4], dump_raw=True
         )
