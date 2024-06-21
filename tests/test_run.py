@@ -10,7 +10,6 @@ import numpy as np
 import pyradiosky
 import pytest
 import pyuvdata
-import pyuvdata.utils as uvutils
 import yaml
 from astropy import units
 from astropy.coordinates import Latitude, Longitude
@@ -24,10 +23,13 @@ from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.telescope import BeamList
 
 try:
+    import pyuvdata.utils.history as history_utils
     from pyuvdata.testing import check_warnings
 except ImportError:
     # this can be removed once we require pyuvdata >= v3.0
+    import pyuvdata.utils as history_utils
     from pyuvdata.tests import check_warnings
+
 
 pytest.importorskip("mpi4py")  # noqa
 
@@ -81,15 +83,17 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     uv_new.unproject_phase(use_ant_pos=True)
     uv_new._consolidate_phase_center_catalogs(other=uv_ref)
 
-    assert uvutils._check_history_version(uv_new.history, pyradiosky.__version__)
-    assert uvutils._check_history_version(uv_new.history, pyuvdata.__version__)
-    assert uvutils._check_history_version(uv_new.history, pyuvsim.__version__)
-    assert uvutils._check_history_version(uv_new.history, paramfile)
-    assert uvutils._check_history_version(uv_new.history, "triangle_bl_layout.csv")
-    assert uvutils._check_history_version(
+    assert history_utils._check_history_version(uv_new.history, pyradiosky.__version__)
+    assert history_utils._check_history_version(uv_new.history, pyuvdata.__version__)
+    assert history_utils._check_history_version(uv_new.history, pyuvsim.__version__)
+    assert history_utils._check_history_version(uv_new.history, paramfile)
+    assert history_utils._check_history_version(
+        uv_new.history, "triangle_bl_layout.csv"
+    )
+    assert history_utils._check_history_version(
         uv_new.history, "28m_triangle_10time_10chan.yaml"
     )
-    assert uvutils._check_history_version(uv_new.history, "Npus =")
+    assert history_utils._check_history_version(uv_new.history, "Npus =")
 
     # Reset parts that will deviate
     uv_new.history = uv_ref.history
@@ -456,11 +460,11 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
     uv_out = pyuvsim.uvsim.run_uvdata_uvsim(
         uv_obj, beam_list, beam_dict, catalog=sources, quiet=True
     )
-    assert uvutils._check_history_version(uv_out.history, pyradiosky.__version__)
-    assert uvutils._check_history_version(uv_out.history, pyuvdata.__version__)
-    assert uvutils._check_history_version(uv_out.history, pyuvsim.__version__)
-    assert uvutils._check_history_version(uv_out.history, uv_obj.filename[0])
-    assert uvutils._check_history_version(uv_out.history, "Npus =")
+    assert history_utils._check_history_version(uv_out.history, pyradiosky.__version__)
+    assert history_utils._check_history_version(uv_out.history, pyuvdata.__version__)
+    assert history_utils._check_history_version(uv_out.history, pyuvsim.__version__)
+    assert history_utils._check_history_version(uv_out.history, uv_obj.filename[0])
+    assert history_utils._check_history_version(uv_out.history, "Npus =")
 
     assert uv_out.extra_keywords["world"] == "moon"
     if hasattr(uv_out, "telescope"):
