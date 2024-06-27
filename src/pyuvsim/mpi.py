@@ -4,6 +4,7 @@
 """MPI setup."""
 
 import atexit
+import enum
 import resource
 import struct as _struct
 import sys
@@ -21,12 +22,22 @@ Npus = 1
 world_comm = None
 node_comm = None
 rank_comm = None
-
+status = None
 
 # Split serialized objects into chunks of 2 GiB
 INT_MAX = 2**31 - 1
 
 shared_window_list = []
+
+
+class Tags(enum.IntEnum):
+    """Tags for MPI computations where worker nodes communicate with a main distribution node."""
+
+    READY = enum.auto()
+    START = enum.auto()
+    DONE = enum.auto()
+    EXIT = enum.auto()
+    ERROR = enum.auto()
 
 
 def set_mpi_excepthook(mpi_comm):
@@ -40,7 +51,7 @@ def set_mpi_excepthook(mpi_comm):
     sys.excepthook = mpi_excepthook
 
 
-def start_mpi(block_nonroot_stdout=True):
+def start_mpi(block_nonroot_stdout=True, thread_multiple=False):
     """
     Initialize MPI if not already initialized and do setup.
 
@@ -53,11 +64,15 @@ def start_mpi(block_nonroot_stdout=True):
         Redirect stdout on nonzero ranks to /dev/null, for cleaner output.
 
     """
-    global world_comm, node_comm, rank_comm, rank, Npus
+    global world_comm, node_comm, rank_comm, rank, Npus, status
+
     if not MPI.Is_initialized():
-        MPI.Init_thread(
-            MPI.THREAD_SERIALIZED
-        )  # RMA is incompatible with THREAD_MULTIPLE.
+        if not thread_multiple:
+            MPI.Init_thread(
+                MPI.THREAD_SERIALIZED
+            )  # RMA is incompatible with THREAD_MULTIPLE.
+        else:
+            MPI.Init_thread(MPI.THREAD_MULTIPLE)
         atexit.register(MPI.Finalize)
     world_comm = MPI.COMM_WORLD
     node_comm = world_comm.Split_type(MPI.COMM_TYPE_SHARED)
@@ -65,6 +80,7 @@ def start_mpi(block_nonroot_stdout=True):
 
     Npus = world_comm.Get_size()
     rank = world_comm.Get_rank()
+    status = MPI.Status()
     set_mpi_excepthook(world_comm)
 
     world_comm.Barrier()
@@ -470,3 +486,8 @@ def get_comm():
 def get_node_comm():
     """Get node_comm, the Communicator for all PUs on current node."""
     return node_comm
+
+
+def get_status():
+    """status, the status of an mpi message."""
+    return status

@@ -2,6 +2,7 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Define various utility functions."""
+import itertools
 import os
 import sys
 import time as pytime
@@ -41,6 +42,14 @@ class progsteps:  # noqa This should be named with CapWords convention
         self.step = step
         self.curval = 0
         self.remain = None
+
+    def __enter__(self):
+        """Enter a context manager."""
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Exit a context manager."""
+        self.finish()
 
     def update(self, count):
         """
@@ -364,3 +373,49 @@ def estimate_skymodel_memory_usage(Ncomponents, Nfreqs):
         [sys.getsizeof(v) * Ncomponents * Nfreqs for k, v in Ncomp_Nfreq_attrs.items()]
     )
     return mem_est
+
+
+def _grouper_it(iterable, chunksize=1):
+    """Chunk an iterator and return an iterator.
+
+    Parameters
+    ----------
+    iterable : Iterable
+        The iterable object to chunk
+    chunksize : int
+        size of chunks desired
+
+    Returns
+    -------
+    iterable chunked into sizes
+    """
+    it = iter(iterable)
+    while True:
+        chunk = list(itertools.islice(it, chunksize))
+        if not chunk:
+            return
+        yield chunk
+
+
+def _chunked_iterator_product(iter1, iter2, chunksize1, chunksize2):
+    """Iterate over the product of two chunked iterators.
+
+    Parameters
+    ----------
+    iter1 : Iterable
+        One iterator to chunk through.
+    iter2 : Iterable
+        The second iterator to chunk through.
+    chunksize1 : int
+        Chunk size for iter1
+    chunksize2 : int
+        Chunk size for iter2
+
+    Returns
+    -------
+    An iterator over the chunked product of all combinations of iter1 and iter2
+
+    """
+    for i1 in _grouper_it(iter1, chunksize1):
+        for i2 in _grouper_it(iter2, chunksize2):
+            yield i1, i2

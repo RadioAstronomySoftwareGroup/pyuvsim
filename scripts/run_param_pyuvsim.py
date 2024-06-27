@@ -3,6 +3,7 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Run a pyuvsim simulation from a parameter file."""
+
 import argparse
 import os
 import time as pytime
@@ -26,6 +27,21 @@ parser.add_argument(
     help="Also save pickled LineStats data for line profiling.",
     action="store_true",
 )
+parser.add_argument(
+    "--backend",
+    type=str,
+    help="Backend task collection for simulation",
+    choices=["rma", "send_recv"],
+    default="rma",
+)
+
+parser.add_argument(
+    "--progbar",
+    type=str,
+    help="Monitor and reporting module for simulation progress",
+    choices=["progsteps", "tqdm"],
+    default="progsteps",
+)
 
 args = parser.parse_args()
 
@@ -45,7 +61,11 @@ t0 = pytime.time()
 block_nonroot_stdout = not args.keep_nonroot_stdout
 
 pyuvsim.uvsim.run_uvsim(
-    args.paramsfile, quiet=args.quiet, block_nonroot_stdout=block_nonroot_stdout
+    args.paramsfile,
+    quiet=args.quiet,
+    block_nonroot_stdout=block_nonroot_stdout,
+    backend=args.backend,
+    progbar=args.progbar,
 )
 
 if args.profile:

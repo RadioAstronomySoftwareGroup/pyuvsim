@@ -1,0 +1,26 @@
+name: only_progsteps
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - astropy>=5.2
+  - astropy-healpix>=0.6
+  - coverage
+  - line_profiler
+  - mpi4py>=3.0.0
+  - numpy>=1.20
+  - openmpi
+  - pip
+  - psutil
+  - python-casacore>=3.3
+  - pytest
+  - pytest-cov
+  - pytest-xdist
+  - pyuvdata>=2.2.10
+  - pyyaml>=5.1
+  - scipy>=1.3
+  - setuptools_scm>=7.0.3
+  - pip:
+    - pyradiosky>=0.2
+    - lunarsky>=0.2.1
+    - git+https://github.com/aelanman/analytic_diffuse

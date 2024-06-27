@@ -1,87 +1,88 @@
 [build-system]
-requires = ["setuptools>=64", "wheel", "setuptools_scm>=8"]
-build-backend = "setuptools.build_meta"
+ requires      = [ "setuptools>=64", "wheel", "setuptools_scm>=8" ]
+ build-backend = "setuptools.build_meta"
 
 [project]
-name = "pyuvsim"
-authors = [
-    {name = "Adam Lanman", email = "alanman@mit.edu"},
-    {name = "Bryna Hazelton", email = "brynah@phys.washington.edu"},
-    {name = "Daniel Jacobs", email = "wheresmytab@gmail.com"},
-    {name = "Matthew Kolopanis", email = "mjkolopa@asu.edu"},
-    {name = "Jonathan Pober", email = "jonathan_pober@brown.edu"},
-    {name = "James Aguirre", email = "jaguirre@sas.upenn.edu"},
-    {name = "Nithyanandan Thyagarajan", email = "nithyanandan.t@gmail.com"},
-    {name = "Steven Murray", email = "murray.steveng@gmail.com"},
-]
-maintainers = [
-    {name = "Bryna Hazelton", email = "brynah@phys.washington.edu"},
-    {name = "Matthew Kolopanis", email = "mjkolopa@asu.edu"}
-]
-description = "Python objects and interfaces for representing diffuse, extended and compact astrophysical radio sources"
-readme = "README.md"
-dynamic = ["version"]
-dependencies = [
-    "astropy>=6.0",
-    "numpy>=1.23",
-    "psutil",
-    "pyradiosky>=0.2.0",
-    "pyuvdata>=2.4.3",
-    "pyyaml>=5.4.1",
-    "scipy>=1.7.3",
-    "setuptools>=64",
-    "setuptools_scm>=8",
-]
-requires-python = ">=3.10"
-keywords = ["radio astronomy", "interferometry"]
-classifiers = [
-    "License :: OSI Approved :: BSD License",
-    "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: BSD License",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Scientific/Engineering :: Astronomy",
-]
+ name = "pyuvsim"
+ authors = [
+  { name = "Adam Lanman", email = "alanman@mit.edu" },
+  { name = "Bryna Hazelton", email = "brynah@phys.washington.edu" },
+  { name = "Daniel Jacobs", email = "wheresmytab@gmail.com" },
+  { name = "Matthew Kolopanis", email = "mjkolopa@asu.edu" },
+  { name = "Jonathan Pober", email = "jonathan_pober@brown.edu" },
+  { name = "James Aguirre", email = "jaguirre@sas.upenn.edu" },
+  { name = "Nithyanandan Thyagarajan", email = "nithyanandan.t@gmail.com" },
+  { name = "Steven Murray", email = "murray.steveng@gmail.com" },
+ ]
+ maintainers = [
+  { name = "Bryna Hazelton", email = "brynah@phys.washington.edu" },
+  { name = "Matthew Kolopanis", email = "mjkolopa@asu.edu" },
+ ]
+ description = "Python objects and interfaces for representing diffuse, extended and compact astrophysical radio sources"
+ readme = "README.md"
+ dynamic = [ "version" ]
+ dependencies = [
+  "astropy>=6.0",
+  "numpy>=1.23",
+  "psutil",
+  "pyradiosky>=0.2.0",
+  "pyuvdata>=2.4.3",
+  "pyyaml>=5.4.1",
+  "scipy>=1.7.3",
+  "setuptools>=64",
+  "setuptools_scm>=8",
+ ]
+ requires-python = ">=3.10"
+ keywords = [ "radio astronomy", "interferometry" ]
+ classifiers = [
+  "License :: OSI Approved :: BSD License",
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: BSD License",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Astronomy",
+ ]
 
-[project.optional-dependencies]
-casa = ["python-casacore>=3.5.2"]
-healpix = ["astropy-healpix>=1.0.2"]
-moon = ["lunarsky>=0.2.2"]
-sim = ["mpi4py>=3.1.1"]
-all = ["pyuvsim[casa,healpix,moon,sim]"]
-test = ["coverage", "pre-commit", "pytest", "pytest-cov>=5.0"]
-doc = ["matplotlib", "pypandoc", "sphinx"]
-profiler = ["line-profiler"]
-dev = ["pyuvsim[all,test,doc,profiler]"]
+ [project.optional-dependencies]
+  casa     = [ "python-casacore>=3.5.2" ]
+  healpix  = [ "astropy-healpix>=1.0.2" ]
+  moon     = [ "lunarsky>=0.2.2" ]
+  sim      = [ "mpi4py>=3.1.1" ]
+  tqdm     = [ "tqdm" ]
+  all      = [ "pyuvsim[casa,healpix,moon,sim,tqdm]" ]
+  test     = [ "coverage", "pre-commit", "pytest", "pytest-cov>=5.0", "pyuvsim[tqdm]" ]
+  doc      = [ "matplotlib", "pypandoc", "sphinx" ]
+  profiler = [ "line-profiler" ]
+  dev      = [ "pyuvsim[all,test,doc,profiler]" ]
 
 
-[project.urls]
-Repository = "https://github.com/RadioAstronomySoftwareGroup/pyuvsim"
-Documentation = "https://pyuvsim.readthedocs.io/"
+ [project.urls]
+  Repository    = "https://github.com/RadioAstronomySoftwareGroup/pyuvsim"
+  Documentation = "https://pyuvsim.readthedocs.io/"
 
 # Note that this approach is "discouraged" in favor of [project.scripts], but
 # that requires entry-point functions, which would require some refactoring.
 [tool.setuptools]
-script-files = [
-    "scripts/im_to_catalog.py",
-    "scripts/plot_csv_antpos.py",
-    "scripts/profiling_plots.py",
-    "scripts/run_param_pyuvsim.py",
-    "scripts/run_profile_pyuvsim.py",
-    "scripts/summarize_profiling.py",
-    "scripts/uvdata_to_config.py",
-    "scripts/uvdata_to_telescope_config.py",
-]
+ script-files = [
+  "scripts/im_to_catalog.py",
+  "scripts/plot_csv_antpos.py",
+  "scripts/profiling_plots.py",
+  "scripts/run_param_pyuvsim.py",
+  "scripts/run_profile_pyuvsim.py",
+  "scripts/summarize_profiling.py",
+  "scripts/uvdata_to_config.py",
+  "scripts/uvdata_to_telescope_config.py",
+ ]
 
 [tool.setuptools_scm]
 
 [tool.isort]
-profile = "black"
+ profile = "black"
 
 [tool.black]
-skip_magic_trailing_comma = true
+ skip_magic_trailing_comma = true
 
 [tool.pytest.ini_options]
-addopts = "--ignore=scripts"
+ addopts = "--ignore=scripts"

@@ -96,6 +96,7 @@ Optional:
 * mpi4py>=3.1.1 (for actually running simulations)
 * lunarsky>=0.2.2 (for simulating telescopes on the moon)
 * python-casacore>=3.5.2 (for writing CASA measurement sets)
+* tqdm
 
 ### Developer Installation
 If you are developing `pyuvsim`, you will need to download and install the
