@@ -88,7 +88,7 @@ def test_shared_mem():
 
     # Shared array should be read-only
     with pytest.raises(ValueError, match="assignment destination is read-only"):
-        sA.itemset(0, 3.0)
+        sA[0] = 3.0
 
     mpi.world_comm.Barrier()
 

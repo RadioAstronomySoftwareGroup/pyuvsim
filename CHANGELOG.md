@@ -8,6 +8,9 @@ conjugation convention and ordering along the baseline-time axis.
 - Support for pyuvdata version 3.0 and later.
 
 ### Changed
+- pyuvdata utils imports to ensure compatibility with version 3.0.
+- `numpy.string_` calls to `numpy.bytes_`, `np.in1d` to `np.isin` and a few other
+changes for numpy 2.0 compatibility.
 - Use UVData.new method to do the UVData object initialization. This leads to a
 change in the default conjugation convention from `"ant2<ant1"` to `"ant1<ant2"`.
 
