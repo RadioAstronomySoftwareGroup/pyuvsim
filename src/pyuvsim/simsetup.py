@@ -111,7 +111,7 @@ def _parse_layout_csv(layout_csv):
     columns = ["name", "number", "beamid", "e", "n", "u"]
     col_exist = [col for col in columns if col in lower_header]
 
-    dt = np.format_parser([dtypes[col] for col in col_exist], col_exist, header)
+    dt = np.rec.format_parser([dtypes[col] for col in col_exist], col_exist, header)
 
     return np.genfromtxt(layout_csv, autostrip=True, skip_header=1, dtype=dt.dtype)
 
@@ -736,11 +736,11 @@ class SkyModelData:
             new_sky.hpx_inds = self.hpx_inds[inds]
 
         if self.polarized is not None:
-            sub_inds = np.in1d(self.polarized, inds)
+            sub_inds = np.isin(self.polarized, inds)
             new_sky.stokes_Q = self.stokes_Q[..., sub_inds]
             new_sky.stokes_U = self.stokes_U[..., sub_inds]
             new_sky.stokes_V = self.stokes_V[..., sub_inds]
-            new_sky.polarized = np.where(np.in1d(inds, self.polarized))[0]
+            new_sky.polarized = np.where(np.isin(inds, self.polarized))[0]
 
         return new_sky
 
@@ -2491,6 +2491,9 @@ def uvdata_to_telescope_config(
         ant_names = uvdata_in.antenna_names
         ant_numbers = uvdata_in.antenna_numbers
         tel_lla_deg = uvdata_in.telescope_location_lat_lon_alt_degrees
+
+    # fix formating issue for numpy types in numpy>2.0
+    tel_lla_deg = tuple(np.asarray(tel_lla_deg).tolist())
 
     if telescope_config_name is None:
         telescope_config_path = check_file_exists_and_increment(

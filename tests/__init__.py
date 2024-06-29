@@ -32,7 +32,7 @@ def compare_dictionaries(d1, d2):
             )
 
         elif isinstance(d1[key], (np.ndarray)):
-            if np.issubdtype(d1[key].dtype, np.string_):
+            if np.issubdtype(d1[key].dtype, np.bytes_):
                 assert np.array_equal(d1[key], np.asarray(d2[key]))
             else:
                 assert np.allclose(d1[key], np.asarray(d2[key])), (
