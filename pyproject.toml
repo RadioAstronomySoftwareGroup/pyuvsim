@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "wheel", "setuptools_scm>=8"]
+requires = ["setuptools>=64", "wheel", "setuptools_scm>=8.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -28,9 +28,9 @@ dependencies = [
     "pyradiosky>=0.2.0",
     "pyuvdata>=2.4.3",
     "pyyaml>=5.4.1",
-    "scipy>=1.7.3",
+    "scipy>=1.8",
     "setuptools>=64",
-    "setuptools_scm>=8",
+    "setuptools_scm>=8.1",
 ]
 requires-python = ">=3.10"
 keywords = ["radio astronomy", "interferometry"]
