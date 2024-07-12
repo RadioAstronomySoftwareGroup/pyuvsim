@@ -201,7 +201,7 @@ def test_powerbeam_sim(cst_beam):
         cfg, return_catname=False
     )
     sky_model = pyuvsim.simsetup.SkyModelData(sky_model)
-    beam_dict = {n: 0 for n in range(4)}
+    beam_dict = dict.fromkeys(range(4), 0)
 
     with pytest.raises(ValueError, match="Beam type must be efield!"):
         pyuvsim.run_uvdata_uvsim(input_uv, beams, beam_dict, catalog=sky_model)

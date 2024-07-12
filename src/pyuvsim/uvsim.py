@@ -492,8 +492,7 @@ def uvdata_to_task_iter(
     else:
         src_iter = [range(Nsrcs_total)]
     # Build the antenna list.
-    # remove the pragma below after pyuvdata v3.0 is released
-    if hasattr(input_uv, "telescope"):  # pragma: nocover
+    if hasattr(input_uv, "telescope"):
         antenna_names = input_uv.telescope.antenna_names
         antpos_enu = input_uv.telescope.get_enu_antpos()
         antenna_numbers = input_uv.telescope.antenna_numbers
@@ -511,7 +510,8 @@ def uvdata_to_task_iter(
         if world.lower() == "earth":
             tel_loc = EarthLocation.from_geocentric(*tloc, unit="m")
         elif world.lower() == "moon":
-            if not hasmoon:
+            if not hasmoon:  # pragma: nocover
+                # can only get here if pyuvdata < 3.0 and no lunarsky installed
                 raise ValueError(
                     "Need lunarsky module to simulate an array on the Moon."
                 )
