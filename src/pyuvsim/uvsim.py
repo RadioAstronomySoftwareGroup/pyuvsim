@@ -671,6 +671,86 @@ def _set_nsky_parts(Nsrcs, cat_nfreqs, Nsky_parts):
     return Nsky_parts
 
 
+def _update_uvd(uv_container, *, input_uv, catalog, input_order):
+    """
+    Apply final updates to the simulated uvdata object.
+
+    Parameters
+    ----------
+    uv_container : UVData object
+        The uvdata object with the simulated visibilities that will be updated.
+    input_uv : UVData object
+        The input UVData object that the simulation ran from which may contain
+        some useful metadata that we want to get into the history of the
+        simulated UVData object.
+    catalog : SkyModel object
+        The input SkyModel object that was used in the simulation which may contain
+        some useful metadata that we want to get into the history of the
+        simulated UVData object.
+    input_order : tuple of str
+        The baseline-time ordering of the input_uv when it was passed in.
+
+    """
+    if input_order is not None:
+        if len(input_order) < 2:
+            input_order = (input_order[0], None)
+        # Don't call the function if we're already expecting (time, baseline)
+        if input_order != ("time", "baseline"):
+            uv_container.reorder_blts(order=input_order[0], minor_order=input_order[1])
+    else:
+        warnings.warn(
+            "The parameter `blt_order` could not be identified for input_uv "
+            " so the ordering cannot be restored."
+            "The output UVData object will have (time, baseline) ordering."
+        )
+
+    # set the uvws and phase center properly
+    # the sim uses the antenna locations and applies no projection, so
+    # if an object is passed in with projected phase centers or uvws not
+    # calculated from the antenna locations in ENU are wrong.
+    if np.any(~uv_container._check_for_cat_type("unprojected")):
+        # If there are any projected phase centers, just replace the whole
+        # catalog with an unprojected one.
+        uv_container.phase_center_catalog = {
+            0: {"cat_name": "unprojected", "cat_type": "unprojected"}
+        }
+    uv_container.set_uvws_from_antenna_positions(update_vis=False)
+
+    # Updating file history.
+    history = simutils.get_version_string()
+    if catalog.filename is not None:
+        history += (
+            " Sources from source list(s): [" + ", ".join(catalog.filename) + "]."
+        )
+    if "obsparam" in input_uv.extra_keywords:
+        obs_param_file = input_uv.extra_keywords["obsparam"]
+        telescope_config_file = input_uv.extra_keywords["telecfg"]
+        antenna_location_file = input_uv.extra_keywords["layout"]
+        history += (
+            " Based on config files: "
+            + obs_param_file
+            + ", "
+            + telescope_config_file
+            + ", "
+            + antenna_location_file
+        )
+    elif hasattr(uv_container, "filename") and uv_container.filename is not None:
+        history += (
+            " Based on uvdata file(s): [" + ", ".join(uv_container.filename) + "]."
+        )
+    history += " Npus = " + str(mpi.Npus) + "."
+
+    # add pyradiosky version
+    history += catalog.pyradiosky_version_str
+
+    # add pyuvdata version info
+    history += uv_container.pyuvdata_version_str
+
+    uv_container.history = history
+
+    return uv_container
+
+
 def run_uvdata_uvsim(
     input_uv,
     beam_list,
@@ -890,52 +970,9 @@ def run_uvdata_uvsim(
         vis_data.Free()
 
     if rank == 0:
-        if input_order is not None:
-            if len(input_order) < 2:
-                input_order = (input_order[0], None)
-            # Don't call the function if we're already expecting (time, baseline)
-            if input_order != ("time", "baseline"):
-                uv_container.reorder_blts(
-                    order=input_order[0], minor_order=input_order[1]
-                )
-        else:
-            warnings.warn(
-                "The parameter `blt_order` could not be identified for input_uv "
-                " so the ordering cannot be restored."
-                "The output UVData object will have (time, baseline) ordering."
-            )
-
-        # Updating file history.
-        history = simutils.get_version_string()
-        if catalog.filename is not None:
-            history += (
-                " Sources from source list(s): [" + ", ".join(catalog.filename) + "]."
-            )
-        if "obsparam" in input_uv.extra_keywords:
-            obs_param_file = input_uv.extra_keywords["obsparam"]
-            telescope_config_file = input_uv.extra_keywords["telecfg"]
-            antenna_location_file = input_uv.extra_keywords["layout"]
-            history += (
-                " Based on config files: "
-                + obs_param_file
-                + ", "
-                + telescope_config_file
-                + ", "
-                + antenna_location_file
-            )
-        elif hasattr(uv_container, "filename") and uv_container.filename is not None:
-            history += (
-                " Based on uvdata file(s): [" + ", ".join(uv_container.filename) + "]."
-            )
-        history += " Npus = " + str(mpi.Npus) + "."
-
-        # add pyradiosky version
-        history += catalog.pyradiosky_version_str
-
-        # add pyuvdata version info
-        history += uv_container.pyuvdata_version_str
-
-        uv_container.history = history
+        uv_container = _update_uvd(
+            uv_container, input_uv=input_uv, catalog=catalog, input_order=input_order
+        )
 
         return uv_container
 

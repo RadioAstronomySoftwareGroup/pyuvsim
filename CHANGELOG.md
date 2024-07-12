@@ -15,6 +15,10 @@ changes for numpy 2.0 compatibility.
 - Use UVData.new method to do the UVData object initialization. This leads to a
 change in the default conjugation convention from `"ant2<ant1"` to `"ant1<ant2"`.
 
+### Fixed
+- Fixed a bug where `run_uvdata_uvsim` does not update uvw_array to what it actually
+used for the simulation, resulting in output objects with incorrect uvw arrays.
+
 ### Deprecated
 - The `"reorder_blt_kw"` parameter in the `simsetup.initialize_uvdata_from_params`
 function in favor of setting the ordering via the new "ordering" section in the

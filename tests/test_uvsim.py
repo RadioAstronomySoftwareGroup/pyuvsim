@@ -177,7 +177,7 @@ def uvdata_two_redundant_bls_triangle_sources():
     beam_list[0] = pyuvsim.AnalyticBeam("airy", diameter=13.0)
 
     time = Time(uv_obj.time_array[0], format="jd", scale="utc")
-    sources, kwds = pyuvsim.create_mock_catalog(
+    sources, _ = pyuvsim.create_mock_catalog(
         time, arrangement="triangle", Nsrcs=3, return_data=True
     )
 
@@ -734,7 +734,7 @@ def test_nsky_parts_large(capsys):
         hera_uv.use_future_array_shapes()
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
     time = Time(hera_uv.time_array[0], scale="utc", format="jd")
-    sources, kwds = pyuvsim.create_mock_catalog(
+    sources, _ = pyuvsim.create_mock_catalog(
         time, arrangement="random", Nsrcs=25, return_data=True, rseed=100
     )
 
@@ -1293,3 +1293,21 @@ def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources, cut_beam):
             out_uv.Nfreqs,
             out_uv.Npols,
         )
+
+
+@pytest.mark.filterwarnings("ignore:The uvw_array does not match the expected")
+def test_uvdata_uvsim_uvw_setting(uvdata_two_redundant_bls_triangle_sources):
+    pytest.importorskip("mpi4py")
+    uvd, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
+    uvd2 = uvd.copy()
+    uvd2.uvw_array = uvd2.uvw_array * 1.2
+
+    out_uv1 = pyuvsim.uvsim.run_uvdata_uvsim(
+        input_uv=uvd, beam_list=beam_list, beam_dict=beam_dict, catalog=sky_model
+    )
+
+    out_uv2 = pyuvsim.uvsim.run_uvdata_uvsim(
+        input_uv=uvd2, beam_list=beam_list, beam_dict=beam_dict, catalog=sky_model
+    )
+
+    assert out_uv1 == out_uv2
