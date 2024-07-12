@@ -1134,20 +1134,23 @@ def test_fullfreq_check(uvobj_beams_srcs):
     next(taskiter1)
 
 
-@pytest.mark.skipif("hasmoon")
 def test_moonloc_error(uvobj_beams_srcs):
-    # Break if the uvobj indicates that the sim is on the Moon, but lunarsky is not available.
 
     uv_obj, beam_list, beam_dict, sources = uvobj_beams_srcs
+    if hasattr(uv_obj, "telescope"):
+        # This whole test can go away once we require pyuvdata >= 3.0
+        pytest.skip()
 
     uv_obj.extra_keywords["world"] = "moon"
 
-    with pytest.raises(ValueError, match="Need lunarsky module to simulate"):
-        next(
-            pyuvsim.uvsim.uvdata_to_task_iter(
-                range(5), uv_obj, sources, beam_list, beam_dict
+    if not hasmoon:
+        # Break if the uvobj indicates that the sim is on the Moon, but lunarsky is not installed.
+        with pytest.raises(ValueError, match="Need lunarsky module to simulate"):
+            next(
+                pyuvsim.uvsim.uvdata_to_task_iter(
+                    range(5), uv_obj, sources, beam_list, beam_dict
+                )
             )
-        )
 
     uv_obj.extra_keywords["world"] = "gallifrey"
 
