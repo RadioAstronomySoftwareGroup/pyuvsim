@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.3.1] - 2024-07-18
+
 ### Added
 - A new "ordering" section to the parameter yaml file to specify the UVData
 conjugation convention and ordering along the baseline-time axis.
@@ -24,7 +26,7 @@ used for the simulation, resulting in output objects with incorrect uvw arrays.
 function in favor of setting the ordering via the new "ordering" section in the
 parameter yaml file.
 
-## [1.3.0] - 2024-07-17
+## [1.3.0] - 2024-04-02
 
 ### Added
 - Tests verifying accuracy of Lunar simulations.
