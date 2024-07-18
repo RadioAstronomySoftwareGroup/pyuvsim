@@ -283,7 +283,7 @@ def test_beam_basis_type(beam_objs):
 
     basis_types = beamlist._get_beam_basis_type()
 
-    assert basis_types == {index: "az_za" for index in range(len(beam_objs))}
+    assert basis_types == dict.fromkeys(range(len(beam_objs)), "az_za")
 
 
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer")

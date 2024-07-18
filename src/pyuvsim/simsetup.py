@@ -1370,7 +1370,7 @@ def parse_telescope_params(
 
     if not tele_config or not return_beams:
         # if no info on beams, just return what we have
-        beam_dict = {n: 0 for n in antnames}
+        beam_dict = dict.fromkeys(antnames, 0)
         if not return_beams:
             return return_dict
         else:
