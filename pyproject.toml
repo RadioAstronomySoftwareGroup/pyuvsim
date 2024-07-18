@@ -77,9 +77,6 @@ script-files = [
 
 [tool.setuptools_scm]
 
-[tool.isort]
-profile = "black"
-
 [tool.pytest.ini_options]
 addopts = "--ignore=scripts"
 
