@@ -80,12 +80,8 @@ script-files = [
 [tool.isort]
 profile = "black"
 
-[tool.black]
-skip_magic_trailing_comma = true
-
 [tool.pytest.ini_options]
 addopts = "--ignore=scripts"
-
 
 [tool.ruff.lint]
 select = [
