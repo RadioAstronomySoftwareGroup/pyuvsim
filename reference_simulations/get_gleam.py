@@ -1,5 +1,4 @@
 #!/bin/env python
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2022 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """
@@ -29,7 +28,7 @@ name = "gleam.vot"
 
 opath = os.path.join(catalog_dir, name)
 if os.path.exists(opath):
-    print("GLEAM already downloaded to {}.".format(opath))
+    print(f"GLEAM already downloaded to {opath}.")
     sys.exit()
 Vizier.ROW_LIMIT = -1
 Vizier.columns = ["GLEAM", "RAJ2000", "DEJ2000", "Fintwide"]

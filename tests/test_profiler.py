@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 import atexit
@@ -50,7 +49,7 @@ def test_profiler(tmpdir):
     assert hasattr(time_profiler, "meta_file")
     lstats = time_profiler.get_stats()
     assert len(lstats.timings) != 0
-    func_names = [k[2] for k in lstats.timings.keys()]
+    func_names = [k[2] for k in lstats.timings]
     assert unique(func_names).tolist() == sorted(
         pyuvsim.profiling.default_profile_funcs
     )

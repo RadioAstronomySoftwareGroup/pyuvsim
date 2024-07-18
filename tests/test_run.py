@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2020 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
@@ -164,7 +163,7 @@ def test_analytic_diffuse(model, tol, tmpdir):
     with open(herauniform_path, "w") as ofile:
         yaml.dump(teleconfig, ofile, default_flow_style=False)
 
-    with open(template_path, "r") as yfile:
+    with open(template_path) as yfile:
         obspar = yaml.safe_load(yfile)
     obspar["telescope"]["array_layout"] = layout_path
     obspar["telescope"]["telescope_config_name"] = herauniform_path
@@ -246,7 +245,7 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
         shutil.copyfile(beamfits_file, new_beam_file)
 
         # change the beam file name to .uvbeam
-        with open(new_telescope_param_file, "r") as pfile:
+        with open(new_telescope_param_file) as pfile:
             tele_param_dict = yaml.safe_load(pfile)
             tele_param_dict["beam_paths"][0] = {"filename": new_beam_file}
 
@@ -405,7 +404,7 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
         os.path.join(tmpdir, "test_config", "layout_hex37_14.6m.csv"),
     )
 
-    with open(os.path.join(tmpdir, "tranquility_config.yaml"), "r") as pfile:
+    with open(os.path.join(tmpdir, "tranquility_config.yaml")) as pfile:
         tele_param_dict = yaml.safe_load(pfile)
     tele_param_dict["ellipsoid"] = selenoid
     with open(os.path.join(tmpdir, "tranquility_config.yaml"), "w") as pfile:
@@ -527,9 +526,7 @@ def test_lunar_gauss(goto_tempdir, selenoid):
         os.path.join(tmpdir, "test_catalogs", "one_distant_point_2458178.5.txt"),
     )
 
-    with open(
-        os.path.join(tmpdir, "test_config", "bl_single_gauss.yaml"), "r"
-    ) as pfile:
+    with open(os.path.join(tmpdir, "test_config", "bl_single_gauss.yaml")) as pfile:
         tele_param_dict = yaml.safe_load(pfile)
     tele_param_dict["ellipsoid"] = selenoid
     with open(

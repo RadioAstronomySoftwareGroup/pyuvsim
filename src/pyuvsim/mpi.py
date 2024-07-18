@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """MPI setup."""
@@ -69,9 +68,10 @@ def start_mpi(block_nonroot_stdout=True):
 
     world_comm.Barrier()
 
-    if (not rank == 0) and block_nonroot_stdout:  # pragma: no cover
+    if (rank != 0) and block_nonroot_stdout:  # pragma: no cover
         # For non-root ranks, do not print to stdout.
-        sys.stdout = open("/dev/null", "w")
+        with open("/dev/null", "w") as devnull:
+            sys.stdout = devnull
         atexit.register(sys.stdout.close)
     atexit.register(free_shared)
 

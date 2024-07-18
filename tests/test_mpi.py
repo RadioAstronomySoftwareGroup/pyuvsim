@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 import resource
@@ -133,7 +132,6 @@ def test_mpi_counter(count_rank):
 
 @pytest.mark.parametrize("max_bytes", [mpi.INT_MAX, 100])
 def test_big_gather(max_bytes, fake_tasks):
-
     objs = fake_tasks
     n_tasks = len(objs)
     result, split_info = mpi.big_gather(
@@ -158,7 +156,6 @@ def test_big_gather(max_bytes, fake_tasks):
 @pytest.mark.parallel(3)
 @pytest.mark.parametrize("max_bytes", [mpi.INT_MAX, 100])
 def test_big_bcast(max_bytes, fake_tasks):
-
     objs = fake_tasks
     n_tasks = len(objs)
 
@@ -183,7 +180,6 @@ def test_big_bcast(max_bytes, fake_tasks):
 
 @pytest.mark.parallel(3)
 def test_big_bcast_gather_loop(fake_tasks):
-
     objs = fake_tasks
 
     broadcast = mpi.big_bcast(mpi.world_comm, objs, root=0, MAX_BYTES=35)

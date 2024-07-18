@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Definition of Analytic Beam objects."""
@@ -31,6 +30,7 @@ def diameter_to_sigma(diam, freqs):
         The standard deviation in zenith angle radians for a Gaussian beam
         with FWHM equal to that of an Airy disk's main lobe for an aperture
         with the given diameter.
+
     """
     wavelengths = c_ms / freqs
 
@@ -206,7 +206,7 @@ class AnalyticBeam:
             interp_data[0, 1, :, :] = values
             interp_basis_vector = None
         else:
-            raise ValueError("no interp for this type: {}".format(self.type))
+            raise ValueError(f"no interp for this type: {self.type}")
 
         if self.beam_type == "power":
             # Cross-multiplying feeds, adding vector components

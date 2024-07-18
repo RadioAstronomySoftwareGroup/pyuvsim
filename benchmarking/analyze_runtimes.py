@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2022 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """
@@ -11,6 +10,7 @@ NB:
     than each simulation axis.
 
 """
+
 import os
 import sys
 
@@ -50,14 +50,14 @@ axesname = os.path.join(basepath, axesname)
 
 lstat = lp.load_stats(profname)
 axes_npz = np.load(axesname)
-axes = {k: axes_npz[k][0] for k in axes_npz.keys()}
+axes = {k: axes_npz[k][0] for k in axes_npz}
 
 # Set up combinations of axes.
 Naxes = len(axes)
 
 combos = [("Ntimes",), ("Ntimes", "Nfreqs"), ("Ntimes", "Nfreqs", "Nbls")]
 
-if not axes["Nsrcs_loc"] == 1:
+if axes["Nsrcs_loc"] != 1:
     combos.append(("Ntimes", "Nfreqs", "Nbls", "Nsrcs_loc"))
 
 Nlist = []
@@ -69,5 +69,5 @@ for comb in combos:
 
 results = _func_times(lstat.timings, Nlist, dt=lstat.unit)
 print(Nlist)
-print(dict(zip(combos, results)))
+print(dict(zip(combos, results, strict=False)))
 print(np.sum(np.array(Nlist) * np.array(results)))

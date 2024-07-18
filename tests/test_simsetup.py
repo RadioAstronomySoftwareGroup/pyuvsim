@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
@@ -24,8 +23,7 @@ except ImportError:
     from pyuvdata.tests import check_warnings
 
 try:
-    from lunarsky import MoonLocation
-    from lunarsky import Time as LTime
+    from lunarsky import MoonLocation, Time as LTime
 
     hasmoon = True
 except ImportError:
@@ -41,7 +39,7 @@ herabeam_default = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
 # Five different test configs
 param_filenames = [
-    os.path.join(SIM_DATA_PATH, "test_config", "param_10time_10chan_{}.yaml".format(x))
+    os.path.join(SIM_DATA_PATH, "test_config", f"param_10time_10chan_{x}.yaml")
     for x in range(6)
 ]
 
@@ -233,7 +231,6 @@ def test_mock_diffuse_maps_errors():
     analytic_diffuse = pyuvsim.simsetup.analytic_diffuse
     astropy_healpix = pyuvsim.simsetup.astropy_healpix
     if (analytic_diffuse is not None) and (astropy_healpix is not None):
-
         # Error cases:
         with pytest.raises(ValueError, match="Diffuse arrangement selected"):
             pyuvsim.simsetup.create_mock_catalog(Time.now(), arrangement="diffuse")
@@ -396,11 +393,13 @@ def test_initialize_catalog_from_params_errors(
         warn_type = None
     else:
         warn_type = UserWarning
-    with check_warnings(warn_type, match=warn_msg):
-        with pytest.raises(err_type, match=err_msg):
-            pyuvsim.simsetup.initialize_catalog_from_params(
-                {"sources": source_dict}, input_uv=input_uv, return_catname=False
-            )
+    with (
+        check_warnings(warn_type, match=warn_msg),
+        pytest.raises(err_type, match=err_msg),
+    ):
+        pyuvsim.simsetup.initialize_catalog_from_params(
+            {"sources": source_dict}, input_uv=input_uv, return_catname=False
+        )
 
 
 @pytest.mark.parametrize("use_filetype", [True, False])
@@ -445,7 +444,7 @@ def test_gleam_catalog(filetype, flux_cut):
         params_use = gleam_param_file
     else:
         expected_ncomp = 50
-        with open(gleam_param_file, "r") as pfile:
+        with open(gleam_param_file) as pfile:
             param_dict = yaml.safe_load(pfile)
         param_dict["config_path"] = os.path.dirname(gleam_param_file)
         param_dict["sources"].pop("min_flux")
@@ -482,7 +481,7 @@ def test_skyh5_catalog(use_filetype, yaml_filetype, tmp_path):
 
     param_filename = os.path.join(tmp_path, "param_test_skyh5_gleam.yaml")
 
-    with open(starting_param_filename, "r") as yf:
+    with open(starting_param_filename) as yf:
         param_dict = yaml.safe_load(yf)
 
     param_dict["sources"]["catalog"] = skyh5_file
@@ -515,7 +514,7 @@ def test_healpix_catalog():
 
 @pytest.mark.parametrize("spectral_type", ["flat", "subband", "spectral_index"])
 def test_gleam_catalog_spectral_type(spectral_type):
-    with open(gleam_param_file, "r") as pfile:
+    with open(gleam_param_file) as pfile:
         param_dict = yaml.safe_load(pfile)
     param_dict["config_path"] = os.path.dirname(gleam_param_file)
     param_dict["sources"].pop("min_flux")
@@ -587,7 +586,7 @@ def test_param_reader():
 
     pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
 
-    with open(param_filename, "r") as fhandle:
+    with open(param_filename) as fhandle:
         param_dict = yaml.safe_load(fhandle)
     with check_warnings(
         UserWarning,
@@ -597,7 +596,7 @@ def test_param_reader():
         expected_ofilepath = pyuvsim.utils.write_uvdata(
             uv_obj, param_dict, return_filename=True, dryrun=True
         )
-    assert "./sim_results.uvh5" == expected_ofilepath
+    assert expected_ofilepath == "./sim_results.uvh5"
 
     # Spoof attributes that won't match.
     uv_obj.history = uv_in.history
@@ -1235,7 +1234,7 @@ def test_uvdata_keyword_init_layout_dict(uvdata_keyword_dict, tmpdir):
     else:
         # this can be removed when we require pyuvdata >= 3.0
         antpos, ants = uvd.get_ENU_antpos()
-    antpos_d = dict(zip(ants, antpos))
+    antpos_d = dict(zip(ants, antpos, strict=False))
     layout_fname = "temp_layout.csv"
     obsparam_fname = "temp_obsparam.yaml"
 
@@ -1259,7 +1258,7 @@ def test_uvdata_keyword_init_layout_dict(uvdata_keyword_dict, tmpdir):
     else:
         # this can be removed when we require pyuvdata >= 3.0
         antpos2, ants2 = uvd.get_ENU_antpos()
-    antpos_d2 = dict(zip(ants2, antpos2))
+    antpos_d2 = dict(zip(ants2, antpos2, strict=False))
     assert np.all([np.isclose(antpos_d[ant], antpos_d2[ant]) for ant in ants])
 
 
@@ -1280,7 +1279,7 @@ def test_uvdata_keyword_init_write(pass_layout, uvdata_keyword_dict, tmpdir):
     else:
         # this can be removed when we require pyuvdata >= 3.0
         antpos, ants = uvd.get_ENU_antpos()
-    antpos_d = dict(zip(ants, antpos))
+    antpos_d = dict(zip(ants, antpos, strict=False))
     # Checking -- Default to a copy of the original layout, if layout is provided.
     obsparam_fname = os.path.join(tmpdir, "obsparam.yaml")
 
@@ -1492,7 +1491,7 @@ def test_keyword_param_loop(tmpdir):
     # add some jiggle so you get non-zero uvws
     antpos_enu = (np.ones(30) + np.random.uniform(-10, 10, 30)).reshape((10, 3))
     antnums = np.arange(10)
-    antpos_d = dict(zip(antnums, antpos_enu))
+    antpos_d = dict(zip(antnums, antpos_enu, strict=False))
     uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(
         array_layout=antpos_d,
         telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
@@ -1620,24 +1619,26 @@ def test_direct_fname(tmpdir):
 )
 def test_beamlist_init_errors(beam_dict, err_msg):
     telescope_config_name = os.path.join(SIM_DATA_PATH, "bl_lite_mixed.yaml")
-    with open(telescope_config_name, "r") as yf:
+    with open(telescope_config_name) as yf:
         telconfig = yaml.safe_load(yf)
 
     telconfig["beam_paths"] = beam_dict
-    with check_warnings(
-        DeprecationWarning,
-        match="Beam shape options diameter and sigma should be specified per "
-        "beamID in the 'beam_paths' section not as globals. For examples see "
-        "the parameter_files documentation. This will become an error in "
-        "version 1.4",
+    with (
+        check_warnings(
+            DeprecationWarning,
+            match="Beam shape options diameter and sigma should be specified per "
+            "beamID in the 'beam_paths' section not as globals. For examples see "
+            "the parameter_files documentation. This will become an error in "
+            "version 1.4",
+        ),
+        pytest.raises(ValueError, match=err_msg),
     ):
-        with pytest.raises(ValueError, match=err_msg):
-            pyuvsim.simsetup._construct_beam_list([0], telconfig)
+        pyuvsim.simsetup._construct_beam_list([0], telconfig)
 
 
 def test_beamlist_init_spline():
     telescope_config_name = os.path.join(SIM_DATA_PATH, "bl_lite_mixed.yaml")
-    with open(telescope_config_name, "r") as yf:
+    with open(telescope_config_name) as yf:
         telconfig = yaml.safe_load(yf)
 
     # The path for beam 0 is invalid, and it's not needed for this test.
@@ -1670,7 +1671,7 @@ def test_beamlist_init_spline():
 )
 def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
     telescope_config_name = os.path.join(SIM_DATA_PATH, "bl_lite_mixed.yaml")
-    with open(telescope_config_name, "r") as yf:
+    with open(telescope_config_name) as yf:
         telconfig = yaml.safe_load(yf)
 
     beamfits_file = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
@@ -1738,7 +1739,7 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
 
 def test_beamlist_init_freqrange():
     telescope_config_name = os.path.join(SIM_DATA_PATH, "bl_lite_mixed.yaml")
-    with open(telescope_config_name, "r") as yf:
+    with open(telescope_config_name) as yf:
         telconfig = yaml.safe_load(yf)
 
     telconfig["beam_paths"][0] = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
@@ -1778,7 +1779,7 @@ def test_moon_lsts():
     )
     param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
     uv_obj = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
-    assert "world" in uv_obj.extra_keywords.keys()
+    assert "world" in uv_obj.extra_keywords
     assert uv_obj.extra_keywords["world"] == "moon"
 
     # Check ordering on lsts -- unique lsts should correspond with unique times.
@@ -1838,7 +1839,7 @@ def test_mock_catalog_moon():
 
     # Simple check that the given lat/lon were interpreted differently in each call.
     # use not == rather than != to avoid a pyradiosky bug, fixed in v0.1.4
-    assert not mmock == emock
+    assert mmock != emock
 
 
 @pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")

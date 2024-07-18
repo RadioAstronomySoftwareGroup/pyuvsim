@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Run a pyuvsim simulation from a parameter file."""
+
 import argparse
 import os
 import time as pytime
@@ -53,8 +53,8 @@ if args.profile:
     maxrss = pyuvsim.mpi.get_max_node_rss()
     rtime = str(timedelta(seconds=dt))
     if isinstance(maxrss, float):
-        print("\tRuntime: {} \n\tMaxRSS: {:.3f} GiB".format(rtime, maxrss))
+        print(f"\tRuntime: {rtime} \n\tMaxRSS: {maxrss:.3f} GiB")
     if hasattr(pyuvsim.profiling.prof, "meta_file"):
         with open(pyuvsim.profiling.prof.meta_file, "a") as afile:
-            afile.write("Runtime \t {}\nMaxRSS \t {:.3f}\n".format(rtime, maxrss))
-            afile.write("Date/Time \t {}".format(str(datetime.now())))
+            afile.write(f"Runtime \t {rtime}\nMaxRSS \t {maxrss:.3f}\n")
+            afile.write(f"Date/Time \t {str(datetime.now())}")

@@ -1,8 +1,9 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2019 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
 """Testing environment setup and teardown for pytest."""
+
+import contextlib
 import os
 import pickle as pkl
 import re
@@ -28,10 +29,8 @@ except ImportError:
     hasmoon = False
 
 issubproc = os.environ.get("TEST_IN_PARALLEL", 0)
-try:
+with contextlib.suppress(ValueError):
     issubproc = bool(int(issubproc))
-except ValueError:
-    pass
 
 
 def pytest_collection_modifyitems(session, config, items):
@@ -78,10 +77,8 @@ def pytest_exception_interact(node, call, report):
 
         if report.failed:
             pth = f"/tmp/mpitest_{report.head_line}"
-            try:
+            with contextlib.suppress(OSError):
                 os.makedirs(pth)
-            except OSError:
-                pass
             with open(os.path.join(pth, f"report_rank{mpi.rank}.pkl"), "wb") as ofile:
                 pkl.dump(report, ofile)
             raise call.excinfo.value
@@ -97,8 +94,8 @@ def pytest_runtest_call(item):
     if len(parmark.args) >= 1:
         try:
             nproc = int(parmark.args[0])
-        except ValueError:
-            raise ValueError(f"Invalid number of processes: {parmark.args[0]}")
+        except ValueError as ve:
+            raise ValueError(f"Invalid number of processes: {parmark.args[0]}") from ve
 
     timeout = 70
     if "timeout" in parmark.kwargs:
@@ -113,7 +110,7 @@ def pytest_runtest_call(item):
         "python",
         "-m",
         "pytest",
-        "{:s}::{:s}".format(str(item.fspath), str(item.name)),
+        f"{str(item.fspath):s}::{str(item.name):s}",
     ]
     if not issubproc:
         try:
@@ -188,7 +185,8 @@ def pytest_runtest_makereport(item, call):
                 if not repf.endswith(".pkl"):
                     continue
                 rank = int(re.findall("(?<=rank)[0-9]+", repf)[0])
-                rank_report = pkl.load(open(os.path.join(pth, repf), "rb"))
+                with open(os.path.join(pth, repf), "rb") as ofile:
+                    rank_report = pkl.load(ofile)
                 os.remove(os.path.join(pth, repf))
                 if ii == 0:
                     report = rank_report
@@ -214,7 +212,7 @@ def _setup_and_teardown_package():
     # completed (done by extending auto_max_age).
     try:
         t1 = Time.now()
-        t1.ut1
+        t1.ut1  # noqa
     except Exception:
         iers.conf.auto_max_age = None
 

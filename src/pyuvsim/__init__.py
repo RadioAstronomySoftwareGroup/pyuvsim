@@ -1,7 +1,8 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Define namespace."""
+
+import contextlib
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
@@ -34,12 +35,9 @@ try:
     __version__ = version_str
 
 except (LookupError, ImportError):
-    try:
+    with contextlib.suppress(PackageNotFoundError):
         # Set the version automatically from the package details.
         __version__ = version("pyuvsim")
-    except PackageNotFoundError:  # pragma: nocover
-        # package is not installed
-        pass
 
 from .analyticbeam import *  # noqa
 from .antenna import *  # noqa

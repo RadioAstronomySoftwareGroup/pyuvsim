@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """
@@ -11,6 +10,7 @@ simulators as well.
 This module contains methods to create configuration files from :class:`pyuvdata.UVData`
 objects and empty :class:`pyuvdata.UVData` objects from configuration files.
 """
+
 import ast
 import copy
 import logging
@@ -34,8 +34,7 @@ from astropy.coordinates import (
 from astropy.time import Time
 from packaging import version  # packaging is installed with setuptools
 from pyradiosky import SkyModel
-from pyuvdata import Telescope, UVData
-from pyuvdata import utils as uvutils
+from pyuvdata import Telescope, UVData, utils as uvutils
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
@@ -62,8 +61,7 @@ except ImportError:
     mpi = None
 
 try:
-    from lunarsky import LunarTopo, MoonLocation
-    from lunarsky import SkyCoord as LunarSkyCoord
+    from lunarsky import LunarTopo, MoonLocation, SkyCoord as LunarSkyCoord
 
     hasmoon = True
 except ImportError:
@@ -90,7 +88,7 @@ def _parse_layout_csv(layout_csv):
         Filename of a layout csv.
 
     """
-    with open(layout_csv, "r") as fhandle:
+    with open(layout_csv) as fhandle:
         header = fhandle.readline()
 
     header = [h.strip() for h in header.split()]
@@ -170,7 +168,7 @@ def _config_str_to_dict(config_str):
         Filename of a configuration yaml file to read.
 
     """
-    with open(config_str, "r") as pfile:
+    with open(config_str) as pfile:
         param_dict = yaml.safe_load(pfile)
 
     config_str = os.path.abspath(config_str)
@@ -547,7 +545,6 @@ def create_mock_catalog(
         )
 
     else:
-
         catalog, icrs_coord = _create_catalog_discrete(
             Nsrcs, alts, azs, fluxes, time, array_location
         )
@@ -839,6 +836,8 @@ def _sky_select_calc_rise_set(sky, source_params, telescope_lat_deg=None):
 
     Parameters
     ----------
+    sky : pyradiosky.Skymodel
+        SkyModel object to apply cuts to.
     source_params : dict
         Dict specifying flux cut and horizon buffer parameters.
     telescope_lat_deg : float
@@ -906,7 +905,7 @@ def initialize_catalog_from_params(
         raise TypeError("input_uv must be UVData object")
 
     if isinstance(obs_params, str):
-        with open(obs_params, "r") as pfile:
+        with open(obs_params) as pfile:
             param_dict = yaml.safe_load(pfile)
 
         param_dict["config_path"] = os.path.dirname(obs_params)
@@ -933,7 +932,7 @@ def initialize_catalog_from_params(
             "map_nside",
         ]
         for k in extra_mock_kwds:
-            if k in source_params.keys():
+            if k in source_params:
                 if k == "array_location":
                     # String -- lat, lon, alt in degrees
                     latlonalt = [float(s.strip()) for s in source_params[k].split(",")]
@@ -1006,7 +1005,7 @@ def initialize_catalog_from_params(
             os.path.splitext(catalog)[1] == ".vot" and "gleam" in catalog.casefold()
         )
 
-        if detect_gleam and "spectral_type" not in source_params.keys():
+        if detect_gleam and "spectral_type" not in source_params:
             warnings.warn(
                 "No spectral_type specified for GLEAM, using 'flat'. In version 1.4 "
                 "this default will change to 'subband' to match pyradiosky's default.",
@@ -1058,7 +1057,7 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
     uvb_read_kwargs = {}
 
     # possible global shape options
-    if "diameter" in telconfig.keys() or "sigma" in telconfig.keys():
+    if "diameter" in telconfig or "sigma" in telconfig:
         warnings.warn(
             "Beam shape options diameter and sigma should be specified per beamID "
             "in the 'beam_paths' section not as globals. For examples see the "
@@ -1069,7 +1068,7 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
     for beamID in beam_ids:
         beam_model = telconfig["beam_paths"][beamID]
 
-        if not isinstance(beam_model, (str, dict)):
+        if not isinstance(beam_model, str | dict):
             raise ValueError(
                 "Beam model is not properly specified in telescope config file."
             )
@@ -1132,11 +1131,11 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
             # Values in the "beam_paths" override globally-defined options.
             shape_opts = {"diameter": None, "sigma": None}
 
-            for opt in shape_opts.keys():
-                shape_opts[opt] = this_beam_opts.get(opt, None)
+            for opt in shape_opts:
+                shape_opts[opt] = this_beam_opts.get(opt)
 
             if all(v is None for v in shape_opts.values()):
-                for opt in shape_opts.keys():
+                for opt in shape_opts:
                     shape_opts[opt] = telconfig.get(opt, None)
 
             diameter = shape_opts.pop("diameter")
@@ -1169,9 +1168,9 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
         select["freq_range"] = freq_range
 
     bl_options = {}
-    if "spline_interp_opts" in telconfig.keys():
+    if "spline_interp_opts" in telconfig:
         bl_options["spline_interp_opts"] = telconfig["spline_interp_opts"]
-    if "freq_interp_kind" in telconfig.keys():
+    if "freq_interp_kind" in telconfig:
         bl_options["freq_interp_kind"] = telconfig["freq_interp_kind"]
 
     beam_list_obj = BeamList(
@@ -1253,7 +1252,7 @@ def parse_telescope_params(
             telescope_config_name = os.path.join(config_path, telescope_config_name)
             if not os.path.exists(telescope_config_name):
                 raise ValueError("telescope_config_name file from yaml does not exist")
-        with open(telescope_config_name, "r") as yf:
+        with open(telescope_config_name) as yf:
             telconfig = yaml.safe_load(yf)
         telescope_location_latlonalt = ast.literal_eval(telconfig["telescope_location"])
         world = telconfig.pop("world", None)
@@ -1312,7 +1311,7 @@ def parse_telescope_params(
     if "array_layout" not in tele_params:
         raise KeyError("array_layout must be provided.")
     array_layout = tele_params.pop("array_layout")
-    if not isinstance(array_layout, (str, dict)):
+    if not isinstance(array_layout, str | dict):
         raise ValueError(
             "array_layout must be a string or have options that parse as a dict."
         )
@@ -1427,7 +1426,7 @@ def parse_frequency_params(freq_params):
         "channel_width",
         "bandwidth",
     ]
-    fa, sf, ef, nf, cw, bw = [fk in freq_params for fk in freq_keywords]
+    fa, sf, ef, nf, cw, bw = (fk in freq_params for fk in freq_keywords)
     kws_used = ", ".join(sorted(freq_params.keys()))
     freq_params = copy.deepcopy(freq_params)
 
@@ -1450,11 +1449,10 @@ def parse_frequency_params(freq_params):
             raise ValueError(
                 "Either start or end frequency must be specified: " + kws_used
             )
-        if cw:
-            if np.asarray(freq_params["channel_width"]).size > 1:
-                raise ValueError(
-                    "channel_width must be a scalar if freq_array is not specified"
-                )
+        if cw and np.asarray(freq_params["channel_width"]).size > 1:
+            raise ValueError(
+                "channel_width must be a scalar if freq_array is not specified"
+            )
 
         if not nf:
             if not cw:
@@ -1495,21 +1493,19 @@ def parse_frequency_params(freq_params):
             )
             bw = True
 
-        if not sf:
-            if ef and bw:
-                freq_params["start_freq"] = (
-                    freq_params["end_freq"]
-                    - freq_params["bandwidth"]
-                    + freq_params["channel_width"]
-                )
+        if not sf and ef and bw:
+            freq_params["start_freq"] = (
+                freq_params["end_freq"]
+                - freq_params["bandwidth"]
+                + freq_params["channel_width"]
+            )
 
-        if not ef:
-            if sf and bw:
-                freq_params["end_freq"] = (
-                    freq_params["start_freq"]
-                    + freq_params["bandwidth"]
-                    - freq_params["channel_width"]
-                )
+        if not ef and sf and bw:
+            freq_params["end_freq"] = (
+                freq_params["start_freq"]
+                + freq_params["bandwidth"]
+                - freq_params["channel_width"]
+            )
 
         if not np.isclose(freq_params["Nfreqs"] % 1, 0):
             raise ValueError(
@@ -1573,7 +1569,7 @@ def parse_time_params(time_params):
         "duration_hours",
         "duration_days",
     ]
-    ta, st, et, nt, it, dh, dd = [tk in time_params for tk in time_keywords]
+    ta, st, et, nt, it, dh, dd = (tk in time_params for tk in time_keywords)
     kws_used = ", ".join(sorted(time_params.keys()))
     daysperhour = 1 / 24.0
     hourspersec = 1 / 60.0**2
@@ -1636,17 +1632,15 @@ def parse_time_params(time_params):
         if not dd:
             time_params["duration"] = inttime_days * (time_params["Ntimes"])
             dd = True
-        if not st:
-            if et and dd:
-                time_params["start_time"] = (
-                    time_params["end_time"] - time_params["duration"] + inttime_days
-                )
+        if not st and et and dd:
+            time_params["start_time"] = (
+                time_params["end_time"] - time_params["duration"] + inttime_days
+            )
 
-        if not et:
-            if st and dd:
-                time_params["end_time"] = (
-                    time_params["start_time"] + time_params["duration"] - inttime_days
-                )
+        if not et and st and dd:
+            time_params["end_time"] = (
+                time_params["start_time"] + time_params["duration"] - inttime_days
+            )
 
         time_arr = np.linspace(
             time_params["start_time"],
@@ -1655,16 +1649,15 @@ def parse_time_params(time_params):
             endpoint=False,
         )
 
-        if time_params["Ntimes"] != 1:
-            if not np.allclose(
-                np.diff(time_arr),
-                inttime_days * np.ones(time_params["Ntimes"] - 1),
-                atol=dayspersec,
-            ):  # To nearest second
-                raise ValueError(
-                    "Calculated time array is not consistent with set integration_time."
-                    f"\nInput parameters are: {init_time_params}"
-                )
+        if time_params["Ntimes"] != 1 and not np.allclose(
+            np.diff(time_arr),
+            inttime_days * np.ones(time_params["Ntimes"] - 1),
+            atol=dayspersec,
+        ):  # To nearest second
+            raise ValueError(
+                "Calculated time array is not consistent with set integration_time."
+                f"\nInput parameters are: {init_time_params}"
+            )
 
     return_dict["integration_time"] = time_params["integration_time"]
     return_dict["time_array"] = time_arr
@@ -1758,7 +1751,8 @@ def time_array_to_params(time_array):
 
 
 def subselect(uv_obj, param_dict):
-    """Do selection on a UVData object.
+    """
+    Do selection on a UVData object.
 
     Parameters
     ----------
@@ -1808,7 +1802,8 @@ def subselect(uv_obj, param_dict):
 
 
 def set_ordering(uv_obj, param_dict, reorder_blt_kw):
-    """Do conjugation/reordering on a UVData object.
+    """
+    Do conjugation/reordering on a UVData object.
 
     Parameters
     ----------
@@ -1837,7 +1832,7 @@ def set_ordering(uv_obj, param_dict, reorder_blt_kw):
 
         if isinstance(blt_order, str):
             reorder_blt_kw = {"order": blt_order}
-        if isinstance(blt_order, (tuple, list, np.ndarray)):
+        if isinstance(blt_order, tuple | list | np.ndarray):
             reorder_blt_kw = {"order": blt_order[0]}
             if len(blt_order) > 1:
                 reorder_blt_kw["minor_order"] = blt_order[1]
@@ -2006,7 +2001,7 @@ def initialize_uvdata_from_params(
         uvparam_dict["polarization_array"] = np.array(param_dict["polarization_array"])
 
     # Parse polarizations
-    if uvparam_dict.get("polarization_array", None) is None:
+    if uvparam_dict.get("polarization_array") is None:
         uvparam_dict["polarization_array"] = np.array([-5, -6, -7, -8])
 
     if "Npols" not in uvparam_dict:
@@ -2032,8 +2027,8 @@ def initialize_uvdata_from_params(
         src, _ = create_mock_catalog(time, arrangement="zenith", array_location=tloc)
         if "sources" in param_dict:
             source_file_name = os.path.basename(param_dict["sources"]["catalog"])
-            cat_name = "{}_ra{:.4f}_dec{:.4f}".format(
-                source_file_name, src.ra.deg[0], src.dec.deg[0]
+            cat_name = (
+                f"{source_file_name}_ra{src.ra.deg[0]:.4f}_dec{src.dec.deg[0]:.4f}"
             )
         else:
             cat_name = "unprojected"
@@ -2299,9 +2294,10 @@ def initialize_uvdata_from_keywords(
             "Either array_layout or antenna_layout_filepath must be passed."
         )
 
-    if array_layout is None or isinstance(array_layout, str) or write_files:
-        if path_out is None:
-            path_out = "."
+    if (
+        array_layout is None or isinstance(array_layout, str) or write_files
+    ) and path_out is None:
+        path_out = "."
 
     if write_files:
         if not outfile:
@@ -2323,13 +2319,13 @@ def initialize_uvdata_from_keywords(
             os.path.join(path_out, output_yaml_filename)
         )
 
-        if antenna_layout_filepath is not None:
-            # Copying original file to new place, if it exists
-            if os.path.exists(antenna_layout_filepath):
-                shutil.copyfile(
-                    antenna_layout_filepath,
-                    os.path.join(path_out, output_layout_filename),
-                )
+        # Copying original file to new place, if it exists
+        if antenna_layout_filepath is not None and os.path.exists(
+            antenna_layout_filepath
+        ):
+            shutil.copyfile(
+                antenna_layout_filepath, os.path.join(path_out, output_layout_filename)
+            )
 
     antenna_numbers = None
     if isinstance(array_layout, dict):
@@ -2394,9 +2390,8 @@ def initialize_uvdata_from_keywords(
     extra_kwds = {k: v for k, v in kwargs.items() if k in valid_param_names}
 
     # Convert str polarization array to int.
-    if polarization_array is not None:
-        if type(polarization_array[0]) is not int:
-            polarization_array = np.array(uvutils.polstr2num(polarization_array))
+    if polarization_array is not None and type(polarization_array[0]) is not int:
+        polarization_array = np.array(uvutils.polstr2num(polarization_array))
 
     if output_yaml_filename is None:
         output_yaml_filename = ""

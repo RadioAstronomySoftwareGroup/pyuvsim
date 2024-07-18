@@ -85,3 +85,60 @@ skip_magic_trailing_comma = true
 
 [tool.pytest.ini_options]
 addopts = "--ignore=scripts"
+
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # pycodestyle warnings
+    "W",
+    # Pyflakes
+    "F",
+    # pydocstyle
+    "D",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-builtins
+    "A",
+    # flake8-comprehensions
+    "C4",
+    # pep8-naming
+    "N",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # McCabe complexity
+    "C90"
+]
+ignore = [
+    "E203",
+    "D107",
+    "N803",
+    "N806",
+    "B028",
+    "SIM108",
+    "D203",
+    "D212",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+"docs/*.py" = ["D", "A"]
+"setup.py" = ["D"]
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 100
+
+[tool.ruff.lint.mccabe]
+max-complexity = 30
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+known-first-party = ["pyuvsim"]

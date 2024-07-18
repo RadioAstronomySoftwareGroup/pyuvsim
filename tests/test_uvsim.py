@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
@@ -641,7 +640,7 @@ def test_gather():
         # this can be removed when we require pyuvdata >= 3.0
         antenna_names = hera_uv.antenna_names
 
-    beam_dict = dict(zip(antenna_names, [0] * hera_uv.Nants_data))
+    beam_dict = dict(zip(antenna_names, [0] * hera_uv.Nants_data, strict=False))
     taskiter = pyuvsim.uvdata_to_task_iter(
         np.arange(Ntasks), hera_uv, sources, beam_list, beam_dict
     )
@@ -962,9 +961,7 @@ def test_quantity_reuse(uvobj_beams_srcs):
     engine = pyuvsim.UVEngine()
 
     def allclose_or_none(first, second):
-        if first is None or second is None:
-            return False
-        elif not first.shape == second.shape:
+        if first is None or second is None or first.shape != second.shape:
             return False
         return np.allclose(first, second)
 
@@ -1135,7 +1132,6 @@ def test_fullfreq_check(uvobj_beams_srcs):
 
 
 def test_moonloc_error(uvobj_beams_srcs):
-
     uv_obj, beam_list, beam_dict, sources = uvobj_beams_srcs
     if hasattr(uv_obj, "telescope"):
         # This whole test can go away once we require pyuvdata >= 3.0

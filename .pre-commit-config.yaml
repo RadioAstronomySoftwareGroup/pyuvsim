@@ -16,32 +16,14 @@ repos:
         - id: mixed-line-ending
           args: ['--fix=no']
 
-  -   repo: https://github.com/pycqa/flake8
-      rev: '7.1.0'
-      hooks:
-      -   id: flake8
-          additional_dependencies:
-            - flake8-bugbear
-            - flake8-builtins
-            - flake8-comprehensions
-            - flake8-docstrings
-            - flake8-pytest-style>=2.0
-            - flake8-rst-docstrings
-            - pep8-naming
-
-  - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.4.2
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.3
     hooks:
-      - id: black
+      - id: ruff
+      - id: ruff-format
 
   - repo: https://github.com/Lucas-C/pre-commit-hooks-bandit
     rev: v1.0.6
     hooks:
       - id: python-bandit-vulnerability-check
         args: [--skip, "B101", --recursive, pyuvdata]
-
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        name: isort (python)

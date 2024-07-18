@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """
 Format the readme.md file into the sphinx index.rst file.
 
 """
+
 import codecs
 import inspect
 import os
@@ -18,8 +17,8 @@ def write_index_rst(readme_file=None, write_file=None):
     t.out_subfmt = "date"
     out = (
         ".. pyuvsim documentation master file, created by\n"
-        "   make_index.py on {date}\n\n"
-    ).format(date=t.iso)
+        f"   make_index.py on {t.iso}\n\n"
+    )
 
     print(readme_file)
     if readme_file is None:

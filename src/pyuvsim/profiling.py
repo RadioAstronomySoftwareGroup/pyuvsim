@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
@@ -104,20 +103,18 @@ def set_profiler(
     # Add module functions to profiler.
     mod_iter = chain(_pyuvsim.__dict__.values(), _pyradiosky.__dict__.values())
     for mod_it in mod_iter:
-        if isfunction(mod_it):
-            if mod_it.__name__ in func_list:
-                prof.add_function(mod_it)
+        if isfunction(mod_it) and mod_it.__name__ in func_list:
+            prof.add_function(mod_it)
         if isclass(mod_it):
             for item in mod_it.__dict__.values():
-                if isfunction(item):
-                    if item.__name__ in func_list:
-                        prof.add_function(item)
+                if isfunction(item) and item.__name__ in func_list:
+                    prof.add_function(item)
 
     # Write out profiling report to file.
     if mpi.get_rank() == rank:
-        ofile = open(outfile_name, "w")
-        atexit.register(ofile.close)
-        atexit.register(prof.print_stats, stream=ofile)
+        with open(outfile_name, "w") as ofile:
+            atexit.register(ofile.close)
+            atexit.register(prof.print_stats, stream=ofile)
         if dump_raw:
             outfile_raw_name = outfile_prefix + ".lprof"
             atexit.register(prof.dump_stats, outfile_raw_name)

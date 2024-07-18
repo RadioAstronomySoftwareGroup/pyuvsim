@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
@@ -229,13 +228,12 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         warn_str = ""
 
     try:
-        with check_warnings(warn_type, match=warn_str):
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", "`np.int` is a deprecated alias")
-                warnings.filterwarnings("ignore", "`np.bool` is a deprecated alias")
-                expected_ofname = simutils.write_uvdata(
-                    uv, filing_dict, return_filename=True, out_format=save_format
-                )
+        with check_warnings(warn_type, match=warn_str), warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "`np.int` is a deprecated alias")
+            warnings.filterwarnings("ignore", "`np.bool` is a deprecated alias")
+            expected_ofname = simutils.write_uvdata(
+                uv, filing_dict, return_filename=True, out_format=save_format
+            )
     except AssertionError:
         # handling for old pyuvdata versions
         # should only get here for miriad
@@ -280,7 +278,7 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         uv2._consolidate_phase_center_catalogs(other=uv, ignore_name=True)
     else:
         uv2._set_multi_phase_center(preserve_phase_center_info=True)
-        if 1 not in uv2.phase_center_catalog.keys():
+        if 1 not in uv2.phase_center_catalog:
             uv2._update_phase_center_id(0, 1)
         uv2.phase_center_catalog = uv.phase_center_catalog
         uv2.antenna_diameters = None
@@ -309,7 +307,7 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         uv2._consolidate_phase_center_catalogs(other=uv, ignore_name=True)
     else:
         uv2._set_multi_phase_center(preserve_phase_center_info=True)
-        if 1 not in uv2.phase_center_catalog.keys():
+        if 1 not in uv2.phase_center_catalog:
             uv2._update_phase_center_id(0, 1)
         uv2.phase_center_catalog = uv.phase_center_catalog
         uv2.antenna_diameters = None

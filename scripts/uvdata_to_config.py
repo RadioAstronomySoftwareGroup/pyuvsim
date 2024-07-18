@@ -1,7 +1,7 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Generate basic simulation parameters from a data file readable by :class:`pyuvdata.UVData`."""
+
 import argparse
 
 from pyuvdata import UVData

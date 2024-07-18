@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Configuration file for the Sphinx documentation builder.
 #
@@ -21,14 +20,14 @@ index_file = os.path.join(os.path.abspath('../docs'), 'index.rst')
 
 # -- Project information -----------------------------------------------------
 
-project = u'pyuvsim'
-copyright = u'2018, Radio Astronomy Software Group'
-author = u'Radio Astronomy Software Group'
+project = 'pyuvsim'
+copyright = '2018, Radio Astronomy Software Group'
+author = 'Radio Astronomy Software Group'
 
 # The short X.Y version
-version = u''
+version = ''
 # The full version, including alpha/beta/rc tags
-release = u''
+release = ''
 
 # -- General configuration ---------------------------------------------------
 
@@ -71,7 +70,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = [u'.build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['.build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -133,8 +132,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'pyuvsim.tex', u'pyuvsim Documentation',
-     u'Radio Astronomy Software Group', 'manual'),
+    (master_doc, 'pyuvsim.tex', 'pyuvsim Documentation',
+     'Radio Astronomy Software Group', 'manual'),
 ]
 
 # -- Options for manual page output ------------------------------------------
@@ -142,7 +141,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'pyuvsim', u'pyuvsim Documentation',
+    (master_doc, 'pyuvsim', 'pyuvsim Documentation',
      [author], 1)
 ]
 
@@ -152,7 +151,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'pyuvsim', u'pyuvsim Documentation',
+    (master_doc, 'pyuvsim', 'pyuvsim Documentation',
      author, 'pyuvsim', 'One line description of project.',
      'Miscellaneous'),
 ]

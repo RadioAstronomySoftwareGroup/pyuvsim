@@ -1,7 +1,7 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Define various utility functions."""
+
 import os
 import sys
 import time as pytime
@@ -54,7 +54,7 @@ class progsteps:  # noqa This should be named with CapWords convention
         """
         if count >= self.curval + self.step:
             doprint = False
-            if not self.curval == count:
+            if self.curval != count:
                 doprint = True
                 self.curval = count
             if doprint:
@@ -164,7 +164,7 @@ def check_file_exists_and_increment(filepath):
         base_filepath = "_".join(bf_list[:-1])
     n = 0
     while os.path.exists(filepath):
-        filepath = "{}_{}".format(base_filepath, n) + ext
+        filepath = f"{base_filepath}_{n}" + ext
         n += 1
     return filepath
 
@@ -204,7 +204,7 @@ def write_uvdata(
         File path, if return_filename is True
 
     """
-    if "filing" in param_dict.keys():
+    if "filing" in param_dict:
         param_dict = param_dict["filing"]
     if "outdir" not in param_dict:
         param_dict["outdir"] = "."
@@ -238,9 +238,10 @@ def write_uvdata(
     if not os.path.exists(param_dict["outdir"]):
         os.makedirs(param_dict["outdir"])
 
-    if out_format in ["uvfits", "uvh5", "ms"]:
-        if not outfile_name.endswith(f".{out_format}"):
-            outfile_name = outfile_name + f".{out_format}"
+    if out_format in ["uvfits", "uvh5", "ms"] and not outfile_name.endswith(
+        f".{out_format}"
+    ):
+        outfile_name = outfile_name + f".{out_format}"
 
     noclobber = ("clobber" not in param_dict) or not bool(param_dict["clobber"])
     if noclobber:
