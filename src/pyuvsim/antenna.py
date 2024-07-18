@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Definition of Antenna objects, to describe a single interferometric element."""
@@ -69,6 +68,11 @@ class Antenna:
         freq_interp_kind : str
             Interpolation method for frequencies. Note -- This overrides whatever method
             may be set on the :class:`pyuvdata.UVBeam` or BeamList objects.
+        beam_interp_check : bool
+            Option to check whether the beam covers all the skymodel az/za values
+            to ensure that they are covered by the intrinsic data array. Checking
+            them can be quite computationally expensive. Defaults to True to run
+            the check, can be set to False if the beam coverage is known.
 
         Returns
         -------

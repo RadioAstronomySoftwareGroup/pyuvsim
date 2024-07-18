@@ -235,7 +235,7 @@ def test_beamlist_errors(beam_objs):
         match="All polarized beams have x_orientation set to None. This will make it "
         "hard to interpret the polarizations of the simulated visibilities.",
     ):
-        pyuvsim.BeamList(beams).x_orientation
+        assert pyuvsim.BeamList(beams).x_orientation is None
 
     # Compare Telescopes with beamlists of different lengths
 
@@ -247,7 +247,6 @@ def test_beamlist_errors(beam_objs):
 
 
 def test_beamlist_consistency(beam_objs):
-
     # Does check, but raises no error
     pyuvsim.BeamList(beam_objs[:2])
 

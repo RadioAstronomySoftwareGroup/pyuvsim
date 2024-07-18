@@ -1,5 +1,4 @@
 #!/bin/env python
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2020 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """
@@ -55,7 +54,7 @@ fileids = "gdrive_file_ids.dat"
 
 dat = []
 
-with open(fileids, "r") as dfile:
+with open(fileids) as dfile:
     for line in dfile:
         line = line.strip()
         # fileid name type size size_unit date time
@@ -65,9 +64,8 @@ with open(fileids, "r") as dfile:
         if args.generation == 1:
             if "ref_2." in fname:
                 continue
-        elif args.generation == 2:
-            if "ref_1." in fname:
-                continue
+        elif args.generation == 2 and "ref_1." in fname:
+            continue
         fid = d[0]
         r = requests.get(urlbase, params={"id": fid})
         print(fname)
@@ -76,7 +74,7 @@ with open(fileids, "r") as dfile:
             ofile.write(r.content)
 
 if args.inputs:
-    with open("gdrive_input_ids.dat", "r") as dfile:
+    with open("gdrive_input_ids.dat") as dfile:
         for line in dfile:
             line = line.strip()
             file_id, name = line.split()[:2]

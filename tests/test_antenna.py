@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2021 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 import copy
@@ -17,7 +16,7 @@ def test_jones_set_spline(cst_beam, hera_loc):
     array_location = hera_loc
     beam0 = cst_beam.copy()
     telescope_config_name = os.path.join(SIM_DATA_PATH, "mwa128_config.yaml")
-    with open(telescope_config_name, "r") as yf:
+    with open(telescope_config_name) as yf:
         telconfig = yaml.safe_load(yf)
     telconfig["spline_interp_opts"] = {"kx": 1, "ky": 1}
 

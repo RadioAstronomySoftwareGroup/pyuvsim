@@ -1,5 +1,4 @@
 #!/bin/env python
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2022 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Script to setup/run benchmarking jobs."""
@@ -34,7 +33,7 @@ parser.add_argument(
     "--outdir",
     type=str,
     help="Path for all configuration/results to go.",
-    default="{:4d}-{:02d}-{:02d}".format(now.year, now.month, now.day),
+    default=f"{now.year:4d}-{now.month:02d}-{now.day:02d}",
 )
 
 

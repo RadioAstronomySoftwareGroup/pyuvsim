@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Run a pyuvsim simulation for profiling purposes."""
@@ -41,7 +40,7 @@ parser.add_argument("--time_out", dest="time_out", type=str, default="time_usage
 
 args = parser.parse_args()
 
-with open(paramsfile, "r") as pfile:
+with open(paramsfile) as pfile:
     params = yaml.safe_load(pfile)
 
 params["config_path"] = os.path.dirname(paramsfile)
@@ -63,9 +62,8 @@ profiling.set_profiler(outfile_prefix=args.prof_out)
 
 if rank == 0:
     print(
-        "{} freqs, {} times, {} bls, {} srcs, {} beam".format(
-            args.Nfreqs, args.Ntimes, args.Nbls, args.Nsrcs, args.beam
-        )
+        f"{args.Nfreqs} freqs, {args.Ntimes} times, {args.Nbls} bls, "
+        "{args.Nsrcs} srcs, {args.beam} beam"
     )
     params["freq"]["Nfreqs"] = args.Nfreqs
     params["time"]["Ntimes"] = args.Ntimes
@@ -77,9 +75,7 @@ if rank == 0:
 
     if input_uv.Nbls < args.Nbls:
         raise ValueError(
-            "Cannot profile for more than {} baselines, requeted {}".format(
-                input_uv.Nbls, args.Nbls
-            )
+            f"Cannot profile for more than {input_uv.Nbls} baselines, requeted {args.Nbls}"
         )
 
     # Baseline selection:
@@ -94,7 +90,9 @@ if rank == 0:
     input_uv.antenna_names = ants_new.astype(str)
     Nants = ants_new.size
     # For now, all use the same beam model
-    beam_dict = dict(zip(input_uv.antenna_names, np.zeros(Nants, dtype=int)))
+    beam_dict = dict(
+        zip(input_uv.antenna_names, np.zeros(Nants, dtype=int), strict=False)
+    )
     input_uv.antenna_positions = input_uv.antenna_positions[:Nants, :]
     input_uv.Nants_data = Nants
     input_uv.Nants_telescope = Nants
@@ -123,7 +121,7 @@ if rank == 0:
         "min_alt": min_alt,
         "time": input_uv.time_array[0],
     }
-    print("Beam: {}".format(beam_list[0]))
+    print(f"Beam: {beam_list[0]}")
     params["sources"].update(**mock_keywords)
 
     # Catalog setup

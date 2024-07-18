@@ -1,7 +1,7 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2022 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Utility functions for benchmarking."""
+
 import os
 import re
 import socket
@@ -31,7 +31,7 @@ def settings_setup(settings_file, outdir=None):
         Dictionary of configuration and output file parameters.
 
     """
-    with open(settings_file, "r") as yfile:
+    with open(settings_file) as yfile:
         settings = yaml.safe_load(yfile)
 
     odir_keys = ["config_dir", "profiles", "data_out"]
@@ -39,7 +39,7 @@ def settings_setup(settings_file, outdir=None):
         for key in odir_keys:
             settings[key] = os.path.join(outdir, settings[key])
 
-    if "Nside" in settings.keys():
+    if "Nside" in settings:
         settings["Nsrcs"] = 12 * settings["Nside"] ** 2
 
     settings["hostname"] = socket.getfqdn()
@@ -133,7 +133,7 @@ def make_benchmark_configuration(settings_dict):
         for a2 in range(a1, Nants):
             if bi >= Nbls:
                 break
-            blsel.append("({},{})".format(a1, a2))
+            blsel.append(f"({a1},{a2})")
             bi += 1
 
     # ----------------
@@ -202,16 +202,16 @@ def make_jobscript(settings_dict):
 
     script = "#!/bin/bash\n\n"
     script += "#SBATCH -J pyuvsim_benchmark\n"
-    script += "#SBATCH --mem={}\n".format(mem)
-    script += "#SBATCH --time={}\n".format(walltime)
-    script += "#SBATCH --cpus-per-task={:d}\n".format(Ncpus_per_task)
-    script += "#SBATCH --nodes={}-{}\n".format(Nnodes, Nnodes)
-    script += "#SBATCH --ntasks={:d}\n".format(Ntasks)
+    script += f"#SBATCH --mem={mem}\n"
+    script += f"#SBATCH --time={walltime}\n"
+    script += f"#SBATCH --cpus-per-task={Ncpus_per_task:d}\n"
+    script += f"#SBATCH --nodes={Nnodes}-{Nnodes}\n"
+    script += f"#SBATCH --ntasks={Ntasks:d}\n"
     script += "#SBATCH -m cyclic\n\n"
 
     script += (
         "srun --mpi=pmi2 python ../scripts/run_param_pyuvsim.py "
-        + "{} --profile='{}' --raw_profile".format(obspath, profile_path)
+        + f"{obspath} --profile='{profile_path}' --raw_profile"
     )
 
     with open(settings_dict["jobscript"], "w") as jfile:
@@ -274,7 +274,7 @@ def update_runlog(settings_dict, logfile="BENCHMARKS.log"):
 
     widths = [len(s) for s in header_vals]
 
-    with open(meta_file, "r") as mfile:
+    with open(meta_file) as mfile:
         lines = mfile.readlines()
     lines = (line.split() for line in lines)
     meta = {line[0]: "-".join(line[1:]) for line in lines}
@@ -301,17 +301,21 @@ def update_runlog(settings_dict, logfile="BENCHMARKS.log"):
     for ii, wid in enumerate(widths):
         widths[ii] = max(len(results[ii]), wid)
 
-    formats = ["{" + ": <{}".format(w) + "}" for w in widths]
+    formats = ["{" + f": <{w}" + "}" for w in widths]
 
     header = "\t".join([formats[i].format(hkey) for i, hkey in enumerate(header_vals)])
 
     if not os.path.exists(logfile):
-        log = open(logfile, "w")
-        log.write(header)
+        open_type = "w"
+        write_header = True
     else:
-        log = open(logfile, "a")
+        open_type = "a"
+        write_header = False
 
-    results = [formats[i].format(str(r)) for i, r in enumerate(results)]
+    with open(logfile, open_type) as log:
+        if write_header:
+            log.write(header)
 
-    log.write("\n" + "\t".join(results))
-    log.close()
+        results = [formats[i].format(str(r)) for i, r in enumerate(results)]
+
+        log.write("\n" + "\t".join(results))

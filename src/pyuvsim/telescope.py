@@ -1,7 +1,7 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Definition of Telescope objects, for metadata common to all antennas in an array."""
+
 from __future__ import annotations
 
 import warnings
@@ -121,7 +121,6 @@ class BeamList:
         check: bool = True,
         force_check: bool = False,
     ):
-
         self.spline_interp_opts = spline_interp_opts
         self.freq_interp_kind = freq_interp_kind
         self._str_beam_list = []
@@ -404,7 +403,7 @@ class BeamList:
 
     def _str_to_obj(self, beam_id, beam_model, use_shared_mem=False):
         """Convert beam strings to objects."""
-        if isinstance(beam_model, (AnalyticBeam, UVBeam)):
+        if isinstance(beam_model, AnalyticBeam | UVBeam):
             return beam_model
         if beam_model.startswith("analytic"):
             bspl = beam_model.split("_")
@@ -478,10 +477,10 @@ class BeamList:
         # If not AnalyticBeam, it's UVBeam.
         try:
             path = beam_model.extra_keywords["beam_path"]
-        except KeyError:
+        except KeyError as ke:
             raise ValueError(
                 "Need to set 'beam_path' key in extra_keywords for UVBeam objects."
-            )
+            ) from ke
 
         return path
 

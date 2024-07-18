@@ -1,5 +1,4 @@
 #!/bin/env python
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2022 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """Make plots of profiling results under different constraints."""
@@ -57,12 +56,12 @@ for nni in range(len(NNodes)):
             axes[bi].scatter(
                 dat["Ntasks"][inds],
                 dat["Runtime_Seconds"][inds],
-                label="{:d} cores, {:d} Nodes".format(Ncpus[nc], NNodes[nni]),
+                label=f"{Ncpus[nc]:d} cores, {NNodes[nni]:d} Nodes",
                 color=colors[nc],
                 marker=markers[nni],
             )
 
-        axes[bi].set_title("{} beam".format(beams[bi]))
+        axes[bi].set_title(f"{beams[bi]} beam")
         axes[bi].set_ylabel("Runtime (seconds)")
         axes[bi].set_xlabel("Ntasks")
         axes[bi].set_ylim([ymin, ymax])
@@ -96,12 +95,12 @@ for nni in range(len(NNodes)):
             axes[bi].scatter(
                 dat["Ntasks"][inds],
                 dat["MaxRSS_GB"][inds],
-                label="{:d} cores, {:d} Nodes".format(Ncpus[nc], NNodes[nni]),
+                label=f"{Ncpus[nc]:d} cores, {NNodes[nni]:d} Nodes",
                 color=colors[nc],
                 marker=markers[nni],
             )
 
-        axes[bi].set_title("{} beam".format(beams[bi]))
+        axes[bi].set_title(f"{beams[bi]} beam")
         axes[bi].set_ylabel("MaxRSS (GB)")
         axes[bi].set_xlabel("Ntasks")
         axes[bi].set_ylim([ymin, ymax])

@@ -1,4 +1,3 @@
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
@@ -21,8 +20,7 @@ from astropy.units import Quantity
 from pyuvdata import UVData
 
 try:
-    from lunarsky import MoonLocation
-    from lunarsky import Time as LTime
+    from lunarsky import MoonLocation, Time as LTime
 
     hasmoon = True
 except ImportError:
@@ -32,8 +30,7 @@ try:
     from . import mpi
 except ImportError:  # pragma: no cover
     mpi = None
-from . import simsetup
-from . import utils as simutils
+from . import simsetup, utils as simutils
 from .antenna import Antenna
 from .baseline import Baseline
 from .simsetup import SkyModelData
@@ -245,6 +242,7 @@ class UVEngine:
         (2, 2, Nfreqs, Ncomponents).
     task :  :class:`~UVTask`
         The task currently being calculated.
+
     """
 
     def __init__(
@@ -286,9 +284,7 @@ class UVEngine:
         baseline = self.task.baseline
         beam_pair = (baseline.antenna1.beam_id, baseline.antenna2.beam_id)
 
-        if (not self.current_time == task.time.jd) or (
-            self.sources is not task.sources
-        ):
+        if (self.current_time != task.time.jd) or (self.sources is not task.sources):
             self.update_positions = True
             self.update_local_coherency = True
             self.update_beams = True
@@ -297,10 +293,10 @@ class UVEngine:
             self.update_positions = False
             self.update_local_coherency = False
 
-        if not self.current_freq == task.freq.to("Hz").value:
+        if self.current_freq != task.freq.to("Hz").value:
             self.update_beams = True
 
-        if not self.current_beam_pair == beam_pair:
+        if self.current_beam_pair != beam_pair:
             self.current_beam_pair = beam_pair
             self.update_beams = True
 
@@ -463,6 +459,8 @@ def uvdata_to_task_iter(
         BeamList carrying beam model (in object mode).
     beam_dict : dict
         Map of antenna numbers to index in beam_list.
+    Nsky_parts : int
+        Number of chunks to break the skymodel into. Default is 1.
 
     Yields
     ------
@@ -601,7 +599,7 @@ def uvdata_to_task_iter(
             bl_num = input_uv.baseline_array[blt_i]
 
             # We reuse a lot of baseline info, so make the baseline list on the first go and reuse.
-            if bl_num not in baselines.keys():
+            if bl_num not in baselines:
                 antnum1 = input_uv.ant_1_array[blt_i]
                 antnum2 = input_uv.ant_2_array[blt_i]
                 index1 = np.where(antenna_numbers == antnum1)[0][0]
@@ -874,10 +872,7 @@ def run_uvdata_uvsim(
 
         if beam_interp_check is None:
             # check that all the beams cover the full sky
-            if beam_list.check_all_azza_beams_full_sky():
-                beam_interp_check = False
-            else:
-                beam_interp_check = True
+            beam_interp_check = not beam_list.check_all_azza_beams_full_sky()
 
         Nsky_parts = _set_nsky_parts(Nsrcs, catalog.Nfreqs, Nsky_parts)
 
@@ -964,7 +959,7 @@ def run_uvdata_uvsim(
 
             with open(prof.meta_file, "w") as afile:
                 for k, v in axes_dict.items():
-                    afile.write("{} \t {:d}\n".format(k, int(v)))
+                    afile.write(f"{k} \t {int(v):d}\n")
     finally:
         count.free()
         vis_data.Free()
@@ -1059,7 +1054,7 @@ def run_uvsim(
 
     if rank == 0:
         if isinstance(params, str):
-            with open(params, "r") as pfile:
+            with open(params) as pfile:
                 param_dict = yaml.safe_load(pfile)
         else:
             param_dict = params

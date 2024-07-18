@@ -1,5 +1,4 @@
 #!/bin/python
-# -*- mode: python; coding: utf-8 -*
 # Copyright (c) 2020 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 """
@@ -43,12 +42,12 @@ old_file_paths = glob.glob(os.path.join(ref_set_path, "*.uvh5"))
 new_file_names = [os.path.basename(fn) for fn in new_file_paths]
 old_file_names = [os.path.basename(fn) for fn in old_file_paths]
 
-new_files = dict(zip(new_file_names, new_file_paths))
-old_files = dict(zip(old_file_names, old_file_paths))
+new_files = dict(zip(new_file_names, new_file_paths, strict=False))
+old_files = dict(zip(old_file_names, old_file_paths, strict=False))
 
-for k in new_files.keys():
-    if k not in old_files.keys():
-        warnings.warn("File {} not in reference data.".format(k))
+for k in new_files:
+    if k not in old_files:
+        warnings.warn(f"File {k} not in reference data.")
         continue
     uv_old = UVData()
     uv_new = UVData()
