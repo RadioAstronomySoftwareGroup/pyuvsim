@@ -278,7 +278,7 @@ def test_mock_diffuse_maps(modname, modkwargs, hera_loc, apollo_loc, location):
     vals = modfunc(az, za, **modkwargs)
 
     assert cat.nside == map_nside
-    np.testing.assert_allclose(cat.stokes[0, 0].to_value("K"), vals)
+    np.testing.assert_allclose(cat.stokes[0, 0].to_value("K"), vals, rtol=0, atol=1e-12)
 
 
 @pytest.mark.filterwarnings(

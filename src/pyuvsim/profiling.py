@@ -112,9 +112,12 @@ def set_profiler(
 
     # Write out profiling report to file.
     if mpi.get_rank() == rank:
-        with open(outfile_name, "w") as ofile:
-            atexit.register(ofile.close)
-            atexit.register(prof.print_stats, stream=ofile)
+        # don't use a context manager here because it the file needs to stay
+        # open for the various jobs to write to it. File closing is handled
+        # explicitly by the `atexit.register` call.
+        ofile = open(outfile_name, "w")  # noqa
+        atexit.register(ofile.close)
+        atexit.register(prof.print_stats, stream=ofile)
         if dump_raw:
             outfile_raw_name = outfile_prefix + ".lprof"
             atexit.register(prof.dump_stats, outfile_raw_name)
