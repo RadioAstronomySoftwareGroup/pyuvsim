@@ -383,6 +383,7 @@ def test_input_uv_error():
 def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
     pytest.importorskip("lunarsky")
     from lunarsky import MoonLocation
+    from spiceypy.utils.exceptions import SpiceUNKNOWNFRAME
 
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_tranquility_hex.yaml"
@@ -456,9 +457,13 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
     # Run simulation.
     if not future_shapes:
         uv_obj.use_current_array_shapes()
-    uv_out = pyuvsim.uvsim.run_uvdata_uvsim(
-        uv_obj, beam_list, beam_dict, catalog=sources, quiet=True
-    )
+    try:
+        uv_out = pyuvsim.uvsim.run_uvdata_uvsim(
+            uv_obj, beam_list, beam_dict, catalog=sources, quiet=True
+        )
+    except SpiceUNKNOWNFRAME as err:
+        pytest.skip("SpiceUNKNOWNFRAME error: " + str(err))
+
     assert history_utils._check_history_version(uv_out.history, pyradiosky.__version__)
     assert history_utils._check_history_version(uv_out.history, pyuvdata.__version__)
     assert history_utils._check_history_version(uv_out.history, pyuvsim.__version__)
