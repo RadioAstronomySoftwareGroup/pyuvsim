@@ -26,7 +26,7 @@ advantage of this, any wrapper must be run with ``mpirun``:
     .. code-block:: python
 
         # Running with 50 MPI processing units
-        > mpiexec -n 50 python run_param_pyuvsim obsparam_filename.yaml   # This will run a parameter file job with 10 processing units.
+        > mpirun -n 50 python run_param_pyuvsim obsparam_filename.yaml   # This will run a parameter file job with 10 processing units.
 
 
 Further speedup is achieved through ``numpy``/``scipy`` internal threading.
