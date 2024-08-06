@@ -22,13 +22,13 @@ parser.add_argument(
     "paths",
     nargs="+",
     type=str,
-    help="Paths to new files, " "to compare with archived data.",
+    help="Paths to new files, to compare with archived data.",
 )
 parser.add_argument(
     "-g",
     "--generation",
     type=int,
-    help="Generation of reference sims " "to download (1 or 2).",
+    help="Generation of reference sims to download (1 or 2).",
     default=1,
 )
 
