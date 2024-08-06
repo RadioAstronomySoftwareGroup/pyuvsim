@@ -166,7 +166,7 @@ Example `obsparam` configuration files may be found in the `reference_simulation
 1. Install from github or pip.
 2. Run off of a parameter file with 4 MPI ranks:
 ```
-mpirun -n 4 python scripts/run_param_pyuvsim.py reference_simulations/first_generation/obsparam_ref_1.1.yaml
+mpiexec -n 4 python scripts/run_param_pyuvsim.py reference_simulations/first_generation/obsparam_ref_1.1.yaml
 ```
 
 ## Documentation

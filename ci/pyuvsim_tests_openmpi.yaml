@@ -8,7 +8,7 @@ dependencies:
   - line_profiler
   - mpi4py>=3.1.1
   - numpy>=1.23
-  - openmpi<5
+  - openmpi
   - pip
   - psutil
   - python-casacore>=3.5.2
