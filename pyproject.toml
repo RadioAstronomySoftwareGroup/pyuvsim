@@ -82,46 +82,32 @@ addopts = "--ignore=scripts"
 
 [tool.ruff.lint]
 select = [
-    # pycodestyle
-    "E",
-    # pycodestyle warnings
-    "W",
-    # Pyflakes
-    "F",
-    # pydocstyle
-    "D",
-    # pyupgrade
-    "UP",
-    # flake8-bugbear
-    "B",
-    # flake8-builtins
-    "A",
-    # flake8-comprehensions
-    "C4",
-    # pep8-naming
-    "N",
-    # flake8-simplify
-    "SIM",
-    # isort
-    "I",
-    # McCabe complexity
-    "C90"
+    "E", # pycodestyle
+    "W", # pycodestyle warnings
+    "F", # Pyflakes
+    "D", # pydocstyle
+    "UP", # pyupgrade
+    "B", # flake8-bugbear
+    "A", # flake8-builtins
+    "C4", # flake8-comprehensions
+    "N", # pep8-naming
+    "SIM", # flake8-simplify
+    "I", # isort
+    "C90", # McCabe complexity
 ]
 ignore = [
-    "E203",
-    "D107",
-    "N803",
-    "N806",
-    "B028",
-    "SIM108",
-    "D203",
-    "D212",
+    "N803", # non-lowercase arguments (we use N* for axes lengths)
+    "N806", # non-lowercase variable (we use N* for axes lengths)
+    "B028", # no-explicit-stacklevel for warnings
+    "SIM108", # prefer ternary opperators. I find them difficult to read.
+    "D203", # one-blank-line-before-class. we use two.
+    "D212", # multi-line-summary-first-line. We put it on the second line.
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D"]
-"docs/*.py" = ["D", "A"]
-"setup.py" = ["D"]
+"tests/*" = ["D"] # Don't require docstrings for tests
+"docs/*.py" = ["D", "A"] # Don't require docstrings or worry about builtins for docs
+"setup.py" = ["D"] # Don't require docstrings for setup.py
 
 [tool.ruff.format]
 skip-magic-trailing-comma = true
