@@ -20,6 +20,7 @@ import warnings
 
 import astropy.units as units
 import numpy as np
+import numpy.typing as npt
 import pyradiosky
 import yaml
 from astropy.coordinates import (
@@ -34,11 +35,19 @@ from astropy.coordinates import (
 from astropy.time import Time
 from packaging import version  # packaging is installed with setuptools
 from pyradiosky import SkyModel
-from pyuvdata import Telescope, UVData, utils as uvutils
+from pyuvdata import (
+    AiryBeam,
+    GaussianBeam,
+    ShortDipoleBeam,
+    Telescope,
+    UniformBeam,
+    UVBeam,
+    UVData,
+    utils as uvutils,
+)
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
-from .analyticbeam import AnalyticBeam
 from .telescope import BeamList
 
 try:
@@ -71,6 +80,21 @@ except ImportError:
 from .utils import check_file_exists_and_increment
 
 logger = logging.getLogger(__name__)
+
+analytic_beams = {
+    "airy": AiryBeam,
+    "gaussian": GaussianBeam,
+    "short_dipole": ShortDipoleBeam,
+    "uniform": UniformBeam,
+}
+
+
+weird_beamfits_extension_warning = (
+    "This beamfits file does not have a '.fits' or '.beamfits' extension, so "
+    "UVBeam does not recognize it as a beamfits file. Either change the file "
+    "extension or specify the beam_type. This is currently handled with a "
+    "try/except clause in pyuvsim, but this will become an error in version 1.4"
+)
 
 
 def _parse_layout_csv(layout_csv):
@@ -945,14 +969,7 @@ def initialize_catalog_from_params(
 
         if "array_location" not in mock_keywords:
             if input_uv is not None:
-                # remove the pragma below after pyuvdata v3.0 is released
-                if hasattr(input_uv, "telescope"):  # pragma: nocover
-                    mock_keywords["array_location"] = input_uv.telescope.location
-                else:
-                    # this can be removed when we require pyuvdata >= 3.0
-                    mock_keywords["array_location"] = EarthLocation.from_geocentric(
-                        *input_uv.telescope_location, unit="m"
-                    )
+                mock_keywords["array_location"] = input_uv.telescope.location
             else:
                 warnings.warn(
                     "No array_location specified. Defaulting to the HERA site."
@@ -1017,12 +1034,7 @@ def initialize_catalog_from_params(
         sky = SkyModel.from_file(catalog, **read_params)
 
     if input_uv is not None:
-        # remove the pragma below after pyuvdata v3.0 is released
-        if hasattr(input_uv, "telescope"):  # pragma: nocover
-            telescope_lat_deg = input_uv.telescope.location.lat.to("deg").value
-        else:
-            # this can be removed when we require pyuvdata >= 3.0
-            telescope_lat_deg = input_uv.telescope_location_lat_lon_alt_degrees[0]
+        telescope_lat_deg = input_uv.telescope.location.lat.to("deg").value
     else:
         telescope_lat_deg = None
     # Do source selections, if any.
@@ -1051,10 +1063,42 @@ def _check_uvbeam_file(beam_file):
     return beam_file
 
 
-def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False):
-    """Construct BeamList."""
+def _construct_beam_list(
+    beam_ids: npt.NDArray[int] | list[float] | tuple[float],
+    telconfig: dict,
+    freq_range: (npt.NDArray[float] | list[float] | tuple[float] | None) = None,
+):
+    """
+    Construct the BeamList from the telescope parameter dict.
+
+    Parameters
+    ----------
+    beam_ids : list of int
+        List of beam ID integers to include from the telconfig. All integers in
+        this list must be included in the telconfig.
+    telconfig : dict
+        Telescope parameters dict, typically parsed from the telescope yaml file.
+        See pyuvsim documentation for allowable keys.
+        https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#telescope-configuration
+    freq_range : array-like of float
+        Range of frequencies to keep in the beam object, shape (2,). Should
+        include all frequencies in the simulation with a buffer to support
+        interpolation.
+    """
     beam_list = []
-    uvb_read_kwargs = {}
+    assert isinstance(
+        beam_ids, np.ndarray | list | tuple
+    ), "beam_ids must be a list, tuple or numpy array."
+    beam_ids = np.asarray(beam_ids, dtype=int)
+    assert isinstance(telconfig, dict), "telconfig must be a dict."
+
+    if freq_range is not None:
+        assert isinstance(
+            freq_range, np.ndarray | list | tuple
+        ), "If passed, freq_range must be a list, tuple or numpy array"
+        freq_range = np.asarray(freq_range, dtype=float).squeeze()
+        if freq_range.size != 2:
+            raise ValueError("If passed, freq_range have 2 elements")
 
     # possible global shape options
     if "diameter" in telconfig or "sigma" in telconfig:
@@ -1065,8 +1109,14 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
             DeprecationWarning,
         )
 
-    for beamID in beam_ids:
-        beam_model = telconfig["beam_paths"][beamID]
+    select = telconfig.pop("select", {})
+    if freq_range is not None:
+        select["freq_range"] = freq_range
+
+    for beam_id in beam_ids:
+        if beam_id not in telconfig["beam_paths"]:
+            raise ValueError(f"beam_id {beam_id} is not listed in the telconfig.")
+        beam_model = telconfig["beam_paths"][beam_id]
 
         if not isinstance(beam_model, str | dict):
             raise ValueError(
@@ -1083,27 +1133,34 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
 
         if (
             isinstance(beam_model, str)
-            and beam_model not in AnalyticBeam.supported_types
+            and beam_model not in analytic_beams
+            or isinstance(beam_model, dict)
+            and "filename" in beam_model
         ):
-            # this is the path to a UVBeam readable file
-            beam_file = _check_uvbeam_file(beam_model)
-
-            beam_list.append(beam_file)
-        elif isinstance(beam_model, dict) and "filename" in beam_model:
-            # this a UVBeam readable file with (possibly) some read kwargs
-            beam_file = beam_model["filename"]
-            beam_file = beam_model.pop("filename")
-            read_kwargs = beam_model
-            read_kwargs = {}
-            for key, value in beam_model.items():
-                if key != "filename":
-                    read_kwargs[key] = value
-            if len(read_kwargs) > 0:
-                uvb_read_kwargs[beamID] = read_kwargs
+            if isinstance(beam_model, str):
+                # this is the path to a UVBeam readable file
+                beam_file = beam_model
+                read_kwargs = {}
+            else:
+                # this a UVBeam readable file with (possibly) some read kwargs
+                beam_file = beam_model.pop("filename")
+                read_kwargs = beam_model
 
             beam_file = _check_uvbeam_file(beam_file)
+            uvb = UVBeam()
 
-            beam_list.append(beam_file)
+            if "freq_range" in select:
+                read_kwargs["freq_range"] = select["freq_range"]
+
+            try:
+                uvb.read(beam_file, **read_kwargs)
+            except ValueError:
+                # If file type is not recognized, assume beamfits,
+                # which was originally the only option.
+                uvb.read_beamfits(beam_file, **read_kwargs)
+                warnings.warn(weird_beamfits_extension_warning, DeprecationWarning)
+
+            beam_list.append(uvb)
         else:
             if isinstance(beam_model, str):
                 beam_type = beam_model
@@ -1115,7 +1172,7 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
                     "files or a 'type' field for analytic beams."
                 )
 
-            if beam_type not in AnalyticBeam.supported_types:
+            if beam_type not in analytic_beams:
                 raise ValueError(f"Undefined beam model type: {beam_type}")
 
             this_beam_opts = {}
@@ -1129,43 +1186,36 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
 
             # Default to None for diameter and sigma.
             # Values in the "beam_paths" override globally-defined options.
-            shape_opts = {"diameter": None, "sigma": None}
+            if beam_type == "gaussian":
+                shape_opts = {"diameter": None, "sigma": None}
+            elif beam_type == "airy":
+                shape_opts = {"diameter": None}
+            else:
+                shape_opts = {}
 
             for opt in shape_opts:
                 shape_opts[opt] = this_beam_opts.get(opt)
 
             if all(v is None for v in shape_opts.values()):
                 for opt in shape_opts:
-                    shape_opts[opt] = telconfig.get(opt, None)
+                    shape_opts[opt] = telconfig.get(opt)
 
-            diameter = shape_opts.pop("diameter")
-            sigma = shape_opts.pop("sigma")
-
-            if beam_type == "uniform":
-                beam_model = "analytic_uniform"
-
+            if beam_type == "airy" and shape_opts["diameter"] is None:
+                raise KeyError("Missing diameter for airy beam.")
             if beam_type == "gaussian":
-                if diameter is not None:
-                    beam_model = "_".join(
-                        ["analytic_gaussian", "diam=" + str(diameter)]
-                    )
-                elif sigma is not None:
-                    beam_model = "_".join(["analytic_gaussian", "sig=" + str(sigma)])
-                else:
+                if shape_opts["diameter"] is None and shape_opts["sigma"] is None:
+                    raise KeyError("Missing diameter or sigma for gaussian beam.")
+                elif (
+                    shape_opts["diameter"] is not None
+                    and shape_opts["sigma"] is not None
+                ):
                     raise KeyError(
-                        "Missing shape parameter for gaussian beam (diameter or sigma)."
+                        "Only one of diameter or sigma shoule be included for gaussian."
                     )
-            if beam_type == "airy":
-                if diameter is not None:
-                    beam_model = "_".join(["analytic_airy", "diam=" + str(diameter)])
-                else:
-                    raise KeyError("Missing diameter for airy beam.")
 
-            beam_list.append(beam_model)
+            ab = analytic_beams[beam_type](**shape_opts)
 
-    select = telconfig.pop("select", {})
-    if freq_range is not None:
-        select["freq_range"] = freq_range
+            beam_list.append(ab)
 
     bl_options = {}
     if "spline_interp_opts" in telconfig:
@@ -1173,23 +1223,13 @@ def _construct_beam_list(beam_ids, telconfig, freq_range=None, force_check=False
     if "freq_interp_kind" in telconfig:
         bl_options["freq_interp_kind"] = telconfig["freq_interp_kind"]
 
-    beam_list_obj = BeamList(
-        beam_list=beam_list,
-        select_params=select,
-        uvb_read_kwargs=uvb_read_kwargs,
-        force_check=force_check,
-        **bl_options,
-    )
+    beam_list_obj = BeamList(beam_list=beam_list, **bl_options)
 
     return beam_list_obj
 
 
 def parse_telescope_params(
-    tele_params,
-    config_path="",
-    freq_range=None,
-    return_beams=True,
-    force_beam_check=False,
+    tele_params, config_path="", freq_range=None, return_beams=True
 ):
     """
     Parse the "telescope" section of obsparam.
@@ -1206,11 +1246,6 @@ def parse_telescope_params(
         If given, select frequencies on reading the beam.
     return_beams : bool
         Option to return the beam_list and beam_dict.
-    force_beam_check : bool
-        The beam consistency check is only possible for object-beams (not string mode).
-        If `force_beam_check` is True, it will convert beams to object-mode to force
-        the check to run (then convert back to string mode).
-
 
     Returns
     -------
@@ -1231,9 +1266,7 @@ def parse_telescope_params(
         * `x_orientation`: physical orientation of the dipole labelled as "x"
         * `world`: Either "earth" or "moon" (requires lunarsky).
     beam_list : :class:`pyuvsim.BeamList`
-        This is a BeamList object in string mode, only returned if return_beams is True.
-        The strings provide either paths to beamfits files or the specifications to make
-        a :class:`pyuvsim.AnalyticBeam`.
+        This is a BeamList object, only returned if return_beams is True.
     beam_dict : dict
         Antenna numbers to beam indices, only returned if return_beams is True.
 
@@ -1378,19 +1411,19 @@ def parse_telescope_params(
     # if provided, parse sections related to beam files and types
     return_dict["telescope_config_name"] = telescope_config_name
     beam_ids = ant_layout["beamid"]
+    beam_ids_inc = np.unique(beam_ids)
     beam_dict = {}
 
-    for beamID in np.unique(beam_ids):
+    for beamID in beam_ids_inc:
         which_ants = antnames[np.where(beam_ids == beamID)]
+        beam_ind = np.where(beam_ids_inc == beamID)[0][0]
         for a in which_ants:
-            beam_dict[a] = beamID
+            # use the index into the included beams here rather than the beamID
+            # because only the included beams make it into the beam_list and
+            # then they are accessed by index in the list (not by original ID)
+            beam_dict[a] = beam_ind
 
-    beam_list = _construct_beam_list(
-        np.unique(beam_ids),
-        telconfig,
-        freq_range=freq_range,
-        force_check=force_beam_check,
-    )
+    beam_list = _construct_beam_list(beam_ids_inc, telconfig, freq_range=freq_range)
 
     return return_dict, beam_list, beam_dict
 
@@ -1801,7 +1834,7 @@ def set_ordering(uv_obj, param_dict, reorder_blt_kw):
     Parameters
     ----------
     uv_obj : UVData
-        UVData object to do the selection on.
+        UVData object to reorder.
     param_dict : dict
         Dict of parameters that can include an `order` section.
     reorder_blt_kw : dict
@@ -1840,23 +1873,18 @@ def set_ordering(uv_obj, param_dict, reorder_blt_kw):
     elif bl_conjugation_convention != "ant1<ant2":
         uv_obj.conjugate_bls(convention=bl_conjugation_convention)
 
-    # remove the pragma below after pyuvdata v3.0 is released.
-    # The blt_order attribute is set in UVData.new in version 3.0
-    if uv_obj.blt_order is not None:  # pragma: nocover
-        blt_order = {"order": uv_obj.blt_order[0], "minor_order": uv_obj.blt_order[1]}
-    else:
-        blt_order = None
+    obj_blt_order = uv_obj.blt_order
+    if obj_blt_order is not None:
+        obj_blt_order = {"order": uv_obj.blt_order[0]}
+        if len(uv_obj.blt_order) > 1:
+            obj_blt_order["minor_order"] = uv_obj.blt_order[1]
 
-    if reorder_blt_kw and reorder_blt_kw != blt_order:
+    if reorder_blt_kw and reorder_blt_kw != obj_blt_order:
         uv_obj.reorder_blts(**reorder_blt_kw)
 
 
 def initialize_uvdata_from_params(
-    obs_params,
-    return_beams=None,
-    reorder_blt_kw=None,
-    check_kw=None,
-    force_beam_check=False,
+    obs_params, return_beams=None, reorder_blt_kw=None, check_kw=None
 ):
     """
     Construct a :class:`pyuvdata.UVData` object from parameters in a valid yaml file.
@@ -1884,10 +1912,6 @@ def initialize_uvdata_from_params(
         values are ``order='time'`` and ``minor_order='baseline'``.
     check_kw : dict (optional)
         Deprecated and has no effect.
-    force_beam_check : bool
-        The beam consistency check is only possible for object-beams (not string mode).
-        If `force_beam_check` is True, it will convert beams to object-mode to force
-        the check to run (then convert back to string mode).
 
     Returns
     -------
@@ -1955,7 +1979,6 @@ def initialize_uvdata_from_params(
         config_path=param_dict["config_path"],
         freq_range=freq_range,
         return_beams=return_beams,
-        force_beam_check=force_beam_check,
     )
     if return_beams:
         tele_params, beam_list, beam_dict = ptp_ret
@@ -2036,64 +2059,35 @@ def initialize_uvdata_from_params(
     if isinstance(antpairs, str):
         antpairs = ast.literal_eval(antpairs)
 
-    # remove the pragma below after pyuvdata v3.0 is released
-    if hasattr(UVData(), "telescope"):  # pragma: nocover
-        tel_init_params = {"location": telescope_location}
+    tel_init_params = {"location": telescope_location}
 
-        telescope_param_map = {
-            "telescope_name": "name",
-            "antenna_names": "antenna_names",
-            "antenna_numbers": "antenna_numbers",
-            "antenna_positions": "antenna_positions",
-            "antenna_diameters": "antenna_diameters",
-            "x_orientation": "x_orientation",
-            "instrument": "instrument",
-        }
-        for key, tel_key in telescope_param_map.items():
-            if key in param_dict:
-                tel_init_params[tel_key] = param_dict[key]
-            if key in tele_params:
-                tel_init_params[tel_key] = tele_params[key]
-        if "instrument" not in tel_init_params:
-            tel_init_params["instrument"] = tel_init_params["name"]
+    telescope_param_map = {
+        "telescope_name": "name",
+        "antenna_names": "antenna_names",
+        "antenna_numbers": "antenna_numbers",
+        "antenna_positions": "antenna_positions",
+        "antenna_diameters": "antenna_diameters",
+        "x_orientation": "x_orientation",
+        "instrument": "instrument",
+    }
+    for key, tel_key in telescope_param_map.items():
+        if key in param_dict:
+            tel_init_params[tel_key] = param_dict[key]
+        if key in tele_params:
+            tel_init_params[tel_key] = tele_params[key]
+    if "instrument" not in tel_init_params:
+        tel_init_params["instrument"] = tel_init_params["name"]
 
-        uv_obj = UVData.new(
-            telescope=Telescope.new(**tel_init_params),
-            phase_center_catalog=phase_center_catalog,
-            vis_units="Jy",
-            history="",
-            do_blt_outer=True,
-            time_axis_faster_than_bls=False,
-            antpairs=antpairs,
-            **uvparam_dict,
-        )
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        uvparam_dict["telescope_name"] = tele_params["telescope_name"]
-        uvparam_dict["antenna_numbers"] = tele_params["antenna_numbers"]
-        uvparam_dict["antenna_names"] = tele_params["antenna_names"]
-        uvparam_dict["antenna_positions"] = tele_params["antenna_positions"]
-        if "x_orientation" in tele_params:
-            uvparam_dict["x_orientation"] = tele_params["x_orientation"]
-
-        uvparam_dict["ellipsoid"] = tele_params["ellipsoid"]
-
-        uv_obj = UVData.new(
-            telescope_location=telescope_location,
-            phase_center_catalog=phase_center_catalog,
-            vis_units="Jy",
-            history="",
-            do_blt_outer=True,
-            time_axis_faster_than_bls=True,
-            antpairs=antpairs,
-            **uvparam_dict,
-        )
-        uv_obj.telescope_location = np.asarray(uv_obj.telescope_location)
-
-        # This has to be changed to avoid a bug in uvfits for 1 freq channel.
-        # The bug is fixed in v3.0
-        uv_obj.flex_spw = False
-        uv_obj._flex_spw_id_array.required = False
+    uv_obj = UVData.new(
+        telescope=Telescope.new(**tel_init_params),
+        phase_center_catalog=phase_center_catalog,
+        vis_units="Jy",
+        history="",
+        do_blt_outer=True,
+        time_axis_faster_than_bls=False,
+        antpairs=antpairs,
+        **uvparam_dict,
+    )
 
     logger.info(f"  Baseline Array: {uv_obj.baseline_array.nbytes / 1024**3:.2f} GB")
     logger.info(f"      Time Array: {uv_obj.time_array.nbytes / 1024**3:.2f} GB")
@@ -2196,7 +2190,6 @@ def initialize_uvdata_from_keywords(
     write_files=True,
     path_out=None,
     complete=False,
-    force_beam_check=False,
     **kwargs,
 ):
     """
@@ -2272,10 +2265,6 @@ def initialize_uvdata_from_keywords(
     complete : bool (optional)
         Whether to fill out the :class:`pyuvdata.UVData` object with its requisite
         data arrays, and check if it's all consistent.
-    force_beam_check : bool
-        The beam consistency check is only possible for object-beams (not string mode).
-        If `force_beam_check` is True, it will convert beams to object-mode to force
-        the check to run (then convert back to string mode).
     kwargs : dictionary
         Any additional valid :class:`pyuvdata.UVData` attribute to assign to object.
 
@@ -2419,9 +2408,7 @@ def initialize_uvdata_from_keywords(
 
     param_dict["obs_param_file"] = os.path.basename(output_yaml_filename)
     param_dict["telescope"].update(layout_params)
-    uv_obj = initialize_uvdata_from_params(
-        param_dict, return_beams=False, force_beam_check=force_beam_check
-    )
+    uv_obj = initialize_uvdata_from_params(param_dict, return_beams=False)
 
     if complete:
         _complete_uvdata(uv_obj, inplace=True)
@@ -2472,20 +2459,11 @@ def uvdata_to_telescope_config(
         if return_names, returns (path, telescope_config_name, layout_csv_name)
 
     """
-    # remove the pragma below after pyuvdata v3.0 is released
-    if hasattr(uvdata_in, "telescope"):  # pragma: nocover
-        tel_name = uvdata_in.telescope.name
-        antpos_enu = uvdata_in.telescope.get_enu_antpos()
-        ant_names = uvdata_in.telescope.antenna_names
-        ant_numbers = uvdata_in.telescope.antenna_numbers
-        tel_lla_deg = uvdata_in.telescope.location_lat_lon_alt_degrees
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        tel_name = uvdata_in.telescope_name
-        antpos_enu, _ = uvdata_in.get_ENU_antpos()
-        ant_names = uvdata_in.antenna_names
-        ant_numbers = uvdata_in.antenna_numbers
-        tel_lla_deg = uvdata_in.telescope_location_lat_lon_alt_degrees
+    tel_name = uvdata_in.telescope.name
+    antpos_enu = uvdata_in.telescope.get_enu_antpos()
+    ant_names = uvdata_in.telescope.antenna_names
+    ant_numbers = uvdata_in.telescope.antenna_numbers
+    tel_lla_deg = uvdata_in.telescope.location_lat_lon_alt_degrees
 
     # fix formating issue for numpy types in numpy>2.0
     tel_lla_deg = tuple(np.asarray(tel_lla_deg).tolist())

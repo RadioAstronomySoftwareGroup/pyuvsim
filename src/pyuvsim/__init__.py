@@ -39,7 +39,6 @@ except (LookupError, ImportError):
         # Set the version automatically from the package details.
         __version__ = version("pyuvsim")
 
-from .analyticbeam import *  # noqa
 from .antenna import *  # noqa
 from .baseline import *  # noqa
 from .profiling import *  # noqa
