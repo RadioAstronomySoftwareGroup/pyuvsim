@@ -14,7 +14,6 @@ import astropy.units as units
 import numpy as np
 import yaml
 from astropy.constants import c as speed_of_light
-from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from astropy.units import Quantity
 from pyuvdata import UVData
@@ -34,7 +33,7 @@ from . import simsetup, utils as simutils
 from .antenna import Antenna
 from .baseline import Baseline
 from .simsetup import SkyModelData
-from .telescope import Telescope
+from .telescope import BeamList, Telescope
 
 __all__ = ["UVTask", "UVEngine", "uvdata_to_task_iter", "run_uvsim", "run_uvdata_uvsim"]
 
@@ -456,7 +455,7 @@ def uvdata_to_task_iter(
     catalog : :class:`pyuvsim.simsetup.SkyModelData`
         Source components.
     beam_list : :class:`pyuvsim.BeamList`
-        BeamList carrying beam model (in object mode).
+        BeamList carrying beam model objects.
     beam_dict : dict
         Map of antenna numbers to index in beam_list.
     Nsky_parts : int
@@ -475,10 +474,6 @@ def uvdata_to_task_iter(
     if not isinstance(catalog, SkyModelData):
         raise TypeError("catalog must be a SkyModelData object.")
 
-    # use future array shapes
-    if hasattr(input_uv, "use_current_array_shapes"):
-        input_uv.use_future_array_shapes()
-
     # Splitting the catalog for memory's sake.
     Nsrcs_total = catalog.Ncomponents
     if Nsky_parts > 1:
@@ -489,45 +484,23 @@ def uvdata_to_task_iter(
         ]
     else:
         src_iter = [range(Nsrcs_total)]
+
     # Build the antenna list.
-    if hasattr(input_uv, "telescope"):
-        antenna_names = input_uv.telescope.antenna_names
-        antpos_enu = input_uv.telescope.get_enu_antpos()
-        antenna_numbers = input_uv.telescope.antenna_numbers
-        tel_loc = input_uv.telescope.location
-        telescope = Telescope(input_uv.telescope.name, tel_loc, beam_list)
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        antenna_names = input_uv.antenna_names
-        antpos_enu, _ = input_uv.get_ENU_antpos()
-        antenna_numbers = input_uv.antenna_numbers
-        tloc = [np.float64(x) for x in input_uv.telescope_location]
-
-        world = input_uv.extra_keywords.get("world", "earth")
-
-        if world.lower() == "earth":
-            tel_loc = EarthLocation.from_geocentric(*tloc, unit="m")
-        elif world.lower() == "moon":
-            if not hasmoon:  # pragma: nocover
-                # can only get here if pyuvdata < 3.0 and no lunarsky installed
-                raise ValueError(
-                    "Need lunarsky module to simulate an array on the Moon."
-                )
-            tel_loc = MoonLocation.from_selenocentric(*tloc, unit="m")
-            tel_loc.ellipsoid = input_uv._telescope_location.ellipsoid
-        else:
-            raise ValueError(
-                "If world keyword is set, it must be either 'moon' or 'earth'."
-            )
-        telescope = Telescope(input_uv.telescope_name, tel_loc, beam_list)
+    antenna_names = input_uv.telescope.antenna_names
+    antpos_enu = input_uv.telescope.get_enu_antpos()
+    antenna_numbers = input_uv.telescope.antenna_numbers
+    tel_loc = input_uv.telescope.location
+    telescope = Telescope(input_uv.telescope.name, tel_loc, beam_list)
 
     antennas = []
-    for num, antname in enumerate(antenna_names):
+    for ant_ind, antname in enumerate(antenna_names):
         if beam_dict is None:
             beam_id = 0
         else:
             beam_id = beam_dict[antname]
-        antennas.append(Antenna(antname, num, antpos_enu[num], beam_id))
+        antennas.append(
+            Antenna(antname, antenna_numbers[ant_ind], antpos_enu[ant_ind], beam_id)
+        )
 
     baselines = {}
     Nfreqs = input_uv.Nfreqs
@@ -732,7 +705,7 @@ def _update_uvd(uv_container, *, input_uv, catalog, input_order):
             + ", "
             + antenna_location_file
         )
-    elif hasattr(uv_container, "filename") and uv_container.filename is not None:
+    elif uv_container.filename is not None:
         history += (
             " Based on uvdata file(s): [" + ", ".join(uv_container.filename) + "]."
         )
@@ -812,9 +785,12 @@ def run_uvdata_uvsim(
     Npus = mpi.get_Npus()
 
     input_uv = comm.bcast(input_uv, root=0)
-    beam_list = comm.bcast(beam_list, root=0)
     beam_dict = comm.bcast(beam_dict, root=0)
     catalog.share(root=0)
+    if rank == 0:
+        print(beam_list)
+        print(type(beam_list))
+    beam_list.share(root=0)
 
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
@@ -825,21 +801,18 @@ def run_uvdata_uvsim(
     ):
         raise ValueError("input_uv must have XX,YY,XY,YX polarization")
 
-    if hasattr(input_uv, "use_current_array_shapes"):
-        input_uv.use_future_array_shapes()
-
     input_order = input_uv.blt_order
     if input_order != ("time", "baseline"):
         input_uv.reorder_blts(order="time", minor_order="baseline")
 
     # The root node will initialize our simulation
     # Read input file and make uvtask list
-    if rank == 0 and not quiet:
-        print("Nbls:", input_uv.Nbls, flush=True)
-        print("Ntimes:", input_uv.Ntimes, flush=True)
-        print("Nfreqs:", input_uv.Nfreqs, flush=True)
-        print("Nsrcs:", catalog.Ncomponents, flush=True)
     if rank == 0:
+        if not quiet:
+            print("Nbls:", input_uv.Nbls, flush=True)
+            print("Ntimes:", input_uv.Ntimes, flush=True)
+            print("Nfreqs:", input_uv.Nfreqs, flush=True)
+            print("Nsrcs:", catalog.Ncomponents, flush=True)
         uv_container = simsetup._complete_uvdata(input_uv, inplace=False)
         if "world" in input_uv.extra_keywords:
             uv_container.extra_keywords["world"] = input_uv.extra_keywords["world"]
@@ -859,7 +832,6 @@ def run_uvdata_uvsim(
     )
 
     # Construct beam objects from strings
-    beam_list.set_obj_mode(use_shared_mem=True)
     count = mpi.Counter()
 
     # wrap this in a try/finally (no exception handling) to ensure resources are freed
@@ -869,6 +841,12 @@ def run_uvdata_uvsim(
 
         if beam_list.beam_type != "efield":
             raise ValueError("Beam type must be efield!")
+
+        if (
+            beam_list.data_normalization is not None
+            and beam_list.data_normalization != "peak"
+        ):
+            raise ValueError("UVBeams must be peak normalized.")
 
         if beam_interp_check is None:
             # check that all the beams cover the full sky
@@ -1020,7 +998,7 @@ def run_uvsim(
     rank = mpi.get_rank()
 
     input_uv = UVData()
-    beam_list = None
+    beam_list = BeamList()
     beam_dict = None
     skydata = SkyModelData()
 

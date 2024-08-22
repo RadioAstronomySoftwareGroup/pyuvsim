@@ -77,7 +77,7 @@ Filing
 Frequency
 ^^^^^^^^^
 
-    As is the standard with ``pyuvdata``, the frequency channel numbers refer to the
+    As is the standard with ``pyuvdata``, the frequencies refer to the
     **frequency at the channel center**. The ``bandpass`` refers to the total band
     covered by all channels, and the channel width is the separation between channel
     centers. Therefore, the following relations hold::

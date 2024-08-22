@@ -5,23 +5,23 @@
 from __future__ import annotations
 
 import warnings
+from typing import Literal
 
 import numpy as np
-from pyuvdata import UVBeam, parameter
+from astropy.coordinates import EarthLocation
+from pyuvdata import BeamInterface, UVBeam, parameter, utils as uvutils
 
 try:
     from . import mpi
 except ImportError:
     mpi = None
 
-from .analyticbeam import AnalyticBeam
+try:
+    from lunarsky import MoonLocation
 
-weird_beamfits_extension_warning = (
-    "This beamfits file does not have a '.fits' or '.beamfits' extension, so "
-    "UVBeam does not recognize it as a beamfits file. Either change the file "
-    "extension or specify the beam_type. This is currently handled with a "
-    "try/except clause in pyuvsim, but this will become an error in version 1.4"
-)
+    hasmoon = True
+except ImportError:
+    hasmoon = False
 
 
 class BeamConsistencyError(Exception):
@@ -34,22 +34,17 @@ class BeamList:
     """
     A container for the set of beam models and related parameters.
 
-    Each rank in the simulation gets a copy of the set of beam objects
-    used for calculating Jones matrices. Rather than broadcasting the objects
-    themselves, the list is composed of strings which provide either a complete
-    description of an analytic beam or the path to a UVBeam readable file. After
-    the broadcast, the beams are initialized from these strings.
-
-    This class provides methods to transform between the string and object
-    representations, and also carries parameters used globally by all UVBeams,
-    including their frequency / angular interpolation options.
+    When used with MPI, this can be initialized simultaneously on all
+    processes such that sky_in is provided only on the root process.
+    The data can then be shared across all processes by running the `share`
+    method.
 
     This behaves just as a normal Python list in terms of indexing, appending, etc.
 
     Attributes
     ----------
-    string_mode : bool
-        Is True if the beams are represented as strings, False if they're objects
+    beam_list : list of pyuvdata.BeamInterface objects
+        The list of BeamInterface objects.
     spline_interp_opts : dict
         Degrees of the bivariate spline for the angular interpolation (passed
         directly to numpy.RectBivariateSpline, e.g. use {'kx' : 2, 'ky' : 2}
@@ -62,111 +57,64 @@ class BeamList:
     Parameters
     ----------
     beam_list : list (optional)
-        A list of UVBeam/AnalyticBeam objects or strings describing beams. If
-        beam_list consists of objects, then the BeamList will be initialized in
-        object mode with string_mode == False. If beam_list consists of strings,
-        the BeamList will be initialized in string mode.
-        Passing in a mixture of strings and objects will error.
-    uvb_read_kwargs : dict (optional)
-        A nested dictionary that can contain parameters to pass to the UVBeam
-        read method for each UVBeam in the beam dict. The top-level keys are
-        beam_id integers, the value for each beam id is a dict with the kwargs
-        specified for each beam. This can include ``file_type`` or any other
-        parameter accepted by the UVBeam.read method. Note that this can in
-        principal overlap with entries in select_params. Entries in uvb_read_kwargs
-        will supercede anything that is also in select_params.
-    select_params : dict (optional)
-        A dictionary that can contain parameters for selecting parts of the beam
-        to read. Example keys include ``freq_range`` and ``za_range``. Note that
-        these will only be used for UVBeam readable files and they apply to all
-        such beams unless they are superceded by uvb_read_kwargs.
+        A list of pyuvdata UVBeam or AnalyticBeam objects.
+    beam_type : str
+        Desired beam type, either "efield" or "power", defaults to "efield".
+    spline_interp_opts : dict
+        Provide options to numpy.RectBivariateSpline. This includes spline
+        order parameters `kx` and `ky`, and smoothing parameter `s`.
+        Only applies UVBeams and for `az_za_simple` interpolation.
+    freq_interp_kind : str
+        Interpolation method to use for frequencies. See scipy.interpolate.interp1d
+        for details. Defaults to "cubic".
+    peak_normalize : bool
+        Option to peak normalize UVBeams in the beam list. This is required to
+        be True for the pyuvsim simulator. Defaults to True.
     check : bool
         Whether to perform a consistency check on the beams (i.e. asserting that several
         of their defining parameters are the same for all beams in the list).
-    force_check : bool
-        The consistency check is only possible for object-beams (not string mode). If
-        `force_check` is True, it will convert beams to object-mode to force the check
-        to run (then convert back to string mode).
-
-    Raises
-    ------
-    ValueError
-        For an invalid beam_list (mix of strings and objects).
-
-    Notes
-    -----
-    If an object beam is added while in string mode, it will be converted to a string
-    before being inserted, and vice versa. ***In order to be converted to a string, a UVBeam
-    needs to have the entry 'beam_path' in its extra_keywords, giving the path to the beam
-    file it came from.***
 
     """
-
-    _float_params = {
-        "sig": "sigma",
-        "diam": "diameter",
-        "reff": "ref_freq",
-        "ind": "spectral_index",
-    }
-
-    string_mode = True
 
     def __init__(
         self,
         beam_list=None,
-        uvb_read_kwargs: dict[str : tuple[float, float]] | None = None,
-        select_params: dict[str : tuple[float, float]] | None = None,
+        *,
+        beam_type: Literal["efield", "power"] = "efield",
         spline_interp_opts: dict[str:int] | None = None,
         freq_interp_kind: str = "cubic",
+        peak_normalize: bool = True,
         check: bool = True,
-        force_check: bool = False,
     ):
         self.spline_interp_opts = spline_interp_opts
         self.freq_interp_kind = freq_interp_kind
-        self._str_beam_list = []
-        self._obj_beam_list = []
+        self.beam_list = []
         if beam_list is not None:
-            if all(isinstance(b, str) for b in beam_list):
-                self._str_beam_list[:] = beam_list[:]
-                self.string_mode = True
-            elif all(not isinstance(b, str) for b in beam_list):
-                self._obj_beam_list[:] = beam_list[:]
-                for beam in self._obj_beam_list:
-                    # always use future shapes
-                    if (
-                        isinstance(beam, UVBeam)
-                        and hasattr(beam, "use_current_array_shapes")
-                        and not beam.future_array_shapes
-                    ):
-                        beam.use_future_array_shapes()
-                self.string_mode = False
-            else:
-                raise ValueError("Invalid beam list: " + str(beam_list))
+            for beam in beam_list:
+                if peak_normalize and isinstance(beam, UVBeam):
+                    beam = beam.copy()
+                    beam.peak_normalize()
+                # turn them into BeamInterface objects
+                self.beam_list.append(BeamInterface(beam, beam_type=beam_type))
 
-        self.uvb_read_kwargs = uvb_read_kwargs or {}
-        self.select_params = select_params or {}
         self.is_consistent = False
-        if check and (not self.string_mode or force_check):
-            # only call the check if it will do something. This avoids an annoying warning.
-            self.check_consistency(force=force_check)
+        if check:
+            self.check_consistency()
 
     def _get_beam_basis_type(self):
-        if self.string_mode:
-            raise ValueError("Cannot get beam basis type from a string-mode BeamList.")
-
         beam_basis = {}
-        for index, bm in enumerate(self):
-            if isinstance(bm, UVBeam):
-                if bm.pixel_coordinate_system not in ["az_za", "healpix"]:
+        for index, bi in enumerate(self):
+            if bi._isuvbeam:
+                if bi.beam.pixel_coordinate_system not in ["az_za", "healpix"]:
                     raise ValueError(
                         "pyuvsim currently only supports UVBeams with 'az_za' or "
                         "'healpix' pixel coordinate systems."
                     )
                 if (
-                    np.all(bm.basis_vector_array[0, 0] == 1)
-                    and np.all(bm.basis_vector_array[0, 1] == 0)
-                    and np.all(bm.basis_vector_array[1, 0] == 0)
-                    and np.all(bm.basis_vector_array[1, 1] == 1)
+                    np.all(bi.beam.basis_vector_array[0, 0] == 1)
+                    and np.all(bi.beam.basis_vector_array[0, 1] == 0)
+                    and np.all(bi.beam.basis_vector_array[1, 0] == 0)
+                    and np.all(bi.beam.basis_vector_array[1, 1] == 1)
                 ):
                     beam_basis[index] = "az_za"
                 else:
@@ -180,19 +128,12 @@ class BeamList:
                 beam_basis[index] = "az_za"
         return beam_basis
 
-    def check_consistency(self, force: bool = False):
+    def check_consistency(self):
         """
         Check the consistency of all beams in the list.
 
         This checks basic parameters of the objects for consistency, eg. the ``beam_type``.
         It is meant to be manually called by the user.
-
-        Parameters
-        ----------
-        force : bool
-            Whether to force the consistency check even if the object is in string
-            mode. This wil convert to to object mode, perform the check, then
-            convert back.
 
         Raises
         ------
@@ -200,27 +141,28 @@ class BeamList:
             If any beam is inconsistent with the rest of the beams.
 
         """
-        if self.string_mode and len(self._str_beam_list) > 0:
-            if not force:
-                warnings.warn(
-                    "Cannot check consistency of a string-mode BeamList! Set force=True"
-                    " to force consistency checking."
-                )
-                return
-            else:
-                self.set_obj_mode(check=True)
-                self.set_str_mode()
-                return
-
         if len(self) == 0:
             return
 
         def check_thing(item):
             if item == "basis":
                 items = self._get_beam_basis_type()
+            elif item == "beam_type":
+                items = {i: bi.beam_type for i, bi in enumerate(self)}
+            elif item == "feed_array":
+                items = {}
+                for i, bi in enumerate(self):
+                    if "e" in bi.beam.feed_array or "n" in bi.beam.feed_array:
+                        feed_map = uvutils.x_orientation_pol_map(bi.beam.x_orientation)
+                        inv_feed_map = {value: key for key, value in feed_map.items()}
+                        items[i] = [inv_feed_map[feed] for feed in bi.beam.feed_array]
+                    else:
+                        items[i] = bi.beam.feed_array
             else:
                 items = {
-                    i: getattr(b, item) for i, b in enumerate(self) if hasattr(b, item)
+                    i: getattr(bi.beam, item)
+                    for i, bi in enumerate(self)
+                    if hasattr(bi.beam, item)
                 }
 
             if not items:
@@ -238,6 +180,7 @@ class BeamList:
 
         check_thing("beam_type")
         check_thing("x_orientation")
+        check_thing("data_normalization")
 
         if self[0].beam_type == "efield":
             check_thing("Nfeeds")
@@ -258,20 +201,39 @@ class BeamList:
         interpolation location.
         """
         all_azza_full_sky = True
-        for beam in self:
-            if isinstance(beam, UVBeam) and beam.pixel_coordinate_system == "az_za":
+        for bi in self:
+            if bi._isuvbeam and bi.beam.pixel_coordinate_system == "az_za":
                 # regular gridding is enforced in UVBeam checking, so can use first diff
-                axis1_diff = np.diff(beam.axis1_array)[0]
-                axis2_diff = np.diff(beam.axis2_array)[0]
+                axis1_diff = np.diff(bi.beam.axis1_array)[0]
+                axis2_diff = np.diff(bi.beam.axis2_array)[0]
                 max_axis_diff = np.max([axis1_diff, axis2_diff])
                 if not (
-                    np.max(beam.axis2_array) >= np.pi / 2.0 - max_axis_diff * 2.0
-                    and np.min(beam.axis1_array) <= max_axis_diff * 2.0
-                    and np.max(beam.axis1_array) >= 2.0 * np.pi - max_axis_diff * 2.0
+                    np.max(bi.beam.axis2_array) >= np.pi / 2.0 - max_axis_diff * 2.0
+                    and np.min(bi.beam.axis1_array) <= max_axis_diff * 2.0
+                    and np.max(bi.beam.axis1_array) >= 2.0 * np.pi - max_axis_diff * 2.0
                 ):
                     all_azza_full_sky = False
                     break
         return all_azza_full_sky
+
+    @property
+    def beam_type(self):
+        """
+        Return the beam_type of all beams in list (if consistent).
+
+        Raises
+        ------
+        BeamConsistencyError
+            If the beams in the list are not consistent with each other.
+
+        """
+        if not self.is_consistent:
+            self.check_consistency()
+
+        if len(self) == 0:
+            return None
+
+        return getattr(self.beam_list[0], "beam_type", None)
 
     @property
     def x_orientation(self):
@@ -285,22 +247,14 @@ class BeamList:
 
         """
         if not self.is_consistent:
-            self.check_consistency(force=True)
+            self.check_consistency()
 
         if len(self) == 0:
             return None
 
-        if self.string_mode:
-            # Can't get xorientation from beams in string mode.
-            # Convert to obj mode, get xorient, and then convert back.
-            self.set_obj_mode()
-            xorient = self.x_orientation
-            self.set_str_mode()
-            return xorient
-
-        for b in self:
-            if hasattr(b, "x_orientation"):
-                xorient = b.x_orientation
+        for bi in self:
+            if hasattr(bi.beam, "x_orientation"):
+                xorient = bi.beam.x_orientation
                 break
         else:
             # None of the constituent beams has defined x_orientation.
@@ -318,9 +272,9 @@ class BeamList:
         return xorient
 
     @property
-    def beam_type(self):
+    def data_normalization(self):
         """
-        Return the beam_type of all beams in list (if consistent).
+        Return the data_normalization of all beams in list (if consistent).
 
         Raises
         ------
@@ -329,218 +283,98 @@ class BeamList:
 
         """
         if not self.is_consistent:
-            self.check_consistency(force=True)
+            self.check_consistency()
 
         if len(self) == 0:
             return None
 
-        return getattr(self._obj_beam_list[0], "beam_type", None)
+        for bi in self:
+            if hasattr(bi.beam, "data_normalization"):
+                data_norm = bi.beam.data_normalization
+                break
+        else:
+            # None of the constituent beams has defined data_normalization.
+            return None
+
+        return data_norm
 
     def __len__(self):
         """Define the length of a BeamList."""
-        # Note that only one of these lists has nonzero length at a given time.
-        return len(self._obj_beam_list) + len(self._str_beam_list)
+        return len(self.beam_list)
 
     def __iter__(self):
         """Get the list as an iterable."""
-        lst = self._str_beam_list if self.string_mode else self._obj_beam_list
-        return iter(lst)
+        return iter(self.beam_list)
 
     def __getitem__(self, ind):
         """Get a particular beam from the list."""
-        if self.string_mode:
-            return self._str_beam_list[ind]
-        return self._obj_beam_list[ind]
+        return self.beam_list[ind]
 
-    def __setitem__(self, ind, value, uvb_read_kwargs=None):
-        """
-        Insert into the beam list.
-
-        Converts objects to strings if in object mode,
-        or vice versa if in string mode.
-
-        """
-        if self.string_mode:
-            self._str_beam_list[ind] = self._obj_to_str(value)
-        else:
-            if uvb_read_kwargs is not None:
-                self.uvb_read_kwargs[ind] = uvb_read_kwargs
-            try:
-                value = self._str_to_obj(ind, value)
-            except FileNotFoundError as err:
-                raise ValueError(f"Invalid file path: {value}") from err
-            self._obj_beam_list[ind] = value
+    def __setitem__(self, ind, value):
+        """Insert into the beam list."""
+        try:
+            self.beam_list[ind] = value
+            # reset the is_consistent flag when changing a value
+            self.is_consistent = False
+        except ValueError as err:
+            self.beam_list.pop()
+            raise err
 
     def __eq__(self, other):
         """Define BeamList equality."""
-        if self.string_mode:
-            return self._str_beam_list == other._str_beam_list
-        return self._obj_beam_list == other._obj_beam_list
+        return self.beam_list == other.beam_list
 
-    def append(self, value, uvb_read_kwargs=None):
-        """
-        Append to the beam list.
-
-        Converts objects to strings if in object mode,
-        or vice versa if in string mode.
-
-        """
-        if self.string_mode:
-            self._str_beam_list.append("")
-        else:
-            self._obj_beam_list.append("")
+    def append(self, beam):
+        """Append to the beam list."""
+        if self.data_normalization == "peak" and isinstance(beam, UVBeam):
+            beam.peak_normalize()
+        bi = BeamInterface(beam, beam_type=self.beam_type)
+        self.beam_list.append("")
         try:
-            self.__setitem__(-1, value, uvb_read_kwargs=uvb_read_kwargs)
+            self.__setitem__(-1, bi)
         except ValueError as err:
-            if self.string_mode:
-                # This line is hard to cover with a test. I've verified that I
-                # can get here, but I when I wrap it in  pytest.raises it stops
-                # on the earlier error.
-                self._str_beam_list.pop()  # pragma: no cover
-            else:
-                self._obj_beam_list.pop()
+            self.beam_list.pop()
             raise err
 
-    def _str_to_obj(self, beam_id, beam_model, use_shared_mem=False):
-        """Convert beam strings to objects."""
-        if isinstance(beam_model, AnalyticBeam | UVBeam):
-            return beam_model
-        if beam_model.startswith("analytic"):
-            bspl = beam_model.split("_")
-            model = bspl[1]
-
-            to_set = {}
-            for extra in bspl[2:]:
-                par, val = extra.split("=")
-                full = self._float_params[par]
-                to_set[full] = float(val)
-
-            return AnalyticBeam(model, **to_set)
-
-        if use_shared_mem and mpi is None:
-            raise ImportError(
-                "You need mpi4py to use shared memory. Either call this method with "
-                "use_shared_mem=False or install mpi4py. You can install it by running "
-                "pip install pyuvsim[sim] or pip install pyuvsim[all] if you also want "
-                "the line_profiler installed."
-            )
-
-        path = beam_model  # beam_model = path to UVBeam readable file
-        uvb = UVBeam()
-        read_kwargs = {**self.select_params, **self.uvb_read_kwargs.get(beam_id, {})}
-
-        # always use future shapes if it's an option
-        if hasattr(uvb, "use_current_array_shapes"):
-            read_kwargs["use_future_array_shapes"] = True
-
-        if (
-            (use_shared_mem and mpi.world_comm is not None and mpi.rank == 0)
-            or not use_shared_mem
-            or mpi is None
-            or mpi.world_comm is None
-        ):
-            try:
-                uvb.read(path, **read_kwargs)
-            except ValueError:
-                # If file type is not recognized, assume beamfits,
-                # which was originally the only option.
-                uvb.read_beamfits(path, **read_kwargs)
-                warnings.warn(weird_beamfits_extension_warning, DeprecationWarning)
-            uvb.peak_normalize()
-
-        if use_shared_mem and (mpi.world_comm is not None):
-            for key, attr in uvb.__dict__.items():
-                if not isinstance(attr, parameter.UVParameter):
-                    continue
-                if key == "_data_array":
-                    uvb.__dict__[key].value = mpi.shared_mem_bcast(attr.value, root=0)
-                else:
-                    uvb.__dict__[key].value = mpi.world_comm.bcast(attr.value, root=0)
-            mpi.world_comm.Barrier()
-        uvb.extra_keywords["beam_path"] = path
-        return uvb
-
-    def _obj_to_str(self, beam_model):
-        """Convert beam objects to strings that may generate them."""
-        if isinstance(beam_model, str):
-            return beam_model
-        if isinstance(beam_model, AnalyticBeam):
-            btype = beam_model.type
-
-            bm_str = "analytic_" + btype
-            for abbrv, full in self._float_params.items():
-                val = getattr(beam_model, full)
-                if val is not None:
-                    bm_str += "_" + abbrv + "=" + str(val)
-            return bm_str
-
-        # If not AnalyticBeam, it's UVBeam.
-        try:
-            path = beam_model.extra_keywords["beam_path"]
-        except KeyError as ke:
-            raise ValueError(
-                "Need to set 'beam_path' key in extra_keywords for UVBeam objects."
-            ) from ke
-
-        return path
-
-    def set_str_mode(self):
+    def share(self, root=0):
         """
-        Convert object beams to their strings representations.
+        Share across MPI processes (requires mpi4py to use).
 
-        Convert AnalyticBeam objects to a string representation
-        that can be used to generate them. Replaces UVBeam objects with
-        the path to the UVBeam readable file they originate from.
-
-        Any UVBeams in the list must have the path to their beam files
-        stored as 'beam_path' in the `extra_keywords` dictionary.
-
-        Sets :attr:`~.string_mode` to True.
-
-        Raises
-        ------
-        ValueError:
-            If UVBeam objects in the list have inconsistent UVBeam parameters.
-        ValueError:
-            If any UVBeam objects lack a "beam_path" keyword in the "extra_keywords"
-            attribute, specifying the path to the UVBeam readable file that generates it.
-
-        """
-        if self._obj_beam_list != []:
-            # Convert object beams to string definitions
-            self._str_beam_list = [
-                self._obj_to_str(bobj) for bobj in self._obj_beam_list
-            ]
-        self._obj_beam_list = []
-        self.string_mode = True
-
-    def set_obj_mode(self, use_shared_mem: bool = False, check: bool = False):
-        """
-        Initialize AnalyticBeam and UVBeam objects from string representations.
-
-        Sets :attr:`~.string_mode` to False.
+        All attributes are put in shared memory.
 
         Parameters
         ----------
-        use_shared_mem : bool
-            Whether to use shared memory for the beam data.
-        check : bool
-            Whether to perform consistency checks on all the beams in the list after
-            conversion to object mode.
+        root : int
+            Root rank on COMM_WORLD, from which data will be broadcast.
 
         """
-        if self._str_beam_list != []:
-            beam_list = []
-            for bid, bstr in enumerate(self._str_beam_list):
-                beam_list.append(
-                    self._str_to_obj(bid, bstr, use_shared_mem=use_shared_mem)
-                )
-            self._obj_beam_list = beam_list
-        self._str_beam_list = []
-        self.string_mode = False
+        if mpi is None:
+            raise ImportError(
+                "You need mpi4py to use this method. "
+                "Install it by running pip install pyuvsim[sim] "
+                "or pip install pyuvsim[all] if you also want the "
+                "line_profiler installed."
+            )
+        mpi.start_mpi()
 
-        if check:
+        if not self.is_consistent:
             self.check_consistency()
+
+        for bi in self:
+            if bi._isuvbeam:
+                # Get list of attributes that are set.
+                for key, attr in bi.beam.__dict__.items():
+                    if not isinstance(attr, parameter.UVParameter):
+                        continue
+                    if key == "_data_array":
+                        bi.beam.__dict__[key].value = mpi.shared_mem_bcast(
+                            attr.value, root=0
+                        )
+                    else:
+                        bi.beam.__dict__[key].value = mpi.world_comm.bcast(
+                            attr.value, root=0
+                        )
+        mpi.world_comm.Barrier()
 
 
 class Telescope:
@@ -561,12 +395,27 @@ class Telescope:
 
     """
 
-    def __init__(self, telescope_name, telescope_location, beam_list):
-        # telescope location (EarthLocation object)
+    def __init__(
+        self,
+        telescope_name: str,
+        telescope_location: EarthLocation,
+        beam_list: BeamList,
+    ):
+        allowed_location_types = [EarthLocation]
+        if hasmoon:
+            allowed_location_types.append(MoonLocation)
+
+        if not isinstance(telescope_location, tuple(allowed_location_types)):
+            raise ValueError(
+                "location must be an EarthLocation object or a lunarsky.MoonLocation object"
+            )
         self.location = telescope_location
         self.name = telescope_name
 
-        # list of UVBeam objects, length of number of unique beams
+        # BeamList object, length of number of unique beams
+        if not isinstance(beam_list, BeamList):
+            raise ValueError("beam_list must be a BeamList object")
+
         self.beam_list = beam_list
 
     def __eq__(self, other):

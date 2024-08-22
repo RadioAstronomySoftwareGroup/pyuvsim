@@ -21,10 +21,10 @@ def test_jones_set_spline(cst_beam, hera_loc):
     telconfig["spline_interp_opts"] = {"kx": 1, "ky": 1}
 
     beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(1), telconfig)
-    beam_list.set_obj_mode()
     beam_list.append(beam0)
+    assert len(beam_list) == 2
 
-    assert beam0 is beam_list[-1]
+    assert beam0 is beam_list[-1].beam
 
     # Make antenna that uses beam #1
     antenna = pyuvsim.Antenna("ant1", 1, np.array([0, 10, 0]), 1)
@@ -84,8 +84,7 @@ def test_jones_set_interp(cst_beam, hera_loc):
     array_location = hera_loc
 
     beam = cst_beam.copy()
-
-    beam_list = pyuvsim.BeamList([beam])
+    beam_list = pyuvsim.BeamList(beam_list=[beam])
     antenna1 = pyuvsim.Antenna("ant1", 1, np.array([0, 10, 0]), 0)
     array = pyuvsim.Telescope("telescope_name", array_location, beam_list)
     source_altaz = np.array([[0.0], [np.pi / 4.0]])
