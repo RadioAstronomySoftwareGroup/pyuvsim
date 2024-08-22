@@ -96,6 +96,7 @@ jobs:
         run: |
           pip install -e .[test]
           pip install pytest-xdist
+          pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata@analytic_beam_refactor
 
       - name: Environment Info
         run: |
