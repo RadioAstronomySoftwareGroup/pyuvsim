@@ -2,23 +2,15 @@
 # Licensed under the 3-clause BSD License
 
 import os
-import shutil
 import warnings
 
 import numpy as np
 import pytest
-import pyuvdata
-from packaging import version  # packaging is installed with setuptools
 from pyuvdata import UVData
+from pyuvdata.testing import check_warnings
 
 from pyuvsim import utils as simutils
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-
-try:
-    from pyuvdata.testing import check_warnings
-except ImportError:
-    # this can be removed once we require pyuvdata >= v3.0
-    from pyuvdata.tests import check_warnings
 
 triangle_uvfits_file = os.path.join(SIM_DATA_PATH, "28m_triangle_10time_10chan.uvfits")
 
@@ -116,11 +108,6 @@ def test_file_namer(tmpdir, ext):
     assert new_filepath.endswith(f"_111{ext}")
 
 
-# TODO: remove the "LST values stored" filter when pyuvdata > 2.4
-@pytest.mark.filterwarnings("ignore:LST values stored in this file are not")
-@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-@pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 @pytest.mark.parametrize("save_format", [None, "uvfits", "miriad", "uvh5", "ms"])
 def test_write_uvdata(save_format, tmpdir):
     """Test function that defines filenames from parameter dict"""
@@ -128,8 +115,6 @@ def test_write_uvdata(save_format, tmpdir):
         pytest.importorskip("casacore")
 
     uv = UVData.from_file(triangle_uvfits_file)
-    if hasattr(uv, "use_current_array_shapes"):
-        uv.use_future_array_shapes()
 
     ofname = str(tmpdir.join("test_file"))
     filing_dict = {"outfile_name": ofname}
@@ -147,34 +132,10 @@ def test_write_uvdata(save_format, tmpdir):
     else:
         warn_type = None
         warn_str = ""
-    try:
-        with check_warnings(warn_type, match=warn_str):
-            expected_ofname = simutils.write_uvdata(
-                uv, filing_dict, return_filename=True, out_format=save_format
-            )
-    except AssertionError:
-        # handling for old pyuvdata versions
-        if save_format in ["miriad", "ms"]:
-            shutil.rmtree(expected_ofname)
-        else:
-            os.remove(expected_ofname)
-        if save_format is not None:
-            warn_type = []
-            warn_str = []
-        if version.parse(pyuvdata.__version__) > version.parse("2.4.0"):
-            warn_type += [UserWarning]
-            warn_str += [
-                "The lst_array is not self-consistent with the time_array and "
-                "telescope location. Consider recomputing with the "
-                "`set_lsts_from_time_array` method."
-            ]
-        if len(warn_type) < 1:
-            warn_type = None
-            warn_str = ""
-        with check_warnings(warn_type, match=warn_str):
-            expected_ofname = simutils.write_uvdata(
-                uv, filing_dict, return_filename=True, out_format=save_format
-            )
+    with check_warnings(warn_type, match=warn_str):
+        expected_ofname = simutils.write_uvdata(
+            uv, filing_dict, return_filename=True, out_format=save_format
+        )
 
     ofname = os.path.join(".", ofname)
 
@@ -188,23 +149,14 @@ def test_write_uvdata(save_format, tmpdir):
         assert ofname == expected_ofname
 
 
-# TODO: remove the "LST values stored" filter when pyuvdata > 2.4
-@pytest.mark.filterwarnings("ignore:LST values stored in this file are not")
-@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 @pytest.mark.filterwarnings("ignore:writing default values for restfreq, vsource")
-@pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 @pytest.mark.parametrize("save_format", [None, "uvfits", "miriad", "uvh5", "ms"])
 def test_write_uvdata_clobber(save_format, tmpdir):
     """Test overwriting a uvdata object yields the expected results."""
     if save_format == "ms":
         pytest.importorskip("casacore")
-        if not hasattr(UVData, "write_ms"):
-            pytest.skip()
 
     uv = UVData.from_file(triangle_uvfits_file)
-    if hasattr(uv, "use_current_array_shapes"):
-        uv.use_future_array_shapes()
 
     uv.set_lsts_from_time_array()
     filing_dict = {
@@ -227,30 +179,16 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         warn_type = None
         warn_str = ""
 
-    try:
-        with check_warnings(warn_type, match=warn_str), warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "`np.int` is a deprecated alias")
-            warnings.filterwarnings("ignore", "`np.bool` is a deprecated alias")
-            expected_ofname = simutils.write_uvdata(
-                uv, filing_dict, return_filename=True, out_format=save_format
-            )
-    except AssertionError:
-        # handling for old pyuvdata versions
-        # should only get here for miriad
-        assert save_format == "miriad"
-        shutil.rmtree(expected_ofname)
-        warn_type = None
-        warn_str = ""
-        with check_warnings(warn_type, match=warn_str):
-            expected_ofname = simutils.write_uvdata(
-                uv, filing_dict, return_filename=True, out_format=save_format
-            )
+    with check_warnings(warn_type, match=warn_str), warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "`np.int` is a deprecated alias")
+        warnings.filterwarnings("ignore", "`np.bool` is a deprecated alias")
+        expected_ofname = simutils.write_uvdata(
+            uv, filing_dict, return_filename=True, out_format=save_format
+        )
 
     assert os.path.exists(expected_ofname)
 
     uv2 = UVData.from_file(expected_ofname)
-    if hasattr(uv2, "use_current_array_shapes"):
-        uv2.use_future_array_shapes()
 
     if save_format == "ms":
         # MS adds some stuff to history & extra keywords
@@ -274,15 +212,7 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     elif save_format == "uvfits":
         uv.rdate = uv2.rdate
 
-    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
-        uv2._consolidate_phase_center_catalogs(other=uv, ignore_name=True)
-    else:
-        uv2._set_multi_phase_center(preserve_phase_center_info=True)
-        if 1 not in uv2.phase_center_catalog:
-            uv2._update_phase_center_id(0, 1)
-        uv2.phase_center_catalog = uv.phase_center_catalog
-        uv2.antenna_diameters = None
-        uv2.reorder_blts()
+    uv2._consolidate_phase_center_catalogs(other=uv, ignore_name=True)
 
     assert uv == uv2
 
@@ -293,8 +223,6 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         simutils.write_uvdata(uv, filing_dict, out_format=save_format)
 
     uv2.read(expected_ofname)
-    if hasattr(uv2, "use_current_array_shapes"):
-        uv2.use_future_array_shapes()
 
     if save_format == "ms":
         # MS adds some stuff to history & extra keywords
@@ -303,27 +231,12 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         # for some reason, the vis_units also change. This is more problematic...
         uv2.vis_units = uv.vis_units
 
-    if version.parse(pyuvdata.__version__) > version.parse("2.2.12"):
-        uv2._consolidate_phase_center_catalogs(other=uv, ignore_name=True)
-    else:
-        uv2._set_multi_phase_center(preserve_phase_center_info=True)
-        if 1 not in uv2.phase_center_catalog:
-            uv2._update_phase_center_id(0, 1)
-        uv2.phase_center_catalog = uv.phase_center_catalog
-        uv2.antenna_diameters = None
-        uv2.reorder_blts()
+    uv2._consolidate_phase_center_catalogs(other=uv, ignore_name=True)
     assert uv2 == uv
 
 
-# TODO: remove the "LST values stored" filter when pyuvdata > 2.4
-@pytest.mark.filterwarnings("ignore:LST values stored in this file are not")
-@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-@pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 def test_write_fix_autos(tmpdir):
     uv = UVData.from_file(triangle_uvfits_file)
-    if hasattr(uv, "use_current_array_shapes"):
-        uv.use_future_array_shapes()
 
     uv.set_lsts_from_time_array()
 
@@ -341,16 +254,9 @@ def test_write_fix_autos(tmpdir):
         simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format="uvh5")
 
 
-# TODO: remove the "LST values stored" filter when pyuvdata > 2.4
-@pytest.mark.filterwarnings("ignore:LST values stored in this file are not")
-@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-@pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 def test_write_error_with_no_format(tmpdir):
     """Test write_uvdata will error if no format is given."""
     uv = UVData.from_file(triangle_uvfits_file)
-    if hasattr(uv, "use_current_array_shapes"):
-        uv.use_future_array_shapes()
 
     ofname = str(tmpdir.join("test_file"))
     filing_dict = {"outfile_name": ofname}
@@ -358,16 +264,9 @@ def test_write_error_with_no_format(tmpdir):
         simutils.write_uvdata(uv, filing_dict, return_filename=True, out_format="")
 
 
-# TODO: remove the "LST values stored" filter when pyuvdata > 2.4
-@pytest.mark.filterwarnings("ignore:LST values stored in this file are not")
-@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-@pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 def test_file_format_in_filing_dict(tmpdir):
     """Test file is written out when output_format is set in filing dict."""
     uv = UVData.from_file(triangle_uvfits_file)
-    if hasattr(uv, "use_current_array_shapes"):
-        uv.use_future_array_shapes()
 
     ofname = str(tmpdir.join("test_file"))
     filing_dict = {"outfile_name": ofname}

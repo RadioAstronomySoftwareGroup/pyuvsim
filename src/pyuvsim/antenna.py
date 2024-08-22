@@ -4,6 +4,7 @@
 
 import astropy.units as units
 import numpy as np
+import numpy.typing as npt
 
 from . import utils as simutils
 from .telescope import BeamList
@@ -29,7 +30,12 @@ class Antenna:
 
     """
 
-    def __init__(self, name, number, enu_position, beam_id):
+    def __init__(
+        self, name: str, number: int, enu_position: npt.NDArray[float], beam_id: int
+    ):
+        assert isinstance(name, str), "name must be a string"
+        assert isinstance(number, int | np.int32 | np.int64), "number must be an int"
+        assert isinstance(beam_id, int | np.int32 | np.int64), "beam_id must be an int"
         self.name = name
         self.number = number
         self.pos_enu = enu_position * units.m
@@ -66,8 +72,8 @@ class Antenna:
             Set the angular interpolation function on the :class:`pyuvdata.UVBeam`.
             See :meth:`pyuvdata.UVBeam.interp` for options.
         freq_interp_kind : str
-            Interpolation method for frequencies. Note -- This overrides whatever method
-            may be set on the :class:`pyuvdata.UVBeam` or BeamList objects.
+            Interpolation method for frequencies. See :meth:`pyuvdata.UVBeam.interp`
+            for options.
         beam_interp_check : bool
             Option to check whether the beam covers all the skymodel az/za values
             to ensure that they are covered by the intrinsic data array. Checking
@@ -91,10 +97,21 @@ class Antenna:
         else:
             freq = np.array([frequency])
 
-        beam = array.beam_list[self.beam_id]
+        if self.beam_id not in range(len(array.beam_list)):
+            raise ValueError(
+                f"This antenna beam_id is {self.beam_id}, which is too large "
+                f"for the beam_list, which has length {len(array.beam_list)}."
+            )
+        if array.beam_list.beam_type != "efield":
+            raise ValueError("Beam type must be efield!")
 
-        if beam.data_normalization != "peak":
-            beam.peak_normalize()
+        if (
+            array.beam_list.data_normalization is not None
+            and array.beam_list.data_normalization != "peak"
+        ):
+            raise ValueError("UVBeams must be peak normalized.")
+
+        bi = array.beam_list[self.beam_id]
 
         interp_kwargs = {
             "az_array": source_az,
@@ -121,7 +138,7 @@ class Antenna:
         if freq_interp_kind is not None:
             interp_kwargs["freq_interp_kind"] = freq_interp_kind
 
-        interp_data, _ = beam.interp(**interp_kwargs)
+        interp_data = bi.compute_response(**interp_kwargs)
 
         Ncomponents = source_za.shape[-1]
 

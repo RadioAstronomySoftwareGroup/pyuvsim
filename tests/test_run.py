@@ -9,32 +9,23 @@ import numpy as np
 import pyradiosky
 import pytest
 import pyuvdata
+import pyuvdata.utils.history as history_utils
 import yaml
 from astropy import units
+from astropy.constants import c as speed_of_light
 from astropy.coordinates import Latitude, Longitude
 from astropy.time import Time
 from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
-from pyuvdata import UVData
+from pyuvdata import ShortDipoleBeam, UVData
+from pyuvdata.testing import check_warnings
 
 import pyuvsim
-from pyuvsim.analyticbeam import c_ms
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.telescope import BeamList
 
-try:
-    import pyuvdata.utils.history as history_utils
-    from pyuvdata.testing import check_warnings
-except ImportError:
-    # this can be removed once we require pyuvdata >= v3.0
-    import pyuvdata.utils as history_utils
-    from pyuvdata.tests import check_warnings
-
+c_ms = speed_of_light.to("m/s").value
 
 pytest.importorskip("mpi4py")  # noqa
-
-future_shapes_options = [True]
-if hasattr(UVData(), "use_current_array_shapes"):
-    future_shapes_options += [False]
 
 
 @pytest.fixture
@@ -50,7 +41,6 @@ def goto_tempdir(tmpdir):
 
 
 @pytest.mark.filterwarnings("ignore:antenna_diameters are not set")
-@pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 @pytest.mark.filterwarnings("ignore:Fixing auto-correlations to be be real-only")
 @pytest.mark.parametrize(
     "paramfile", ["param_1time_1src_testcat.yaml", "param_1time_1src_testvot.yaml"]
@@ -61,8 +51,6 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # Compare to reference files.
     uv_ref = UVData()
     uv_ref.read(os.path.join(SIM_DATA_PATH, "testfile_singlesource.uvh5"))
-    if hasattr(uv_ref, "use_current_array_shapes"):
-        uv_ref.use_future_array_shapes()
 
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", paramfile)
     # This test obsparam file has "single_source.txt" as its catalog.
@@ -76,8 +64,6 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     ofilepath = os.path.join(path, "tempfile.uvfits")
 
     uv_new = UVData.from_file(ofilepath)
-    if hasattr(uv_new, "use_current_array_shapes"):
-        uv_new.use_future_array_shapes()
 
     uv_new.unproject_phase(use_ant_pos=True)
     uv_new._consolidate_phase_center_catalogs(other=uv_ref)
@@ -193,7 +179,7 @@ def test_analytic_diffuse(model, tol, tmpdir):
 def test_powerbeam_sim(cst_beam):
     new_cst = copy.deepcopy(cst_beam)
     new_cst.efield_to_power()
-    beams = BeamList([new_cst] * 4)
+    beams = BeamList([new_cst] * 4, beam_type="power")
     cfg = os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
     input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(cfg, return_beams=False)
     sky_model = pyuvsim.simsetup.initialize_catalog_from_params(
@@ -252,9 +238,8 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
         with open(new_telescope_param_file, "w") as yfile:
             yaml.dump(tele_param_dict, yfile, default_flow_style=False)
 
-        n_beam_warnings = 3
-        warn_type = [DeprecationWarning] * n_beam_warnings
-        msg = [pyuvsim.telescope.weird_beamfits_extension_warning] * n_beam_warnings
+        warn_type = [DeprecationWarning]
+        msg = [pyuvsim.simsetup.weird_beamfits_extension_warning]
 
         params = pyuvsim.simsetup._config_str_to_dict(new_param_file)
     else:
@@ -266,8 +251,6 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
         pyuvsim.run_uvsim(params, return_uv=True)
 
 
-@pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 @pytest.mark.parametrize("spectral_type", ["flat", "subband", "spectral_index"])
 def test_run_gleam_uvsim(spectral_type):
     params = pyuvsim.simsetup._config_str_to_dict(
@@ -278,28 +261,17 @@ def test_run_gleam_uvsim(spectral_type):
     params["sources"].pop("max_flux")
 
     uv_out = pyuvsim.run_uvsim(params, return_uv=True)
-    if hasattr(uv_out, "telescope"):
-        assert uv_out.telescope.name == "Triangle"
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        assert uv_out.telescope_name == "Triangle"
+    assert uv_out.telescope.name == "Triangle"
 
     file_name = f"gleam_triangle_{spectral_type}.uvh5"
     uv_in = UVData.from_file(os.path.join(SIM_DATA_PATH, file_name))
-    # This can be removed when we require pyuvdata >= 3.0
-    if hasattr(uv_in, "use_current_array_shapes"):
-        uv_in.use_future_array_shapes()
     uv_in.conjugate_bls()
     uv_in.reorder_blts()
     uv_in.integration_time = np.full_like(uv_in.integration_time, 11.0)
     # This just tests that we get the same answer as an earlier run, not that
     # the data are correct (that's covered in other tests)
     uv_out.history = uv_in.history
-    if hasattr(uv_out, "telescope"):
-        assert uv_in.telescope._location == uv_out.telescope._location
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        assert uv_in._telescope_location == uv_out._telescope_location
+    assert uv_in.telescope._location == uv_out.telescope._location
     assert uv_in == uv_out
 
 
@@ -360,29 +332,23 @@ def test_pol_error():
     hera_uv = UVData()
 
     hera_uv.polarizations = ["xx"]
+    beam_list = BeamList([ShortDipoleBeam()])
 
     with pytest.raises(ValueError, match="input_uv must have XX,YY,XY,YX polarization"):
-        pyuvsim.run_uvdata_uvsim(
-            hera_uv, ["beamlist"], {}, catalog=pyuvsim.SkyModelData()
-        )
+        pyuvsim.run_uvdata_uvsim(hera_uv, beam_list, {}, catalog=pyuvsim.SkyModelData())
 
 
 def test_input_uv_error():
     with pytest.raises(TypeError, match="input_uv must be UVData object"):
-        pyuvsim.run_uvdata_uvsim(None, None, {}, catalog=pyuvsim.SkyModelData())
+        pyuvsim.run_uvdata_uvsim(
+            None, BeamList([ShortDipoleBeam()]), {}, catalog=pyuvsim.SkyModelData()
+        )
 
 
-# several of these filters should be removed once we require pyuvdata>=3.0
 @pytest.mark.filterwarnings("ignore:Setting the location attribute post initialization")
-@pytest.mark.filterwarnings("ignore:This method will be removed in version 3.0")
-@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
-@pytest.mark.filterwarnings("ignore:Telescope apollo11 is not in known_telescopes.")
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-@pytest.mark.parametrize("future_shapes", future_shapes_options)
 @pytest.mark.parametrize("selenoid", ["SPHERE", "GSFC", "GRAIL23", "CE-1-LAM-GEO"])
-def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
+def test_sim_on_moon(goto_tempdir, selenoid):
     pytest.importorskip("lunarsky")
-    from lunarsky import MoonLocation
     from spiceypy.utils.exceptions import SpiceUNKNOWNFRAME
 
     param_filename = os.path.join(
@@ -420,11 +386,7 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
         param_dict, return_beams=True
     )
-    if hasattr(uv_obj, "telescope"):
-        assert uv_obj.telescope.location.ellipsoid == selenoid
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        assert uv_obj._telescope_location.ellipsoid == selenoid
+    assert uv_obj.telescope.location.ellipsoid == selenoid
 
     # set the filename to make sure it ends up in the history,
     # remove the parameter file info from extra_keywords
@@ -437,14 +399,7 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
 
     uv_obj.select(times=uv_obj.time_array[0])
 
-    if hasattr(uv_obj, "telescope"):
-        tranquility_base = uv_obj.telescope.location
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        tranquility_base = MoonLocation.from_selenocentric(
-            *uv_obj.telescope_location, "meter"
-        )
-        tranquility_base.ellipsoid = selenoid
+    tranquility_base = uv_obj.telescope.location
 
     time = Time(uv_obj.time_array[0], format="jd", scale="utc")
     sources, _ = pyuvsim.create_mock_catalog(
@@ -455,8 +410,6 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
         return_data=True,
     )
     # Run simulation.
-    if not future_shapes:
-        uv_obj.use_current_array_shapes()
     try:
         uv_out = pyuvsim.uvsim.run_uvdata_uvsim(
             uv_obj, beam_list, beam_dict, catalog=sources, quiet=True
@@ -471,11 +424,7 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
     assert history_utils._check_history_version(uv_out.history, "Npus =")
 
     assert uv_out.extra_keywords["world"] == "moon"
-    if hasattr(uv_out, "telescope"):
-        assert uv_out.telescope.location.ellipsoid == selenoid
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        assert uv_out._telescope_location.ellipsoid == selenoid
+    assert uv_out.telescope.location.ellipsoid == selenoid
     assert np.allclose(uv_out.data_array[:, :, 0], 0.5)
 
     # Lunar Frame Roundtripping
@@ -485,22 +434,12 @@ def test_sim_on_moon(future_shapes, goto_tempdir, selenoid):
     )
     uv_compare = UVData()
     uv_compare.read(uv_filename)
-    if hasattr(uv_compare, "use_current_array_shapes") and future_shapes:
-        uv_compare.use_future_array_shapes()
-    if hasattr(uv_obj, "telescope"):
-        assert uv_out.telescope._location == uv_compare.telescope._location
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        assert np.allclose(uv_out.telescope_location, uv_compare.telescope_location)
-        assert uv_out._telescope_location.frame == uv_compare._telescope_location.frame
-        assert uv_compare._telescope_location.ellipsoid == selenoid
+    assert uv_out.telescope._location == uv_compare.telescope._location
 
     # Cleanup
     os.remove(uv_filename)
 
 
-@pytest.mark.filterwarnings("ignore:This method will be removed in version 3.0")
-@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 @pytest.mark.parametrize("selenoid", ["SPHERE", "GSFC", "GRAIL23", "CE-1-LAM-GEO"])
 def test_lunar_gauss(goto_tempdir, selenoid):
     pytest.importorskip("lunarsky")
@@ -550,11 +489,7 @@ def test_lunar_gauss(goto_tempdir, selenoid):
     except SpiceUNKNOWNFRAME as err:
         pytest.skip("SpiceUNKNOWNFRAME error: " + str(err))
 
-    if hasattr(uv_out, "telescope"):
-        assert uv_out.telescope.location.ellipsoid == selenoid
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        assert uv_out._telescope_location.ellipsoid == selenoid
+    assert uv_out.telescope.location.ellipsoid == selenoid
 
     # Skymodel and update positions
 
@@ -568,11 +503,7 @@ def test_lunar_gauss(goto_tempdir, selenoid):
         frame="fk5",
     )
 
-    if hasattr(uv_out, "telescope"):
-        pos = uv_out.telescope.location_lat_lon_alt_degrees
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        pos = uv_out.telescope_location_lat_lon_alt_degrees
+    pos = uv_out.telescope.location_lat_lon_alt_degrees
 
     # Creating the analytical gaussian
     Alt = np.zeros(uv_out.Ntimes)
