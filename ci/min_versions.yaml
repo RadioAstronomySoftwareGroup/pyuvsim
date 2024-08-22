@@ -14,7 +14,7 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-xdist
-  - pyuvdata==2.4.3
+  - pyuvdata==3.0
   - pyyaml==5.4.1
   - scipy==1.8.*
   - setuptools_scm==8.1
@@ -22,3 +22,4 @@ dependencies:
     - pyradiosky==0.2.0
     - lunarsky==0.2.2
     - git+https://github.com/aelanman/analytic_diffuse
+    - git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata@analytic_beam_refactor
