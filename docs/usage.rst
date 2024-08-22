@@ -3,19 +3,24 @@
 Running a simulation
 ====================
 
-``pyuvsim`` takes a UVData object, instrument configuration settings, and a source
-catalog and effectively "fills" the UVData object with simulated data.
+``pyuvsim`` takes instrument and observation configuration settings and a source
+catalog and produces a UVData object with simulated data.
+
 The function ``uvsim.run_pyuvsim`` in uvsim.py accepts as input a path to a yaml
-``obsparam`` file and writes out the data to ``uvfits``, ``miriad``, or ``uvh5`` format.
+``obsparam`` file which specifies all the required configuration information and
+writes out the data to ``uvfits``, ``miriad``, or ``uvh5`` format.
 Optionally, it can also skip writing the data out and just return a ``UVData`` object
 filled with simulated data. The default behavior is to write to ``uvh5``.
 
 This is demonstrated in more detail in ``run_param_pyuvsim.py`` in the scripts directory.
 See :doc:`parameter_files` for information on the parameter files.
 
-Under the hood, pyuvsim generates a ``pyuvdata.UVData`` object without data and then
-fills it with simulated data. The function ``pyuvsim.run_uvdata_uvsim`` provides this
-lower-level functionality if needed.
+Under the hood, pyuvsim uses all the configuartion information to generate a
+``pyuvdata.UVData`` object without data and then fills it with simulated data.
+Optionally, the user can instead provide a UVData object along with the various
+beam objects (UVBeam or AnalyticBeam objects) and a dict identifying which beam
+should be used for each antenna directly to the lower level function,
+``pyuvsim.run_uvdata_uvsim``, instead of providing the configuration files.
 
 Using MPI
 ^^^^^^^^^

@@ -7,7 +7,6 @@ import contextlib
 import os
 import pickle as pkl
 import re
-import warnings
 from subprocess import DEVNULL, CalledProcessError, TimeoutExpired, check_output
 
 import pytest
@@ -230,26 +229,18 @@ def cst_beam():
 
     cst_files = ["HERA_NicCST_150MHz.txt", "HERA_NicCST_123MHz.txt"]
     beam_files = [os.path.join(DATA_PATH, "NicCSTbeams", f) for f in cst_files]
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", "The shapes of several attributes will be changing"
-        )
-        beam.read_cst_beam(
-            beam_files,
-            beam_type="efield",
-            frequency=freqs,
-            telescope_name="HERA",
-            feed_name="PAPER",
-            feed_version="0.1",
-            feed_pol=["x"],
-            model_name="E-field pattern - Rigging height 4.9m",
-            model_version="1.0",
-        )
-    if hasattr(beam, "use_current_array_shapes"):
-        beam.use_future_array_shapes()
+    beam.read_cst_beam(
+        beam_files,
+        beam_type="efield",
+        frequency=freqs,
+        telescope_name="HERA",
+        feed_name="PAPER",
+        feed_version="0.1",
+        feed_pol=["x"],
+        model_name="E-field pattern - Rigging height 4.9m",
+        model_version="1.0",
+    )
     beam.x_orientation = "east"
-    if hasattr(beam, "_interpolation_function"):
-        beam.interpolation_function = "az_za_simple"
     beam.peak_normalize()
     return beam
 

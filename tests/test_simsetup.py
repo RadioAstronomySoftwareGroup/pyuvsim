@@ -13,14 +13,16 @@ from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, SkyCo
 from astropy.time import Time
 from pyradiosky import SkyModel
 from pyradiosky.data import DATA_PATH as SKY_DATA_PATH
-from pyuvdata import UVBeam, UVData
+from pyuvdata import (
+    AiryBeam,
+    GaussianBeam,
+    ShortDipoleBeam,
+    UniformBeam,
+    UVBeam,
+    UVData,
+)
 from pyuvdata.data import DATA_PATH as UV_DATA_PATH
-
-try:
-    from pyuvdata.testing import check_warnings
-except ImportError:
-    # this can be removed once we require pyuvdata >= v3.0
-    from pyuvdata.tests import check_warnings
+from pyuvdata.testing import check_warnings
 
 try:
     from lunarsky import MoonLocation, Time as LTime
@@ -281,12 +283,6 @@ def test_mock_diffuse_maps(modname, modkwargs, hera_loc, apollo_loc, location):
     np.testing.assert_allclose(cat.stokes[0, 0].to_value("K"), vals, rtol=0, atol=1e-12)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:LST values stored in this file are not self-consistent"
-)
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
-@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
-@pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 @pytest.mark.parametrize(
     ("horizon_buffer", "pass_time", "pass_array_loc", "pass_uv", "return_catname"),
     [
@@ -300,23 +296,15 @@ def test_initialize_catalog_from_params(
 ):
     # Pass in parameter dictionary as dict
     uv_in = UVData.from_file(triangle_uvfits_file)
-    if hasattr(uv_in, "use_current_array_shapes"):
-        uv_in.use_future_array_shapes()
 
     source_dict = {"catalog": "mock", "mock_arrangement": "zenith", "Nsrcs": 5}
     if horizon_buffer:
         source_dict["horizon_buffer"] = 0.04364
 
     if pass_array_loc:
-        if hasattr(uv_in, "telescope"):
-            source_dict["array_location"] = ",".join(
-                [str(coord) for coord in uv_in.telescope.location_lat_lon_alt_degrees]
-            )
-        else:
-            # this can be removed when we require pyuvdata >= 3.0
-            source_dict["array_location"] = ",".join(
-                [str(coord) for coord in uv_in.telescope_location_lat_lon_alt_degrees]
-            )
+        source_dict["array_location"] = ",".join(
+            [str(coord) for coord in uv_in.telescope.location_lat_lon_alt_degrees]
+        )
 
     warn_type = []
     warn_str = []
@@ -528,34 +516,19 @@ def test_gleam_catalog_spectral_type(spectral_type):
     assert gleam_catalog.Ncomponents == 50
 
 
-@pytest.mark.filterwarnings(
-    "ignore:LST values stored in this file are not self-consistent"
-)
-@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
-@pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_param_reader():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml"
     )
     uv_in = UVData.from_file(triangle_uvfits_file)
-    if hasattr(uv_in, "use_current_array_shapes"):
-        uv_in.use_future_array_shapes()
     uv_in.unproject_phase()
 
     beam0 = UVBeam()
     beam0.read_beamfits(herabeam_default)
-    if hasattr(beam0, "use_current_array_shapes"):
-        beam0.use_future_array_shapes()
-    beam0.extra_keywords["beam_path"] = herabeam_default
-    beam1 = pyuvsim.AnalyticBeam("uniform")
-    beam2 = pyuvsim.AnalyticBeam("gaussian", sigma=0.02)
-    beam3 = pyuvsim.AnalyticBeam("airy", diameter=14.6)
+    beam1 = UniformBeam()
+    beam2 = GaussianBeam(sigma=0.02)
+    beam3 = AiryBeam(diameter=14.6)
     beam_list = pyuvsim.BeamList([beam0, beam1, beam2, beam3])
-
-    # To fill out other parameters in the UVBeam.
-    beam_list.set_str_mode()
-    beam_list.set_obj_mode()
 
     beam_dict = {"ANT1": 0, "ANT2": 1, "ANT3": 2, "ANT4": 3}
 
@@ -577,12 +550,7 @@ def test_param_reader():
             reorder_blt_kw={"order": "time", "minor_order": "baseline"},
             check_kw={"run_check_acceptability": True},
         )
-    new_beam_list.set_obj_mode()
-    if hasattr(uv_obj, "telescope"):
-        assert uv_obj.telescope.x_orientation == "east"
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        assert uv_obj.x_orientation == "east"
+    assert uv_obj.telescope.x_orientation == "east"
 
     pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
 
@@ -609,6 +577,10 @@ def test_param_reader():
             setattr(uv_obj, attr, param)
 
     assert new_beam_dict == beam_dict
+
+    for b_ind, bi in enumerate(new_beam_list):
+        assert bi.beam == beam_list[b_ind].beam
+        assert bi == beam_list[b_ind]
     assert new_beam_list == beam_list
 
     # renumber/rename the phase centers so the equality check will pass.
@@ -656,7 +628,7 @@ def test_param_reader():
                 }
             },
             KeyError,
-            "Missing shape parameter for gaussian beam",
+            "Missing diameter or sigma for gaussian beam.",
         ),
         (
             {
@@ -1169,13 +1141,8 @@ def test_param_set_cat_name(key):
 def test_uvdata_keyword_init(uvdata_keyword_dict):
     # check it runs through
     uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
-    if hasattr(uvd, "telescope"):
-        lla_deg = uvd.telescope.location_lat_lon_alt_degrees
-        tel_name = uvd.telescope.name
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        lla_deg = uvd.telescope_location_lat_lon_alt_degrees
-        tel_name = uvd.telescope_name
+    lla_deg = uvd.telescope.location_lat_lon_alt_degrees
+    tel_name = uvd.telescope.name
 
     np.testing.assert_allclose(uvdata_keyword_dict["telescope_location"], lla_deg)
     np.testing.assert_allclose(
@@ -1228,12 +1195,8 @@ def test_uvdata_keyword_init_time_freq_override(uvdata_keyword_dict):
 def test_uvdata_keyword_init_layout_dict(uvdata_keyword_dict, tmpdir):
     # test feeding array layout as dictionary
     uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
-    if hasattr(uvd, "telescope"):
-        antpos = uvd.telescope.get_enu_antpos()
-        ants = uvd.telescope.antenna_numbers
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        antpos, ants = uvd.get_ENU_antpos()
+    antpos = uvd.telescope.get_enu_antpos()
+    ants = uvd.telescope.antenna_numbers
     antpos_d = dict(zip(ants, antpos, strict=False))
     layout_fname = "temp_layout.csv"
     obsparam_fname = "temp_obsparam.yaml"
@@ -1252,12 +1215,8 @@ def test_uvdata_keyword_init_layout_dict(uvdata_keyword_dict, tmpdir):
 
     assert uvd.Nbls == 6
     assert uvd.Nants_data == 4
-    if hasattr(uvd, "telescope"):
-        antpos2 = uvd.telescope.get_enu_antpos()
-        ants2 = uvd.telescope.antenna_numbers
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        antpos2, ants2 = uvd.get_ENU_antpos()
+    antpos2 = uvd.telescope.get_enu_antpos()
+    ants2 = uvd.telescope.antenna_numbers
     antpos_d2 = dict(zip(ants2, antpos2, strict=False))
     assert np.all([np.isclose(antpos_d[ant], antpos_d2[ant]) for ant in ants])
 
@@ -1273,12 +1232,8 @@ def test_uvdata_keyword_init_write(pass_layout, uvdata_keyword_dict, tmpdir):
     )
 
     uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
-    if hasattr(uvd, "telescope"):
-        antpos = uvd.telescope.get_enu_antpos()
-        ants = uvd.telescope.antenna_numbers
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        antpos, ants = uvd.get_ENU_antpos()
+    antpos = uvd.telescope.get_enu_antpos()
+    ants = uvd.telescope.antenna_numbers
     antpos_d = dict(zip(ants, antpos, strict=False))
     # Checking -- Default to a copy of the original layout, if layout is provided.
     obsparam_fname = os.path.join(tmpdir, "obsparam.yaml")
@@ -1312,7 +1267,6 @@ def test_initialize_uvdata_from_keywords_errors(uvdata_keyword_dict):
         pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
 
 
-@pytest.mark.filterwarnings("ignore:The shapes of several attributes will be changing")
 def test_uvfits_to_config(tmp_path):
     """
     Loopback test of reading parameters from uvfits file, generating uvfits file, and reading
@@ -1326,8 +1280,6 @@ def test_uvfits_to_config(tmp_path):
 
     # Read uvfits file to params.
     uv0 = UVData.from_file(longbl_uvfits_file)
-    if hasattr(uv0, "use_current_array_shapes"):
-        uv0.use_future_array_shapes()
 
     path, telescope_config, layout_fname = pyuvsim.simsetup.uvdata_to_telescope_config(
         uv0, herabeam_default, path_out=opath, return_names=True
@@ -1539,11 +1491,7 @@ def test_multi_analytic_beams(tmpdir):
         1: {"type": "airy", "diameter": 20},
         2: {"type": "gaussian", "sigma": 0.5},
     }
-    expected = [
-        "analytic_airy_diam=14",
-        "analytic_airy_diam=20",
-        "analytic_gaussian_sig=0.5",
-    ]
+    expected = [AiryBeam(diameter=14), AiryBeam(diameter=20), GaussianBeam(sigma=0.5)]
 
     Nants = 5
     antenna_numbers = np.arange(Nants)
@@ -1573,7 +1521,7 @@ def test_multi_analytic_beams(tmpdir):
     for i, nm in enumerate(names):
         bid = beam_ids[i]
         assert beam_dict[nm] == bid
-        assert beam_list[bid] == expected[bid]
+        assert beam_list[bid].beam == expected[bid]
 
 
 def test_direct_fname(tmpdir):
@@ -1676,15 +1624,9 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
 
     beamfits_file = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
-    msg = ""
-    warn_type = None
     if rename_beamfits:
         new_beam_file = os.path.join(tmp_path, "HERA_NicCST.uvbeam")
         shutil.copyfile(beamfits_file, new_beam_file)
-
-        if not pass_beam_type:
-            warn_type = DeprecationWarning
-            msg = pyuvsim.telescope.weird_beamfits_extension_warning
 
         telconfig["beam_paths"][0] = new_beam_file
     else:
@@ -1714,27 +1656,33 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
         "documentation. This will become an error in version 1.4"
     ] * n_entries_warn
     warn_types = [DeprecationWarning] * (n_entries_warn + 1)
+
+    if rename_beamfits and not pass_beam_type:
+        warn_list.append(
+            "This beamfits file does not have a '.fits' or '.beamfits' extension, "
+            "so UVBeam does not recognize it as a beamfits file. Either change the "
+            "file extension or specify the beam_type. This is currently handled "
+            "with a try/except clause in pyuvsim, but this will become an error in "
+            "version 1.4"
+        )
+        warn_types.append(DeprecationWarning)
     with check_warnings(warn_types, match=warn_list):
         beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(nbeams), telconfig)
 
-    with check_warnings(warn_type, match=msg):
-        beam_list.set_obj_mode()
-
     # How the beam attributes should turn out for this file:
-    assert isinstance(beam_list[0], UVBeam)
-    assert beam_list[1].type == "airy"
-    assert beam_list[1].diameter == 16
-    assert beam_list[2].type == "gaussian"
-    assert beam_list[2].sigma == 0.03
-    assert beam_list[3].type == "airy"
-    assert beam_list[3].diameter == 12
-    assert beam_list[4].type == "gaussian"
-    assert beam_list[4].diameter == 14
-    assert beam_list[5].type == "gaussian"
-    assert beam_list[5].diameter == 12
-    assert isinstance(beam_list[6], UVBeam)
-
-    assert len(beam_list.uvb_read_kwargs) > 0
+    assert isinstance(beam_list[0].beam, UVBeam)
+    assert isinstance(beam_list[1].beam, AiryBeam)
+    assert beam_list[1].beam.diameter == 16
+    assert isinstance(beam_list[2].beam, GaussianBeam)
+    assert beam_list[2].beam.sigma == 0.03
+    assert isinstance(beam_list[3].beam, AiryBeam)
+    assert beam_list[3].beam.diameter == 12
+    assert isinstance(beam_list[4].beam, GaussianBeam)
+    assert beam_list[4].beam.diameter == 14
+    assert isinstance(beam_list[5].beam, GaussianBeam)
+    assert beam_list[5].beam.diameter == 12
+    assert isinstance(beam_list[6].beam, UVBeam)
+    assert isinstance(beam_list[7].beam, ShortDipoleBeam)
 
 
 def test_beamlist_init_freqrange():
@@ -1762,14 +1710,12 @@ def test_beamlist_init_freqrange():
         beam_list = pyuvsim.simsetup._construct_beam_list(
             np.arange(6), telconfig, freq_range=(117e6, 148e6)
         )
-    beam_list.set_obj_mode()
 
     # How the beam attributes should turn out for this file:
-    assert isinstance(beam_list[0], UVBeam)
-    assert len(beam_list[0].freq_array) == 2
+    assert isinstance(beam_list[0].beam, UVBeam)
+    assert len(beam_list[0].beam.freq_array) == 2
 
 
-@pytest.mark.filterwarnings("ignore:The lst_array is not self-consistent")
 def test_moon_lsts():
     # Check that setting lsts for a Moon simulation works as expected.
     pytest.importorskip("lunarsky")
@@ -1788,11 +1734,7 @@ def test_moon_lsts():
     assert np.all(lst_inds == time_inds)
 
     # Confirm that the LSTs match the zenith RAs for the telescope_location
-    if hasattr(uv_obj, "telescope"):
-        loc = uv_obj.telescope.location
-    else:
-        # this can be removed when we require pyuvdata >= 3.0
-        loc = MoonLocation.from_selenocentric(*uv_obj.telescope_location, unit="m")
+    loc = uv_obj.telescope.location
     times_quant = LTime(times, format="jd", location=loc)
     skycrds = SkyCoord(
         alt=["90d"] * times.size,
@@ -1802,7 +1744,7 @@ def test_moon_lsts():
         location=loc,
     ).transform_to("icrs")
 
-    assert np.allclose(skycrds.ra.rad, lsts, atol=1e-7)
+    np.testing.assert_allclose(skycrds.ra.rad, lsts, atol=1e-7, rtol=0)
 
     # Unset the lst array and confirm that the call from _complete_uvdata returns the same.
     backup_lst_array = uv_obj.lst_array.copy()
@@ -1814,12 +1756,6 @@ def test_moon_lsts():
     assert new_obj.check()
 
 
-# all these filters can be removed when we require pyradiosky >= 0.2.0
-@pytest.mark.filterwarnings("ignore:The _ra parameters are not")
-@pytest.mark.filterwarnings("ignore:The _dec parameters are not")
-@pytest.mark.filterwarnings("ignore:The _lon parameters are not")
-@pytest.mark.filterwarnings("ignore:The _lat parameters are not")
-@pytest.mark.filterwarnings("ignore:Future equality does not pass")
 def test_mock_catalog_moon():
     # A mock catalog made with a MoonLocation.
     pytest.importorskip("lunarsky")
@@ -1978,5 +1914,4 @@ def test_simsetup_with_freq_buffer():
 
     _, beams, _ = simsetup.initialize_uvdata_from_params(fl, return_beams=True)
 
-    beams.set_obj_mode()
-    assert beams[0].freq_array.max() < 101e6
+    assert beams[0].beam.freq_array.max() < 101e6
