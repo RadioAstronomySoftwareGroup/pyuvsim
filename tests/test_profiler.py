@@ -7,15 +7,10 @@ import shutil
 
 import pytest
 from numpy import unique
+from pyuvdata.testing import check_warnings
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-
-try:
-    from pyuvdata.testing import check_warnings
-except ImportError:
-    # this can be removed once we require pyuvdata >= v3.0
-    from pyuvdata.tests import check_warnings
 
 
 def profdata_dir_setup(tmpdir):
