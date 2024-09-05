@@ -984,8 +984,11 @@ def run_uvsim(
 
     Parameters
     ----------
-    params : str
-        Path to a parameter yaml file.
+    params : str or dict
+        Path to a parameter yaml file or a dict containing all the required
+        parameters in the expected structure (typically parsed from a yaml),
+        see simsetup.initialize_uvdata_from_params and
+        simsetup.initialize_catalog_from_params for details.
     return_uv : bool
         If true, do not write results to file and return uv_out. (Default False)
     beam_interp_check :  bool

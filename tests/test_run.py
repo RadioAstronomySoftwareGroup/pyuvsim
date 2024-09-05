@@ -13,8 +13,10 @@ import yaml
 from astropy import units
 from astropy.coordinates import Latitude, Longitude
 from astropy.time import Time
+from pyradiosky import SkyModel
 from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
 from pyuvdata import UVData
+from pyuvdata.testing import check_warnings
 
 import pyuvsim
 from pyuvsim.analyticbeam import c_ms
@@ -353,6 +355,46 @@ def test_zenith_spectral_sim(spectral_type, tmpdir):
 
     for ii in range(uv_out.Nbls):
         assert np.allclose(uv_out.data_array[ii, :, 0], spectrum / 2)
+
+
+def test_gleam_vot_skyh5(tmpdir):
+    """
+    Test simulating with a GLEAM vot file and compare that with writing out a
+    skyh5 file and simulating with that to try to replicate issue #488.
+    """
+    gleam_vot = os.path.join(SIM_DATA_PATH, "gleam_50srcs.vot")
+
+    Nfreqs = 5
+    freqs = np.linspace(110e6, 115e6, Nfreqs)
+    freq_params = pyuvsim.simsetup.freq_array_to_params(freqs)
+
+    time_params = pyuvsim.simsetup.parse_time_params(
+        {"start_time": Time.now().jd, "Ntimes": 3, "integration_time": 10}
+    )
+    params = {}
+    params["sources"] = {"catalog": gleam_vot}
+    params["filing"] = {"outdir": str(tmpdir)}
+    params["freq"] = freq_params
+    params["time"] = time_params
+    params["config_path"] = os.path.join(SIM_DATA_PATH, "test_config")
+    params["telescope"] = {
+        "array_layout": "triangle_bl_layout.csv",
+        "telescope_config_name": "28m_triangle_10time_10chan.yaml",
+    }
+
+    uv_vot = pyuvsim.run_uvsim(params, return_uv=True)
+
+    gleam_skyh5 = os.path.join(tmpdir, "gleam_50srcs.skyh5")
+    gleam_sky = SkyModel.from_file(gleam_vot)
+    gleam_sky.write_skyh5(gleam_skyh5)
+
+    params["sources"] = {"catalog": gleam_skyh5}
+
+    uv_skyh5 = pyuvsim.run_uvsim(params, return_uv=True)
+
+    np.testing.assert_allclose(uv_vot.data_array, uv_skyh5.data_array)
+
+    assert uv_vot == uv_skyh5
 
 
 def test_pol_error():
