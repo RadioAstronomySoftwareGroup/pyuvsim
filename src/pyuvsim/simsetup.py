@@ -2037,7 +2037,12 @@ def initialize_uvdata_from_params(
     else:
         cat_name = param_dict["cat_name"]
     phase_center_catalog = {0: {"cat_name": cat_name, "cat_type": "unprojected"}}
-
+    
+    # Set the antpairs _before_ creating the uvdata object to conserve memory.
+    antpairs = param_dict.get('select', {}).pop('bls', None)
+    if isinstance(antpairs, str):
+        antpairs = ast.literal_eval(antpairs)
+        
     # remove the pragma below after pyuvdata v3.0 is released
     if hasattr(UVData(), "telescope"):  # pragma: nocover
         tel_init_params = {"location": telescope_location}
@@ -2058,7 +2063,7 @@ def initialize_uvdata_from_params(
                 tel_init_params[tel_key] = tele_params[key]
         if "instrument" not in tel_init_params:
             tel_init_params["instrument"] = tel_init_params["name"]
-
+      
         uv_obj = UVData.new(
             telescope=Telescope.new(**tel_init_params),
             phase_center_catalog=phase_center_catalog,
@@ -2066,6 +2071,7 @@ def initialize_uvdata_from_params(
             history="",
             do_blt_outer=True,
             time_axis_faster_than_bls=False,
+            antpairs=antpairs,
             **uvparam_dict,
         )
     else:
@@ -2086,6 +2092,7 @@ def initialize_uvdata_from_params(
             history="",
             do_blt_outer=True,
             time_axis_faster_than_bls=True,
+            antpairs=antpairs,
             **uvparam_dict,
         )
         uv_obj.telescope_location = np.asarray(uv_obj.telescope_location)
