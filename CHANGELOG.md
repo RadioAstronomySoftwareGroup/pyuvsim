@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+- Setting the `select.bls` property in the obsparams file now selects baselines _before_
+creating the UVData object, rather than down-selecting afterwards, saving memory and time.
+
 ## [1.3.1] - 2024-07-18
 
 ### Added
