@@ -45,6 +45,7 @@ from pyuvdata import (
     UVData,
     utils as uvutils,
 )
+from pyuvdata.uvbeam.analytic_beam import AnalyticBeam
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
@@ -1118,20 +1119,33 @@ def _construct_beam_list(
             raise ValueError(f"beam_id {beam_id} is not listed in the telconfig.")
         beam_model = telconfig["beam_paths"][beam_id]
 
-        if not isinstance(beam_model, str | dict):
+        if not isinstance(beam_model, str | dict | AnalyticBeam | UVBeam):
             raise ValueError(
                 "Beam model is not properly specified in telescope config file."
             )
 
-        if isinstance(beam_model, str):
+        if not isinstance(beam_model, AnalyticBeam | UVBeam):
             warnings.warn(
-                "Entries in 'beam_paths' can no longer be specified as simple strings, "
-                "they must be parsed as dicts. For examples see the parameter_files "
-                "documentation. This will become an error in version 1.4",
+                "Entries in 'beam_paths' should be specified using either the "
+                "UVBeam or AnalyticBeam constructors. For examples see the "
+                "parameter_files documentation. Specifying simple strings "
+                "will cause an error in version 1.4, specifications that parse "
+                "as dicts will cause an error in version 1.5",
                 DeprecationWarning,
             )
 
-        if (
+        if isinstance(beam_model, AnalyticBeam | UVBeam):
+            if len(select) > 0 and isinstance(beam_model, UVBeam):
+                if "freq_range" in select:
+                    freq_range = select.pop("freq_range")
+                    freq_chans = np.nonzero(
+                        (beam_model.freq_array >= freq_range[0])
+                        & (beam_model.freq_array <= freq_range[1])
+                    )[0]
+                    select["freq_chans"] = freq_chans
+                beam_model.select(**select)
+            beam_list.append(beam_model)
+        elif (
             isinstance(beam_model, str)
             and beam_model not in analytic_beams
             or isinstance(beam_model, dict)
@@ -1199,19 +1213,6 @@ def _construct_beam_list(
             if all(v is None for v in shape_opts.values()):
                 for opt in shape_opts:
                     shape_opts[opt] = telconfig.get(opt)
-
-            if beam_type == "airy" and shape_opts["diameter"] is None:
-                raise KeyError("Missing diameter for airy beam.")
-            if beam_type == "gaussian":
-                if shape_opts["diameter"] is None and shape_opts["sigma"] is None:
-                    raise KeyError("Missing diameter or sigma for gaussian beam.")
-                elif (
-                    shape_opts["diameter"] is not None
-                    and shape_opts["sigma"] is not None
-                ):
-                    raise KeyError(
-                        "Only one of diameter or sigma shoule be included for gaussian."
-                    )
 
             ab = analytic_beams[beam_type](**shape_opts)
 
@@ -2484,16 +2485,21 @@ def uvdata_to_telescope_config(
         os.path.join(path_out, layout_csv_name), antpos_enu, ant_names, ant_numbers
     )
 
+    # create a nearly empty beam object, only defining the filepath for the
+    # yaml dumper
+    beam = UVBeam()
+    beam.filename = beam_filepath
+
     # Write the rest to a yaml file.
     yaml_dict = {
         "telescope_name": tel_name,
         "telescope_location": repr(tel_lla_deg),
         "Nants": uvdata_in.Nants_telescope,
-        "beam_paths": {0: {"filename": beam_filepath}},
+        "beam_paths": beam,
     }
 
     with open(os.path.join(path_out, telescope_config_name), "w+") as yfile:
-        yaml.dump(yaml_dict, yfile, default_flow_style=False)
+        yaml.safe_dump(yaml_dict, yfile, default_flow_style=False)
 
     logger.info(
         f"Path: {path_out}, telescope_config: {telescope_config_name}, layout: {layout_csv_name}"
@@ -2578,4 +2584,4 @@ def uvdata_to_config_file(
         param_dict["sources"]["mock_arrangement"] = "zenith"
 
     with open(os.path.join(path_out, param_filename), "w") as yfile:
-        yaml.dump(param_dict, yfile, default_flow_style=False)
+        yaml.safe_dump(param_dict, yfile, default_flow_style=False)
