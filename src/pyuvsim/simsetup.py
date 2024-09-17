@@ -1772,7 +1772,6 @@ def subselect(uv_obj, param_dict):
         "antenna_nums",
         "antenna_names",
         "ant_str",
-        "bls",
         "frequencies",
         "freq_chans",
         "times",
@@ -1785,12 +1784,6 @@ def subselect(uv_obj, param_dict):
     if "antenna_nums" in select_params:
         select_params["antenna_nums"] = list(map(int, select_params["antenna_nums"]))
     redundant_threshold = param_dict["select"].get("redundant_threshold", None)
-    if "bls" in select_params:
-        bls = select_params["bls"]
-        if isinstance(bls, str):
-            # If read from file, this should be a string.
-            bls = ast.literal_eval(bls)
-            select_params["bls"] = bls
     if len(select_params) > 0:
         uv_obj.select(**select_params)
 
