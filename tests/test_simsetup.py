@@ -523,8 +523,7 @@ def test_param_reader():
     uv_in = UVData.from_file(triangle_uvfits_file)
     uv_in.unproject_phase()
 
-    beam0 = UVBeam()
-    beam0.read_beamfits(herabeam_default)
+    beam0 = UVBeam.from_file(herabeam_default)
     beam1 = UniformBeam()
     beam2 = GaussianBeam(sigma=0.02)
     beam3 = AiryBeam(diameter=14.6)
@@ -589,6 +588,7 @@ def test_param_reader():
     assert uv_obj == uv_in
 
 
+@pytest.mark.filterwarnings("ignore:Entries in 'beam_paths' should be specified")
 @pytest.mark.parametrize(
     ("subdict", "error", "msg"),
     [
@@ -604,44 +604,10 @@ def test_param_reader():
         (
             {
                 "config_path": os.path.join(SIM_DATA_PATH, "test_config"),
-                "telescope": {"array_layout": "nonexistent_file"},
-            },
-            ValueError,
-            "nonexistent_file from yaml does not exist",
-        ),
-        (
-            {
-                "config_path": os.path.join(SIM_DATA_PATH, "test_config"),
                 "telescope": {"telescope_config_name": "nonexistent_file"},
             },
             ValueError,
             "telescope_config_name file from yaml does not exist",
-        ),
-        (
-            {
-                "telescope": {
-                    "telescope_config_name": os.path.join(
-                        SIM_DATA_PATH,
-                        "test_config",
-                        "28m_triangle_10time_10chan_gaussnoshape.yaml",
-                    )
-                }
-            },
-            KeyError,
-            "Missing diameter or sigma for gaussian beam.",
-        ),
-        (
-            {
-                "telescope": {
-                    "telescope_config_name": os.path.join(
-                        SIM_DATA_PATH,
-                        "test_config",
-                        "28m_triangle_10time_10chan_nodiameter.yaml",
-                    )
-                }
-            },
-            KeyError,
-            "Missing diameter for airy beam.",
         ),
         (
             {
@@ -1487,9 +1453,9 @@ def test_multi_analytic_beams(tmpdir):
     telescope_location = (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
     telescope_name = "SKA"
     beam_specs = {
-        0: {"type": "airy", "diameter": 14},
-        1: {"type": "airy", "diameter": 20},
-        2: {"type": "gaussian", "sigma": 0.5},
+        0: AiryBeam(diameter=14),
+        1: AiryBeam(diameter=20),
+        2: GaussianBeam(sigma=0.5),
     }
     expected = [AiryBeam(diameter=14), AiryBeam(diameter=20), GaussianBeam(sigma=0.5)]
 
@@ -1510,7 +1476,7 @@ def test_multi_analytic_beams(tmpdir):
         "beam_paths": beam_specs,
     }
     with open(par_fname, "w") as yfile:
-        yaml.dump(pdict, yfile, default_flow_style=False)
+        yaml.safe_dump(pdict, yfile, default_flow_style=False)
 
     param_dict = {"telescope_config_name": par_fname, "array_layout": layout_fname}
 
@@ -1551,34 +1517,76 @@ def test_direct_fname(tmpdir):
 
 
 @pytest.mark.parametrize(
-    ("beam_dict", "err_msg"),
+    ("input_yaml", "err_msg"),
     [
-        ({0: 1.35}, "Beam model is not properly specified"),
         (
-            {0: {"diameter": 12}},
+            """
+            beam_paths:
+                0: 1.35
+            diameter: 12
+            spline_interp_opts:
+                    kx: 4
+                    ky: 4
+            freq_interp_kind: 'cubic'
+            telescope_location: (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
+            telescope_name: BLLITE
+            """,
+            "Beam model is not properly specified",
+        ),
+        (
+            """
+            beam_paths:
+                0:
+                    diameter: 12
+            diameter: 12
+            spline_interp_opts:
+                    kx: 4
+                    ky: 4
+            freq_interp_kind: 'cubic'
+            telescope_location: (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
+            telescope_name: BLLITE
+            """,
             "Beam model must have either a 'filename' field for UVBeam files "
             "or a 'type' field for analytic beams.",
         ),
         (
-            {0: {"type": "unsupported_type", "diameter": 12}},
+            """
+            beam_paths:
+                0:
+                    type: unsupported_type
+                    diameter: 12
+            diameter: 12
+            spline_interp_opts:
+                    kx: 4
+                    ky: 4
+            freq_interp_kind: 'cubic'
+            telescope_location: (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
+            telescope_name: BLLITE
+            """,
             "Undefined beam model type: unsupported_type",
         ),
     ],
 )
-def test_beamlist_init_errors(beam_dict, err_msg):
-    telescope_config_name = os.path.join(SIM_DATA_PATH, "bl_lite_mixed.yaml")
-    with open(telescope_config_name) as yf:
-        telconfig = yaml.safe_load(yf)
+def test_beamlist_init_errors(input_yaml, err_msg):
+    telconfig = yaml.safe_load(input_yaml)
 
-    telconfig["beam_paths"] = beam_dict
+    warn_msg = [
+        "Beam shape options diameter and sigma should be specified per "
+        "beamID in the 'beam_paths' section not as globals. For examples "
+        "see the parameter_files documentation. This will become an "
+        "error in version 1.4"
+    ]
+    if not isinstance(telconfig["beam_paths"][0], float):
+        warn_msg += [
+            "Entries in 'beam_paths' should be specified using either the "
+            "UVBeam or AnalyticBeam constructors. For examples see the "
+            "parameter_files documentation. Specifying simple strings "
+            "will cause an error in version 1.4, specifications that parse "
+            "as dicts will cause an error in version 1.5"
+        ]
+
     with (
-        check_warnings(
-            DeprecationWarning,
-            match="Beam shape options diameter and sigma should be specified per "
-            "beamID in the 'beam_paths' section not as globals. For examples see "
-            "the parameter_files documentation. This will become an error in "
-            "version 1.4",
-        ),
+        check_warnings(DeprecationWarning, match=warn_msg),
         pytest.raises(ValueError, match=err_msg),
     ):
         pyuvsim.simsetup._construct_beam_list([0], telconfig)
@@ -1604,11 +1612,13 @@ def test_beamlist_init_spline():
             "version 1.4"
         ]
         + [
-            "Entries in 'beam_paths' can no longer be specified as simple strings, "
-            "they must be parsed as dicts. For examples see the parameter_files "
-            "documentation. This will become an error in version 1.4"
+            "Entries in 'beam_paths' should be specified using either the "
+            "UVBeam or AnalyticBeam constructors. For examples see the "
+            "parameter_files documentation. Specifying simple strings "
+            "will cause an error in version 1.4, specifications that parse "
+            "as dicts will cause an error in version 1.5"
         ]
-        * 2,
+        * 5,
     ):
         beam_list = pyuvsim.simsetup._construct_beam_list(beam_ids, telconfig)
     assert beam_list.spline_interp_opts == {"kx": 2, "ky": 2}
@@ -1641,21 +1651,19 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
     )
 
     nbeams = len(telconfig["beam_paths"])
-    if pass_beam_type:
-        n_entries_warn = 2
-    else:
-        n_entries_warn = 3
     warn_list = [
         "Beam shape options diameter and sigma should be specified per "
         "beamID in the 'beam_paths' section not as globals. For examples see "
         "the parameter_files documentation. This will become an error in "
         "version 1.4"
     ] + [
-        "Entries in 'beam_paths' can no longer be specified as simple strings, "
-        "they must be parsed as dicts. For examples see the parameter_files "
-        "documentation. This will become an error in version 1.4"
-    ] * n_entries_warn
-    warn_types = [DeprecationWarning] * (n_entries_warn + 1)
+        "Entries in 'beam_paths' should be specified using either the "
+        "UVBeam or AnalyticBeam constructors. For examples see the "
+        "parameter_files documentation. Specifying simple strings "
+        "will cause an error in version 1.4, specifications that parse "
+        "as dicts will cause an error in version 1.5"
+    ] * nbeams
+    warn_types = [DeprecationWarning] * (nbeams + 1)
 
     if rename_beamfits and not pass_beam_type:
         warn_list.append(
@@ -1693,7 +1701,7 @@ def test_beamlist_init_freqrange():
     telconfig["beam_paths"][0] = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
     with check_warnings(
-        [DeprecationWarning] * 4,
+        DeprecationWarning,
         match=[
             "Beam shape options diameter and sigma should be specified per "
             "beamID in the 'beam_paths' section not as globals. For examples see "
@@ -1701,11 +1709,13 @@ def test_beamlist_init_freqrange():
             "version 1.4"
         ]
         + [
-            "Entries in 'beam_paths' can no longer be specified as simple strings, "
-            "they must be parsed as dicts. For examples see the parameter_files "
-            "documentation. This will become an error in version 1.4"
+            "Entries in 'beam_paths' should be specified using either the "
+            "UVBeam or AnalyticBeam constructors. For examples see the "
+            "parameter_files documentation. Specifying simple strings "
+            "will cause an error in version 1.4, specifications that parse "
+            "as dicts will cause an error in version 1.5"
         ]
-        * 3,
+        * 6,
     ):
         beam_list = pyuvsim.simsetup._construct_beam_list(
             np.arange(6), telconfig, freq_range=(117e6, 148e6)
