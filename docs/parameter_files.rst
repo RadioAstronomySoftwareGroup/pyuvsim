@@ -195,47 +195,71 @@ Telescope Configuration
       - 4: an analytic Gaussian with diameter 14 m
 
     The parameters for each beam depends on whether it is a UVBeam or an analytic
-    beam. UVBeams must have a `filename` parameter and they can optionally have
-    any other parameter that can be passed to the ``UVBeam.read`` method.
-    Analytic beams must have a `type` parameter and can have parameters specifying
-    shapes as appropriate for their type.
+    beam.
+
+    UVBeams can be specified with our without ``!UVBeam`` tag, must have a
+    ``filename`` parameter and can optionally have any other parameter that can be
+    passed to the ``UVBeam.read`` method. We encourage using the ``!UVBeam`` tag
+    unless a global ``select`` section is specified (see below).
+
+    Analytic Beams should use the ``!AnalyticBeam`` tag, must specify the ``class``
+    parameter and can have parameters specifying shapes as appropriate for their
+    type. The ``class`` parameter can optionally contain a module name, which
+    allows any properly defined importable analytic beam to be specified. See
+    the pyuvdata documentation on analytic beams to learn how to create new
+    analytic beams.
+
     The dictionary only needs to be as long as the number of unique beams used
     in the array, while the layout file specifies which antennas will use which
     beam type. This allows for a mixture of beams to be used, as in this example.
-    Unassigned beams will be ignored (the given layout file only uses beamIDs 0 and 2).
+    Unassigned beams will be ignored (the given layout file only uses beamIDs 0
+    and 2).
 
-    Analytic beams may require shape parameters depending on their type.
+    Analytic beams may require shape parameters depending on their type. The
+    following types are defined in pyuvdata and are always available:
 
-    - airy: Airy disk (ie, diffraction pattern of a circular aperture). Requires an
-      antenna diameter and is inherently chromatic.
-    - gaussian: Gaussian function shaped beam. Requires either an antenna `diameter`
-      (in meters) or a standard deviation `sigma` (in radians). Gaussian beams
-      specified by a diameter will have their width matched to an Airy beam at
-      each simulated frequency, so are inherently chromatic. For Gaussian beams
-      specified with `sigma`, `sigma` sets the width of the E-Field beam in zenith angle.
-      If only `sigma` is specified, the beam is achromatic, optionally both the
-      `spectral_index` and `reference_frequency` parameters can be set to generate
+    - AiryBeam: Airy disk (ie, diffraction pattern of a circular aperture).
+      Requires an antenna diameter and is inherently chromatic and unpolarized.
+    - GaussianBeam: Gaussian function shaped beam, inherently unpolarized.
+      Requires either an antenna ``diameter`` (in meters) or a standard deviation
+      ``sigma`` (in radians). Gaussian beams specified by a diameter will have
+      their width matched to an Airy beam at each simulated frequency, so are
+      inherently chromatic. For Gaussian beams specified with ``sigma``, the
+      ``sigma_type`` defines whether the width specified by ``sigma`` specifies the
+      width of the E-Field beam (default) or power beam in zenith angle.
+      If only ``sigma`` is specified, the beam is achromatic, optionally both the
+      ``spectral_index`` and ``reference_frequency`` parameters can be set to generate
       a chromatic beam with standard deviation defined by a power law:
-      `stddev(f) = sigma * (f/ref_freq)**(spectral_index)`
-    - uniform: The same response in all directions. No additional parameters.
+      ``stddev(f) = sigma * (f/ref_freq)**(spectral_index)``
+    - UniformBeam: The same response in all directions, inherently achromatic
+      and unpolarized. No additional parameters.
+    - ShortDipoleBeam: A classical short dipole beam, this is an intrinsically
+      polarized but achromatic analytic beam. No additional parameters.
 
     There are also some global parameters that apply to all the UVBeams:
 
-      - `freq_interp_kind` sets the type of frequency interpolation for all UVBeam
+      - ``freq_interp_kind`` sets the type of frequency interpolation for all UVBeam
         objects defined in the beam list (see documentation on UVBeam for options).
 
-      - The `spline_interp_opts` keyword lets the user set the order on the angular
+      - The ``spline_interp_opts`` keyword lets the user set the order on the angular
         interpolating polynomial spline function. By default, it is cubic.
 
-      - The `select` section allows for doing partial reading UVBeam files.
+      - The ``select`` section allows for doing partial reading UVBeam files.
         This can include any selection parameter accepted by UVBeam.read.
-        It can also take a `freq_buffer` parameter which is used to set the
-        `freq_range` on read so that only frequencies within `freq_buffer` of the
-        min and max of the simulated frequencies will be read during setup. This
-        can help reduce peak memory usage. Note that if any of the same `select`
-        parameters are passed for a specific UVBeam and to the `select` section,
+        It can also take a ``freq_buffer`` parameter which is used to set the
+        ``freq_range`` on read so that only frequencies within ``freq_buffer`` of the
+        min and max of the simulated frequencies will be read during setup. Using
+        select parameters here or in the individual UVBeam specification above
+        can help reduce peak memory usage. Note that if any of the same ``select``
+        parameters are passed for a specific UVBeam and to the ``select`` section,
         the values passed for the specific UVBeam will supercede the values in the
-        `select` section.
+        ``select`` section, unless the beams are specified using the ``!UVBeam``
+        yaml tag. **Note: this global select should not be used if** ``!UVBeam``
+        **yaml tags are used** (as shown in beam 0 in the example yaml).
+        This is because using the ``!UVBeam`` yaml tag results in a UVBeam being
+        constructed before the rest of the yaml is read, so any globally specified
+        selects will be done **after** the read rather than during the read and
+        will be applied **in addition** to any selects done during the read.
 
     The figure below shows the array created by these configurations, with beam type
     indicated by color.
