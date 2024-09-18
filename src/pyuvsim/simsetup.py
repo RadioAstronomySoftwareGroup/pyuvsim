@@ -1067,6 +1067,7 @@ def _check_uvbeam_file(beam_file):
 def _construct_beam_list(
     beam_ids: npt.NDArray[int] | list[float] | tuple[float],
     telconfig: dict,
+    freq_array: npt.NDArray[float],
     freq_range: (npt.NDArray[float] | list[float] | tuple[float] | None) = None,
 ):
     """
@@ -1081,6 +1082,8 @@ def _construct_beam_list(
         Telescope parameters dict, typically parsed from the telescope yaml file.
         See pyuvsim documentation for allowable keys.
         https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#telescope-configuration
+    freq_array : array-like of float
+        Simulation frequency array.
     freq_range : array-like of float
         Range of frequencies to keep in the beam object, shape (2,). Should
         include all frequencies in the simulation with a buffer to support
@@ -1111,7 +1114,17 @@ def _construct_beam_list(
         )
 
     select = telconfig.pop("select", {})
-    if freq_range is not None:
+    if (
+        freq_range is not None
+        and "freq_range" not in select
+        and "freq_buffer" not in select
+    ):
+        select["freq_range"] = freq_range
+    if "freq_buffer" in select and "freq_range" not in select:
+        freq_range = (
+            freq_array.min() - select["freq_buffer"],
+            freq_array.max() + select["freq_buffer"],
+        )
         select["freq_range"] = freq_range
 
     for beam_id in beam_ids:
@@ -1124,13 +1137,16 @@ def _construct_beam_list(
                 "Beam model is not properly specified in telescope config file."
             )
 
-        if not isinstance(beam_model, AnalyticBeam | UVBeam):
+        if not isinstance(beam_model, AnalyticBeam | UVBeam) and not (
+            isinstance(beam_model, dict) and "filename" in beam_model
+        ):
             warnings.warn(
                 "Entries in 'beam_paths' should be specified using either the "
-                "UVBeam or AnalyticBeam constructors. For examples see the "
-                "parameter_files documentation. Specifying simple strings "
-                "will cause an error in version 1.4, specifications that parse "
-                "as dicts will cause an error in version 1.5",
+                "UVBeam or AnalyticBeam constructors or using a dict syntax for "
+                "UVBeams. For examples see the parameter_files documentation. "
+                "Specifying simple strings will cause an error in version 1.4, "
+                "specifying analytic beam without the AnalyticBeam constructors "
+                "will cause an error in version 1.5",
                 DeprecationWarning,
             )
 
@@ -1230,7 +1246,12 @@ def _construct_beam_list(
 
 
 def parse_telescope_params(
-    tele_params, config_path="", freq_range=None, return_beams=True
+    tele_params: dict,
+    *,
+    config_path: str = "",
+    freq_array: npt.NDArray[float],
+    freq_range: (npt.NDArray[float] | list[float] | tuple[float] | None) = None,
+    return_beams: bool = True,
 ):
     """
     Parse the "telescope" section of obsparam.
@@ -1243,6 +1264,8 @@ def parse_telescope_params(
         https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#telescope-configuration
     config_path : str
         Path to directory holding configuration and layout files.
+    freq_array : array-like of float
+        Simulation frequency array.
     freq_range : float
         If given, select frequencies on reading the beam.
     return_beams : bool
@@ -1424,7 +1447,9 @@ def parse_telescope_params(
             # then they are accessed by index in the list (not by original ID)
             beam_dict[a] = beam_ind
 
-    beam_list = _construct_beam_list(beam_ids_inc, telconfig, freq_range=freq_range)
+    beam_list = _construct_beam_list(
+        beam_ids_inc, telconfig, freq_array=freq_array, freq_range=freq_range
+    )
 
     return return_dict, beam_list, beam_dict
 
@@ -1969,6 +1994,14 @@ def initialize_uvdata_from_params(
     # Parse telescope parameters
     tele_dict = param_dict["telescope"]
     beamselect = tele_dict.pop("select", {})
+    if len(beamselect) > 0:
+        warnings.warn(
+            "Beam selections should be specified in the telescope "
+            "configuration, not in the obsparam. This will become an error in "
+            "version 1.5",
+            DeprecationWarning,
+        )
+
     freq_buffer = beamselect.pop("freq_buffer", None)
     if freq_buffer:
         freq_range = (freq_array.min() - freq_buffer, freq_array.max() + freq_buffer)
@@ -1978,6 +2011,7 @@ def initialize_uvdata_from_params(
     ptp_ret = parse_telescope_params(
         tele_dict,
         config_path=param_dict["config_path"],
+        freq_array=freq_array,
         freq_range=freq_range,
         return_beams=return_beams,
     )
@@ -2488,7 +2522,7 @@ def uvdata_to_telescope_config(
     # create a nearly empty beam object, only defining the filepath for the
     # yaml dumper
     beam = UVBeam()
-    beam.filename = beam_filepath
+    beam.filename = [beam_filepath]
 
     # Write the rest to a yaml file.
     yaml_dict = {
