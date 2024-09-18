@@ -16,7 +16,7 @@ from astropy.constants import c as speed_of_light
 from astropy.coordinates import Latitude, Longitude
 from astropy.time import Time
 from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
-from pyuvdata import ShortDipoleBeam, UVData
+from pyuvdata import ShortDipoleBeam, UniformBeam, UVData
 from pyuvdata.testing import check_warnings
 
 import pyuvsim
@@ -134,7 +134,7 @@ def test_analytic_diffuse(model, tol, tmpdir):
     herauniform_path = str(tmpdir.join("hera_uniform.yaml"))
 
     teleconfig = {
-        "beam_paths": {0: {"type": "uniform"}},
+        "beam_paths": {0: UniformBeam()},
         "telescope_location": "(-30.72153, 21.42830, 1073.0)",
         "telescope_name": "HERA",
     }

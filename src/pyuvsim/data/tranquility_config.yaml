@@ -1,6 +1,6 @@
 beam_paths:
-    0 :
-        type: uniform
+    0: !AnalyticBeam 
+        class: UniformBeam
 telescope_location: (0.6875, 24.433, 0)
 world: 'moon'
 lunar_ellipsoid: SPHERE

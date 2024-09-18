@@ -20,7 +20,12 @@ def test_jones_set_spline(cst_beam, hera_loc):
         telconfig = yaml.safe_load(yf)
     telconfig["spline_interp_opts"] = {"kx": 1, "ky": 1}
 
-    beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(1), telconfig)
+    Nfreqs = 10
+    freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
+
+    beam_list = pyuvsim.simsetup._construct_beam_list(
+        np.arange(1), telconfig, freq_array=freqs
+    )
     beam_list.append(beam0)
     assert len(beam_list) == 2
 
