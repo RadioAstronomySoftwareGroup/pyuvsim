@@ -664,13 +664,16 @@ def test_tele_parser(world, selenoid):
         "telescope_location": "(-30.72152777777791, 21.428305555555557, 1073.0000000093132)",
         "telescope_name": "foo",
     }
+    Nfreqs = 10
+    freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
+
     if world is not None:
         pytest.importorskip("lunarsky")
         tdict["world"] = world
         if selenoid is not None:
             tdict["ellipsoid"] = selenoid
 
-    tpars, blist, _ = pyuvsim.simsetup.parse_telescope_params(tdict)
+    tpars, blist, _ = pyuvsim.simsetup.parse_telescope_params(tdict, freq_array=freqs)
 
     assert tpars["Nants_data"] == 6
     assert len(blist) == 0
@@ -740,8 +743,11 @@ def test_tele_parser(world, selenoid):
     ],
 )
 def test_tele_parser_errors(tele_dict, err_type, err_msg):
+    Nfreqs = 10
+    freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
+
     with pytest.raises(err_type, match=err_msg):
-        pyuvsim.simsetup.parse_telescope_params(tele_dict)
+        pyuvsim.simsetup.parse_telescope_params(tele_dict, freq_array=freqs)
 
 
 @pytest.mark.parametrize(
@@ -1469,6 +1475,9 @@ def test_multi_analytic_beams(tmpdir):
         layout_fname, antpos, names, antenna_numbers, beam_ids
     )
 
+    Nfreqs = 10
+    freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
+
     # Write tele config to file.
     pdict = {
         "telescope_location": str(telescope_location),
@@ -1481,7 +1490,7 @@ def test_multi_analytic_beams(tmpdir):
     param_dict = {"telescope_config_name": par_fname, "array_layout": layout_fname}
 
     pdict, beam_list, beam_dict = pyuvsim.simsetup.parse_telescope_params(
-        param_dict, str(tmpdir)
+        param_dict, config_path=str(tmpdir), freq_array=freqs
     )
 
     for i, nm in enumerate(names):
@@ -1578,18 +1587,22 @@ def test_beamlist_init_errors(input_yaml, err_msg):
     ]
     if not isinstance(telconfig["beam_paths"][0], float):
         warn_msg += [
-            "Entries in 'beam_paths' should be specified using either the "
-            "UVBeam or AnalyticBeam constructors. For examples see the "
-            "parameter_files documentation. Specifying simple strings "
-            "will cause an error in version 1.4, specifications that parse "
-            "as dicts will cause an error in version 1.5"
+            "Entries in 'beam_paths' should be specified using either the UVBeam "
+            "or AnalyticBeam constructors or using a dict syntax for UVBeams. "
+            "For examples see the parameter_files documentation. Specifying "
+            "simple strings will cause an error in version 1.4, specifying "
+            "analytic beam without the AnalyticBeam constructors will cause an "
+            "error in version 1.5"
         ]
+
+    Nfreqs = 10
+    freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
 
     with (
         check_warnings(DeprecationWarning, match=warn_msg),
         pytest.raises(ValueError, match=err_msg),
     ):
-        pyuvsim.simsetup._construct_beam_list([0], telconfig)
+        pyuvsim.simsetup._construct_beam_list([0], telconfig, freq_array=freqs)
 
 
 def test_beamlist_init_spline():
@@ -1600,6 +1613,9 @@ def test_beamlist_init_spline():
     # The path for beam 0 is invalid, and it's not needed for this test.
     del telconfig["beam_paths"][0]
     beam_ids = np.arange(1, 6)
+
+    Nfreqs = 10
+    freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
 
     # Check that spline_interp_opts is passed along correctly to BeamList
     telconfig["spline_interp_opts"] = {"kx": 2, "ky": 2}
@@ -1612,15 +1628,18 @@ def test_beamlist_init_spline():
             "version 1.4"
         ]
         + [
-            "Entries in 'beam_paths' should be specified using either the "
-            "UVBeam or AnalyticBeam constructors. For examples see the "
-            "parameter_files documentation. Specifying simple strings "
-            "will cause an error in version 1.4, specifications that parse "
-            "as dicts will cause an error in version 1.5"
+            "Entries in 'beam_paths' should be specified using either the UVBeam "
+            "or AnalyticBeam constructors or using a dict syntax for UVBeams. "
+            "For examples see the parameter_files documentation. Specifying "
+            "simple strings will cause an error in version 1.4, specifying "
+            "analytic beam without the AnalyticBeam constructors will cause an "
+            "error in version 1.5"
         ]
         * 5,
     ):
-        beam_list = pyuvsim.simsetup._construct_beam_list(beam_ids, telconfig)
+        beam_list = pyuvsim.simsetup._construct_beam_list(
+            beam_ids, telconfig, freq_array=freqs
+        )
     assert beam_list.spline_interp_opts == {"kx": 2, "ky": 2}
 
 
@@ -1651,19 +1670,27 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
     )
 
     nbeams = len(telconfig["beam_paths"])
+    entries_warnings = nbeams - 1
+    if pass_beam_type:
+        entries_warnings -= 1
+
     warn_list = [
         "Beam shape options diameter and sigma should be specified per "
         "beamID in the 'beam_paths' section not as globals. For examples see "
         "the parameter_files documentation. This will become an error in "
         "version 1.4"
     ] + [
-        "Entries in 'beam_paths' should be specified using either the "
-        "UVBeam or AnalyticBeam constructors. For examples see the "
-        "parameter_files documentation. Specifying simple strings "
-        "will cause an error in version 1.4, specifications that parse "
-        "as dicts will cause an error in version 1.5"
-    ] * nbeams
-    warn_types = [DeprecationWarning] * (nbeams + 1)
+        "Entries in 'beam_paths' should be specified using either the UVBeam "
+        "or AnalyticBeam constructors or using a dict syntax for UVBeams. "
+        "For examples see the parameter_files documentation. Specifying "
+        "simple strings will cause an error in version 1.4, specifying "
+        "analytic beam without the AnalyticBeam constructors will cause an "
+        "error in version 1.5"
+    ] * entries_warnings
+    warn_types = DeprecationWarning
+
+    Nfreqs = 10
+    freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
 
     if rename_beamfits and not pass_beam_type:
         warn_list.append(
@@ -1673,9 +1700,10 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
             "with a try/except clause in pyuvsim, but this will become an error in "
             "version 1.4"
         )
-        warn_types.append(DeprecationWarning)
     with check_warnings(warn_types, match=warn_list):
-        beam_list = pyuvsim.simsetup._construct_beam_list(np.arange(nbeams), telconfig)
+        beam_list = pyuvsim.simsetup._construct_beam_list(
+            np.arange(nbeams), telconfig, freq_array=freqs
+        )
 
     # How the beam attributes should turn out for this file:
     assert isinstance(beam_list[0].beam, UVBeam)
@@ -1700,6 +1728,9 @@ def test_beamlist_init_freqrange():
 
     telconfig["beam_paths"][0] = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
+    Nfreqs = 10
+    freqs = np.linspace(100, 150, Nfreqs) * 1e6 * units.Hz
+
     with check_warnings(
         DeprecationWarning,
         match=[
@@ -1709,16 +1740,17 @@ def test_beamlist_init_freqrange():
             "version 1.4"
         ]
         + [
-            "Entries in 'beam_paths' should be specified using either the "
-            "UVBeam or AnalyticBeam constructors. For examples see the "
-            "parameter_files documentation. Specifying simple strings "
-            "will cause an error in version 1.4, specifications that parse "
-            "as dicts will cause an error in version 1.5"
+            "Entries in 'beam_paths' should be specified using either the UVBeam "
+            "or AnalyticBeam constructors or using a dict syntax for UVBeams. "
+            "For examples see the parameter_files documentation. Specifying "
+            "simple strings will cause an error in version 1.4, specifying "
+            "analytic beam without the AnalyticBeam constructors will cause an "
+            "error in version 1.5"
         ]
         * 6,
     ):
         beam_list = pyuvsim.simsetup._construct_beam_list(
-            np.arange(6), telconfig, freq_range=(117e6, 148e6)
+            np.arange(6), telconfig, freq_range=(117e6, 148e6), freq_array=freqs
         )
 
     # How the beam attributes should turn out for this file:
@@ -1922,6 +1954,12 @@ def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
 def test_simsetup_with_freq_buffer():
     fl = os.path.join(SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky_freqbuf.yaml")
 
-    _, beams, _ = simsetup.initialize_uvdata_from_params(fl, return_beams=True)
+    with check_warnings(
+        DeprecationWarning,
+        match="Beam selections should be specified in the telescope "
+        "configuration, not in the obsparam. This will become an error in "
+        "version 1.5",
+    ):
+        _, beams, _ = simsetup.initialize_uvdata_from_params(fl, return_beams=True)
 
     assert beams[0].beam.freq_array.max() < 101e6
