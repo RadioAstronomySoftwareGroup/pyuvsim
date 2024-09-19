@@ -45,7 +45,7 @@ from pyuvdata import (
     UVData,
     utils as uvutils,
 )
-from pyuvdata.uvbeam.analytic_beam import AnalyticBeam
+from pyuvdata.analytic_beam import AnalyticBeam
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
@@ -1240,7 +1240,7 @@ def _construct_beam_list(
     if "freq_interp_kind" in telconfig:
         bl_options["freq_interp_kind"] = telconfig["freq_interp_kind"]
 
-    beam_list_obj = BeamList(beam_list=beam_list, **bl_options)
+    beam_list_obj = BeamList(beam_list, **bl_options)
 
     return beam_list_obj
 
@@ -1438,14 +1438,10 @@ def parse_telescope_params(
     beam_ids_inc = np.unique(beam_ids)
     beam_dict = {}
 
-    for beamID in beam_ids_inc:
-        which_ants = antnames[np.where(beam_ids == beamID)]
-        beam_ind = np.where(beam_ids_inc == beamID)[0][0]
-        for a in which_ants:
-            # use the index into the included beams here rather than the beamID
-            # because only the included beams make it into the beam_list and
-            # then they are accessed by index in the list (not by original ID)
-            beam_dict[a] = beam_ind
+    for beam_ind, beam_id in enumerate(beam_ids_inc):
+        which_ants = antnames[np.where(beam_ids == beam_id)]
+        for ant in which_ants:
+            beam_dict[ant] = beam_ind
 
     beam_list = _construct_beam_list(
         beam_ids_inc, telconfig, freq_array=freq_array, freq_range=freq_range
