@@ -95,17 +95,19 @@ def uvobj_beams_srcs():
         param_dict, return_beams=True
     )
 
-    # Add more beams to the list.
+    # create a new beam list with more beams.
     # Don't use the uniform beam (need to see coherency change with positions).
     reference_frequency = 100e6
     alpha = -0.5
-    beam_list = BeamList([AiryBeam(diameter=13.0)])
-    beam_list.append(AiryBeam(diameter=14.6))
-    beam_list.append(GaussianBeam(sigma=0.3))
-    beam_list.append(
-        GaussianBeam(
-            sigma=0.8, reference_frequency=reference_frequency, spectral_index=alpha
-        )
+    beam_list = BeamList(
+        [
+            AiryBeam(diameter=13.0),
+            AiryBeam(diameter=14.6),
+            GaussianBeam(sigma=0.3),
+            GaussianBeam(
+                sigma=0.8, reference_frequency=reference_frequency, spectral_index=alpha
+            ),
+        ]
     )
 
     # Assign the last few antennas to use these other beams.

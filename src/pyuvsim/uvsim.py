@@ -787,9 +787,6 @@ def run_uvdata_uvsim(
     input_uv = comm.bcast(input_uv, root=0)
     beam_dict = comm.bcast(beam_dict, root=0)
     catalog.share(root=0)
-    if rank == 0:
-        print(beam_list)
-        print(type(beam_list))
     beam_list.share(root=0)
 
     if not isinstance(input_uv, UVData):
@@ -836,9 +833,6 @@ def run_uvdata_uvsim(
 
     # wrap this in a try/finally (no exception handling) to ensure resources are freed
     try:
-        # In case the user created the beam list without checking consistency:
-        beam_list.check_consistency()
-
         if beam_list.beam_type != "efield":
             raise ValueError("Beam type must be efield!")
 
@@ -998,7 +992,7 @@ def run_uvsim(
     rank = mpi.get_rank()
 
     input_uv = UVData()
-    beam_list = BeamList()
+    beam_list = BeamList([])
     beam_dict = None
     skydata = SkyModelData()
 

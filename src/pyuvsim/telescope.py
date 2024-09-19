@@ -5,11 +5,13 @@
 from __future__ import annotations
 
 import warnings
+from dataclasses import KW_ONLY, InitVar, dataclass, field
 from typing import Literal
 
 import numpy as np
 from astropy.coordinates import EarthLocation
 from pyuvdata import BeamInterface, UVBeam, parameter, utils as uvutils
+from pyuvdata.analytic_beam import AnalyticBeam
 
 try:
     from . import mpi
@@ -30,6 +32,7 @@ class BeamConsistencyError(Exception):
     pass
 
 
+@dataclass(frozen=True)
 class BeamList:
     """
     A container for the set of beam models and related parameters.
@@ -39,7 +42,8 @@ class BeamList:
     The data can then be shared across all processes by running the `share`
     method.
 
-    This behaves just as a normal Python list in terms of indexing, appending, etc.
+    This behaves just as a normal Python list in terms of indexing but it does
+    not allow changes to the list.
 
     Attributes
     ----------
@@ -56,7 +60,7 @@ class BeamList:
 
     Parameters
     ----------
-    beam_list : list (optional)
+    beams : list
         A list of pyuvdata UVBeam or AnalyticBeam objects.
     beam_type : str
         Desired beam type, either "efield" or "power", defaults to "efield".
@@ -70,36 +74,40 @@ class BeamList:
     peak_normalize : bool
         Option to peak normalize UVBeams in the beam list. This is required to
         be True for the pyuvsim simulator. Defaults to True.
-    check : bool
-        Whether to perform a consistency check on the beams (i.e. asserting that several
-        of their defining parameters are the same for all beams in the list).
 
     """
 
-    def __init__(
-        self,
-        beam_list=None,
-        *,
-        beam_type: Literal["efield", "power"] = "efield",
-        spline_interp_opts: dict[str:int] | None = None,
-        freq_interp_kind: str = "cubic",
-        peak_normalize: bool = True,
-        check: bool = True,
-    ):
-        self.spline_interp_opts = spline_interp_opts
-        self.freq_interp_kind = freq_interp_kind
-        self.beam_list = []
-        if beam_list is not None:
-            for beam in beam_list:
-                if peak_normalize and isinstance(beam, UVBeam):
-                    beam = beam.copy()
-                    beam.peak_normalize()
-                # turn them into BeamInterface objects
-                self.beam_list.append(BeamInterface(beam, beam_type=beam_type))
+    beams: InitVar([UVBeam | AnalyticBeam])
+    _: KW_ONLY
+    beam_type: Literal["efield", "power"] | None = "efield"
+    spline_interp_opts: dict[str:int] | None = None
+    freq_interp_kind: str = "cubic"
+    peak_normalize: InitVar(bool) = True
+    beam_list: [BeamInterface] = field(init=False)
 
-        self.is_consistent = False
-        if check:
-            self.check_consistency()
+    def __post_init__(self, beams, peak_normalize):
+        """
+        Post-initialization validation and conversions, define the beam_list attribute.
+
+        Parameters
+        ----------
+        beams : list
+            A list of pyuvdata UVBeam or AnalyticBeam objects.
+        peak_normalize : bool
+            Option to peak normalize UVBeams in the beam list. This is required to
+            be True for the pyuvsim simulator. Defaults to True.
+
+        """
+        beam_list = []
+        for beam in beams:
+            if peak_normalize and isinstance(beam, UVBeam):
+                beam = beam.copy()
+                beam.peak_normalize()
+            # turn them into BeamInterface objects
+            beam_list.append(BeamInterface(beam, beam_type=self.beam_type))
+        object.__setattr__(self, "beam_list", beam_list)
+
+        self._check_consistency()
 
     def _get_beam_basis_type(self):
         beam_basis = {}
@@ -128,12 +136,12 @@ class BeamList:
                 beam_basis[index] = "az_za"
         return beam_basis
 
-    def check_consistency(self):
+    def _check_consistency(self):
         """
         Check the consistency of all beams in the list.
 
-        This checks basic parameters of the objects for consistency, eg. the ``beam_type``.
-        It is meant to be manually called by the user.
+        This checks basic parameters of the objects for consistency, eg. the
+        ``beam_type``. It is called in the __post_init__.
 
         Raises
         ------
@@ -191,8 +199,6 @@ class BeamList:
             check_thing("Npols")
             check_thing("polarization_array")
 
-        self.is_consistent = True
-
     def check_all_azza_beams_full_sky(self):
         """
         Check if all az_za UVBeams cover the full sky.
@@ -217,38 +223,8 @@ class BeamList:
         return all_azza_full_sky
 
     @property
-    def beam_type(self):
-        """
-        Return the beam_type of all beams in list (if consistent).
-
-        Raises
-        ------
-        BeamConsistencyError
-            If the beams in the list are not consistent with each other.
-
-        """
-        if not self.is_consistent:
-            self.check_consistency()
-
-        if len(self) == 0:
-            return None
-
-        return getattr(self.beam_list[0], "beam_type", None)
-
-    @property
     def x_orientation(self):
-        """
-        Return the x_orientation of all beams in list (if consistent).
-
-        Raises
-        ------
-        BeamConsistencyError
-            If the beams in the list are not consistent with each other.
-
-        """
-        if not self.is_consistent:
-            self.check_consistency()
-
+        """Return the x_orientation of all beams in list."""
         if len(self) == 0:
             return None
 
@@ -273,18 +249,7 @@ class BeamList:
 
     @property
     def data_normalization(self):
-        """
-        Return the data_normalization of all beams in list (if consistent).
-
-        Raises
-        ------
-        BeamConsistencyError
-            If the beams in the list are not consistent with each other.
-
-        """
-        if not self.is_consistent:
-            self.check_consistency()
-
+        """Return the data_normalization of all beams in list."""
         if len(self) == 0:
             return None
 
@@ -310,32 +275,6 @@ class BeamList:
         """Get a particular beam from the list."""
         return self.beam_list[ind]
 
-    def __setitem__(self, ind, value):
-        """Insert into the beam list."""
-        try:
-            self.beam_list[ind] = value
-            # reset the is_consistent flag when changing a value
-            self.is_consistent = False
-        except ValueError as err:
-            self.beam_list.pop()
-            raise err
-
-    def __eq__(self, other):
-        """Define BeamList equality."""
-        return self.beam_list == other.beam_list
-
-    def append(self, beam):
-        """Append to the beam list."""
-        if self.data_normalization == "peak" and isinstance(beam, UVBeam):
-            beam.peak_normalize()
-        bi = BeamInterface(beam, beam_type=self.beam_type)
-        self.beam_list.append("")
-        try:
-            self.__setitem__(-1, bi)
-        except ValueError as err:
-            self.beam_list.pop()
-            raise err
-
     def share(self, root=0):
         """
         Share across MPI processes (requires mpi4py to use).
@@ -356,9 +295,6 @@ class BeamList:
                 "line_profiler installed."
             )
         mpi.start_mpi()
-
-        if not self.is_consistent:
-            self.check_consistency()
 
         for bi in self:
             if bi._isuvbeam:
