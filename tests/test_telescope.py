@@ -57,7 +57,7 @@ def beam_objs(beam_objs_main):
 
 
 def test_comparison(beam_objs):
-    beamlist = pyuvsim.BeamList(beam_objs)
+    beamlist = pyuvsim.BeamList(beams=beam_objs)
 
     beamlist2 = pyuvsim.BeamList([bi.beam for bi in beamlist.beam_list])
     assert beamlist == beamlist2
@@ -74,7 +74,7 @@ def test_beamlist_errors(beam_objs):
         BeamConsistencyError,
         match="x_orientation of beam 2 is not consistent with beam 1",
     ):
-        pyuvsim.BeamList(beams, check=True)
+        pyuvsim.BeamList(beams)
 
     # test warning on beams with no x_orientation
     beams[0].x_orientation = None
@@ -110,12 +110,6 @@ def test_beamlist_consistency_properties(beam_objs):
     assert beamlist.x_orientation == beams[0].x_orientation
 
 
-def test_beamlist_consistency_stringmode(beam_objs):
-    beams = beam_objs
-    beamlist = pyuvsim.BeamList(beams[:2])
-    beamlist.check_consistency()
-
-
 def test_beam_basis_type(beam_objs):
     beamlist = pyuvsim.BeamList(beam_objs)
 
@@ -129,13 +123,12 @@ def test_beam_basis_type_errors(beam_objs):
     beam_objs[0].pixel_coordinate_system = "orthoslant_zenith"
     beam_objs[0].check()
 
-    beamlist = pyuvsim.BeamList(beam_objs, check=False)
     with pytest.raises(
         ValueError,
         match="pyuvsim currently only supports UVBeams with 'az_za' or "
         "'healpix' pixel coordinate systems.",
     ):
-        beamlist.check_consistency()
+        pyuvsim.BeamList(beam_objs)
 
 
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer")
@@ -154,20 +147,19 @@ def test_beam_basis_non_orthogonal_error(beam_objs):
     beam_objs[1].data_array = new_data
     beam_objs[1].check()
 
-    beamlist = pyuvsim.BeamList(beam_objs, check=False)
     with pytest.raises(
         ValueError,
         match="pyuvsim currently only supports beams with basis vectors that"
         "are aligned with the azimuth and zenith angle in each pixel."
         "Work is in progress to add other basis vector systems.",
     ):
-        beamlist.check_consistency()
+        pyuvsim.BeamList(beam_objs)
 
 
 def test_empty_beamlist():
-    a = pyuvsim.BeamList(check=False)
+    a = pyuvsim.BeamList([])
     assert a.x_orientation is None
-    assert a.beam_type is None
+    assert a.beam_type == "efield"
 
 
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
@@ -178,7 +170,7 @@ def test_powerbeam_consistency(beam_objs):
     for beam in newbeams:
         beam.efield_to_power()
 
-    pyuvsim.BeamList(newbeams, beam_type="power", check=True)
+    pyuvsim.BeamList(newbeams, beam_type="power")
 
 
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
