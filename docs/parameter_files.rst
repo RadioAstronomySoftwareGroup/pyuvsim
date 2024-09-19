@@ -188,7 +188,7 @@ Telescope Configuration
     In this case we have 5 different types of beams with beam IDs running from
     0 to 4:
 
-      - 0: a UVBeam from the file `hera.beamfits`
+      - 0: a UVBeam from the file ``hera.beamfits``
       - 1: a UVBeam (for the MWA) with some keywords specified to pass to ``UVBeam.read``
       - 2: an analytic Airy disk with diameter 16 m
       - 3: an analytic Gaussian beam with sigma 0.03 radians (for the E-Field beam)
