@@ -176,10 +176,26 @@ def test_analytic_diffuse(model, tol, tmpdir):
 
 
 @pytest.mark.filterwarnings("ignore:Fixing auto polarization power beams")
-def test_powerbeam_sim(cst_beam):
+@pytest.mark.parametrize(
+    ("problem", "err_msg"),
+    [
+        ("beam_type", "Beam type must be efield!"),
+        ("normalization", "UVBeams must be peak normalized."),
+    ],
+)
+def test_uvsim_beamlist_errors(cst_beam, problem, err_msg):
     new_cst = copy.deepcopy(cst_beam)
-    new_cst.efield_to_power()
-    beams = BeamList([new_cst] * 4, beam_type="power")
+    if problem == "beam_type":
+        new_cst.efield_to_power()
+        beam_type = "power"
+    else:
+        beam_type = "efield"
+    if problem == "normalization":
+        new_cst.data_normalization = "physical"
+        peak_normalize = False
+    else:
+        peak_normalize = True
+    beams = BeamList([new_cst] * 4, beam_type=beam_type, peak_normalize=peak_normalize)
     cfg = os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
     input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(cfg, return_beams=False)
     sky_model = pyuvsim.simsetup.initialize_catalog_from_params(
@@ -188,7 +204,7 @@ def test_powerbeam_sim(cst_beam):
     sky_model = pyuvsim.simsetup.SkyModelData(sky_model)
     beam_dict = dict.fromkeys(range(4), 0)
 
-    with pytest.raises(ValueError, match="Beam type must be efield!"):
+    with pytest.raises(ValueError, match=err_msg):
         pyuvsim.run_uvdata_uvsim(input_uv, beams, beam_dict, catalog=sky_model)
 
 

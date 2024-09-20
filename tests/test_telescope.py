@@ -7,9 +7,8 @@ from astropy.coordinates import EarthLocation
 from pyuvdata import AiryBeam, GaussianBeam, ShortDipoleBeam, UniformBeam, UVBeam
 from pyuvdata.testing import check_warnings
 
-import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-from pyuvsim.telescope import BeamConsistencyError
+from pyuvsim.telescope import BeamConsistencyError, BeamList, Telescope
 
 try:
     import mpi4py  # noqa
@@ -25,8 +24,6 @@ herabeam_default = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 def beam_objs_main():
     uvb = UVBeam()
     uvb.read_beamfits(herabeam_default)
-
-    uvb.extra_keywords["beam_path"] = herabeam_default
 
     uvb2 = uvb.copy()
 
@@ -57,16 +54,26 @@ def beam_objs(beam_objs_main):
 
 
 def test_comparison(beam_objs):
-    beamlist = pyuvsim.BeamList(beams=beam_objs)
+    beamlist = BeamList(beam_objs)
 
-    beamlist2 = pyuvsim.BeamList([bi.beam for bi in beamlist.beam_list])
+    beamlist2 = BeamList([bi.beam for bi in beamlist.beam_list])
     assert beamlist == beamlist2
+
+
+def test_en_feed_beamlist_no_errors(beam_objs):
+    beams = beam_objs
+
+    beams[0].feed_array = ["e", "n"]
+    beams[0].check()
+
+    assert "n" in beams[0].feed_array
+    BeamList([beams[0]])
 
 
 def test_beamlist_errors(beam_objs):
     # make a copy to enable Telescope equality checking
     beams = copy.deepcopy(beam_objs)
-    beam_list_init = pyuvsim.BeamList(beam_objs)
+    beam_list_init = BeamList(beam_objs)
 
     # test error on beams with different x_orientation
     beams[0].x_orientation = None
@@ -74,7 +81,7 @@ def test_beamlist_errors(beam_objs):
         BeamConsistencyError,
         match="x_orientation of beam 2 is not consistent with beam 1",
     ):
-        pyuvsim.BeamList(beams)
+        BeamList(beams)
 
     # test warning on beams with no x_orientation
     beams[0].x_orientation = None
@@ -84,34 +91,34 @@ def test_beamlist_errors(beam_objs):
         match="All polarized beams have x_orientation set to None. This will make it "
         "hard to interpret the polarizations of the simulated visibilities.",
     ):
-        assert pyuvsim.BeamList(beams[:2]).x_orientation is None
+        assert BeamList(beams[:2]).x_orientation is None
 
     # Compare Telescopes with beamlists of different lengths
-    beam_list_init = pyuvsim.BeamList(beam_objs)
+    beam_list_init = BeamList(beam_objs)
     beams = copy.deepcopy(beam_objs)
     del beams[0]
-    beam_list = pyuvsim.BeamList(beams)
+    beam_list = BeamList(beams)
     array_location = EarthLocation(lat="-30d43m17.5s", lon="21d25m41.9s", height=1073.0)
-    tel0 = pyuvsim.Telescope("tel0", array_location, beam_list_init)
-    tel1 = pyuvsim.Telescope("tel1", array_location, beam_list)
+    tel0 = Telescope("tel0", array_location, beam_list_init)
+    tel1 = Telescope("tel1", array_location, beam_list)
     assert tel0 != tel1
 
 
 def test_beamlist_consistency(beam_objs):
     # Does check, but raises no error
-    pyuvsim.BeamList(beam_objs[:2])
+    BeamList(beam_objs[:2])
 
-    pyuvsim.BeamList(beam_objs[:3])
+    BeamList(beam_objs[:3])
 
 
 def test_beamlist_consistency_properties(beam_objs):
     beams = beam_objs
-    beamlist = pyuvsim.BeamList(beams[:2])
+    beamlist = BeamList(beams[:2])
     assert beamlist.x_orientation == beams[0].x_orientation
 
 
 def test_beam_basis_type(beam_objs):
-    beamlist = pyuvsim.BeamList(beam_objs)
+    beamlist = BeamList(beam_objs)
 
     basis_types = beamlist._get_beam_basis_type()
 
@@ -128,7 +135,7 @@ def test_beam_basis_type_errors(beam_objs):
         match="pyuvsim currently only supports UVBeams with 'az_za' or "
         "'healpix' pixel coordinate systems.",
     ):
-        pyuvsim.BeamList(beam_objs)
+        BeamList(beam_objs)
 
 
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer")
@@ -153,11 +160,11 @@ def test_beam_basis_non_orthogonal_error(beam_objs):
         "are aligned with the azimuth and zenith angle in each pixel."
         "Work is in progress to add other basis vector systems.",
     ):
-        pyuvsim.BeamList(beam_objs)
+        BeamList(beam_objs)
 
 
 def test_empty_beamlist():
-    a = pyuvsim.BeamList([])
+    a = BeamList([])
     assert a.x_orientation is None
     assert a.beam_type == "efield"
 
@@ -170,14 +177,14 @@ def test_powerbeam_consistency(beam_objs):
     for beam in newbeams:
         beam.efield_to_power()
 
-    pyuvsim.BeamList(newbeams, beam_type="power")
+    BeamList(newbeams, beam_type="power")
 
 
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
 def test_check_azza_full_sky(beam_objs):
     beams = beam_objs
 
-    beamlist = pyuvsim.BeamList(beams)
+    beamlist = BeamList(beams)
     assert beamlist.check_all_azza_beams_full_sky()
 
     # Downselect a beam to a small sky area
@@ -185,5 +192,20 @@ def test_check_azza_full_sky(beam_objs):
     za_inds_use = np.nonzero(beams[0].axis2_array <= za_max)[0]
     beams[0].select(axis2_inds=za_inds_use)
 
-    beamlist = pyuvsim.BeamList(beams)
+    beamlist = BeamList(beams)
     assert not beamlist.check_all_azza_beams_full_sky()
+
+
+def test_telescope_init_errors(beam_objs, hera_loc):
+    array_xyz = np.array([hera_loc.x.value, hera_loc.y.value, hera_loc.z.value])
+
+    beam_list = BeamList(beam_objs)
+    with pytest.raises(
+        ValueError,
+        match="location must be an EarthLocation object or a "
+        "lunarsky.MoonLocation object",
+    ):
+        Telescope("telescope_name", array_xyz, beam_list)
+
+    with pytest.raises(ValueError, match="beam_list must be a BeamList object"):
+        Telescope("telescope_name", hera_loc, beam_objs)
