@@ -82,6 +82,8 @@ from .utils import check_file_exists_and_increment
 
 logger = logging.getLogger(__name__)
 
+# this dict can go away in version 1.5 when we require the !AnalyticBeam
+# tag in yaml files to specify analytic beams
 analytic_beams = {
     "airy": AiryBeam,
     "gaussian": GaussianBeam,
@@ -1121,9 +1123,10 @@ def _construct_beam_list(
     ):
         select["freq_range"] = freq_range
     if "freq_buffer" in select and "freq_range" not in select:
+        freq_arr_val = freq_array.to("Hz").value
         freq_range = (
-            freq_array.min() - select["freq_buffer"],
-            freq_array.max() + select["freq_buffer"],
+            freq_arr_val.min() - select["freq_buffer"],
+            freq_arr_val.max() + select["freq_buffer"],
         )
         select["freq_range"] = freq_range
 
@@ -2102,8 +2105,8 @@ def initialize_uvdata_from_params(
         "instrument": "instrument",
     }
     for key, tel_key in telescope_param_map.items():
-        if key in param_dict:
-            tel_init_params[tel_key] = param_dict[key]
+        if key in param_dict["telescope"]:
+            tel_init_params[tel_key] = param_dict["telescope"][key]
         if key in tele_params:
             tel_init_params[tel_key] = tele_params[key]
     if "instrument" not in tel_init_params:

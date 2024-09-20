@@ -4,11 +4,14 @@ import copy
 import os
 
 import numpy as np
+import pytest
 import yaml
 from astropy import units
 
-import pyuvsim
+from pyuvsim import simsetup
+from pyuvsim.antenna import Antenna
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
+from pyuvsim.telescope import BeamList, Telescope
 
 
 def test_jones_set_spline(cst_beam, hera_loc):
@@ -24,16 +27,14 @@ def test_jones_set_spline(cst_beam, hera_loc):
     Nfreqs = 10
     freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
 
-    beam_list = pyuvsim.simsetup._construct_beam_list(
-        np.arange(2), telconfig, freq_array=freqs
-    )
+    beam_list = simsetup._construct_beam_list(np.arange(2), telconfig, freq_array=freqs)
     assert len(beam_list) == 2
 
     assert beam0 == beam_list[-1].beam
 
     # Make antenna that uses beam #1
-    antenna = pyuvsim.Antenna("ant1", 1, np.array([0, 10, 0]), 1)
-    array = pyuvsim.Telescope("telescope_name", array_location, beam_list)
+    antenna = Antenna("ant1", 1, np.array([0, 10, 0]), 1)
+    array = Telescope("telescope_name", array_location, beam_list)
 
     altaz = [[0.0134], [1.0]]
 
@@ -89,9 +90,9 @@ def test_jones_set_interp(cst_beam, hera_loc):
     array_location = hera_loc
 
     beam = cst_beam.copy()
-    beam_list = pyuvsim.BeamList([beam])
-    antenna1 = pyuvsim.Antenna("ant1", 1, np.array([0, 10, 0]), 0)
-    array = pyuvsim.Telescope("telescope_name", array_location, beam_list)
+    beam_list = BeamList([beam])
+    antenna1 = Antenna("ant1", 1, np.array([0, 10, 0]), 0)
+    array = Telescope("telescope_name", array_location, beam_list)
     source_altaz = np.array([[0.0], [np.pi / 4.0]])
     freq = 123e6 * units.Hz
 
@@ -107,9 +108,51 @@ def test_jones_set_interp(cst_beam, hera_loc):
     assert np.all(jones1 == jones0)
 
 
+@pytest.mark.parametrize(
+    ("problem", "err_msg"),
+    [
+        (
+            "beam_id",
+            "This antenna beam_id is 1, which is too large "
+            "for the beam_list, which has length 1.",
+        ),
+        ("beam_type", "Beam type must be efield!"),
+        ("normalization", "UVBeams must be peak normalized."),
+    ],
+)
+def test_get_beam_jones_errors(cst_beam, hera_loc, problem, err_msg):
+    array_location = hera_loc
+
+    beam = cst_beam.copy()
+    if problem == "normalization":
+        beam.data_normalization = "physical"
+        peak_normalize = False
+    else:
+        peak_normalize = True
+
+    if problem == "beam_type":
+        beam.efield_to_power()
+        beam_type = "power"
+    else:
+        beam_type = "efield"
+    beam_list = BeamList([beam], beam_type=beam_type, peak_normalize=peak_normalize)
+    if problem == "beam_id":
+        beam_id = 1
+    else:
+        beam_id = 0
+
+    antenna1 = Antenna("ant1", 1, np.array([0, 10, 0]), beam_id)
+    array = Telescope("telescope_name", array_location, beam_list)
+    source_altaz = np.array([[0.0], [np.pi / 4.0]])
+    freq = 123e6 * units.Hz
+
+    with pytest.raises(ValueError, match=err_msg):
+        antenna1.get_beam_jones(array, source_altaz, freq, freq_interp_kind="cubic")
+
+
 def test_ant_comparison():
-    antenna1 = pyuvsim.Antenna("ant1", 1, np.array([0, 10, 0]), 1)
-    antenna2 = pyuvsim.Antenna("ant2", 2, np.array([0, 20, 0]), 1)
+    antenna1 = Antenna("ant1", 1, np.array([0, 10, 0]), 1)
+    antenna2 = Antenna("ant2", 2, np.array([0, 20, 0]), 1)
 
     ant1_copy = copy.deepcopy(antenna1)
 

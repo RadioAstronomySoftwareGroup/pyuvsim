@@ -1098,7 +1098,7 @@ def test_fullfreq_check(uvobj_beams_srcs):
     next(taskiter1)
 
 
-def test_run_mpierr():
+def test_run_mpierr(hera_loc, cst_beam):
     params = pyuvsim.simsetup._config_str_to_dict(
         os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
     )
@@ -1112,6 +1112,10 @@ def test_run_mpierr():
             ImportError, match="You need mpi4py to use the uvsim module"
         ):
             pyuvsim.run_uvdata_uvsim(UVData(), ["beamlist"], {}, pyuvsim.SkyModelData())
+
+        beam_list = BeamList([cst_beam])
+        with pytest.raises(ImportError, match="You need mpi4py to use this method."):
+            beam_list.share()
 
 
 @pytest.mark.parametrize("order", [("bda",), ("baseline", "time"), ("ant2", "time")])
