@@ -164,9 +164,10 @@ def test_beam_basis_non_orthogonal_error(beam_objs):
 
 
 def test_empty_beamlist():
-    a = BeamList([])
-    assert a.x_orientation is None
-    assert a.beam_type == "efield"
+    blist = BeamList([])
+    assert blist.x_orientation is None
+    assert blist.beam_type == "efield"
+    assert blist.data_normalization is None
 
 
 @pytest.mark.filterwarnings("ignore:key beam_path in extra_keywords is longer than 8")
