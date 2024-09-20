@@ -516,10 +516,47 @@ def test_gleam_catalog_spectral_type(spectral_type):
     assert gleam_catalog.Ncomponents == 50
 
 
-def test_param_reader():
+@pytest.mark.parametrize("telparam_in_obsparam", [True, False])
+def test_param_reader(telparam_in_obsparam, tmpdir):
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml"
     )
+    with open(param_filename) as fhandle:
+        param_dict = yaml.safe_load(fhandle)
+
+    if telparam_in_obsparam:
+        print("setting up new param file")
+        new_param_file = os.path.join(tmpdir, "new_obsparam.yaml")
+        new_telconfig_file = os.path.join(tmpdir, "new_tel_config.yaml")
+        new_layout_file = os.path.join(tmpdir, "triangle_bl_layout.csv")
+
+        orig_tel_config = os.path.join(
+            SIM_DATA_PATH,
+            "test_config",
+            param_dict["telescope"]["telescope_config_name"],
+        )
+
+        param_dict["telescope"]["instrument"] = "foo"
+        param_dict["telescope"]["telescope_config_name"] = new_telconfig_file
+
+        with open(orig_tel_config) as fhandle:
+            tel_config = yaml.safe_load(fhandle)
+            tel_config["beam_paths"][0].filename = os.path.join(
+                SIM_DATA_PATH, tel_config["beam_paths"][0].filename[0]
+            )
+        with open(new_telconfig_file, "w") as fhandle:
+            yaml.safe_dump(tel_config, fhandle)
+        with open(new_param_file, "w") as fhandle:
+            yaml.safe_dump(param_dict, fhandle)
+
+        shutil.copyfile(
+            os.path.join(SIM_DATA_PATH, "test_config", "triangle_bl_layout.csv"),
+            new_layout_file,
+        )
+
+    else:
+        new_param_file = param_filename
+
     uv_in = UVData.from_file(triangle_uvfits_file)
     uv_in.unproject_phase()
 
@@ -545,16 +582,18 @@ def test_param_reader():
         ],
     ):
         uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(
-            param_filename,
+            new_param_file,
             reorder_blt_kw={"order": "time", "minor_order": "baseline"},
             check_kw={"run_check_acceptability": True},
         )
     assert uv_obj.telescope.x_orientation == "east"
+    if telparam_in_obsparam:
+        assert uv_obj.telescope.instrument == "foo"
+        # reset it for equality check
+        uv_obj.telescope.instrument = "Triangle"
 
     pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
 
-    with open(param_filename) as fhandle:
-        param_dict = yaml.safe_load(fhandle)
     with check_warnings(
         UserWarning,
         match="No out format specified for uvdata file. Defaulting to uvh5 "
@@ -1526,7 +1565,7 @@ def test_direct_fname(tmpdir):
 
 
 @pytest.mark.parametrize(
-    ("input_yaml", "err_msg"),
+    ("input_yaml", "beam_id", "err_msg"),
     [
         (
             """
@@ -1540,6 +1579,7 @@ def test_direct_fname(tmpdir):
             telescope_location: (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
             telescope_name: BLLITE
             """,
+            0,
             "Beam model is not properly specified",
         ),
         (
@@ -1555,6 +1595,7 @@ def test_direct_fname(tmpdir):
             telescope_location: (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
             telescope_name: BLLITE
             """,
+            0,
             "Beam model must have either a 'filename' field for UVBeam files "
             "or a 'type' field for analytic beams.",
         ),
@@ -1572,11 +1613,29 @@ def test_direct_fname(tmpdir):
             telescope_location: (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
             telescope_name: BLLITE
             """,
+            0,
             "Undefined beam model type: unsupported_type",
+        ),
+        (
+            """
+            beam_paths:
+                0: !AnalyticBeam
+                    class: AiryBeam
+                    diameter: 12
+            diameter: 12
+            spline_interp_opts:
+                    kx: 4
+                    ky: 4
+            freq_interp_kind: 'cubic'
+            telescope_location: (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
+            telescope_name: BLLITE
+            """,
+            1,
+            "beam_id 1 is not listed in the telconfig.",
         ),
     ],
 )
-def test_beamlist_init_errors(input_yaml, err_msg):
+def test_beamlist_init_errors(input_yaml, beam_id, err_msg):
     telconfig = yaml.safe_load(input_yaml)
 
     warn_msg = [
@@ -1585,7 +1644,7 @@ def test_beamlist_init_errors(input_yaml, err_msg):
         "see the parameter_files documentation. This will become an "
         "error in version 1.4"
     ]
-    if not isinstance(telconfig["beam_paths"][0], float):
+    if beam_id == 0 and not isinstance(telconfig["beam_paths"][0], float):
         warn_msg += [
             "Entries in 'beam_paths' should be specified using either the UVBeam "
             "or AnalyticBeam constructors or using a dict syntax for UVBeams. "
@@ -1602,7 +1661,7 @@ def test_beamlist_init_errors(input_yaml, err_msg):
         check_warnings(DeprecationWarning, match=warn_msg),
         pytest.raises(ValueError, match=err_msg),
     ):
-        pyuvsim.simsetup._construct_beam_list([0], telconfig, freq_array=freqs)
+        pyuvsim.simsetup._construct_beam_list([beam_id], telconfig, freq_array=freqs)
 
 
 def test_beamlist_init_spline():
@@ -1721,7 +1780,8 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
     assert isinstance(beam_list[7].beam, ShortDipoleBeam)
 
 
-def test_beamlist_init_freqrange():
+@pytest.mark.parametrize("sel_type", ["freq_range", "freq_range_yaml", "freq_buff"])
+def test_beamlist_init_freqrange(sel_type):
     telescope_config_name = os.path.join(SIM_DATA_PATH, "bl_lite_mixed.yaml")
     with open(telescope_config_name) as yf:
         telconfig = yaml.safe_load(yf)
@@ -1729,7 +1789,17 @@ def test_beamlist_init_freqrange():
     telconfig["beam_paths"][0] = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
     Nfreqs = 10
-    freqs = np.linspace(100, 150, Nfreqs) * 1e6 * units.Hz
+    freqs = np.linspace(120, 145, Nfreqs) * 1e6 * units.Hz
+
+    freq_range = [117e6, 148e6]
+    if sel_type == "freq_range":
+        freq_range_pass = freq_range
+    elif sel_type == "freq_range_yaml":
+        telconfig["select"] = {"freq_range": freq_range}
+        freq_range_pass = None
+    else:
+        telconfig["select"] = {"freq_buffer": 0}
+        freq_range_pass = None
 
     with check_warnings(
         DeprecationWarning,
@@ -1750,12 +1820,17 @@ def test_beamlist_init_freqrange():
         * 6,
     ):
         beam_list = pyuvsim.simsetup._construct_beam_list(
-            np.arange(6), telconfig, freq_range=(117e6, 148e6), freq_array=freqs
+            np.arange(6), telconfig, freq_range=freq_range_pass, freq_array=freqs
         )
 
     # How the beam attributes should turn out for this file:
     assert isinstance(beam_list[0].beam, UVBeam)
     assert len(beam_list[0].beam.freq_array) == 2
+
+    with pytest.raises(ValueError, match="If passed, freq_range have 2 elements"):
+        beam_list = pyuvsim.simsetup._construct_beam_list(
+            np.arange(6), telconfig, freq_range=[117e6], freq_array=freqs
+        )
 
 
 def test_moon_lsts():
