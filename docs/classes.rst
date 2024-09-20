@@ -5,7 +5,8 @@ Primary Beams
 -------------
 
 Simulations may be run using :class:`pyuvdata.UVBeam` objects or
-:class:`pyuvdata.AnalyticBeam` objects. See the docs for those objects.
+:class:`pyuvdata.analytic_beam.AnalyticBeam` objects. See the docs for those
+objects.
 
 
 Antenna objects

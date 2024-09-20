@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import warnings
-from dataclasses import KW_ONLY, InitVar, dataclass, field
+from dataclasses import KW_ONLY, InitVar, dataclass
 from typing import Literal
 
 import numpy as np
@@ -47,7 +47,7 @@ class BeamList:
 
     Attributes
     ----------
-    beam_list : list of pyuvdata.BeamInterface objects
+    beam_list : list of pyuvdata.BeamInterface
         The list of BeamInterface objects.
     spline_interp_opts : dict
         Degrees of the bivariate spline for the angular interpolation (passed
@@ -60,8 +60,9 @@ class BeamList:
 
     Parameters
     ----------
-    beams : list
-        A list of pyuvdata UVBeam or AnalyticBeam objects.
+    beam_list : list pyuvdata.UVBeam or pyuvdata.AnalyticBeam
+        A list of pyuvdata UVBeam or AnalyticBeam objects. These will be converted
+        into BeamInterface objects during initialization.
     beam_type : str
         Desired beam type, either "efield" or "power", defaults to "efield".
     spline_interp_opts : dict
@@ -77,29 +78,26 @@ class BeamList:
 
     """
 
-    beams: InitVar([UVBeam | AnalyticBeam])
+    beam_list: [UVBeam | AnalyticBeam]
     _: KW_ONLY
     beam_type: Literal["efield", "power"] | None = "efield"
-    spline_interp_opts: dict[str:int] | None = None
+    spline_interp_opts: dict[str, int] | None = None
     freq_interp_kind: str = "cubic"
     peak_normalize: InitVar(bool) = True
-    beam_list: [BeamInterface] = field(init=False)
 
-    def __post_init__(self, beams, peak_normalize):
+    def __post_init__(self, peak_normalize):
         """
         Post-initialization validation and conversions, define the beam_list attribute.
 
         Parameters
         ----------
-        beams : list
-            A list of pyuvdata UVBeam or AnalyticBeam objects.
         peak_normalize : bool
             Option to peak normalize UVBeams in the beam list. This is required to
             be True for the pyuvsim simulator. Defaults to True.
 
         """
         beam_list = []
-        for beam in beams:
+        for beam in self.beam_list:
             if peak_normalize and isinstance(beam, UVBeam):
                 beam = beam.copy()
                 beam.peak_normalize()
@@ -343,7 +341,8 @@ class Telescope:
 
         if not isinstance(telescope_location, tuple(allowed_location_types)):
             raise ValueError(
-                "location must be an EarthLocation object or a lunarsky.MoonLocation object"
+                "location must be an EarthLocation object or a "
+                "lunarsky.MoonLocation object"
             )
         self.location = telescope_location
         self.name = telescope_name
