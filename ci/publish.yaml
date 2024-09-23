@@ -11,6 +11,6 @@ dependencies:
   - setuptools_scm>=8.1
   - psutil
   - pip:
-    - pyradiosky>=0.2
+    - pyradiosky>=1.0.1
     - build
     - git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata@analytic_beam_refactor
