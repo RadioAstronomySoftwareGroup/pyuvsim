@@ -49,8 +49,8 @@ def goto_tempdir(tmpdir):
 def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # Test vot and txt catalogs for parameter simulation
     # Compare to reference files.
-    uv_ref = UVData()
-    uv_ref.read(os.path.join(SIM_DATA_PATH, "testfile_singlesource.uvh5"))
+    ref_file = os.path.join(SIM_DATA_PATH, "testfile_singlesource.uvh5")
+    uv_ref = UVData.from_file(ref_file)
 
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", paramfile)
     # This test obsparam file has "single_source.txt" as its catalog.
@@ -61,12 +61,12 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
         return
 
     path = goto_tempdir
-    ofilepath = os.path.join(path, "tempfile.uvfits")
+    ofilepath = os.path.join(path, "tempfile.uvh5")
 
     uv_new = UVData.from_file(ofilepath)
 
-    uv_new.unproject_phase(use_ant_pos=True)
-    uv_new._consolidate_phase_center_catalogs(other=uv_ref)
+    # harmonize the phase centers
+    uv_new._consolidate_phase_center_catalogs(other=uv_ref, ignore_name=True)
 
     assert history_utils._check_history_version(uv_new.history, pyradiosky.__version__)
     assert history_utils._check_history_version(uv_new.history, pyuvdata.__version__)
@@ -80,15 +80,8 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     )
     assert history_utils._check_history_version(uv_new.history, "Npus =")
 
-    # Reset parts that will deviate
+    # Reset history because it will deviate
     uv_new.history = uv_ref.history
-    uv_ref.dut1 = uv_new.dut1
-    uv_ref.gst0 = uv_new.gst0
-    uv_ref.rdate = uv_new.rdate
-
-    uv_ref.conjugate_bls()
-    uv_ref.reorder_blts()
-    uv_ref.integration_time = np.full_like(uv_ref.integration_time, 11.0)
 
     assert uv_new == uv_ref
 
