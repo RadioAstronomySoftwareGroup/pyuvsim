@@ -274,7 +274,7 @@ class BeamList:
         return self.beam_list[ind]
 
     def _share_uvbeam(self, bi, root):
-        mpi.start_mpi(block_nonroot_stdout=False)
+        mpi.start_mpi()
 
         # Get list of attributes that are set.
         rank = mpi.world_comm.Get_rank()
@@ -291,21 +291,16 @@ class BeamList:
 
         set_values = mpi.world_comm.bcast(set_values, root=root)
 
-        assert set_values is not None
-        try:
-            assert isinstance(set_values, list)
-        except Exception as err:
-            print(f"{type(set_values)=:} {set_values=:}")
-            raise err
-
         # share these attributes to the other ranks
         for key in set_values:
             if rank == root:
                 attr = getattr(bi.beam, key)
             else:
                 attr = parameter.UVParameter(key)
-                setattr(bi.beam, key, attr)
 
+            # for the data array on a UVBeam
+            # share the actual response pattern in shared memory
+            # this could in theory be quite large
             if key == "_data_array":
                 attr.value = mpi.shared_mem_bcast(attr.value, root=root)
 
@@ -317,6 +312,10 @@ class BeamList:
                     setattr(attr, metadata, meta_to_assign)
             else:
                 attr = mpi.world_comm.bcast(attr, root=root)
+
+            #  assign the initialized UVParameter to the new beam
+            if rank != root:
+                setattr(bi.beam, key, attr)
 
         return bi
 
@@ -340,7 +339,7 @@ class BeamList:
                 "line_profiler installed."
             )
 
-        mpi.start_mpi(block_nonroot_stdout=False)
+        mpi.start_mpi()
         rank = mpi.get_rank()
 
         beam_opts = {
