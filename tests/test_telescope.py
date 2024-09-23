@@ -209,3 +209,35 @@ def test_telescope_init_errors(beam_objs, hera_loc):
 
     with pytest.raises(ValueError, match="beam_list must be a BeamList object"):
         Telescope("telescope_name", hera_loc, beam_objs)
+
+
+# @pytest.mark.parallel(2, timeout=5)
+@pytest.mark.skipif(not has_mpi, reason="Must have mpi for this test")
+def test_share_beams(beam_objs):
+    from pyuvsim import mpi
+
+    mpi.start_mpi(block_nonroot_stdout=False)
+
+    expected_list = BeamList(beam_objs)
+
+    if mpi.rank == 0:
+        beam_list = BeamList(beam_objs)
+    else:
+        beam_list = BeamList([])
+
+    assert isinstance(beam_list, BeamList)
+    mpi.world_comm.Barrier()
+
+    beam_list.share()
+
+    assert len(expected_list) == len(beam_list)
+
+    for expected, other in zip(expected_list, beam_list, strict=True):
+        try:
+            assert expected == other
+        except Exception as err:
+            try:
+                assert expected.beam == other.beam
+            except Exception as err2:
+                raise err2 from err
+            raise err from None

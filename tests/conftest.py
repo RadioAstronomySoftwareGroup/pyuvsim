@@ -101,7 +101,7 @@ def pytest_runtest_call(item):
         timeout = float(parmark.kwargs["timeout"])
 
     call = [
-        "mpirun",
+        "mpiexec",
         "--host",
         "localhost:10",
         "-n",

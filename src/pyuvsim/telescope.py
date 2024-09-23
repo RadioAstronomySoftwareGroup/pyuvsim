@@ -273,6 +273,53 @@ class BeamList:
         """Get a particular beam from the list."""
         return self.beam_list[ind]
 
+    def _share_uvbeam(self, bi, root):
+        mpi.start_mpi(block_nonroot_stdout=False)
+
+        # Get list of attributes that are set.
+        rank = mpi.world_comm.Get_rank()
+
+        set_values = []
+        if rank == root:
+            set_values = [
+                key
+                for key, value in bi.beam.__dict__.items()
+                if value is not None and isinstance(value, parameter.UVParameter)
+            ]
+
+        mpi.world_comm.Barrier()
+
+        set_values = mpi.world_comm.bcast(set_values, root=root)
+
+        assert set_values is not None
+        try:
+            assert isinstance(set_values, list)
+        except Exception as err:
+            print(f"{type(set_values)=:} {set_values=:}")
+            raise err
+
+        # share these attributes to the other ranks
+        for key in set_values:
+            if rank == root:
+                attr = getattr(bi.beam, key)
+            else:
+                attr = parameter.UVParameter(key)
+                setattr(bi.beam, key, attr)
+
+            if key == "_data_array":
+                attr.value = mpi.shared_mem_bcast(attr.value, root=root)
+
+                for metadata in attr.__dict__:
+                    if metadata == "value":
+                        continue
+                    meta_to_assign = getattr(attr, metadata)
+                    meta_to_assign = mpi.world_comm.bcast(meta_to_assign, root=root)
+                    setattr(attr, metadata, meta_to_assign)
+            else:
+                attr = mpi.world_comm.bcast(attr, root=root)
+
+        return bi
+
     def share(self, root=0):
         """
         Share across MPI processes (requires mpi4py to use).
@@ -292,22 +339,70 @@ class BeamList:
                 "or pip install pyuvsim[all] if you also want the "
                 "line_profiler installed."
             )
-        mpi.start_mpi()
 
-        for bi in self:
-            if bi._isuvbeam:
-                # Get list of attributes that are set.
-                for key, attr in bi.beam.__dict__.items():
-                    if not isinstance(attr, parameter.UVParameter):
-                        continue
-                    if key == "_data_array":
-                        bi.beam.__dict__[key].value = mpi.shared_mem_bcast(
-                            attr.value, root=0
-                        )
-                    else:
-                        bi.beam.__dict__[key].value = mpi.world_comm.bcast(
-                            attr.value, root=0
-                        )
+        mpi.start_mpi(block_nonroot_stdout=False)
+        rank = mpi.get_rank()
+
+        beam_opts = {
+            "beam_type": None,
+            "spline_interp_opts": None,
+            "freq_interp_kind": None,
+            "peak_normalize": None,
+        }
+        if rank == root:
+            beam_opts = {
+                "beam_type": self.beam_type,
+                "spline_interp_opts": self.spline_interp_opts,
+                "freq_interp_kind": self.freq_interp_kind,
+                "peak_normalize": self.peak_normalize,
+            }
+
+        beam_opts = mpi.world_comm.bcast(beam_opts, root=root)
+
+        if rank != root:
+            for key, val in beam_opts.items():
+                object.__setattr__(self, key, val)
+
+        # Get list of beam indices that are set.
+        sharelist = None
+        if rank == root:
+            sharelist = [
+                (bi._isuvbeam, bi.beam_type, bi.include_cross_pols) for bi in self
+            ]
+        sharelist = mpi.world_comm.bcast(sharelist, root=root)
+
+        if rank != root:
+            beam_list = []
+
+        for cnt, (uvbeam, beam_type, cross_pols) in enumerate(sharelist):
+            mpi.world_comm.Barrier()
+
+            if rank == root:
+                bi = self[cnt]
+            else:
+                if not uvbeam:
+                    bi = None
+                else:
+                    tmp_beam = UVBeam()
+                    tmp_beam.beam_type = beam_type
+
+                    bi = BeamInterface(
+                        beam=tmp_beam,
+                        beam_type=beam_type,
+                        include_cross_pols=cross_pols,
+                    )
+
+            if not uvbeam:
+                bi = mpi.world_comm.bcast(bi, root=root)
+            else:
+                bi = self._share_uvbeam(bi, root)
+
+            if rank != root:
+                beam_list.append(bi)
+
+        if rank != root:
+            object.__setattr__(self, "beam_list", beam_list)
+
         mpi.world_comm.Barrier()
 
 
