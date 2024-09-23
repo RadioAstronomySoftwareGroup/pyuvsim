@@ -1,6 +1,6 @@
 filing:
   outdir: '.'
-  outfile_name: 'tempfile.uvfits'
+  outfile_name: 'tempfile.uvh5'
 freq:
   Nfreqs: 1
   start_freq: 100000000.0
