@@ -19,7 +19,7 @@ dependencies:
   - scipy==1.8.*
   - setuptools_scm==8.1
   - pip:
-    - pyradiosky==0.2.0
+    - pyradiosky==1.0.1
     - lunarsky==0.2.2
     - git+https://github.com/aelanman/analytic_diffuse
     - git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata@analytic_beam_refactor
