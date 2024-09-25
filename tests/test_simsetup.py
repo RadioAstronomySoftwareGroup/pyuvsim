@@ -32,6 +32,7 @@ except ImportError:
     hasmoon = False
 
 import pyuvsim
+import pyuvsim.utils as simutils
 from pyuvsim import simsetup
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
@@ -174,12 +175,12 @@ def test_mock_catalog_zenith_source(hera_loc, return_data):
         spectral_type="flat",
     )
 
-    cat, _ = pyuvsim.create_mock_catalog(
+    cat, _ = simsetup.create_mock_catalog(
         time, arrangement="zenith", return_data=return_data
     )
 
     if return_data:
-        test_data = pyuvsim.simsetup.SkyModelData(test_source)
+        test_data = simsetup.SkyModelData(test_source)
 
         for attr in cat.__dict__:
             assert getattr(cat, attr) == getattr(test_data, attr)
@@ -194,8 +195,8 @@ def test_mock_catalog_zenith_source(hera_loc, return_data):
 
 def test_shared_mpierr():
     time = Time(2457458.65410, scale="utc", format="jd")
-    cat, _ = pyuvsim.create_mock_catalog(time, arrangement="zenith")
-    cat_data = pyuvsim.simsetup.SkyModelData(cat)
+    cat, _ = simsetup.create_mock_catalog(time, arrangement="zenith")
+    cat_data = simsetup.SkyModelData(cat)
 
     if pyuvsim.mpi is None:
         with pytest.raises(ImportError, match="You need mpi4py to use this method."):
@@ -222,7 +223,7 @@ def test_mock_catalog_off_zenith_source(hera_loc):
         spectral_type="flat",
     )
 
-    cat, _ = pyuvsim.create_mock_catalog(
+    cat, _ = simsetup.create_mock_catalog(
         time, arrangement="off-zenith", alt=src_alt.deg
     )
 
@@ -230,21 +231,21 @@ def test_mock_catalog_off_zenith_source(hera_loc):
 
 
 def test_mock_diffuse_maps_errors():
-    analytic_diffuse = pyuvsim.simsetup.analytic_diffuse
-    astropy_healpix = pyuvsim.simsetup.astropy_healpix
+    analytic_diffuse = simsetup.analytic_diffuse
+    astropy_healpix = simsetup.astropy_healpix
     if (analytic_diffuse is not None) and (astropy_healpix is not None):
         # Error cases:
         with pytest.raises(ValueError, match="Diffuse arrangement selected"):
-            pyuvsim.simsetup.create_mock_catalog(Time.now(), arrangement="diffuse")
+            simsetup.create_mock_catalog(Time.now(), arrangement="diffuse")
 
         with check_warnings(UserWarning, match="No nside chosen"):
-            pyuvsim.simsetup.create_mock_catalog(
+            simsetup.create_mock_catalog(
                 Time.now(), arrangement="diffuse", diffuse_model="monopole"
             )
 
     else:
         with pytest.raises(ValueError, match="analytic_diffuse and astropy_healpix"):
-            pyuvsim.simsetup.create_mock_catalog(Time.now(), arrangement="diffuse")
+            simsetup.create_mock_catalog(Time.now(), arrangement="diffuse")
 
 
 @pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
@@ -262,7 +263,7 @@ def test_mock_diffuse_maps(modname, modkwargs, hera_loc, apollo_loc, location):
         loc = apollo_loc
     map_nside = 128
     t0 = Time.now()
-    cat, _ = pyuvsim.simsetup.create_mock_catalog(
+    cat, _ = simsetup.create_mock_catalog(
         t0,
         arrangement="diffuse",
         array_location=loc,
@@ -336,14 +337,14 @@ def test_initialize_catalog_from_params(
         warn_str = ""
 
     with check_warnings(warn_type, match=warn_str):
-        catalog_uv = pyuvsim.simsetup.initialize_catalog_from_params(
+        catalog_uv = simsetup.initialize_catalog_from_params(
             {"sources": source_dict}, input_uv=uv_use, return_catname=return_catname
         )
 
     if return_catname is not False:
         catalog_uv = catalog_uv[0]
 
-    exp_cat, _ = pyuvsim.simsetup.create_mock_catalog(
+    exp_cat, _ = simsetup.create_mock_catalog(
         uv_in.time_array[0], arrangement="zenith", array_location=hera_loc, Nsrcs=5
     )
 
@@ -385,7 +386,7 @@ def test_initialize_catalog_from_params_errors(
         check_warnings(warn_type, match=warn_msg),
         pytest.raises(err_type, match=err_msg),
     ):
-        pyuvsim.simsetup.initialize_catalog_from_params(
+        simsetup.initialize_catalog_from_params(
             {"sources": source_dict}, input_uv=input_uv, return_catname=False
         )
 
@@ -399,7 +400,7 @@ def test_vot_catalog(use_filetype):
     )
     if use_filetype:
         filetype = "vot"
-    vot_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+    vot_catalog = simsetup.initialize_catalog_from_params(
         vot_param_filename, filetype=filetype, return_catname=False
     )
 
@@ -408,7 +409,7 @@ def test_vot_catalog(use_filetype):
     txt_param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml"
     )
-    txt_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+    txt_catalog = simsetup.initialize_catalog_from_params(
         txt_param_filename, filetype=filetype, return_catname=False
     )
 
@@ -420,7 +421,7 @@ def test_vot_catalog_errors():
         SIM_DATA_PATH, "test_config", "param_1time_1src_testvot.yaml"
     )
     with pytest.raises(ValueError, match="Invalid filetype. Filetype options are:"):
-        pyuvsim.simsetup.initialize_catalog_from_params(
+        simsetup.initialize_catalog_from_params(
             vot_param_filename, filetype="foo", return_catname=False
         )
 
@@ -445,7 +446,7 @@ def test_gleam_catalog(filetype, flux_cut):
     ]
     warnings = [DeprecationWarning]
     with check_warnings(warnings, match=warn_messages):
-        gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+        gleam_catalog = simsetup.initialize_catalog_from_params(
             params_use, filetype=filetype, return_catname=False
         )
 
@@ -480,7 +481,7 @@ def test_skyh5_catalog(use_filetype, yaml_filetype, tmp_path):
 
     if use_filetype:
         filetype = "skyh5"
-    skyh5_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+    skyh5_catalog = simsetup.initialize_catalog_from_params(
         param_filename, filetype=filetype, return_catname=False
     )
 
@@ -494,9 +495,7 @@ def test_healpix_catalog():
     sky = SkyModel.from_file(path)
 
     params = {"sources": {"catalog": path}}
-    hpx_sky = pyuvsim.simsetup.initialize_catalog_from_params(
-        params, return_catname=False
-    )
+    hpx_sky = simsetup.initialize_catalog_from_params(params, return_catname=False)
     assert hpx_sky == sky
 
 
@@ -509,7 +508,7 @@ def test_gleam_catalog_spectral_type(spectral_type):
     param_dict["sources"].pop("max_flux")
     param_dict["sources"]["spectral_type"] = spectral_type
 
-    gleam_catalog = pyuvsim.simsetup.initialize_catalog_from_params(
+    gleam_catalog = simsetup.initialize_catalog_from_params(
         param_dict, return_catname=False
     )
     assert gleam_catalog.spectral_type == spectral_type
@@ -581,7 +580,7 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
             "become an error in version 1.5",
         ],
     ):
-        uv_obj, new_beam_list, new_beam_dict = pyuvsim.initialize_uvdata_from_params(
+        uv_obj, new_beam_list, new_beam_dict = simsetup.initialize_uvdata_from_params(
             new_param_file,
             reorder_blt_kw={"order": "time", "minor_order": "baseline"},
             check_kw={"run_check_acceptability": True},
@@ -592,14 +591,14 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
         # reset it for equality check
         uv_obj.telescope.instrument = "Triangle"
 
-    pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
+    simsetup._complete_uvdata(uv_obj, inplace=True)
 
     with check_warnings(
         UserWarning,
         match="No out format specified for uvdata file. Defaulting to uvh5 "
         "(note this is a defaulting change, it used to default to uvfits).",
     ):
-        expected_ofilepath = pyuvsim.utils.write_uvdata(
+        expected_ofilepath = simutils.write_uvdata(
             uv_obj, param_dict, return_filename=True, dryrun=True
         )
     assert expected_ofilepath == "./sim_results.uvh5"
@@ -643,6 +642,14 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
         (
             {
                 "config_path": os.path.join(SIM_DATA_PATH, "test_config"),
+                "telescope": {"array_layout": "nonexistent_file"},
+            },
+            ValueError,
+            "nonexistent_file from yaml does not exist",
+        ),
+        (
+            {
+                "config_path": os.path.join(SIM_DATA_PATH, "test_config"),
                 "telescope": {"telescope_config_name": "nonexistent_file"},
             },
             ValueError,
@@ -669,7 +676,7 @@ def test_param_reader_errors(subdict, error, msg):
     )
 
     # Error conditions:
-    params_bad = pyuvsim.simsetup._config_str_to_dict(param_filename)
+    params_bad = simsetup._config_str_to_dict(param_filename)
 
     for key, value in subdict.items():
         if isinstance(value, dict):
@@ -679,7 +686,7 @@ def test_param_reader_errors(subdict, error, msg):
             params_bad[key] = value
 
     with pytest.raises(error, match=msg):
-        pyuvsim.simsetup.initialize_uvdata_from_params(params_bad, return_beams=True)
+        simsetup.initialize_uvdata_from_params(params_bad, return_beams=True)
 
 
 @pytest.mark.parametrize(
@@ -712,7 +719,7 @@ def test_tele_parser(world, selenoid):
         if selenoid is not None:
             tdict["ellipsoid"] = selenoid
 
-    tpars, blist, _ = pyuvsim.simsetup.parse_telescope_params(tdict, freq_array=freqs)
+    tpars, blist, _ = simsetup.parse_telescope_params(tdict, freq_array=freqs)
 
     assert tpars["Nants_data"] == 6
     assert len(blist) == 0
@@ -786,7 +793,7 @@ def test_tele_parser_errors(tele_dict, err_type, err_msg):
     freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
 
     with pytest.raises(err_type, match=err_msg):
-        pyuvsim.simsetup.parse_telescope_params(tele_dict, freq_array=freqs)
+        simsetup.parse_telescope_params(tele_dict, freq_array=freqs)
 
 
 @pytest.mark.parametrize(
@@ -823,7 +830,7 @@ def test_freq_parser(bpass_kwds, chwid_kwds, ref_freq_kwds):
     # the param parser should work.
     keys = tuple(set(bpass_kwds + chwid_kwds + (ref_freq_kwds)))  # Get unique keys
     subdict = {key: fdict_base[key] for key in keys}
-    test = pyuvsim.parse_frequency_params(subdict)
+    test = simsetup.parse_frequency_params(subdict)
     np.testing.assert_allclose(test["freq_array"], freq_array)
 
     cw_array = np.full((10,), fdict_base["channel_width"], dtype=float)
@@ -844,7 +851,7 @@ def test_freq_parser_freq_array(freq_array, channel_width):
     subdict = {"freq_array": freq_array, "channel_width": channel_width}
     # As long as one tuple from each set is represented,
     # the param parser should work.
-    test = pyuvsim.parse_frequency_params(subdict)
+    test = simsetup.parse_frequency_params(subdict)
     np.testing.assert_allclose(test["freq_array"], freq_array)
     if not isinstance(channel_width, np.ndarray):
         np.testing.assert_allclose(
@@ -898,7 +905,7 @@ def test_freq_parser_freq_array(freq_array, channel_width):
 def test_freq_parser_errors(freq_dict, msg):
     # Now check error cases
     with pytest.raises(ValueError, match=msg):
-        pyuvsim.parse_frequency_params(freq_dict)
+        simsetup.parse_frequency_params(freq_dict)
 
 
 @pytest.mark.parametrize(
@@ -924,7 +931,7 @@ def test_time_parser(time_keys, time_dict_base):
     dayspersec = 1 / (24 * 3600.0)
 
     subdict = {key: time_dict_base[key] for key in time_keys}
-    test = pyuvsim.parse_time_params(subdict)
+    test = simsetup.parse_time_params(subdict)
     np.testing.assert_allclose(
         test["time_array"], time_dict_base["time_array"], atol=dayspersec
     )
@@ -953,7 +960,7 @@ def test_time_parser_missing_keys(time_keys, err_msg, time_dict_base):
     # Now check error cases
     subdict = {key: time_dict_base[key] for key in time_keys}
     with pytest.raises(ValueError, match=err_msg):
-        pyuvsim.parse_time_params(subdict)
+        simsetup.parse_time_params(subdict)
 
 
 @pytest.mark.parametrize(
@@ -982,20 +989,20 @@ def test_time_parser_inconsistent(time_dict, add_base, rm_keys, time_dict_base):
         ValueError,
         match="Calculated time array is not consistent with set integration_time",
     ):
-        pyuvsim.parse_time_params(time_dict)
+        simsetup.parse_time_params(time_dict)
 
 
 def test_single_input_time():
-    time_dict = pyuvsim.simsetup.time_array_to_params([1.0])
+    time_dict = simsetup.time_array_to_params([1.0])
     assert time_dict["integration_time"] == 1.0
 
 
 def test_freq_time_params_match(times_and_freqs):
     times, freqs = times_and_freqs
-    time_dict = pyuvsim.simsetup.time_array_to_params(times)
-    freq_dict = pyuvsim.simsetup.freq_array_to_params(freqs)
-    ftest = pyuvsim.simsetup.parse_frequency_params(freq_dict)
-    ttest = pyuvsim.simsetup.parse_time_params(time_dict)
+    time_dict = simsetup.time_array_to_params(times)
+    freq_dict = simsetup.freq_array_to_params(freqs)
+    ftest = simsetup.parse_frequency_params(freq_dict)
+    ttest = simsetup.parse_time_params(time_dict)
     np.testing.assert_allclose(ftest["freq_array"], freqs)
     np.testing.assert_allclose(ttest["time_array"], times)
 
@@ -1005,8 +1012,8 @@ def test_uneven_time_array_to_params(times_and_freqs):
     # Check that this works for unevenly-spaced times
     times = np.random.choice(times, 150, replace=False)
     times.sort()
-    time_dict = pyuvsim.simsetup.time_array_to_params(times)
-    ttest = pyuvsim.simsetup.parse_time_params(time_dict)
+    time_dict = simsetup.time_array_to_params(times)
+    ttest = simsetup.parse_time_params(time_dict)
     np.testing.assert_allclose(ttest["time_array"], times)
 
 
@@ -1014,14 +1021,14 @@ def test_single_time_array_to_params(times_and_freqs):
     times, _ = times_and_freqs
     # check Ntimes = 1 and Nfreqs = 1 case
     times = np.linspace(2458570, 2458570.5, 1)
-    tdict = pyuvsim.simsetup.time_array_to_params(times)
+    tdict = simsetup.time_array_to_params(times)
     assert tdict["Ntimes"] == 1
     assert tdict["start_time"] == times
 
 
 def test_single_freq_array_to_params(times_and_freqs):
     freqs = np.linspace(100, 200, 1)
-    fdict = pyuvsim.simsetup.freq_array_to_params(freqs)
+    fdict = simsetup.freq_array_to_params(freqs)
     assert fdict["Nfreqs"] == 1
     assert fdict["start_freq"] == freqs
 
@@ -1030,12 +1037,14 @@ def test_param_select_cross():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_mwa_nocore.yaml"
     )
-    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    param_dict = simsetup._config_str_to_dict(param_filename)
+    uv_obj_full = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     # test only keeping cross pols
     param_dict["select"] = {"ant_str": "cross"}
-    uv_obj_cross = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv_obj_cross = simsetup.initialize_uvdata_from_params(
+        param_dict, return_beams=False
+    )
     uv_obj_cross2 = uv_obj_full.select(ant_str="cross", inplace=False)
 
     # histories are different because of time stamp from UVData.new() method
@@ -1048,12 +1057,12 @@ def test_param_select_bls():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_mwa_nocore.yaml"
     )
-    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    param_dict = simsetup._config_str_to_dict(param_filename)
+    uv_obj_full = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     # test only keeping certain baselines
     param_dict["select"] = {"bls": "[(40, 41), (42, 43), (44, 45)]"}  # Test as string
-    uv_obj_bls = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv_obj_bls = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     uv_obj_bls2 = uv_obj_full.select(bls=[(40, 41), (42, 43), (44, 45)], inplace=False)
     uv_obj_bls.history, uv_obj_bls2.history = "", ""
@@ -1064,12 +1073,12 @@ def test_param_select_redundant():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_hex37_14.6m.yaml"
     )
-    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj_full = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    param_dict = simsetup._config_str_to_dict(param_filename)
+    uv_obj_full = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     # test only keeping one baseline per redundant group
     param_dict["select"] = {"redundant_threshold": 0.1}
-    uv_obj_red = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv_obj_red = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
     uv_obj_red2 = uv_obj_full.compress_by_redundancy(tol=0.1, inplace=False)
     uv_obj_red.history, uv_obj_red2.history = "", ""
 
@@ -1090,8 +1099,8 @@ def test_param_ordering(order_dict):
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_mwa_nocore.yaml"
     )
-    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj_orig = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    param_dict = simsetup._config_str_to_dict(param_filename)
+    uv_obj_orig = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     param_dict2 = copy.deepcopy(param_dict)
     if order_dict is None:
@@ -1110,7 +1119,9 @@ def test_param_ordering(order_dict):
         param_dict2["ordering"] = order_dict
 
     with check_warnings(warn_type, match=warn_str):
-        uv_obj2 = pyuvsim.initialize_uvdata_from_params(param_dict2, return_beams=False)
+        uv_obj2 = simsetup.initialize_uvdata_from_params(
+            param_dict2, return_beams=False
+        )
 
     if order_dict is not None:
         if order_dict["blt_order"] == "baseline" or order_dict["blt_order"] == [
@@ -1142,16 +1153,16 @@ def test_param_set_cat_name(key):
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_mwa_nocore.yaml"
     )
-    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
+    param_dict = simsetup._config_str_to_dict(param_filename)
 
     param_dict[key] = "foo"
-    uv_obj = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv_obj = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
     assert uv_obj.phase_center_catalog[0]["cat_name"] == "foo"
 
 
 def test_uvdata_keyword_init(uvdata_keyword_dict):
     # check it runs through
-    uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
+    uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
     lla_deg = uvd.telescope.location_lat_lon_alt_degrees
     tel_name = uvd.telescope.name
 
@@ -1175,7 +1186,7 @@ def test_uvdata_keyword_init_select_bls(uvdata_keyword_dict):
     # check bls and antenna_nums selections work
     bls = [(0, 1), (0, 2), (0, 3)]
     uvdata_keyword_dict["bls"] = bls
-    uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
+    uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
     antpairs = uvd.get_antpairs()
     assert antpairs == bls
 
@@ -1185,7 +1196,7 @@ def test_uvdata_keyword_init_select_antnum_str(uvdata_keyword_dict):
     uvdata_keyword_dict["polarization_array"] = ["xx", "yy"]
     uvdata_keyword_dict["no_autos"] = False
     uvdata_keyword_dict["antenna_nums"] = "1"
-    uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
+    uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
 
     assert uvd.Nbls == 1
     assert uvd.get_pols() == uvdata_keyword_dict["polarization_array"]
@@ -1197,7 +1208,7 @@ def test_uvdata_keyword_init_time_freq_override(uvdata_keyword_dict):
     ta = np.linspace(2458101, 2458102, 21)
     uvdata_keyword_dict["freq_array"] = fa
     uvdata_keyword_dict["time_array"] = ta
-    uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
+    uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
 
     np.testing.assert_allclose(uvd.time_array[:: uvd.Nbls], ta)
     np.testing.assert_allclose(uvd.freq_array, fa)
@@ -1205,7 +1216,7 @@ def test_uvdata_keyword_init_time_freq_override(uvdata_keyword_dict):
 
 def test_uvdata_keyword_init_layout_dict(uvdata_keyword_dict, tmpdir):
     # test feeding array layout as dictionary
-    uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
+    uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
     antpos = uvd.telescope.get_enu_antpos()
     ants = uvd.telescope.antenna_numbers
     antpos_d = dict(zip(ants, antpos, strict=False))
@@ -1218,7 +1229,7 @@ def test_uvdata_keyword_init_layout_dict(uvdata_keyword_dict, tmpdir):
     uvdata_keyword_dict["path_out"] = str(tmpdir)
     uvdata_keyword_dict["write_files"] = True
 
-    uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
+    uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
     layout_path = str(tmpdir.join(layout_fname))
     obsparam_path = str(tmpdir.join(obsparam_fname))
     assert os.path.exists(layout_path)
@@ -1242,7 +1253,7 @@ def test_uvdata_keyword_init_write(pass_layout, uvdata_keyword_dict, tmpdir):
         new_layout_file,
     )
 
-    uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
+    uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
     antpos = uvd.telescope.get_enu_antpos()
     ants = uvd.telescope.antenna_numbers
     antpos_d = dict(zip(ants, antpos, strict=False))
@@ -1261,7 +1272,7 @@ def test_uvdata_keyword_init_write(pass_layout, uvdata_keyword_dict, tmpdir):
 
     cwd = os.getcwd()
     os.chdir(tmpdir)
-    pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
+    simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
     assert os.path.exists(layout_fname)
     assert os.path.exists(obsparam_fname)
 
@@ -1275,7 +1286,7 @@ def test_initialize_uvdata_from_keywords_errors(uvdata_keyword_dict):
         ValueError,
         match="Either array_layout or antenna_layout_filepath must be passed.",
     ):
-        pyuvsim.simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
+        simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
 
 
 def test_uvfits_to_config(tmp_path):
@@ -1292,7 +1303,7 @@ def test_uvfits_to_config(tmp_path):
     # Read uvfits file to params.
     uv0 = UVData.from_file(longbl_uvfits_file)
 
-    path, telescope_config, layout_fname = pyuvsim.simsetup.uvdata_to_telescope_config(
+    path, telescope_config, layout_fname = simsetup.uvdata_to_telescope_config(
         uv0, herabeam_default, path_out=opath, return_names=True
     )
 
@@ -1302,7 +1313,7 @@ def test_uvfits_to_config(tmp_path):
         match="The integration time is not constant. "
         "Using the shortest integration time",
     ):
-        pyuvsim.simsetup.uvdata_to_config_file(
+        simsetup.uvdata_to_config_file(
             uv0,
             telescope_config_name=os.path.join(path, telescope_config),
             layout_csv_name=os.path.join(path, layout_fname),
@@ -1310,16 +1321,14 @@ def test_uvfits_to_config(tmp_path):
         )
 
     # From parameters, generate a uvdata object.
-    param_dict = pyuvsim.simsetup._config_str_to_dict(
-        os.path.join(opath, param_filename)
-    )
+    param_dict = simsetup._config_str_to_dict(os.path.join(opath, param_filename))
 
     orig_param_dict = copy.deepcopy(
         param_dict
     )  # The parameter dictionary gets modified in the function below.
-    uv1 = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    uv1 = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
     # Generate parameters from new uvfits and compare with old.
-    path, telescope_config, layout_fname = pyuvsim.simsetup.uvdata_to_telescope_config(
+    path, telescope_config, layout_fname = simsetup.uvdata_to_telescope_config(
         uv1,
         herabeam_default,
         telescope_config_name=telescope_config,
@@ -1327,7 +1336,7 @@ def test_uvfits_to_config(tmp_path):
         path_out=opath,
         return_names=True,
     )
-    pyuvsim.simsetup.uvdata_to_config_file(
+    simsetup.uvdata_to_config_file(
         uv1,
         param_filename=second_param_filename,
         telescope_config_name=os.path.join(path, telescope_config),
@@ -1337,7 +1346,7 @@ def test_uvfits_to_config(tmp_path):
 
     del param_dict
 
-    param_dict = pyuvsim.simsetup._config_str_to_dict(
+    param_dict = simsetup._config_str_to_dict(
         os.path.join(opath, second_param_filename)
     )
     shutil.rmtree(opath)
@@ -1361,9 +1370,7 @@ def test_uvfits_to_config(tmp_path):
 )
 def test_mock_catalogs(arrangement, text_cat):
     time = Time(2458098.27471265, scale="utc", format="jd")
-    cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(
-        time, arrangement, rseed=2458098
-    )
+    cat, mock_kwds = simsetup.create_mock_catalog(time, arrangement, rseed=2458098)
 
     # For each mock catalog, verify the Ra/Dec source positions against a saved text catalog.
     radec_catalog = SkyModel.from_file(
@@ -1372,15 +1379,72 @@ def test_mock_catalogs(arrangement, text_cat):
     assert np.all(radec_catalog == cat)
 
 
+@pytest.mark.filterwarnings("ignore:UVW orientation appears to be flipped")
+def test_mock_catalog_gaussbeam_values():
+    """
+    Make the long-line point sources up to 10 degrees from zenith.
+    Confirm that the coherencies match the expected beam values at those zenith angles.
+    """
+    sigma = 0.05
+    hera_uv = UVData()
+    EW_uvfits_file = os.path.join(SIM_DATA_PATH, "28mEWbl_1time_1chan.uvfits")
+    hera_uv.read_uvfits(EW_uvfits_file)
+
+    array_location = hera_uv.telescope.location
+
+    freq = hera_uv.freq_array[0] * units.Hz
+
+    time = Time(hera_uv.time_array[0], scale="utc", format="jd")
+
+    catalog, _ = simsetup.create_mock_catalog(
+        time=time,
+        arrangement="long-line",
+        Nsrcs=41,
+        min_alt=80.0,
+        array_location=array_location,
+    )
+
+    catalog.update_positions(time, array_location)
+    beam = GaussianBeam(sigma=sigma)
+    array = pyuvsim.Telescope(
+        "telescope_name", array_location, pyuvsim.BeamList([beam])
+    )
+
+    # Need a dummy baseline for this test.
+    antenna1 = pyuvsim.Antenna("ant1", 1, np.array([0, 0, 0]), 0)
+    antenna2 = pyuvsim.Antenna("ant2", 2, np.array([107, 0, 0]), 0)
+
+    baseline = pyuvsim.Baseline(antenna1, antenna2)
+
+    task = pyuvsim.UVTask(catalog, time, freq, baseline, array)
+
+    engine = pyuvsim.UVEngine(task)
+    engine.apply_beam()
+    altitudes = task.sources.alt_az[0]  # In radians.
+    # All four components should be identical
+    if isinstance(engine.apparent_coherency, units.Quantity):
+        coherency_use = engine.apparent_coherency.to_value("Jy")
+    else:
+        coherency_use = engine.apparent_coherency
+
+    coherencies = np.real(coherency_use[0, 0] + coherency_use[1, 1]).astype(float)
+
+    zenith_angles, _ = simutils.altaz_to_zenithangle_azimuth(
+        altitudes, np.zeros_like(np.array(altitudes))
+    )
+
+    # Confirm the coherency values (ie., brightnesses) match the beam values.
+    beam_values = np.exp(-((zenith_angles) ** 2) / (2 * beam.sigma**2))
+    np.testing.assert_allclose(beam_values**2, coherencies)
+
+
 def test_saved_mock_catalog(tmpdir):
     time = Time(2458098.27471265, scale="utc", format="jd")
 
     cwd = os.getcwd()
     os.chdir(tmpdir)
 
-    cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(
-        time, "random", Nsrcs=100, save=True
-    )
+    cat, mock_kwds = simsetup.create_mock_catalog(time, "random", Nsrcs=100, save=True)
     loc = eval(mock_kwds["array_location"])
     loc = EarthLocation.from_geodetic(loc[1], loc[0], loc[2])  # Lon, Lat, alt
     fname = "mock_catalog_random.npz"
@@ -1396,7 +1460,7 @@ def test_saved_mock_catalog(tmpdir):
 @pytest.mark.parametrize("min_alt", [-20, 0, None, 50])
 def test_randsource_minalt(min_alt):
     time = Time(2458098.27471265, scale="utc", format="jd")
-    cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(
+    cat, mock_kwds = simsetup.create_mock_catalog(
         time, "random", Nsrcs=100, min_alt=min_alt
     )
     loc = eval(mock_kwds["array_location"])
@@ -1414,7 +1478,7 @@ def test_randsource_distribution():
     astropy_healpix = pytest.importorskip("astropy_healpix")
     Nsrcs = 40000
     time = Time(2458098.27471265, scale="utc", format="jd")
-    cat, mock_kwds = pyuvsim.simsetup.create_mock_catalog(
+    cat, mock_kwds = simsetup.create_mock_catalog(
         time, "random", Nsrcs=Nsrcs, min_alt=-90, rseed=2458098
     )
     loc = eval(mock_kwds["array_location"])
@@ -1442,7 +1506,7 @@ def test_mock_catalog_error():
     with pytest.raises(
         KeyError, match="Invalid mock catalog arrangement: invalid_catalog_name"
     ):
-        pyuvsim.create_mock_catalog(time, "invalid_catalog_name")
+        simsetup.create_mock_catalog(time, "invalid_catalog_name")
 
 
 def test_keyword_param_loop(tmpdir):
@@ -1455,7 +1519,7 @@ def test_keyword_param_loop(tmpdir):
     antpos_enu = (np.ones(30) + np.random.uniform(-10, 10, 30)).reshape((10, 3))
     antnums = np.arange(10)
     antpos_d = dict(zip(antnums, antpos_enu, strict=False))
-    uvd = pyuvsim.simsetup.initialize_uvdata_from_keywords(
+    uvd = simsetup.initialize_uvdata_from_keywords(
         array_layout=antpos_d,
         telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
         telescope_name="HERA",
@@ -1472,7 +1536,7 @@ def test_keyword_param_loop(tmpdir):
         output_yaml_filename=obsparam_fname,
     )
 
-    uv2 = pyuvsim.simsetup.initialize_uvdata_from_params(
+    uv2 = simsetup.initialize_uvdata_from_params(
         os.path.join(path_out, obsparam_fname), return_beams=False
     )
 
@@ -1510,9 +1574,7 @@ def test_multi_analytic_beams(tmpdir):
     antpos[:, 0] = np.arange(Nants)
     names = antenna_numbers.astype(str)
     beam_ids = [0, 1, 2, 2, 0]
-    pyuvsim.simsetup._write_layout_csv(
-        layout_fname, antpos, names, antenna_numbers, beam_ids
-    )
+    simsetup._write_layout_csv(layout_fname, antpos, names, antenna_numbers, beam_ids)
 
     Nfreqs = 10
     freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
@@ -1528,7 +1590,7 @@ def test_multi_analytic_beams(tmpdir):
 
     param_dict = {"telescope_config_name": par_fname, "array_layout": layout_fname}
 
-    pdict, beam_list, beam_dict = pyuvsim.simsetup.parse_telescope_params(
+    pdict, beam_list, beam_dict = simsetup.parse_telescope_params(
         param_dict, config_path=str(tmpdir), freq_array=freqs
     )
 
@@ -1557,7 +1619,7 @@ def test_direct_fname(tmpdir):
     cwd = os.getcwd()
     os.chdir(tmpdir)
 
-    pyuvsim.simsetup.initialize_uvdata_from_params(
+    simsetup.initialize_uvdata_from_params(
         "param_100times_1.5days_triangle.yaml", return_beams=False
     )
 
@@ -1661,7 +1723,7 @@ def test_beamlist_init_errors(input_yaml, beam_id, err_msg):
         check_warnings(DeprecationWarning, match=warn_msg),
         pytest.raises(ValueError, match=err_msg),
     ):
-        pyuvsim.simsetup._construct_beam_list([beam_id], telconfig, freq_array=freqs)
+        simsetup._construct_beam_list([beam_id], telconfig, freq_array=freqs)
 
 
 def test_beamlist_init_spline():
@@ -1696,9 +1758,7 @@ def test_beamlist_init_spline():
         ]
         * 5,
     ):
-        beam_list = pyuvsim.simsetup._construct_beam_list(
-            beam_ids, telconfig, freq_array=freqs
-        )
+        beam_list = simsetup._construct_beam_list(beam_ids, telconfig, freq_array=freqs)
     assert beam_list.spline_interp_opts == {"kx": 2, "ky": 2}
 
 
@@ -1718,7 +1778,7 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
 
         telconfig["beam_paths"][0] = new_beam_file
     else:
-        telconfig["beam_paths"][0] = beamfits_file
+        telconfig["beam_paths"][0] = "HERA_NicCST.beamfits"
 
     if pass_beam_type:
         beam_file = beamfits_file
@@ -1760,7 +1820,7 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
             "version 1.4"
         )
     with check_warnings(warn_types, match=warn_list):
-        beam_list = pyuvsim.simsetup._construct_beam_list(
+        beam_list = simsetup._construct_beam_list(
             np.arange(nbeams), telconfig, freq_array=freqs
         )
 
@@ -1819,7 +1879,7 @@ def test_beamlist_init_freqrange(sel_type):
         ]
         * 6,
     ):
-        beam_list = pyuvsim.simsetup._construct_beam_list(
+        beam_list = simsetup._construct_beam_list(
             np.arange(6), telconfig, freq_range=freq_range_pass, freq_array=freqs
         )
 
@@ -1828,7 +1888,7 @@ def test_beamlist_init_freqrange(sel_type):
     assert len(beam_list[0].beam.freq_array) == 2
 
     with pytest.raises(ValueError, match="If passed, freq_range have 2 elements"):
-        beam_list = pyuvsim.simsetup._construct_beam_list(
+        beam_list = simsetup._construct_beam_list(
             np.arange(6), telconfig, freq_range=[117e6], freq_array=freqs
         )
 
@@ -1840,8 +1900,8 @@ def test_moon_lsts():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_tranquility_hex.yaml"
     )
-    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
-    uv_obj = pyuvsim.initialize_uvdata_from_params(param_dict, return_beams=False)
+    param_dict = simsetup._config_str_to_dict(param_filename)
+    uv_obj = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
     assert "world" in uv_obj.extra_keywords
     assert uv_obj.extra_keywords["world"] == "moon"
 
@@ -1867,7 +1927,7 @@ def test_moon_lsts():
     backup_lst_array = uv_obj.lst_array.copy()
     uv_obj.lst_array = None
 
-    new_obj = pyuvsim.simsetup._complete_uvdata(uv_obj)
+    new_obj = simsetup._complete_uvdata(uv_obj)
 
     np.testing.assert_allclose(new_obj.lst_array, backup_lst_array)
     assert new_obj.check()
@@ -1879,13 +1939,9 @@ def test_mock_catalog_moon():
 
     time = LTime.now()
     loc = MoonLocation.from_selenodetic(24.433333333, 0.687500000)
-    mmock, mkwds = pyuvsim.simsetup.create_mock_catalog(
-        time, "hera_text", array_location=loc
-    )
+    mmock, mkwds = simsetup.create_mock_catalog(time, "hera_text", array_location=loc)
     eloc = EarthLocation.from_geodetic(24.433, 0.6875)
-    emock, ekwds = pyuvsim.simsetup.create_mock_catalog(
-        time, "hera_text", array_location=eloc
-    )
+    emock, ekwds = simsetup.create_mock_catalog(time, "hera_text", array_location=eloc)
 
     assert mkwds["world"] == "moon"
     assert ekwds["world"] == "earth"
@@ -1905,13 +1961,13 @@ def test_skymodeldata_with_quantity_stokes(unit, cat_with_some_pols):
     else:
         pytest.importorskip("analytic_diffuse")
         pytest.importorskip("astropy_healpix")
-        sky, _ = pyuvsim.simsetup.create_mock_catalog(
+        sky, _ = simsetup.create_mock_catalog(
             Time.now(), arrangement="diffuse", diffuse_model="monopole", map_nside=16
         )
     if not isinstance(sky.stokes, units.Quantity):
         sky.stokes *= units.Unit(unit)
 
-    smd = pyuvsim.simsetup.SkyModelData(sky)
+    smd = simsetup.SkyModelData(sky)
     assert np.all(sky.stokes.to_value(unit)[0] == smd.stokes_I)
     assert smd.flux_unit == unit
 
@@ -1933,7 +1989,7 @@ def test_skymodeldata(component_type, select, cat_with_some_pols):
         sky = SkyModel.from_file(path)
         filename_use = ["healpix_disk"]
 
-    smd = pyuvsim.simsetup.SkyModelData(sky, filename=filename_use)
+    smd = simsetup.SkyModelData(sky, filename=filename_use)
     if isinstance(filename_use, str):
         assert smd.filename == [filename_use]
     else:
@@ -1981,7 +2037,7 @@ def test_skymodeldata_pol_select(inds, cat_with_some_pols):
     # When running SkyModelData.subselect, confirm that the
     # polarization array and Q, U, V are properly selected.
 
-    smd = pyuvsim.simsetup.SkyModelData(cat_with_some_pols)
+    smd = simsetup.SkyModelData(cat_with_some_pols)
     sub_smd = smd.subselect(inds)
 
     test_q = np.zeros((smd.Nfreqs, smd.Ncomponents))
@@ -2009,7 +2065,7 @@ def test_skymodeldata_non_icrs(cat_with_some_pols):
         spectral_type=cat_with_some_pols.spectral_type,
         freq_array=cat_with_some_pols.freq_array,
     )
-    smd = pyuvsim.simsetup.SkyModelData(sky)
+    smd = simsetup.SkyModelData(sky)
 
     np.testing.assert_allclose(icrs_coord.ra.deg, smd.ra)
     np.testing.assert_allclose(icrs_coord.dec.deg, smd.dec)
@@ -2019,7 +2075,7 @@ def test_skymodeldata_non_icrs(cat_with_some_pols):
 def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
     # Check that downselecting doesn't copy length-Ncomponent arrays.
 
-    smd = pyuvsim.simsetup.SkyModelData(cat_with_some_pols)
+    smd = simsetup.SkyModelData(cat_with_some_pols)
     smd_copy = smd.subselect(inds)
     assert smd_copy.ra.base is smd.ra.base
     assert smd_copy.dec.base is smd.dec.base
