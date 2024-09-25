@@ -25,6 +25,11 @@ from pyuvdata.data import DATA_PATH as UV_DATA_PATH
 from pyuvdata.testing import check_warnings
 
 try:
+    from pyuvsim import mpi
+except ImportError:
+    mpi = None
+
+try:
     from lunarsky import MoonLocation, Time as LTime
 
     hasmoon = True
@@ -198,7 +203,7 @@ def test_shared_mpierr():
     cat, _ = simsetup.create_mock_catalog(time, arrangement="zenith")
     cat_data = simsetup.SkyModelData(cat)
 
-    if pyuvsim.mpi is None:
+    if mpi is None:
         with pytest.raises(ImportError, match="You need mpi4py to use this method."):
             cat_data.share(root=0)
 

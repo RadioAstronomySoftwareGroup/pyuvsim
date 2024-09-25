@@ -18,7 +18,10 @@ from astropy.utils import iers
 from pyuvdata import UVBeam
 from pyuvdata.data import DATA_PATH
 
-from pyuvsim import mpi
+try:
+    from pyuvsim import mpi
+except ImportError:
+    mpi = None
 
 try:
     from lunarsky import MoonLocation
