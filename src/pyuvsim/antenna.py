@@ -7,7 +7,6 @@ import numpy as np
 import numpy.typing as npt
 
 from . import utils as simutils
-from .telescope import BeamList
 
 
 class Antenna:
@@ -124,13 +123,10 @@ class Antenna:
         if interpolation_function is not None:
             interp_kwargs["interpolation_function"] = interpolation_function
 
-        if isinstance(array.beam_list, BeamList):
-            spline_opts = array.beam_list.spline_interp_opts
-            if spline_opts is not None:
-                interp_kwargs["spline_opts"] = spline_opts
-            bl_freq_interp_kind = array.beam_list.freq_interp_kind
-        else:
-            bl_freq_interp_kind = None
+        spline_opts = array.beam_list.spline_interp_opts
+        if spline_opts is not None:
+            interp_kwargs["spline_opts"] = spline_opts
+        bl_freq_interp_kind = array.beam_list.freq_interp_kind
 
         if freq_interp_kind is None:
             freq_interp_kind = bl_freq_interp_kind
