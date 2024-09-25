@@ -227,15 +227,8 @@ class BeamList:
             return None
 
         for bi in self:
-            if hasattr(bi.beam, "x_orientation"):
-                xorient = bi.beam.x_orientation
-                break
-        else:
-            # None of the constituent beams has defined x_orientation.
-            # Here we return None, instead of raising an attribute error, to maintain
-            # backwards compatibility (pyuvsim access the beamlist.x_orientation without
-            # checking for its existence).
-            return None
+            xorient = bi.beam.x_orientation
+            break
 
         if xorient is None:
             warnings.warn(
