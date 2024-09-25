@@ -39,10 +39,9 @@ except (LookupError, ImportError):
         # Set the version automatically from the package details.
         __version__ = version("pyuvsim")
 
-from .antenna import *  # noqa
-from .baseline import *  # noqa
-from .profiling import *  # noqa
+from . import profiling  # noqa
+from .antenna import Antenna  # noqa
+from .baseline import Baseline  # noqa
 from .simsetup import *  # noqa
-from .telescope import *  # noqa
-from .utils import *  # noqa
+from .telescope import Telescope, BeamList  # noqa
 from .uvsim import *  # noqa

@@ -27,7 +27,6 @@ except ImportError:
 
 
 default_profile_funcs = [
-    "interp",
     "get_beam_jones",
     "initialize_uvdata_from_params",
     "apply_beam",
