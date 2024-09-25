@@ -80,6 +80,16 @@ except ImportError:
 
 from .utils import check_file_exists_and_increment
 
+__all__ = [
+    "create_mock_catalog",
+    "SkyModelData",
+    "initialize_catalog_from_params",
+    "initialize_uvdata_from_params",
+    "initialize_uvdata_from_keywords",
+    "uvdata_to_telescope_config",
+    "uvdata_to_config_file",
+]
+
 logger = logging.getLogger(__name__)
 
 # this dict can go away in version 1.5 when we require the !AnalyticBeam
