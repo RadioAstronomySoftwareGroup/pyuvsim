@@ -67,5 +67,5 @@ def test_profiler_mock_import(tmpdir):
         ):
             pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname, dump_raw=True)
 
-        lp = pyuvsim.LineProfiler()
+        lp = pyuvsim.profiling.LineProfiler()
         assert lp is None

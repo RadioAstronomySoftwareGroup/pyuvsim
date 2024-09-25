@@ -24,6 +24,11 @@ from pyuvdata import (
 from pyuvdata.testing import check_warnings
 
 try:
+    from pyuvsim import mpi
+except ImportError:
+    mpi = None
+
+try:
     import lunarsky  # noqa
 
     hasmoon = True
@@ -32,7 +37,7 @@ except ImportError:
 
 import pyuvsim
 import pyuvsim.utils as simutils
-from pyuvsim import BeamList
+from pyuvsim import BeamList, SkyModelData, simsetup
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.uvsim import _set_nsky_parts
 
@@ -89,7 +94,7 @@ def uvobj_beams_srcs():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_hex37_14.6m.yaml"
     )
-    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
+    param_dict = simsetup._config_str_to_dict(param_filename)
     param_dict["select"] = {"redundant_threshold": 0.1}
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
         param_dict, return_beams=True
@@ -134,11 +139,11 @@ def uvdata_two_redundant_bls_triangle_sources():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_hex37_14.6m.yaml"
     )
-    param_dict = pyuvsim.simsetup._config_str_to_dict(param_filename)
+    param_dict = simsetup._config_str_to_dict(param_filename)
     uv_obj, beam_list, beam_dict = pyuvsim.initialize_uvdata_from_params(
         param_dict, return_beams=True
     )
-    pyuvsim.simsetup._complete_uvdata(uv_obj, inplace=True)
+    simsetup._complete_uvdata(uv_obj, inplace=True)
 
     uv_obj.select(freq_chans=[0], antenna_nums=[0, 1, 2], inplace=True)
 
@@ -625,7 +630,7 @@ def test_gather():
     )
     uvtask_list = list(taskiter)
 
-    uv_out = pyuvsim.simsetup._complete_uvdata(hera_uv, inplace=False)
+    uv_out = simsetup._complete_uvdata(hera_uv, inplace=False)
 
     size_complex = np.ones(1, dtype=complex).nbytes
 
@@ -892,7 +897,7 @@ def test_source_splitting():
         simutils.estimate_skymodel_memory_usage(skymodel.Ncomponents, skymodel.Nfreqs)
         * Npus_node
     )
-    mem_avail = pyuvsim.utils.get_avail_memory()
+    mem_avail = simutils.get_avail_memory()
 
     Nsky_parts = np.ceil(skymodel_mem_footprint / float(mem_avail))
     partsize = int(np.floor(Nsrcs / Nsky_parts))
@@ -903,7 +908,7 @@ def test_source_splitting():
 
     uvtask_list = list(taskiter)
 
-    assert pyuvsim.estimate_skymodel_memory_usage(partsize, 1) * Npus_node < mem_avail
+    assert simutils.estimate_skymodel_memory_usage(partsize, 1) * Npus_node < mem_avail
 
     # Normally, the number of tasks is Nbls * Ntimes * Nfreqs (partsize = Nsrcs)
     # If the source list is split within the task iterator, then it will be larger.
@@ -985,7 +990,7 @@ def test_update_flags(uvobj_beams_srcs):
     # Simulate the chunk of tasks covered on one rank.
     rank = 5
     Npus = 20
-    task_inds, _ = pyuvsim.utils.iter_array_split(rank, Ntasks, Npus)
+    task_inds, _ = simutils.iter_array_split(rank, Ntasks, Npus)
 
     taskiter = pyuvsim.uvdata_to_task_iter(
         task_inds, uv_obj, sources, beam_list, beam_dict, Nsky_parts=Nsky_parts
@@ -1082,8 +1087,8 @@ def test_fullfreq_check(uvobj_beams_srcs):
 
     Ntasks = uv_obj.Nblts * uv_obj.Nfreqs
 
-    sky0 = pyuvsim.simsetup.SkyModelData(sky0)
-    sky1 = pyuvsim.simsetup.SkyModelData(sky1)
+    sky0 = SkyModelData(sky0)
+    sky1 = SkyModelData(sky1)
 
     taskiter0 = pyuvsim.uvdata_to_task_iter(
         np.arange(Ntasks), uv_obj, sky0, beam_list, beam_dict
@@ -1099,10 +1104,10 @@ def test_fullfreq_check(uvobj_beams_srcs):
 
 
 def test_run_mpierr(hera_loc, cst_beam):
-    params = pyuvsim.simsetup._config_str_to_dict(
+    params = simsetup._config_str_to_dict(
         os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
     )
-    if pyuvsim.mpi is None:
+    if mpi is None:
         with pytest.raises(
             ImportError, match="You need mpi4py to use the uvsim module"
         ):
@@ -1111,7 +1116,7 @@ def test_run_mpierr(hera_loc, cst_beam):
         with pytest.raises(
             ImportError, match="You need mpi4py to use the uvsim module"
         ):
-            pyuvsim.run_uvdata_uvsim(UVData(), ["beamlist"], {}, pyuvsim.SkyModelData())
+            pyuvsim.run_uvdata_uvsim(UVData(), ["beamlist"], {}, SkyModelData())
 
         beam_list = BeamList([cst_beam])
         with pytest.raises(ImportError, match="You need mpi4py to use this method."):
