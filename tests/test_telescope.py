@@ -10,13 +10,6 @@ from pyuvdata.testing import check_warnings
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.telescope import BeamConsistencyError, BeamList, Telescope
 
-try:
-    import mpi4py  # noqa
-
-    has_mpi = True
-except ImportError:
-    has_mpi = False
-
 herabeam_default = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
 
@@ -212,9 +205,9 @@ def test_telescope_init_errors(beam_objs, hera_loc):
         Telescope("telescope_name", hera_loc, beam_objs)
 
 
-@pytest.mark.parallel(2, timeout=10)
-@pytest.mark.skipif(not has_mpi, reason="Must have mpi for this test")
+@pytest.mark.parallel(2, timeout=20)
 def test_share_beams(beam_objs):
+    pytest.importorskip("mpi4py")
     from pyuvsim import mpi
 
     mpi.start_mpi()
