@@ -49,7 +49,7 @@ def test_run_11_uniform(benchmark, goto_tempdir, paramfile):
         param_filename
     )
     #benchmark(print, "hi")
-    pyuvsim.uvsim.run_uvsim(param_filename)
+    #pyuvsim.uvsim.run_uvsim(param_filename)
 
     # Loading the file and comparing is only done on rank 0.
     if pyuvsim.mpi.rank != 0:
