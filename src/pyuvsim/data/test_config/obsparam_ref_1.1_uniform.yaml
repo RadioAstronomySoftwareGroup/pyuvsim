@@ -1,5 +1,5 @@
 filing:
-  outdir: "./results_data/"
+  outdir: "."
   outfile_name: 'ref_1.1_uniform'
   output_format: 'uvh5'
 freq:
