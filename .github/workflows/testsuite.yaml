@@ -208,3 +208,86 @@ jobs:
           file: ./coverage.xml #optional
           env_vars: OS,PYTHON
           fail_ci_if_error: true
+ 
+  #   TODO: should implement generic method of determining os instead of hardcoding it
+  benchmark:
+    name: Performance Benchmark
+    needs: tests
+    env:
+      ENV_NAME: pyuvsim_tests_mpich
+      PYTHON: "3.12"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Adding -l {0} helps ensure conda can be found properly.
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@main
+
+      - name: Setup Minimamba
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
+          python-version: ${{ env.PYTHON }}
+          environment-file: ci/${{ env.ENV_NAME }}.yaml
+          activate-environment: ${{ env.ENV_NAME }}
+          run-post: false
+
+      - name: Conda Info
+        run: |
+          conda info -a
+          conda list
+          PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
+          if [[ $PYVER != $PYTHON ]]; then
+            exit 1;
+          fi
+
+      # also install benchmark utility
+      - name: Install
+        run: |
+          pip install pytest-benchmark
+          pip install .
+
+      - name: Run benchmark
+        run: |
+          mpiexec pytest --benchmark-only --benchmark-json output.json
+
+      # Download previous benchmark result from cache (if exists)
+      - name: Download previous benchmark data
+        uses: actions/cache/restore@v4
+        with:
+          path: ./cache
+          key: ubuntu-benchmark
+
+      # Run `github-action-benchmark` action
+      # this step also EDITS the ./cache/benchmark-data.json file
+      # We do not need to add output.json to the cache directory
+      - name: Compare benchmarks
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          # What benchmark tool the output.txt came from
+          tool: 'pytest'
+          # Where the output from the benchmark tool is stored
+          output-file-path: output.json
+          # Where the previous data file is stored
+          external-data-json-path: ./cache/benchmark-data.json
+          # Workflow will fail when an alert happens
+          fail-on-alert: true
+          # Comment on the PR if the branch is not a fork
+          comment-on-alert: true
+          # Enable Job Summary for PRs
+          summary-always: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Store benchmark results
+        uses: actions/cache/save@v4
+        # only store the cache if being run on ref sim test branch 
+        # TODO: swap to main once functional and ready for merge
+        if: github.ref == 'refs/heads/1.1_ref_sim_ci_workflow'
+        with:
+          path: ./cache
+          key: ubuntu-benchmark
+
