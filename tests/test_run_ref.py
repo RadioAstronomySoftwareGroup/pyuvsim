@@ -4,6 +4,8 @@
 import os
 #import warnings
 
+import requests
+
 import pytest
 from pyuvdata import UVData
 
@@ -14,6 +16,29 @@ import importlib
 hasbench = importlib.util.find_spec("pytest_benchmark") is not None
 
 pytest.importorskip("mpi4py")  # noqa
+
+@pytest.fixture
+def download_sims():
+    target_dir = "results_data" 
+
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+
+    urlbase = "https://drive.google.com/uc?export=download"
+
+    dat = []
+
+    fid = "1V4RmmUGrx5iH-Zyuj45p1ag3vmMuUI2A"
+    fname = "ref_1.1_uniform.uvh5"
+    # fileid name type size size_unit date time
+
+    r = requests.get(urlbase, params={"id": fid})
+
+    fname = os.path.join(target_dir, fname)
+
+    with open(fname, "wb") as ofile:
+        ofile.write(r.content)
+
 
 @pytest.fixture
 def goto_tempdir(tmpdir):
@@ -30,14 +55,22 @@ def goto_tempdir(tmpdir):
 #@pytest.mark.filterwarnings("ignore:antenna_diameters are not set")
 #@pytest.mark.filterwarnings("ignore:Telescope Triangle is not in known_telescopes.")
 #@pytest.mark.filterwarnings("ignore:Fixing auto-correlations to be be real-only")
+#@pytest.mark.parallel(1)
+# to test: call pytest with mpiexec / similar and see if runs
 @pytest.mark.parametrize("paramfile", ["obsparam_ref_1.1_uniform.yaml"]) 
-@pytest.mark.parallel(1)
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
-def test_run_11_uniform(benchmark, goto_tempdir, paramfile):
+def test_run_11_uniform(benchmark, goto_tempdir, download_sims, paramfile):
+    # download reference sim
+    #download_sims(goto_tempdir)
+
+    filepath = os.path.join(goto_tempdir, "results_data", "ref_1.1_uniform.uvh5")
     # Test vot and txt catalogs for parameter simulation
     # Compare to reference files.
     uv_ref = UVData()
-    uv_ref.read_uvh5("/oscar/data/jpober/mburdorf/pyuvsim/results_data/ref_1.1_uniform.uvh5")
+    # TODO: implement methods to make this download from remote to appropriate path 
+    # for now from google drive 
+
+    uv_ref.read_uvh5(filepath)
 
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", paramfile)
     # This test obsparam file has "single_source.txt" as its catalog.
@@ -48,10 +81,10 @@ def test_run_11_uniform(benchmark, goto_tempdir, paramfile):
         pyuvsim.uvsim.run_uvsim,
         param_filename
     )
-    #benchmark(print, "hi")
     #pyuvsim.uvsim.run_uvsim(param_filename)
 
     # Loading the file and comparing is only done on rank 0.
+    # maybe comment out
     if pyuvsim.mpi.rank != 0:
         return
 
@@ -66,11 +99,3 @@ def test_run_11_uniform(benchmark, goto_tempdir, paramfile):
     #uv_ref.rdate = uv_new.rdate
 
     assert uv_new == uv_ref
-
-@pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
-def test_example(benchmark): #goto_tempdir, paramfile):
-    #paramfile = "obsparam_ref_1.1_uniform.yaml" 
-    # Test vot and txt catalogs for parameter simulation
-    # Compare to reference files.
-    uv_ref = UVData()
-    benchmark(uv_ref.read_uvh5, os.path.join("/oscar/data/jpober/mburdorf/pyuvsim/results_data/ref_1.1_uniform.uvh5"))
