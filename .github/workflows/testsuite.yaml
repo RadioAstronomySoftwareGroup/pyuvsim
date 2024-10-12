@@ -244,10 +244,11 @@ jobs:
             exit 1;
           fi
 
-      # also install benchmark utility
+      # also install benchmark utility and requests
       - name: Install
         run: |
           pip install pytest-benchmark
+          pip install requests
           pip install .
 
       - name: Run benchmark
