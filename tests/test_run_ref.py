@@ -4,7 +4,6 @@
 import os
 #import warnings
 
-import requests
 
 import pytest
 from pyuvdata import UVData
@@ -19,6 +18,7 @@ pytest.importorskip("mpi4py")  # noqa
 
 @pytest.fixture
 def download_sims():
+    import requests
     target_dir = "results_data" 
 
     if not os.path.exists(target_dir):
