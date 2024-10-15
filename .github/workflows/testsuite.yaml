@@ -227,9 +227,9 @@ jobs:
       - name: Setup Minimamba
         uses: conda-incubator/setup-miniconda@v3
         with:
-          miniforge-variant: Mambaforge
+          #miniforge-variant: Mambaforge
           miniforge-version: latest
-          use-mamba: true
+          #use-mamba: true
           python-version: ${{ env.PYTHON }}
           environment-file: ci/${{ env.ENV_NAME }}.yaml
           activate-environment: ${{ env.ENV_NAME }}
