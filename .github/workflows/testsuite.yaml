@@ -274,12 +274,16 @@ jobs:
           output-file-path: output.json
           # Where the previous data file is stored
           external-data-json-path: ./cache/benchmark-data.json
+          # should fail consistently
+          alert-threshold: "101%"
           # Workflow will fail when an alert happens
           fail-on-alert: true
           # Comment on the PR if the branch is not a fork
           comment-on-alert: true
           # Enable Job Summary for PRs
           summary-always: true
+          # Always leave a comment
+          comment-always: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
 
