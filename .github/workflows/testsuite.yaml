@@ -260,7 +260,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ./cache
-          key: ubuntu-benchmark
+          key: ubuntu-benchmark_new
 
       # Run `github-action-benchmark` action
       # this step also EDITS the ./cache/benchmark-data.json file
@@ -290,5 +290,5 @@ jobs:
         if: github.ref == 'refs/heads/1.1_ref_sim_ci_workflow'
         with:
           path: ./cache
-          key: ubuntu-benchmark
+          key: ubuntu-benchmark_new
 
