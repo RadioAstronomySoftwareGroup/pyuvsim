@@ -253,7 +253,7 @@ jobs:
 
       - name: Run benchmark
         run: |
-          mpiexec -n 1 -np 3 pytest --benchmark-only --benchmark-json output.json
+          mpiexec -n 1 -np 1 pytest --benchmark-only --benchmark-json output.json
 
       # Download previous benchmark result from cache (if exists)
       - name: Download previous benchmark data
