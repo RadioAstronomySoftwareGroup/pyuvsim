@@ -98,4 +98,4 @@ def test_run_11_uniform(benchmark, goto_tempdir, download_sims, paramfile):
     #uv_ref.gst0 = uv_new.gst0
     #uv_ref.rdate = uv_new.rdate
 
-    assert uv_new != uv_ref
+    assert uv_new == uv_ref
