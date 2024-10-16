@@ -212,7 +212,7 @@ jobs:
   #   TODO: should implement generic method of determining os instead of hardcoding it
   benchmark:
     name: Performance Benchmark
-    needs: tests
+    #needs: tests
     env:
       ENV_NAME: pyuvsim_tests_mpich
       PYTHON: "3.12"
@@ -253,7 +253,7 @@ jobs:
 
       - name: Run benchmark
         run: |
-          mpiexec -n 1 -np 4 pytest --benchmark-only --benchmark-json output.json
+          mpiexec -n 1 -np 3 pytest --benchmark-only --benchmark-json output.json
 
       # Download previous benchmark result from cache (if exists)
       - name: Download previous benchmark data
