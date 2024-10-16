@@ -212,7 +212,7 @@ jobs:
   #   TODO: should implement generic method of determining os instead of hardcoding it
   benchmark:
     name: Performance Benchmark
-    #needs: tests
+    needs: tests
     env:
       ENV_NAME: pyuvsim_tests_mpich
       PYTHON: "3.12"
@@ -275,7 +275,7 @@ jobs:
           # Where the previous data file is stored
           external-data-json-path: ./cache/benchmark-data.json
           # should fail consistently
-          alert-threshold: "50%"
+          alert-threshold: "120%"
           # Workflow will fail when an alert happens
           fail-on-alert: true
           # Comment on the PR if the branch is not a fork
@@ -283,7 +283,7 @@ jobs:
           # Enable Job Summary for PRs
           summary-always: true
           # Always leave a comment
-          # comment-always: true
+          comment-always: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Store benchmark results
