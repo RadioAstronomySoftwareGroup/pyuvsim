@@ -253,7 +253,7 @@ jobs:
 
       - name: Run benchmark
         run: |
-          mpiexec -n 1 -np 1 pytest --benchmark-only --benchmark-json output.json
+          mpiexec -n 1 -np 4 pytest --benchmark-only --benchmark-json output.json
 
       # Download previous benchmark result from cache (if exists)
       - name: Download previous benchmark data
@@ -275,7 +275,7 @@ jobs:
           # Where the previous data file is stored
           external-data-json-path: ./cache/benchmark-data.json
           # should fail consistently
-          alert-threshold: "101%"
+          alert-threshold: "50%"
           # Workflow will fail when an alert happens
           fail-on-alert: true
           # Comment on the PR if the branch is not a fork
@@ -283,7 +283,7 @@ jobs:
           # Enable Job Summary for PRs
           summary-always: true
           # Always leave a comment
-          comment-always: true
+          # comment-always: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
 
