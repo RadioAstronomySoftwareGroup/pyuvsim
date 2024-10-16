@@ -286,7 +286,6 @@ jobs:
           # comment-always: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-
       - name: Store benchmark results
         uses: actions/cache/save@v4
         # only store the cache if being run on ref sim test branch 
@@ -295,4 +294,3 @@ jobs:
         with:
           path: ./cache
           key: ubuntu-benchmark_new
-
