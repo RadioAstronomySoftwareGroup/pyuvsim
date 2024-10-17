@@ -13,4 +13,4 @@ dependencies:
   - pip:
     - pyradiosky>=1.0.1
     - build
-    - git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata@analytic_beam_refactor
+    - git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata
