@@ -25,8 +25,8 @@ dependencies = [
     "astropy>=6.0",
     "numpy>=1.23",
     "psutil",
-    "pyradiosky>=0.2.0",
-    "pyuvdata>=2.4.3",
+    "pyradiosky>=1.0.1",
+    "pyuvdata>=3.0",
     "pyyaml>=5.4.1",
     "scipy>=1.8",
     "setuptools>=64",
@@ -121,6 +121,7 @@ max-complexity = 30
 [tool.ruff.lint.isort]
 combine-as-imports = true
 known-first-party = ["pyuvsim"]
+split-on-trailing-comma = false
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

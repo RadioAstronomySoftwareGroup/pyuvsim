@@ -1,18 +1,18 @@
 beam_paths:
   0:
     filename: hera.beamfits
-  1:
+  1: !UVBeam
     filename: mwa_full_EE_test.h5
     pixels_per_deg: 1
     freq_range: [100.e+6, 200.e+6]
-  2:
-    type: airy
+  2: !AnalyticBeam
+    class: AiryBeam
     diameter: 16
-  3:
-    type: gaussian
+  3: !AnalyticBeam
+    class: GaussianBeam
     sigma: 0.03
-  4:
-    type: gaussian
+  4: !AnalyticBeam
+    class: pyuvdata.GaussianBeam
     diameter: 14
 spline_interp_opts:
         kx: 4
