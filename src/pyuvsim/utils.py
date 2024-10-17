@@ -83,14 +83,14 @@ def altaz_to_zenithangle_azimuth(altitude, azimuth):
     ----------
     altitude, azimuth: float or array of float
         altitude above horizon
-        azimuth in radians in astropy convention: East of North (N=0, E=pi/2)
+        azimuth in radians in astropy convention: East of North (North=0, East=pi/2)
 
     Returns
     -------
     zenith_angle: float or array of float
         In radians
     azimuth: float or array of float
-        In radians in uvbeam convention: North of East(East=0, North=pi/2)
+        In radians in uvbeam convention: North of East (East=0, North=pi/2)
 
     """
     input_alt = np.asarray(altitude)
