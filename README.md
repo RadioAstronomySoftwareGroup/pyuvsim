@@ -85,7 +85,7 @@ Required:
 * psutil
 * pyradiosky>=1.0.1
 * python>=3.10
-* pyuvdata>=3.0
+* pyuvdata>=3.1.0
 * pyyaml>=5.4.1
 * scipy>=1.8
 * setuptools_scm>=8.1
@@ -94,7 +94,7 @@ Optional:
 
 * astropy-healpix>=1.0.2 (for using healpix based sky catalogs or beams)
 * mpi4py>=3.1.1 (for actually running simulations)
-* lunarsky>=0.2.2 (for simulating telescopes on the moon)
+* lunarsky>=0.2.5 (for simulating telescopes on the moon)
 * python-casacore>=3.5.2 (for writing CASA measurement sets)
 
 ### Developer Installation

@@ -15,12 +15,12 @@ dependencies:
   - pytest
   - pytest-cov>=5.0.0
   - pytest-xdist
-  - pyuvdata>=2.4.3
+  - pyuvdata>=3.1.0
   - pyyaml>=5.4.1
   - scipy>=1.8
   - setuptools_scm>=8.1
   - sphinx
   - pip:
-    - pyradiosky>=0.2
-    - lunarsky>=0.2.2
+    - pyradiosky>=1.0.1
+    - lunarsky>=0.2.5
     - git+https://github.com/aelanman/analytic_diffuse

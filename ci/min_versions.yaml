@@ -14,12 +14,11 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-xdist
-  - pyuvdata==3.0
+  - pyuvdata==3.1.1  # 3.1.0 is not available on conda
   - pyyaml==5.4.1
   - scipy==1.8.*
   - setuptools_scm==8.1
   - pip:
     - pyradiosky==1.0.1
-    - lunarsky==0.2.2
+    - lunarsky==0.2.5
     - git+https://github.com/aelanman/analytic_diffuse
-    - git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata
