@@ -48,6 +48,6 @@ def write_index_rst(readme_file=None, write_file=None):
     if write_file is None:
         write_path = os.path.dirname(os.path.abspath(inspect.stack()[0][1]))
         write_file = os.path.join(write_path, "index.rst")
-    F = codecs.open(write_file, "w", "utf-8")
-    F.write(out)
+    with codecs.open(write_file, "w", "utf-8") as file:
+        file.write(out)
     print("wrote " + write_file)
