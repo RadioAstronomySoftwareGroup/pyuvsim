@@ -2086,6 +2086,7 @@ def initialize_uvdata_from_params(
             do_blt_outer=True,
             time_axis_faster_than_bls=True,
             antpairs=antpairs,
+            check_kw=check_kw,
             **uvparam_dict,
         )
         uv_obj.telescope_location = np.asarray(uv_obj.telescope_location)
@@ -2197,6 +2198,7 @@ def initialize_uvdata_from_keywords(
     path_out=None,
     complete=False,
     force_beam_check=False,
+    check_kw: dict | None = None,
     **kwargs,
 ):
     """
@@ -2420,11 +2422,14 @@ def initialize_uvdata_from_keywords(
     param_dict["obs_param_file"] = os.path.basename(output_yaml_filename)
     param_dict["telescope"].update(layout_params)
     uv_obj = initialize_uvdata_from_params(
-        param_dict, return_beams=False, force_beam_check=force_beam_check
+        param_dict,
+        return_beams=False,
+        force_beam_check=force_beam_check,
+        check_kw=check_kw,
     )
 
     if complete:
-        _complete_uvdata(uv_obj, inplace=True)
+        _complete_uvdata(uv_obj, inplace=True, check_kw=False)
 
     return uv_obj
 
