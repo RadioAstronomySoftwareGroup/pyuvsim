@@ -26,7 +26,7 @@ dependencies = [
     "numpy>=1.23",
     "psutil",
     "pyradiosky>=1.0.1",
-    "pyuvdata>=3.0",
+    "pyuvdata>=3.1.0",
     "pyyaml>=5.4.1",
     "scipy>=1.8",
     "setuptools>=64",
@@ -48,7 +48,7 @@ classifiers = [
 [project.optional-dependencies]
 casa = ["python-casacore>=3.5.2"]
 healpix = ["astropy-healpix>=1.0.2"]
-moon = ["lunarsky>=0.2.2"]
+moon = ["lunarsky>=0.2.5"]
 sim = ["mpi4py>=3.1.1"]
 all = ["pyuvsim[casa,healpix,moon,sim]"]
 test = ["coverage", "pre-commit", "pytest", "pytest-cov>=5.0"]
