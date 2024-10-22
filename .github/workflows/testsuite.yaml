@@ -96,7 +96,6 @@ jobs:
         run: |
           pip install -e .[test]
           pip install pytest-xdist
-          pip install git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata
 
       - name: Environment Info
         run: |
