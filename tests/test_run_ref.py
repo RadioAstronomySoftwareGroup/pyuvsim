@@ -16,6 +16,11 @@ hasbench = importlib.util.find_spec("pytest_benchmark") is not None
 
 pytest.importorskip("mpi4py")  # noqa
 
+#paramfile (fix name) = ["a", "b",]
+# FIXME: example for that in lunar stuff (pyuvdata in pyuvdata/test_utils/test_coordinates.py (maybe inaccurate locationing))
+
+# conftest implementation -- setup and teardown happens here
+# fixture can run previous fixture
 @pytest.fixture
 def download_sims():
     import requests
@@ -97,5 +102,7 @@ def test_run_11_uniform(benchmark, goto_tempdir, download_sims, paramfile):
     #uv_ref.dut1 = uv_new.dut1
     #uv_ref.gst0 = uv_new.gst0
     #uv_ref.rdate = uv_new.rdate
+
+    # TODO: implement better asserts
 
     assert uv_new == uv_ref
