@@ -208,7 +208,7 @@ jobs:
           file: ./coverage.xml #optional
           env_vars: OS,PYTHON
           fail_ci_if_error: true
- 
+
   #   TODO: should implement generic method of determining os instead of hardcoding it
   benchmark:
     name: Performance Benchmark
@@ -288,7 +288,7 @@ jobs:
 
       - name: Store benchmark results
         uses: actions/cache/save@v4
-        # only store the cache if being run on ref sim test branch 
+        # only store the cache if being run on ref sim test branch
         # TODO: swap to main once functional and ready for merge
         if: github.ref == 'refs/heads/1.1_ref_sim_ci_workflow'
         with:
