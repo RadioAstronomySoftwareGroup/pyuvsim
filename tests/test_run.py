@@ -17,7 +17,6 @@ from astropy.coordinates import Latitude, Longitude
 from astropy.time import Time
 from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
 from pyuvdata import ShortDipoleBeam, UniformBeam, UVData
-from pyuvdata.testing import check_warnings
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -236,28 +235,14 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
         shutil.copyfile(source_file, new_source_file)
 
         beamfits_file = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
-        new_beam_file = os.path.join(tmp_path, "test_config", "HERA_NicCST.uvbeam")
+        new_beam_file = os.path.join(tmp_path, "test_config", "HERA_NicCST.beamfits")
         shutil.copyfile(beamfits_file, new_beam_file)
-
-        # change the beam file name to .uvbeam
-        with open(new_telescope_param_file) as pfile:
-            tele_param_dict = yaml.safe_load(pfile)
-            tele_param_dict["beam_paths"][0] = {"filename": new_beam_file}
-
-        with open(new_telescope_param_file, "w") as yfile:
-            yaml.dump(tele_param_dict, yfile, default_flow_style=False)
-
-        warn_type = [DeprecationWarning]
-        msg = [pyuvsim.simsetup.weird_beamfits_extension_warning]
 
         params = pyuvsim.simsetup._config_str_to_dict(new_param_file)
     else:
-        warn_type = None
-        msg = ""
         params = pyuvsim.simsetup._config_str_to_dict(param_file)
 
-    with check_warnings(warn_type, match=msg):
-        pyuvsim.run_uvsim(params, return_uv=True)
+    pyuvsim.run_uvsim(params, return_uv=True)
 
 
 @pytest.mark.parametrize("spectral_type", ["flat", "subband", "spectral_index"])

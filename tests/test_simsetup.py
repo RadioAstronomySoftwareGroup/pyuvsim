@@ -292,7 +292,7 @@ def test_mock_diffuse_maps(modname, modkwargs, hera_loc, apollo_loc, location):
 @pytest.mark.parametrize(
     ("horizon_buffer", "pass_time", "pass_array_loc", "pass_uv", "return_catname"),
     [
-        (True, True, True, False, None),
+        (True, True, True, False, True),
         (False, False, False, True, False),
         (True, True, True, True, False),
     ],
@@ -330,13 +330,6 @@ def test_initialize_catalog_from_params(
             warn_type += [UserWarning]
             warn_str += ["No array_location specified. Defaulting to the HERA site."]
 
-    if return_catname is None:
-        warn_type += [DeprecationWarning]
-        warn_str += [
-            "The return_catname parameter currently defaults to True, but "
-            "starting in version 1.4 it will default to False."
-        ]
-
     if len(warn_type) == 0:
         warn_type = None
         warn_str = ""
@@ -346,8 +339,9 @@ def test_initialize_catalog_from_params(
             {"sources": source_dict}, input_uv=uv_use, return_catname=return_catname
         )
 
-    if return_catname is not False:
-        catalog_uv = catalog_uv[0]
+    if return_catname:
+        catalog_uv, cat_name = catalog_uv
+        assert cat_name.startswith("mock")
 
     exp_cat, _ = simsetup.create_mock_catalog(
         uv_in.time_array[0], arrangement="zenith", array_location=hera_loc, Nsrcs=5
@@ -392,7 +386,7 @@ def test_initialize_catalog_from_params_errors(
         pytest.raises(err_type, match=err_msg),
     ):
         simsetup.initialize_catalog_from_params(
-            {"sources": source_dict}, input_uv=input_uv, return_catname=False
+            {"sources": source_dict}, input_uv=input_uv
         )
 
 
@@ -406,7 +400,7 @@ def test_vot_catalog(use_filetype):
     if use_filetype:
         filetype = "vot"
     vot_catalog = simsetup.initialize_catalog_from_params(
-        vot_param_filename, filetype=filetype, return_catname=False
+        vot_param_filename, filetype=filetype
     )
 
     if use_filetype:
@@ -415,7 +409,7 @@ def test_vot_catalog(use_filetype):
         SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml"
     )
     txt_catalog = simsetup.initialize_catalog_from_params(
-        txt_param_filename, filetype=filetype, return_catname=False
+        txt_param_filename, filetype=filetype
     )
 
     assert vot_catalog == txt_catalog
@@ -426,15 +420,13 @@ def test_vot_catalog_errors():
         SIM_DATA_PATH, "test_config", "param_1time_1src_testvot.yaml"
     )
     with pytest.raises(ValueError, match="Invalid filetype. Filetype options are:"):
-        simsetup.initialize_catalog_from_params(
-            vot_param_filename, filetype="foo", return_catname=False
-        )
+        simsetup.initialize_catalog_from_params(vot_param_filename, filetype="foo")
 
 
 @pytest.mark.parametrize(("flux_cut", "filetype"), [(True, "gleam"), (False, None)])
 def test_gleam_catalog(filetype, flux_cut):
     if flux_cut:
-        expected_ncomp = 23
+        expected_ncomp = 9
         params_use = gleam_param_file
     else:
         expected_ncomp = 50
@@ -445,15 +437,9 @@ def test_gleam_catalog(filetype, flux_cut):
         param_dict["sources"].pop("max_flux")
         params_use = param_dict
 
-    warn_messages = [
-        "No spectral_type specified for GLEAM, using 'flat'. In version 1.4 "
-        "this default will change to 'subband' to match pyradiosky's default."
-    ]
-    warnings = [DeprecationWarning]
-    with check_warnings(warnings, match=warn_messages):
-        gleam_catalog = simsetup.initialize_catalog_from_params(
-            params_use, filetype=filetype, return_catname=False
-        )
+    gleam_catalog = simsetup.initialize_catalog_from_params(
+        params_use, filetype=filetype
+    )
 
     assert gleam_catalog.Ncomponents == expected_ncomp
 
@@ -487,7 +473,7 @@ def test_skyh5_catalog(use_filetype, yaml_filetype, tmp_path):
     if use_filetype:
         filetype = "skyh5"
     skyh5_catalog = simsetup.initialize_catalog_from_params(
-        param_filename, filetype=filetype, return_catname=False
+        param_filename, filetype=filetype
     )
 
     assert skyh5_catalog == skyobj
@@ -500,7 +486,7 @@ def test_healpix_catalog():
     sky = SkyModel.from_file(path)
 
     params = {"sources": {"catalog": path}}
-    hpx_sky = simsetup.initialize_catalog_from_params(params, return_catname=False)
+    hpx_sky = simsetup.initialize_catalog_from_params(params)
     assert hpx_sky == sky
 
 
@@ -513,9 +499,7 @@ def test_gleam_catalog_spectral_type(spectral_type):
     param_dict["sources"].pop("max_flux")
     param_dict["sources"]["spectral_type"] = spectral_type
 
-    gleam_catalog = simsetup.initialize_catalog_from_params(
-        param_dict, return_catname=False
-    )
+    gleam_catalog = simsetup.initialize_catalog_from_params(param_dict)
     assert gleam_catalog.spectral_type == spectral_type
     assert gleam_catalog.Ncomponents == 50
 
@@ -574,10 +558,8 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
 
     # Check default configuration
     with check_warnings(
-        [DeprecationWarning, DeprecationWarning, DeprecationWarning],
+        [DeprecationWarning, DeprecationWarning],
         match=[
-            "The return_beams parameter currently defaults to True, but starting in"
-            "version 1.4 it will default to False.",
             "The reorder_blt_kw parameter is deprecated in favor of setting "
             "obs_param['ordering']['blt_order']. This will become an error in "
             "version 1.5",
@@ -589,6 +571,7 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
             new_param_file,
             reorder_blt_kw={"order": "time", "minor_order": "baseline"},
             check_kw={"run_check_acceptability": True},
+            return_beams=True,
         )
     assert uv_obj.telescope.x_orientation == "east"
     if telparam_in_obsparam:
@@ -1638,7 +1621,6 @@ def test_direct_fname(tmpdir):
             """
             beam_paths:
                 0: 1.35
-            diameter: 12
             spline_interp_opts:
                     kx: 4
                     ky: 4
@@ -1654,7 +1636,6 @@ def test_direct_fname(tmpdir):
             beam_paths:
                 0:
                     diameter: 12
-            diameter: 12
             spline_interp_opts:
                     kx: 4
                     ky: 4
@@ -1672,7 +1653,6 @@ def test_direct_fname(tmpdir):
                 0:
                     type: unsupported_type
                     diameter: 12
-            diameter: 12
             spline_interp_opts:
                     kx: 4
                     ky: 4
@@ -1689,7 +1669,6 @@ def test_direct_fname(tmpdir):
                 0: !AnalyticBeam
                     class: AiryBeam
                     diameter: 12
-            diameter: 12
             spline_interp_opts:
                     kx: 4
                     ky: 4
@@ -1700,32 +1679,50 @@ def test_direct_fname(tmpdir):
             1,
             "beam_id 1 is not listed in the telconfig.",
         ),
+        (
+            """
+            beam_paths:
+                0: !AnalyticBeam
+                    class: AiryBeam
+                    diameter: 12
+            diameter: 12
+            spline_interp_opts:
+                    kx: 4
+                    ky: 4
+            freq_interp_kind: 'cubic'
+            telescope_location: (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
+            telescope_name: BLLITE
+            """,
+            0,
+            "Beam shape options diameter and sigma should be specified per "
+            "beamID in the 'beam_paths' section not as globals. For examples "
+            "see the parameter_files documentation.",
+        ),
     ],
 )
 def test_beamlist_init_errors(input_yaml, beam_id, err_msg):
     telconfig = yaml.safe_load(input_yaml)
 
-    warn_msg = [
-        "Beam shape options diameter and sigma should be specified per "
-        "beamID in the 'beam_paths' section not as globals. For examples "
-        "see the parameter_files documentation. This will become an "
-        "error in version 1.4"
-    ]
-    if beam_id == 0 and not isinstance(telconfig["beam_paths"][0], float):
+    warn_msg = []
+    if ("!AnalyticBeam" not in input_yaml) and not isinstance(
+        telconfig["beam_paths"][0], float
+    ):
         warn_msg += [
             "Entries in 'beam_paths' should be specified using either the UVBeam "
             "or AnalyticBeam constructors or using a dict syntax for UVBeams. "
             "For examples see the parameter_files documentation. Specifying "
-            "simple strings will cause an error in version 1.4, specifying "
             "analytic beam without the AnalyticBeam constructors will cause an "
-            "error in version 1.5"
+            "error in version 1.6"
         ]
+        warn_type = DeprecationWarning
+    if len(warn_msg) == 0:
+        warn_type = None
 
     Nfreqs = 10
     freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
 
     with (
-        check_warnings(DeprecationWarning, match=warn_msg),
+        check_warnings(warn_type, match=warn_msg),
         pytest.raises(ValueError, match=err_msg),
     ):
         simsetup._construct_beam_list([beam_id], telconfig, freq_array=freqs)
@@ -1748,27 +1745,21 @@ def test_beamlist_init_spline():
     with check_warnings(
         DeprecationWarning,
         match=[
-            "Beam shape options diameter and sigma should be specified per "
-            "beamID in the 'beam_paths' section not as globals. For examples see "
-            "the parameter_files documentation. This will become an error in "
-            "version 1.4"
-        ]
-        + [
             "Entries in 'beam_paths' should be specified using either the UVBeam "
             "or AnalyticBeam constructors or using a dict syntax for UVBeams. "
             "For examples see the parameter_files documentation. Specifying "
-            "simple strings will cause an error in version 1.4, specifying "
             "analytic beam without the AnalyticBeam constructors will cause an "
-            "error in version 1.5"
+            "error in version 1.6"
         ]
         * 5,
     ):
         beam_list = simsetup._construct_beam_list(beam_ids, telconfig, freq_array=freqs)
+    assert isinstance(beam_list, pyuvsim.BeamList)
     assert beam_list.spline_interp_opts == {"kx": 2, "ky": 2}
 
 
 @pytest.mark.parametrize(
-    ("rename_beamfits", "pass_beam_type"), [(True, False), (True, True), (False, False)]
+    ("rename_beamfits", "pass_beam_type"), [(False, True), (True, True), (False, False)]
 )
 def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
     telescope_config_name = os.path.join(SIM_DATA_PATH, "bl_lite_mixed.yaml")
@@ -1781,9 +1772,9 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
         new_beam_file = os.path.join(tmp_path, "HERA_NicCST.uvbeam")
         shutil.copyfile(beamfits_file, new_beam_file)
 
-        telconfig["beam_paths"][0] = new_beam_file
+        telconfig["beam_paths"][0] = {"filename": new_beam_file}
     else:
-        telconfig["beam_paths"][0] = "HERA_NicCST.beamfits"
+        telconfig["beam_paths"][0] = {"filename": "HERA_NicCST.beamfits"}
 
     if pass_beam_type:
         beam_file = beamfits_file
@@ -1794,36 +1785,20 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
     )
 
     nbeams = len(telconfig["beam_paths"])
-    entries_warnings = nbeams - 1
-    if pass_beam_type:
-        entries_warnings -= 1
+    entries_warnings = 6
 
     warn_list = [
-        "Beam shape options diameter and sigma should be specified per "
-        "beamID in the 'beam_paths' section not as globals. For examples see "
-        "the parameter_files documentation. This will become an error in "
-        "version 1.4"
-    ] + [
         "Entries in 'beam_paths' should be specified using either the UVBeam "
         "or AnalyticBeam constructors or using a dict syntax for UVBeams. "
         "For examples see the parameter_files documentation. Specifying "
-        "simple strings will cause an error in version 1.4, specifying "
         "analytic beam without the AnalyticBeam constructors will cause an "
-        "error in version 1.5"
+        "error in version 1.6"
     ] * entries_warnings
     warn_types = DeprecationWarning
 
     Nfreqs = 10
     freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
 
-    if rename_beamfits and not pass_beam_type:
-        warn_list.append(
-            "This beamfits file does not have a '.fits' or '.beamfits' extension, "
-            "so UVBeam does not recognize it as a beamfits file. Either change the "
-            "file extension or specify the beam_type. This is currently handled "
-            "with a try/except clause in pyuvsim, but this will become an error in "
-            "version 1.4"
-        )
     with check_warnings(warn_types, match=warn_list):
         beam_list = simsetup._construct_beam_list(
             np.arange(nbeams), telconfig, freq_array=freqs
@@ -1851,7 +1826,9 @@ def test_beamlist_init_freqrange(sel_type):
     with open(telescope_config_name) as yf:
         telconfig = yaml.safe_load(yf)
 
-    telconfig["beam_paths"][0] = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
+    telconfig["beam_paths"][0] = {
+        "filename": os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
+    }
 
     Nfreqs = 10
     freqs = np.linspace(120, 145, Nfreqs) * 1e6 * units.Hz
@@ -1869,20 +1846,13 @@ def test_beamlist_init_freqrange(sel_type):
     with check_warnings(
         DeprecationWarning,
         match=[
-            "Beam shape options diameter and sigma should be specified per "
-            "beamID in the 'beam_paths' section not as globals. For examples see "
-            "the parameter_files documentation. This will become an error in "
-            "version 1.4"
-        ]
-        + [
             "Entries in 'beam_paths' should be specified using either the UVBeam "
             "or AnalyticBeam constructors or using a dict syntax for UVBeams. "
             "For examples see the parameter_files documentation. Specifying "
-            "simple strings will cause an error in version 1.4, specifying "
             "analytic beam without the AnalyticBeam constructors will cause an "
-            "error in version 1.5"
+            "error in version 1.6"
         ]
-        * 6,
+        * 5,
     ):
         beam_list = simsetup._construct_beam_list(
             np.arange(6), telconfig, freq_range=freq_range_pass, freq_array=freqs
