@@ -8,7 +8,8 @@ import pytest
 from pyuvdata import UVData
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-from pyuvsim.mpi import rank
+#from pyuvsim.mpi import rank
+import pyuvsim
 from pyuvsim.uvsim import run_uvsim
 
 hasbench = importlib.util.find_spec("pytest_benchmark") is not None
@@ -114,7 +115,7 @@ def goto_tempdir(tmpdir):
 # TODO: add all 8 yaml files
 @pytest.mark.parametrize("paramfile", ci_ref_sims)
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
-def test_run_11_uniform(benchmark, goto_tempdir, download_sims, paramfile):
+def test_run_11(benchmark, goto_tempdir, download_sims, paramfile):
     # download reference sim
     # download_sims(goto_tempdir)
 
@@ -130,6 +131,7 @@ def test_run_11_uniform(benchmark, goto_tempdir, download_sims, paramfile):
     # to run simulation
     yaml_filename = "obsparam_ref_" + paramfile + ".yaml"
     yaml_filepath = os.path.join(SIM_DATA_PATH, "test_config", yaml_filename)
+    assert os.path.exists(yaml_filepath)
 
     # benchmark uvsim.run_uvsim method with param_filename argument
     # runs around 10 times to get benchmark data
@@ -139,17 +141,14 @@ def test_run_11_uniform(benchmark, goto_tempdir, download_sims, paramfile):
     # TODO: check if somehow making like 10 copies of output accidentally (whoops)
     benchmark(run_uvsim, yaml_filepath)
 
-    print(f"\nfor run with {paramfile}:\n")
-    print(f"\n\ncurrent working directory is: {os.getcwd()}\n\n")
-    print(f"\n\nfiles: {os.listdir()}\n\n")
-
     # loading the file and comparing is only done on rank 0.
-    if rank != 0:
+    if pyuvsim.mpi.rank != 0:
         return
 
     # instantiate new UVData object from the benchmark run_uvsim output
     # as current point of comparison
     new_uvh5_filepath = os.path.join(goto_tempdir, uvh5_filename)
+    assert os.path.exists(new_uvh5_filepath)
     uv_new = UVData.from_file(new_uvh5_filepath)
 
     # fix part(s) that should deviate
