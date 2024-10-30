@@ -21,7 +21,9 @@ pytest.importorskip("mpi4py")  # noqa
 # GET THEM TO DOWNLOAD (I GUESS TEMP JUST MAKE ANOTHER
 # DICT OR FILE OR DATA STRUCTURE THAT CAN GRAB THE FILES)
 
-# TODO: check syntax preference for global lists!
+# global list of reference simulation names
+# to be used with the dictionary of gdrive file ids in download_sims,
+# and to construct yaml and output filenames
 ci_ref_sims = [
     "1.1_uniform",
     "1.1_gauss",
@@ -33,9 +35,8 @@ ci_ref_sims = [
     #"1.3_gauss",
 ]
 
-
-# TODO: hardset it using dictionary or something
 # TODO: swap to something more permanent!
+# TODO: double confirm downloading is only happening once
 @pytest.fixture
 def download_sims():
     import requests
@@ -58,17 +59,16 @@ def download_sims():
         #"1.3_gauss":a
     }
 
-
     urlbase = "https://drive.google.com/uc?export=download"
     
     # for each sim name in ci_ref_sims, checks that needs hera uvbeam and
     # has downloadable data (is a key to fids)
     download_hera_uvbeam = any(["hera" in sim for sim in ci_ref_sims if sim in fids])
-    print(download_hera_uvbeam)
 
     # download the hera uvbeam data file if we need it
     if download_hera_uvbeam:
-        print("skipping as file cannot currently be downloaded")
+        # skipping as file cannot currently be downloaded 
+        pass
 
         #fid = "1lqkLlnB3uE17FcPB2GcJJQoCcn7-wVP8"
         #fname = os.path.join(target_dir, "HERA_NicCST_fullfreq.uvbeam")
@@ -81,7 +81,6 @@ def download_sims():
     #       them via a dictionary with ci_ref_sims for keys
     for sim in ci_ref_sims:
         if sim not in fids.keys():
-            print(f"key {sim} not found!")
             continue            
 
         # get id from dict
@@ -96,7 +95,6 @@ def download_sims():
 
         # write the file
         with open(fname, "wb") as ofile:
-            print(f"writing {fname}")
             ofile.write(r.content)
 
 
@@ -137,8 +135,8 @@ def test_run_11(benchmark, goto_tempdir, download_sims, paramfile):
     # runs around 10 times to get benchmark data
     # outdir is given by the yaml file but should be current working directory
     # for all the reference simulations
-    # TODO: think more about filepath specification, also there was a warning
-    # TODO: check if somehow making like 10 copies of output accidentally (whoops)
+    # TODO: currently the benchmark ends up writing like 10 copies of the same file
+    #       should probably fix
     benchmark(run_uvsim, yaml_filepath)
 
     # loading the file and comparing is only done on rank 0.
