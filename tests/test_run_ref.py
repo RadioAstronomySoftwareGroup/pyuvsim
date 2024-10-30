@@ -132,22 +132,14 @@ def test_run_11(benchmark, goto_tempdir, download_sims, paramfile):
     assert os.path.exists(yaml_filepath)
 
     # benchmark uvsim.run_uvsim method with param_filename argument
-    # runs around 10 times to get benchmark data
-    # outdir is given by the yaml file but should be current working directory
-    # for all the reference simulations
-    # TODO: currently the benchmark ends up writing like 10 copies of the same file
-    #       should probably fix
-    benchmark(run_uvsim, yaml_filepath)
+    # runs multiple times to get benchmark data
+    # outdir is given by the yaml file but should not write anything
+    # and simply return a UVData object
+    uv_new = benchmark(run_uvsim, yaml_filepath, return_uv=True)
 
     # loading the file and comparing is only done on rank 0.
     if pyuvsim.mpi.rank != 0:
         return
-
-    # instantiate new UVData object from the benchmark run_uvsim output
-    # as current point of comparison
-    new_uvh5_filepath = os.path.join(goto_tempdir, uvh5_filename)
-    assert os.path.exists(new_uvh5_filepath)
-    uv_new = UVData.from_file(new_uvh5_filepath)
 
     # fix part(s) that should deviate
     # TODO: maybe assert that deviation occurred
