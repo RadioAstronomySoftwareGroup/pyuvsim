@@ -102,14 +102,6 @@ analytic_beams = {
 }
 
 
-weird_beamfits_extension_warning = (
-    "This beamfits file does not have a '.fits' or '.beamfits' extension, so "
-    "UVBeam does not recognize it as a beamfits file. Either change the file "
-    "extension or specify the beam_type. This is currently handled with a "
-    "try/except clause in pyuvsim, but this will become an error in version 1.4"
-)
-
-
 def _parse_layout_csv(layout_csv):
     """
     Interpret the layout csv file.
@@ -902,7 +894,7 @@ def _sky_select_calc_rise_set(sky, source_params, telescope_lat_deg=None):
 
 
 def initialize_catalog_from_params(
-    obs_params, input_uv=None, filetype=None, return_catname=None
+    obs_params, input_uv=None, filetype=None, return_catname=False
 ):
     """
     Make catalog from parameter file specifications.
@@ -919,8 +911,7 @@ def initialize_catalog_from_params(
         One of ['skyh5', 'gleam', 'vot', 'text', 'fhd'] or None.
         If None, the code attempts to guess what the file type is.
     return_catname: bool
-        Return the catalog name. Defaults to True currently but will default to False
-        in version 1.4.
+        Return the catalog name. Default is False.
 
     Returns
     -------
@@ -930,14 +921,6 @@ def initialize_catalog_from_params(
         Catalog identifier for metadata. Only returned if return_catname is True.
 
     """
-    if return_catname is None:
-        warnings.warn(
-            "The return_catname parameter currently defaults to True, but "
-            "starting in version 1.4 it will default to False.",
-            DeprecationWarning,
-        )
-        return_catname = True
-
     if input_uv is not None and not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
 
@@ -1036,12 +1019,7 @@ def initialize_catalog_from_params(
         )
 
         if detect_gleam and "spectral_type" not in source_params:
-            warnings.warn(
-                "No spectral_type specified for GLEAM, using 'flat'. In version 1.4 "
-                "this default will change to 'subband' to match pyradiosky's default.",
-                DeprecationWarning,
-            )
-            read_params["spectral_type"] = "flat"
+            read_params["spectral_type"] = "subband"
 
         source_list_name = os.path.basename(catalog)
         sky = SkyModel.from_file(catalog, **read_params)
@@ -1100,6 +1078,12 @@ def _construct_beam_list(
         Range of frequencies to keep in the beam object, shape (2,). Should
         include all frequencies in the simulation with a buffer to support
         interpolation.
+
+    Returns
+    -------
+    BeamList
+        The constructed beam list object.
+
     """
     beam_list = []
     assert isinstance(
@@ -1118,11 +1102,10 @@ def _construct_beam_list(
 
     # possible global shape options
     if "diameter" in telconfig or "sigma" in telconfig:
-        warnings.warn(
+        raise ValueError(
             "Beam shape options diameter and sigma should be specified per beamID "
             "in the 'beam_paths' section not as globals. For examples see the "
-            "parameter_files documentation. This will become an error in version 1.4",
-            DeprecationWarning,
+            "parameter_files documentation."
         )
 
     select = telconfig.pop("select", {})
@@ -1145,9 +1128,10 @@ def _construct_beam_list(
             raise ValueError(f"beam_id {beam_id} is not listed in the telconfig.")
         beam_model = telconfig["beam_paths"][beam_id]
 
-        if not isinstance(beam_model, str | dict | AnalyticBeam | UVBeam):
+        if not isinstance(beam_model, dict | AnalyticBeam | UVBeam):
             raise ValueError(
                 "Beam model is not properly specified in telescope config file."
+                f"It is specified as {beam_model}"
             )
 
         if not isinstance(beam_model, AnalyticBeam | UVBeam) and not (
@@ -1157,9 +1141,8 @@ def _construct_beam_list(
                 "Entries in 'beam_paths' should be specified using either the "
                 "UVBeam or AnalyticBeam constructors or using a dict syntax for "
                 "UVBeams. For examples see the parameter_files documentation. "
-                "Specifying simple strings will cause an error in version 1.4, "
-                "specifying analytic beam without the AnalyticBeam constructors "
-                "will cause an error in version 1.5",
+                "Specifying analytic beam without the AnalyticBeam constructors "
+                "will cause an error in version 1.6",
                 DeprecationWarning,
             )
 
@@ -1174,20 +1157,10 @@ def _construct_beam_list(
                     select["freq_chans"] = freq_chans
                 beam_model.select(**select)
             beam_list.append(beam_model)
-        elif (
-            isinstance(beam_model, str)
-            and beam_model not in analytic_beams
-            or isinstance(beam_model, dict)
-            and "filename" in beam_model
-        ):
-            if isinstance(beam_model, str):
-                # this is the path to a UVBeam readable file
-                beam_file = beam_model
-                read_kwargs = {}
-            else:
-                # this a UVBeam readable file with (possibly) some read kwargs
-                beam_file = beam_model.pop("filename")
-                read_kwargs = beam_model
+        elif isinstance(beam_model, dict) and "filename" in beam_model:
+            # this a UVBeam readable file with (possibly) some read kwargs
+            beam_file = beam_model.pop("filename")
+            read_kwargs = beam_model
 
             beam_file = _check_uvbeam_file(beam_file)
             uvb = UVBeam()
@@ -1195,19 +1168,11 @@ def _construct_beam_list(
             if "freq_range" in select:
                 read_kwargs["freq_range"] = select["freq_range"]
 
-            try:
-                uvb.read(beam_file, **read_kwargs)
-            except ValueError:
-                # If file type is not recognized, assume beamfits,
-                # which was originally the only option.
-                uvb.read_beamfits(beam_file, **read_kwargs)
-                warnings.warn(weird_beamfits_extension_warning, DeprecationWarning)
+            uvb.read(beam_file, **read_kwargs)
 
             beam_list.append(uvb)
         else:
-            if isinstance(beam_model, str):
-                beam_type = beam_model
-            elif "type" in beam_model:
+            if "type" in beam_model:
                 beam_type = beam_model["type"]
             else:
                 raise ValueError(
@@ -1238,10 +1203,6 @@ def _construct_beam_list(
 
             for opt in shape_opts:
                 shape_opts[opt] = this_beam_opts.get(opt)
-
-            if all(v is None for v in shape_opts.values()):
-                for opt in shape_opts:
-                    shape_opts[opt] = telconfig.get(opt)
 
             ab = analytic_beams[beam_type](**shape_opts)
 
@@ -1919,7 +1880,7 @@ def set_ordering(uv_obj, param_dict, reorder_blt_kw):
 
 
 def initialize_uvdata_from_params(
-    obs_params, return_beams=None, reorder_blt_kw=None, check_kw=None
+    obs_params, return_beams=False, reorder_blt_kw=None, check_kw=None
 ):
     """
     Construct a :class:`pyuvdata.UVData` object from parameters in a valid yaml file.
@@ -1938,8 +1899,7 @@ def initialize_uvdata_from_params(
         Either an obs_param file name or a dictionary of parameters read in.
         Additional :class:`pyuvdata.UVData` parameters may be passed in through here.
     return_beams : bool
-        Option to return the beam_list and beam_dict. Currently defaults to True, but
-        will default to False starting in version 1.4.
+        Option to return the beam_list and beam_dict. Default is False.
     reorder_blt_kw : dict (optional)
         Deprecated. Use obs_param['ordering']['blt_order'] instead.
         Keyword arguments to send to the ``uvdata.reorder_blts`` method at the end of
@@ -1960,14 +1920,6 @@ def initialize_uvdata_from_params(
 
     """
     logger.info("Starting SimSetup")
-
-    if return_beams is None:
-        warnings.warn(
-            "The return_beams parameter currently defaults to True, but starting in"
-            "version 1.4 it will default to False.",
-            DeprecationWarning,
-        )
-        return_beams = True
 
     if reorder_blt_kw is not None:
         warnings.warn(

@@ -1,23 +1,27 @@
 beam_paths:
-  0: hera.beamfits
+  0: 
+    filename: hera.beamfits
   1:
     type: airy
     diameter: 16
   2:
     type: gaussian
     sigma: 0.03
-  3: airy
+  3:
+    type: airy
+    diameter: 12
   4:
     type: gaussian
     diameter: 14
-  5: gaussian
+  5:
+    type: gaussian
+    diameter: 12
   6:
     filename: mwa_full_EE_test.h5
     pixels_per_deg: 1
     freq_range: [100.e+6, 200.e+6]
   7:
     type: short_dipole
-diameter: 12
 spline_interp_opts:
         kx: 4
         ky: 4

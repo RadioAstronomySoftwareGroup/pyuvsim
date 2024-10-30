@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.4.0] - 2024-10-31
+
 ### Changed
 - Use new pyuvdata analytic beams and remove the analytic beams defined in this package.
 - Major restructuring of the BeamList object to use shared memory and remove the
