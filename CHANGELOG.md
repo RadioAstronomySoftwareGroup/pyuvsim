@@ -3,6 +3,12 @@
 ## [Unreleased]
 
 ### Changed
+- Use new pyuvdata analytic beams and remove the analytic beams defined in this package.
+- Major restructuring of the BeamList object to use shared memory and remove the
+string/object mode switch.
+- BeamLists now contain pyuvdata BeamInterface objects
+- Updated minimum dependency versions: pyuvdata>=3.1.0
+- Updated minimum optional dependency versions: lunarsky>=0.2.5
 - Setting the `select.bls` property in the obsparams file now selects baselines _before_
 creating the UVData object, rather than down-selecting afterwards, saving memory and time.
 
