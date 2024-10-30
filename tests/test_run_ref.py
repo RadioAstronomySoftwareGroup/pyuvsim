@@ -23,12 +23,13 @@ pytest.importorskip("mpi4py")  # noqa
 # TODO: check syntax preference for global lists!
 ci_ref_sims = [
     "1.1_uniform",
-    "1.1_hera",
     "1.1_gauss",
-    "1.2_uniform",
-    "1.2_hera",
-    "1.3_uniform",
-    "1.3_gauss",
+    #"1.1_hera",
+    #"1.1_gauss",
+    #"1.2_uniform",
+    #"1.2_hera",
+    #"1.3_uniform",
+    #"1.3_gauss",
 ]
 
 
@@ -43,20 +44,59 @@ def download_sims():
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
 
+    # temporary way to store all the fileids
+    # control which simulations via global ci_ref_sims array
+    fids = {
+        "1.1_uniform":"1V4RmmUGrx5iH-Zyuj45p1ag3vmMuUI2A",
+        "1.1_gauss":"1gTj9BSunEoyde5Dq8a5IhUieMo9PuMuC",
+        #"1.1_hera":"13B0YOSO9v4KsEGX9GVHuBEQrt5Tnjsxr",
+        #"1.2_gauss":a,
+        #"1.2_uniform":a,
+        #"1.2_hera":a,
+        #"1.3_uniform":a,
+        #"1.3_gauss":a
+    }
+
+
     urlbase = "https://drive.google.com/uc?export=download"
+    
+    # for each sim name in ci_ref_sims, checks that needs hera uvbeam and
+    # has downloadable data (is a key to fids)
+    download_hera_uvbeam = any(["hera" in sim for sim in ci_ref_sims if sim in fids])
+    print(download_hera_uvbeam)
+
+    # download the hera uvbeam data file if we need it
+    if download_hera_uvbeam:
+        print("skipping as file cannot currently be downloaded")
+
+        #fid = "1lqkLlnB3uE17FcPB2GcJJQoCcn7-wVP8"
+        #fname = os.path.join(target_dir, "HERA_NicCST_fullfreq.uvbeam")
+        #r = requests.get(urlbase, params={"id": fid})
+        # write the file
+        #with open(fname, "wb") as ofile:
+        #    ofile.write(r.content)
 
     # TODO: upload all other files and hardcode
     #       them via a dictionary with ci_ref_sims for keys
-    fid = "1V4RmmUGrx5iH-Zyuj45p1ag3vmMuUI2A"
-    fname = "ref_1.1_uniform.uvh5"
-    # fileid name type size size_unit date time
+    for sim in ci_ref_sims:
+        if sim not in fids.keys():
+            print(f"key {sim} not found!")
+            continue            
 
-    r = requests.get(urlbase, params={"id": fid})
+        # get id from dict
+        fid = fids[sim]
+        
+        # get content
+        r = requests.get(urlbase, params={"id": fid})
 
-    fname = os.path.join(target_dir, fname)
+        # set filename with full filepath
+        fname = "ref_" + sim + ".uvh5"
+        fname = os.path.join(target_dir, fname)
 
-    with open(fname, "wb") as ofile:
-        ofile.write(r.content)
+        # write the file
+        with open(fname, "wb") as ofile:
+            print(f"writing {fname}")
+            ofile.write(r.content)
 
 
 @pytest.fixture
@@ -98,6 +138,10 @@ def test_run_11_uniform(benchmark, goto_tempdir, download_sims, paramfile):
     # TODO: think more about filepath specification, also there was a warning
     # TODO: check if somehow making like 10 copies of output accidentally (whoops)
     benchmark(run_uvsim, yaml_filepath)
+
+    print(f"\nfor run with {paramfile}:\n")
+    print(f"\n\ncurrent working directory is: {os.getcwd()}\n\n")
+    print(f"\n\nfiles: {os.listdir()}\n\n")
 
     # loading the file and comparing is only done on rank 0.
     if rank != 0:
