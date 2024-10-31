@@ -217,12 +217,44 @@ jobs:
       ENV_NAME: pyuvsim_tests_mpich
       PYTHON: "3.12"
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - id: test_run_11
+            name: "1.1 Reference Simulations"
+          - id: test_run_12
+            name: "1.2 Reference Simulations"
+          - id: test_run_13
+            name: "1.3 Reference Simulations"
+
     defaults:
       run:
         # Adding -l {0} helps ensure conda can be found properly.
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@main
+      
+      #####################
+      # Matrix lock start #
+      #####################
+
+      - name: "Initialize matrix lock"
+        if: matrix.id == test_run_11
+        uses: rakles/matrix-lock@v1
+        with:
+          step: init
+          order: "test_run_11,test_run_13,test_run_12"
+
+      - name: "Wait for matrix lock"
+        uses: rakles/matrix-lock@v1
+        with:
+          step: wait
+          id: ${{ matrix.id }}
+
+      #############
+      # Job Steps #
+      #############
 
       - name: Setup Miniforge
         uses: conda-incubator/setup-miniconda@v3
@@ -251,14 +283,14 @@ jobs:
 
       - name: Run benchmark
         run: |
-          mpiexec -n 1 -np 1 pytest --benchmark-only --benchmark-json output.json
+          mpiexec -n 1 -np 1 pytest -k ${{ matrix.id }} --benchmark-only --benchmark-json output.json
 
       # Download previous benchmark result from cache (if exists)
       - name: Download previous benchmark data
         uses: actions/cache/restore@v4
         with:
           path: ./cache
-          key: ubuntu-benchmark_new
+          key: ubuntu-benchmark_new_2
 
       # Run `github-action-benchmark` action
       # this step also EDITS the ./cache/benchmark-data.json file
@@ -291,4 +323,14 @@ jobs:
         if: github.ref == 'refs/heads/1.1_ref_sim_ci_workflow'
         with:
           path: ./cache
-          key: ubuntu-benchmark_new
+          key: ubuntu-benchmark_new_2
+
+      ########################
+      # Matrix Lock Continue #
+      ########################
+
+      - name: "Continue matrix lock"
+        uses: rakles/matrix-lock@v1
+        with:
+          step: continue
+          id: ${{ matrix.id }}
