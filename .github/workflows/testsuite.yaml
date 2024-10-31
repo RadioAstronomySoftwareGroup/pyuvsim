@@ -240,7 +240,7 @@ jobs:
       #####################
 
       - name: "Initialize matrix lock"
-        if: matrix.id == test_run_11
+        if: matrix.id == "test_run_11"
         uses: rakles/matrix-lock@v1
         with:
           step: init
