@@ -150,3 +150,13 @@ def test_run_11(benchmark, goto_tempdir, download_sims, paramfile):
     # TODO: implement better asserts
     #       include lower tolerance for deviations
     assert uv_new == uv_ref
+
+@pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
+def test_run_12(benchmark, goto_tempdir):
+    output = benchmark(sum, [1,1])
+    assert output == 2
+
+@pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
+def test_run_13(benchmark, goto_tempdir):
+    output = benchmark(sum, [1,1])
+    assert output == 2
