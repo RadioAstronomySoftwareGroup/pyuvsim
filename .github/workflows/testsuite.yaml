@@ -241,13 +241,13 @@ jobs:
 
       - name: "Initialize matrix lock"
         if: matrix.id == 'test_run_11'
-        uses: rakles/matrix-lock@v1
+        uses: rakles/matrix-lock@v1.0.0
         with:
           step: init
           order: "test_run_11,test_run_13,test_run_12"
 
       - name: "Wait for matrix lock"
-        uses: rakles/matrix-lock@v1
+        uses: rakles/matrix-lock@v1.0.0
         with:
           step: wait
           id: ${{ matrix.id }}
@@ -330,7 +330,7 @@ jobs:
       ########################
 
       - name: "Continue matrix lock"
-        uses: rakles/matrix-lock@v1
+        uses: rakles/matrix-lock@v1.0.0
         with:
           step: continue
           id: ${{ matrix.id }}
