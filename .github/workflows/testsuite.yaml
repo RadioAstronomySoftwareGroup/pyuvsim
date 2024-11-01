@@ -282,6 +282,7 @@ jobs:
           key: ${{ matrix.id }}-benchmark
 
       # TODO: figure out if this appropriately updates the cache 
+      # 1
       # this step also EDITS the ./cache/benchmark-data.json file
       # We do not need to add output.json to the cache directory
       - name: Compare benchmarks
