@@ -265,14 +265,23 @@ jobs:
         run: |
           mpiexec -n 1 -np 1 pytest -k ${{ matrix.id }} --benchmark-only --benchmark-json output.json
 
+      # TODO: figure out why / if okay to delete before downloading?
+      - name: Clear previous benchmark report
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/1.1_ref_sim_ci_workflow'}}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh cache delete ${{ matrix.id }}-benchmark --repo RadioAstronomySoftwareGroup/pyuvsim
+        continue-on-error: true
+
       # Download previous benchmark result from cache (if exists)
       - name: Download previous benchmark data
-        uses: actions/cache/restore@v4
+        uses: actions/cache@v4
         with:
           path: ./cache
-          key: ubuntu-benchmark_new_2
+          key: ${{ matrix.id }}-benchmark
 
-      # Run `github-action-benchmark` action
+      # TODO: figure out if this appropriately updates the cache 
       # this step also EDITS the ./cache/benchmark-data.json file
       # We do not need to add output.json to the cache directory
       - name: Compare benchmarks
@@ -295,12 +304,3 @@ jobs:
           # Always leave a comment
           comment-always: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Store benchmark results
-        uses: actions/cache/save@v4
-        # only store the cache if being run on ref sim test branch
-        # TODO: swap to main once functional and ready for merge
-        if: github.ref == 'refs/heads/1.1_ref_sim_ci_workflow'
-        with:
-          path: ./cache
-          key: ubuntu-benchmark_new_2
