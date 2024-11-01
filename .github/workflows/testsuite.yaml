@@ -219,6 +219,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      max-parallel: 1
       matrix:
         include:
           - id: test_run_11
@@ -235,27 +236,6 @@ jobs:
     steps:
       - uses: actions/checkout@main
       
-      #####################
-      # Matrix lock start #
-      #####################
-
-      - name: "Initialize matrix lock"
-        if: matrix.id == 'test_run_11'
-        uses: rakles/matrix-lock@v1.0.0
-        with:
-          step: init
-          order: "test_run_11,test_run_13,test_run_12"
-
-      - name: "Wait for matrix lock"
-        uses: rakles/matrix-lock@v1.0.0
-        with:
-          step: wait
-          id: ${{ matrix.id }}
-
-      #############
-      # Job Steps #
-      #############
-
       - name: Setup Miniforge
         uses: conda-incubator/setup-miniconda@v3
         with:
@@ -324,13 +304,3 @@ jobs:
         with:
           path: ./cache
           key: ubuntu-benchmark_new_2
-
-      ########################
-      # Matrix Lock Continue #
-      ########################
-
-      - name: "Continue matrix lock"
-        uses: rakles/matrix-lock@v1.0.0
-        with:
-          step: continue
-          id: ${{ matrix.id }}
