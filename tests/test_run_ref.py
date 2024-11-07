@@ -130,8 +130,8 @@ def test_run_11(benchmark, goto_tempdir, sim_name, sim_id):
 
 @pytest.mark.parametrize("sim_name, sim_id",
                          [
-                             ("1.1_uniform", "1V4RmmUGrx5iH-Zyuj45p1ag3vmMuUI2A"),
-                             ("1.1_gauss", "1gTj9BSunEoyde5Dq8a5IhUieMo9PuMuC"),
+                             ("1.2_uniform", "1Qo7Mu6AX2_1OcV0f88YwOPwpqHELIEgi"),
+                             ("1.2_gauss", "1a9ZS189c7c-a2heE54Kdm6Kl3_6EKNSo"),
                          ],
                          ids= ["1.2_uniform", "1.2_gauss"],
                         )
@@ -162,8 +162,8 @@ def test_run_12(benchmark, goto_tempdir, sim_name, sim_id):
 
 @pytest.mark.parametrize("sim_name, sim_id",
                          [
-                             ("1.1_uniform", "1V4RmmUGrx5iH-Zyuj45p1ag3vmMuUI2A"),
-                             ("1.1_gauss", "1gTj9BSunEoyde5Dq8a5IhUieMo9PuMuC"),
+                             ("1.3_uniform", "1XRTEGtmdw3MTpfiw-pMAyjoVBxq-rDIs"),
+                             ("1.3_gauss", "1qzigv8BAHhQ6-Y9Au3TlwSHoc6RqFdii"),
                          ],
                          ids= ["1.3_uniform", "1.3_gauss"],
                         )
