@@ -16,57 +16,21 @@ hasbench = importlib.util.find_spec("pytest_benchmark") is not None
 
 pytest.importorskip("mpi4py")  # noqa
 
-# TODO: get running for current 8 sims (add necessary data files)
-# AND DO THE FIX FOR THE GOOGLE DRIVE (UPLOAD THE FILES AND
-# GET THEM TO DOWNLOAD (I GUESS TEMP JUST MAKE ANOTHER
-# DICT OR FILE OR DATA STRUCTURE THAT CAN GRAB THE FILES)
-
-# global list of reference simulation names
-# to be used with the dictionary of gdrive file ids in download_sims,
-# and to construct yaml and output filenames
-ci_ref_sims = [
-    "1.1_uniform",
-    "1.1_gauss",
-    #"1.1_hera",
-    #"1.1_gauss",
-    #"1.2_uniform",
-    #"1.2_hera",
-    #"1.3_uniform",
-    #"1.3_gauss",
-]
-
-# TODO: swap to something more permanent!
-# TODO: double confirm downloading is only happening once
-@pytest.fixture
-def download_sims():
+# TODO: comment method as custom 
+# method to download sim output -- currently from google drive
+# takes as input a directory
+def download_sim(target_dir, sim, fid):
     import requests
 
-    target_dir = "results_data"
+    target_dir = os.path.join(target_dir, "results_data")
 
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
 
-    # temporary way to store all the fileids
-    # control which simulations via global ci_ref_sims array
-    fids = {
-        "1.1_uniform":"1V4RmmUGrx5iH-Zyuj45p1ag3vmMuUI2A",
-        "1.1_gauss":"1gTj9BSunEoyde5Dq8a5IhUieMo9PuMuC",
-        #"1.1_hera":"13B0YOSO9v4KsEGX9GVHuBEQrt5Tnjsxr",
-        #"1.2_gauss":a,
-        #"1.2_uniform":a,
-        #"1.2_hera":a,
-        #"1.3_uniform":a,
-        #"1.3_gauss":a
-    }
-
     urlbase = "https://drive.google.com/uc?export=download"
     
-    # for each sim name in ci_ref_sims, checks that needs hera uvbeam and
-    # has downloadable data (is a key to fids)
-    download_hera_uvbeam = any(["hera" in sim for sim in ci_ref_sims if sim in fids])
-
     # download the hera uvbeam data file if we need it
-    if download_hera_uvbeam:
+    if "hera" in sim:
         # skipping as file cannot currently be downloaded 
         pass
 
@@ -79,23 +43,41 @@ def download_sims():
 
     # TODO: upload all other files and hardcode
     #       them via a dictionary with ci_ref_sims for keys
-    for sim in ci_ref_sims:
-        if sim not in fids.keys():
-            continue            
+    # get content
+    r = requests.get(urlbase, params={"id": fid})
 
-        # get id from dict
-        fid = fids[sim]
-        
-        # get content
-        r = requests.get(urlbase, params={"id": fid})
+    # set filename with full filepath
+    fname = "ref_" + sim + ".uvh5"
+    fname = os.path.join(target_dir, fname)
 
-        # set filename with full filepath
-        fname = "ref_" + sim + ".uvh5"
-        fname = os.path.join(target_dir, fname)
+    # write the file
+    with open(fname, "wb") as ofile:
+        ofile.write(r.content)
 
-        # write the file
-        with open(fname, "wb") as ofile:
-            ofile.write(r.content)
+# TODO
+def compare_uvh5(uv_ref, uv_new):
+    # fix part(s) that should deviate
+    # TODO: maybe assert that deviation occurred
+    uv_new.history = uv_ref.history
+
+    # perform equality check between historical and current reference
+    # simulation output
+    # TODO: implement better asserts
+    #       include lower tolerance for deviations
+    assert uv_new == uv_ref
+
+def construct_filepaths(target_dir, sim):
+    # construct filename and filepath of downloaded file
+    uvh5_filename = "ref_" + sim + ".uvh5"
+    uvh5_filepath = os.path.join(target_dir, "results_data", uvh5_filename)
+
+    # construct filename and filepath of yaml file used
+    # to run simulation
+    yaml_filename = "obsparam_ref_" + sim + ".yaml"
+    yaml_filepath = os.path.join(SIM_DATA_PATH, "test_config", yaml_filename)
+    assert os.path.exists(yaml_filepath)
+
+    return uvh5_filepath, yaml_filepath
 
 
 @pytest.fixture
@@ -109,27 +91,29 @@ def goto_tempdir(tmpdir):
 
     os.chdir(cwd)
 
+################################################################################
+# Note: I don't have a better approach for the benchmarking so current         #
+#       approach has triplicate test_run_## method for benchmarking workflow   #
+################################################################################
 
-# TODO: add all 8 yaml files
-@pytest.mark.parametrize("paramfile", ci_ref_sims)
+@pytest.mark.parametrize("sim_name, sim_id",
+                         [
+                             ("1.1_uniform", "1V4RmmUGrx5iH-Zyuj45p1ag3vmMuUI2A"),
+                             ("1.1_gauss", "1gTj9BSunEoyde5Dq8a5IhUieMo9PuMuC"),
+                         ],
+                         ids= ["1.1_uniform", "1.1_gauss"],
+                        )
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
-def test_run_11(benchmark, goto_tempdir, download_sims, paramfile):
-    # download reference sim
-    # download_sims(goto_tempdir)
+def test_run_11(benchmark, goto_tempdir, sim_name, sim_id):
+    # download reference sim output to compare
+    download_sim(goto_tempdir, sim_name, sim_id)
 
-    # construct filename and filepath of downloaded file
-    uvh5_filename = "ref_" + paramfile + ".uvh5"
-    uvh5_filepath = os.path.join(goto_tempdir, "results_data", uvh5_filename)
+    # construct paths to necessary file using paramfile
+    uvh5_filepath, yaml_filepath = construct_filepaths(goto_tempdir, sim_name)
 
     # instantiate UVData object and read in the downloaded uvh5
     # file as the point of historical comparison
     uv_ref = UVData.from_file(uvh5_filepath)
-
-    # construct filename and filepath of yaml file used
-    # to run simulation
-    yaml_filename = "obsparam_ref_" + paramfile + ".yaml"
-    yaml_filepath = os.path.join(SIM_DATA_PATH, "test_config", yaml_filename)
-    assert os.path.exists(yaml_filepath)
 
     # benchmark uvsim.run_uvsim method with param_filename argument
     # runs multiple times to get benchmark data
@@ -138,25 +122,72 @@ def test_run_11(benchmark, goto_tempdir, download_sims, paramfile):
     uv_new = benchmark(run_uvsim, yaml_filepath, return_uv=True)
 
     # loading the file and comparing is only done on rank 0.
+    # probably not necessary
     if pyuvsim.mpi.rank != 0:
         return
 
-    # fix part(s) that should deviate
-    # TODO: maybe assert that deviation occurred
-    uv_new.history = uv_ref.history
+    compare_uvh5(uv_ref, uv_new)
 
-    # perform equality check between historical and current reference
-    # simulation output
-    # TODO: implement better asserts
-    #       include lower tolerance for deviations
-    assert uv_new == uv_ref
-
+@pytest.mark.parametrize("sim_name, sim_id",
+                         [
+                             ("1.1_uniform", "1V4RmmUGrx5iH-Zyuj45p1ag3vmMuUI2A"),
+                             ("1.1_gauss", "1gTj9BSunEoyde5Dq8a5IhUieMo9PuMuC"),
+                         ],
+                         ids= ["1.2_uniform", "1.2_gauss"],
+                        )
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
-def test_run_12(benchmark, goto_tempdir):
-    output = benchmark(sum, [1,1])
-    assert output == 2
+def test_run_12(benchmark, goto_tempdir, sim_name, sim_id):
+    # download reference sim output to compare
+    download_sim(goto_tempdir, sim_name, sim_id)
 
+    # construct paths to necessary file using paramfile
+    uvh5_filepath, yaml_filepath = construct_filepaths(goto_tempdir, sim_name)
+
+    # instantiate UVData object and read in the downloaded uvh5
+    # file as the point of historical comparison
+    uv_ref = UVData.from_file(uvh5_filepath)
+
+    # benchmark uvsim.run_uvsim method with param_filename argument
+    # runs multiple times to get benchmark data
+    # outdir is given by the yaml file but should not write anything
+    # and simply return a UVData object
+    uv_new = benchmark(run_uvsim, yaml_filepath, return_uv=True)
+
+    # loading the file and comparing is only done on rank 0.
+    # probably not necessary
+    if pyuvsim.mpi.rank != 0:
+        return
+
+    compare_uvh5(uv_ref, uv_new)
+
+@pytest.mark.parametrize("sim_name, sim_id",
+                         [
+                             ("1.1_uniform", "1V4RmmUGrx5iH-Zyuj45p1ag3vmMuUI2A"),
+                             ("1.1_gauss", "1gTj9BSunEoyde5Dq8a5IhUieMo9PuMuC"),
+                         ],
+                         ids= ["1.3_uniform", "1.3_gauss"],
+                        )
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
-def test_run_13(benchmark, goto_tempdir):
-    output = benchmark(sum, [1,1])
-    assert output == 2
+def test_run_13(benchmark, goto_tempdir, sim_name, sim_id):
+    # download reference sim output to compare
+    download_sim(goto_tempdir, sim_name, sim_id)
+
+    # construct paths to necessary file using paramfile
+    uvh5_filepath, yaml_filepath = construct_filepaths(goto_tempdir, sim_name)
+
+    # instantiate UVData object and read in the downloaded uvh5
+    # file as the point of historical comparison
+    uv_ref = UVData.from_file(uvh5_filepath)
+
+    # benchmark uvsim.run_uvsim method with param_filename argument
+    # runs multiple times to get benchmark data
+    # outdir is given by the yaml file but should not write anything
+    # and simply return a UVData object
+    uv_new = benchmark(run_uvsim, yaml_filepath, return_uv=True)
+
+    # loading the file and comparing is only done on rank 0.
+    # probably not necessary
+    if pyuvsim.mpi.rank != 0:
+        return
+
+    compare_uvh5(uv_ref, uv_new)
