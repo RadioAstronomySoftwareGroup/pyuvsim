@@ -1130,8 +1130,8 @@ def _construct_beam_list(
 
         if not isinstance(beam_model, dict | AnalyticBeam | UVBeam):
             raise ValueError(
-                "Beam model is not properly specified in telescope config file."
-                f"It is specified as {beam_model}"
+                "Beam model is not properly specified in telescope config file. "
+                f"It is specified as {beam_model}."
             )
 
         if not isinstance(beam_model, AnalyticBeam | UVBeam) and not (
