@@ -1,6 +1,6 @@
 filing:
   outdir: '.'
-  outfile_name: 'ref_1.2_gauss'
+  outfile_name: 'ref_1.2_mwa'
   output_format: 'uvh5'
 freq:
   Nfreqs: 1
@@ -10,7 +10,7 @@ sources:
   catalog: '../test_catalogs/two_distant_points_2458098.38824015.txt'
 telescope:
   array_layout: '../baseline_lite.csv'
-  telescope_config_name: '../bl_lite_gauss.yaml'
+  telescope_config_name: '../bl_lite_mwa.yaml'
 time:
   Ntimes: 86400
   integration_time: 1.0
