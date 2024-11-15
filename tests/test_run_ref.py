@@ -16,45 +16,54 @@ hasbench = importlib.util.find_spec("pytest_benchmark") is not None
 
 pytest.importorskip("mpi4py")  # noqa
 
-# TODO: comment method as custom 
+# gets latest pid from api call
+def get_latest_pid(response):
+    response_content_arr = response.json()['response']['docs']
+
+    # construct an array of just the timestamps for object creation from all the search results
+    time_arr = [item['object_created_dsi'] for item in response_content_arr]
+
+    if len(time_arr) == 0:
+        print("fail")
+        return
+
+    # get the max timestamp, then get the index at which the max time occurs
+    # this corresponds to the latest created object
+    latest_item_pos = time_arr.index(max(time_arr))
+    # get the pid of the latest item
+    latest_pid = response_content_arr[latest_item_pos]['pid']
+    
+    return latest_pid
+
+# TODO: fix up order of operations and comment the method better
 # method to download sim output -- currently from google drive
 # takes as input a directory
-def download_sim(target_dir, sim, fid):
+def download_sim(target_dir, sim_name):
     import requests
+    import urllib.request
+
+    api_url="https://repository.library.brown.edu/api/search/?q="
+    response=requests.get(api_url+sim_name)
 
     target_dir = os.path.join(target_dir, "results_data")
 
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
 
-    urlbase = "https://drive.google.com/uc?export=download"
-    
-    # download the hera uvbeam data file if we need it
-    if "hera" in sim:
-        # skipping as file cannot currently be downloaded 
-        pass
-
-        #fid = "1lqkLlnB3uE17FcPB2GcJJQoCcn7-wVP8"
-        #fname = os.path.join(target_dir, "HERA_NicCST_fullfreq.uvbeam")
-        #r = requests.get(urlbase, params={"id": fid})
-        # write the file
-        #with open(fname, "wb") as ofile:
-        #    ofile.write(r.content)
-
-    # TODO: upload all other files and hardcode
-    #       them via a dictionary with ci_ref_sims for keys
-    # get content
-    r = requests.get(urlbase, params={"id": fid})
-
     # set filename with full filepath
-    fname = "ref_" + sim + ".uvh5"
+    fname = "ref_" + sim_name + ".uvh5"
     fname = os.path.join(target_dir, fname)
 
-    # write the file
-    with open(fname, "wb") as ofile:
-        ofile.write(r.content)
+    pid = get_latest_pid(response)
 
-# TODO
+    # download url
+    download_url = f"https://repository.library.brown.edu/storage/{pid}/content/"
+
+    # download the file to the location
+    urllib.request.urlretrieve(download_url, fname)
+
+
+# TODO: make more complete
 def compare_uvh5(uv_ref, uv_new):
     # fix part(s) that should deviate
     # TODO: maybe assert that deviation occurred
@@ -96,6 +105,13 @@ def goto_tempdir(tmpdir):
 #       approach has triplicate test_run_## method for benchmarking workflow   #
 ################################################################################
 
+# TODO: FIXME: GET RID OF GOOGLE DRIVE IDS IN PARAMETRIZE!
+# TODO: FIXME: IMPLEMENT MWA BEAM DOWNLOADING AND THE RUNNING OF THE MWA 1.1 AND 1.2 SIMULATIONS
+# TODO: FIXME: (TECHNICALLY GOES ABOVE BUT HAVE IT EXPLICITLY SEARCH COLLECTION AND NOT GENERAL SEARCH API FOR BETTER RESULTS)
+# TODO: FIXME: customize 1.2 and maybe 1.3 to have reduced iterations (hopefully fluctuation isn't that bad). Shoot for 1 hour total runtime with all tests, so probably stop forcing order for reference sims (assuming > 3 workers), and simply have 1.2 run maybe twice each?, 1.1 / 1.3 unedited (if want faster just make 1.2 run once each I guess)
+
+#              NOTE: current approach should still work unless malicious actors do something lol
+
 @pytest.mark.parametrize("sim_name, sim_id",
                          [
                              ("1.1_uniform", "1V4RmmUGrx5iH-Zyuj45p1ag3vmMuUI2A"),
@@ -106,7 +122,7 @@ def goto_tempdir(tmpdir):
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
 def test_run_11(benchmark, goto_tempdir, sim_name, sim_id):
     # download reference sim output to compare
-    download_sim(goto_tempdir, sim_name, sim_id)
+    download_sim(goto_tempdir, sim_name)
 
     # construct paths to necessary file using paramfile
     uvh5_filepath, yaml_filepath = construct_filepaths(goto_tempdir, sim_name)
@@ -138,7 +154,7 @@ def test_run_11(benchmark, goto_tempdir, sim_name, sim_id):
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
 def test_run_12(benchmark, goto_tempdir, sim_name, sim_id):
     # download reference sim output to compare
-    download_sim(goto_tempdir, sim_name, sim_id)
+    download_sim(goto_tempdir, sim_name)
 
     # construct paths to necessary file using paramfile
     uvh5_filepath, yaml_filepath = construct_filepaths(goto_tempdir, sim_name)
@@ -170,7 +186,7 @@ def test_run_12(benchmark, goto_tempdir, sim_name, sim_id):
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
 def test_run_13(benchmark, goto_tempdir, sim_name, sim_id):
     # download reference sim output to compare
-    download_sim(goto_tempdir, sim_name, sim_id)
+    download_sim(goto_tempdir, sim_name)
 
     # construct paths to necessary file using paramfile
     uvh5_filepath, yaml_filepath = construct_filepaths(goto_tempdir, sim_name)

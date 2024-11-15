@@ -15,3 +15,6 @@ time:
   Ntimes: 86400
   integration_time: 1.0
   start_time: 2458098.38824015
+ordering:
+  conjugation_convention: ant1<ant2
+  blt_order: [time, baseline]

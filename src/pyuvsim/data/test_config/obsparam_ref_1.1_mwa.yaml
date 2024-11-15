@@ -1,19 +1,19 @@
 filing:
   outdir: '.'
-  outfile_name: 'ref_1.2_gauss'
+  outfile_name: 'ref_1.1_mwa'
   output_format: 'uvh5'
 freq:
   Nfreqs: 1
   channel_width: 80000.0
   start_freq: 100000000.0
 sources:
-  catalog: '../test_catalogs/two_distant_points_2458098.38824015.txt'
+  catalog: '../test_catalogs/mock_catalog_heratext_2458098.38824015.txt'
 telescope:
-  array_layout: '../baseline_lite.csv'
-  telescope_config_name: '../bl_lite_gauss.yaml'
+  array_layout: '../mwa_nocore_layout.csv'
+  telescope_config_name: '../mwa88_nocore_config_MWA.yaml'
 time:
-  Ntimes: 86400
-  integration_time: 1.0
+  Ntimes: 1
+  integration_time: 11.0
   start_time: 2458098.38824015
 ordering:
   conjugation_convention: ant1<ant2
