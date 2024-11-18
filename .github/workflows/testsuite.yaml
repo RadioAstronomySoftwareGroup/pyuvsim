@@ -209,7 +209,9 @@ jobs:
           env_vars: OS,PYTHON
           fail_ci_if_error: true
 
-  #   TODO: should implement generic method of determining os instead of hardcoding it
+  #   TODO: implement benchmarking that doesn't rely on caching if possible -- probably via pushing to another git repository or similar
+  #   TODO: Redo matrix using new pytest test with refsim command line argument so it runs an independent environment for each ref sim 
+  #        NOTE: can technically improve this by grouping reference sims by generation in the matrix and then have them be parametrized in batches! (DO THIS!)
   benchmark:
     name: Performance Benchmark
     needs: tests
@@ -219,15 +221,15 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      max-parallel: 1
+      #max-parallel: 1
       matrix:
         include:
-          - id: test_run_11
-            name: "1.1 Reference Simulations"
-          - id: test_run_13
-            name: "1.3 Reference Simulations"
-          - id: test_run_12
-            name: "1.2 Reference Simulations"
+          - id: 1.1_uniform
+            name: "Reference Simulation 1.1 uniform"
+          - id: 1.1_gauss
+            name: "Reference Simulation 1.1 gauss"
+          - id: 1.2_uniform
+            name: "Reference Simulation 1.2 uniform"
 
     defaults:
       run:
@@ -263,7 +265,7 @@ jobs:
 
       - name: Run benchmark
         run: |
-          mpiexec -n 1 -np 1 pytest -k ${{ matrix.id }} --benchmark-only --benchmark-json output.json
+          mpiexec -n 1 -np 1 pytest --refsim=${{ matrix.id }} --benchmark-only --benchmark-json output.json -s 
 
       # TODO: figure out why / if okay to delete before downloading?
       - name: Clear previous benchmark report
