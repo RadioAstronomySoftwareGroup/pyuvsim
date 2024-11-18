@@ -100,32 +100,36 @@ def goto_tempdir(tmpdir):
 
     os.chdir(cwd)
 
+#def test_run_sim(refsim, goto_tempdir):
+#    print("\n\n" + refsim + "\n\n")
+#    assert refsim == "test"
+
+#ids= ["1.1_uniform", "1.1_gauss"], 
+#ids= ["1.2_uniform", "1.2_gauss"],
+#ids= ["1.3_uniform", "1.3_gauss"],
+
 ################################################################################
 # Note: I don't have a better approach for the benchmarking so current         #
 #       approach has triplicate test_run_## method for benchmarking workflow   #
 ################################################################################
 
-# TODO: FIXME: GET RID OF GOOGLE DRIVE IDS IN PARAMETRIZE!
 # TODO: FIXME: IMPLEMENT MWA BEAM DOWNLOADING AND THE RUNNING OF THE MWA 1.1 AND 1.2 SIMULATIONS
 # TODO: FIXME: (TECHNICALLY GOES ABOVE BUT HAVE IT EXPLICITLY SEARCH COLLECTION AND NOT GENERAL SEARCH API FOR BETTER RESULTS)
 # TODO: FIXME: customize 1.2 and maybe 1.3 to have reduced iterations (hopefully fluctuation isn't that bad). Shoot for 1 hour total runtime with all tests, so probably stop forcing order for reference sims (assuming > 3 workers), and simply have 1.2 run maybe twice each?, 1.1 / 1.3 unedited (if want faster just make 1.2 run once each I guess)
 
 #              NOTE: current approach should still work unless malicious actors do something lol
 
-@pytest.mark.parametrize("sim_name, sim_id",
-                         [
-                             ("1.1_uniform", "1V4RmmUGrx5iH-Zyuj45p1ag3vmMuUI2A"),
-                             ("1.1_gauss", "1gTj9BSunEoyde5Dq8a5IhUieMo9PuMuC"),
-                         ],
-                         ids= ["1.1_uniform", "1.1_gauss"],
-                        )
+# list of sims to benchmark pedantically as they are too long to run many times
+# TODO: if need be swap to a dictionary with more specific custom pedantic arguments
+long_ref_sims = ["1.2_uniform", "1.2_gauss"]
+
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
-def test_run_11(benchmark, goto_tempdir, sim_name, sim_id):
+def test_run_sim(benchmark, goto_tempdir, refsim):
     # download reference sim output to compare
-    download_sim(goto_tempdir, sim_name)
+    download_sim(goto_tempdir, refsim)
 
     # construct paths to necessary file using paramfile
-    uvh5_filepath, yaml_filepath = construct_filepaths(goto_tempdir, sim_name)
+    uvh5_filepath, yaml_filepath = construct_filepaths(goto_tempdir, refsim)
 
     # instantiate UVData object and read in the downloaded uvh5
     # file as the point of historical comparison
@@ -135,71 +139,20 @@ def test_run_11(benchmark, goto_tempdir, sim_name, sim_id):
     # runs multiple times to get benchmark data
     # outdir is given by the yaml file but should not write anything
     # and simply return a UVData object
-    uv_new = benchmark(run_uvsim, yaml_filepath, return_uv=True)
-
-    # loading the file and comparing is only done on rank 0.
-    # probably not necessary
-    if pyuvsim.mpi.rank != 0:
-        return
-
-    compare_uvh5(uv_ref, uv_new)
-
-@pytest.mark.parametrize("sim_name, sim_id",
-                         [
-                             ("1.2_uniform", "1Qo7Mu6AX2_1OcV0f88YwOPwpqHELIEgi"),
-                             ("1.2_gauss", "1a9ZS189c7c-a2heE54Kdm6Kl3_6EKNSo"),
-                         ],
-                         ids= ["1.2_uniform", "1.2_gauss"],
-                        )
-@pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
-def test_run_12(benchmark, goto_tempdir, sim_name, sim_id):
-    # download reference sim output to compare
-    download_sim(goto_tempdir, sim_name)
-
-    # construct paths to necessary file using paramfile
-    uvh5_filepath, yaml_filepath = construct_filepaths(goto_tempdir, sim_name)
-
-    # instantiate UVData object and read in the downloaded uvh5
-    # file as the point of historical comparison
-    uv_ref = UVData.from_file(uvh5_filepath)
-
-    # benchmark uvsim.run_uvsim method with param_filename argument
-    # runs multiple times to get benchmark data
-    # outdir is given by the yaml file but should not write anything
-    # and simply return a UVData object
-    uv_new = benchmark(run_uvsim, yaml_filepath, return_uv=True)
-
-    # loading the file and comparing is only done on rank 0.
-    # probably not necessary
-    if pyuvsim.mpi.rank != 0:
-        return
-
-    compare_uvh5(uv_ref, uv_new)
-
-@pytest.mark.parametrize("sim_name, sim_id",
-                         [
-                             ("1.3_uniform", "1XRTEGtmdw3MTpfiw-pMAyjoVBxq-rDIs"),
-                             ("1.3_gauss", "1qzigv8BAHhQ6-Y9Au3TlwSHoc6RqFdii"),
-                         ],
-                         ids= ["1.3_uniform", "1.3_gauss"],
-                        )
-@pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
-def test_run_13(benchmark, goto_tempdir, sim_name, sim_id):
-    # download reference sim output to compare
-    download_sim(goto_tempdir, sim_name)
-
-    # construct paths to necessary file using paramfile
-    uvh5_filepath, yaml_filepath = construct_filepaths(goto_tempdir, sim_name)
-
-    # instantiate UVData object and read in the downloaded uvh5
-    # file as the point of historical comparison
-    uv_ref = UVData.from_file(uvh5_filepath)
-
-    # benchmark uvsim.run_uvsim method with param_filename argument
-    # runs multiple times to get benchmark data
-    # outdir is given by the yaml file but should not write anything
-    # and simply return a UVData object
-    uv_new = benchmark(run_uvsim, yaml_filepath, return_uv=True)
+    # uses long_ref_sims global array to determine if pedantic benchmarking should be used
+    if refsim in long_ref_sims:
+        print("\n\n" + "pedantic" + "\n\n")
+        uv_new = benchmark.pedantic(
+            run_uvsim,   
+            args=[yaml_filepath],   
+            kwargs={'return_uv':True},   
+            setup=None,   
+            rounds=1,   
+            warmup_rounds=0,   
+            iterations=1) 
+    else:
+        print("\n\n" + "automatic" + "\n\n")
+        uv_new = benchmark(run_uvsim, yaml_filepath, return_uv=True)
 
     # loading the file and comparing is only done on rank 0.
     # probably not necessary
