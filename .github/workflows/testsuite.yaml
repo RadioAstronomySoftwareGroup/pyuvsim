@@ -225,11 +225,12 @@ jobs:
       matrix:
         include:
           - id: 1.1_uniform
-            name: "Reference Simulation 1.1 uniform"
+          - id: 1.1_mwa
           - id: 1.1_gauss
-            name: "Reference Simulation 1.1 gauss"
           - id: 1.2_uniform
-            name: "Reference Simulation 1.2 uniform"
+          - id: 1.2_gauss
+          - id: 1.3_uniform
+          - id: 1.3_gauss
 
     defaults:
       run:

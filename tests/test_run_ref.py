@@ -35,9 +35,8 @@ def get_latest_pid(response):
     
     return latest_pid
 
+
 # TODO: fix up order of operations and comment the method better
-# method to download sim output -- currently from google drive
-# takes as input a directory
 def download_sim(target_dir, sim_name):
     import requests
     import urllib.request
@@ -61,6 +60,18 @@ def download_sim(target_dir, sim_name):
 
     # download the file to the location
     urllib.request.urlretrieve(download_url, fname)
+
+    # additionally download mwa uvbeam to SIM_DATA_PATH if necessary
+    if "mwa" in sim_name:
+        download_url = "http://ws.mwatelescope.org/static/mwa_full_embedded_element_pattern.h5"
+        fname=os.path.join(SIM_DATA_PATH,"mwa_full_embedded_element_pattern.h5")
+        print(fname)
+
+        # download the file to the location
+        if os.path.isfile(fname):
+            print("skipping download mwa uvbeam file already downloaded")
+        else:
+            urllib.request.urlretrieve(download_url, fname)
 
 
 # TODO: make more complete
@@ -100,24 +111,9 @@ def goto_tempdir(tmpdir):
 
     os.chdir(cwd)
 
-#def test_run_sim(refsim, goto_tempdir):
-#    print("\n\n" + refsim + "\n\n")
-#    assert refsim == "test"
 
-#ids= ["1.1_uniform", "1.1_gauss"], 
-#ids= ["1.2_uniform", "1.2_gauss"],
-#ids= ["1.3_uniform", "1.3_gauss"],
-
-################################################################################
-# Note: I don't have a better approach for the benchmarking so current         #
-#       approach has triplicate test_run_## method for benchmarking workflow   #
-################################################################################
-
-# TODO: FIXME: IMPLEMENT MWA BEAM DOWNLOADING AND THE RUNNING OF THE MWA 1.1 AND 1.2 SIMULATIONS
+# TODO: FIXME: ASK WHY MWA 1.2 BEAM HARD TO RUN?
 # TODO: FIXME: (TECHNICALLY GOES ABOVE BUT HAVE IT EXPLICITLY SEARCH COLLECTION AND NOT GENERAL SEARCH API FOR BETTER RESULTS)
-# TODO: FIXME: customize 1.2 and maybe 1.3 to have reduced iterations (hopefully fluctuation isn't that bad). Shoot for 1 hour total runtime with all tests, so probably stop forcing order for reference sims (assuming > 3 workers), and simply have 1.2 run maybe twice each?, 1.1 / 1.3 unedited (if want faster just make 1.2 run once each I guess)
-
-#              NOTE: current approach should still work unless malicious actors do something lol
 
 # list of sims to benchmark pedantically as they are too long to run many times
 # TODO: if need be swap to a dictionary with more specific custom pedantic arguments
@@ -141,7 +137,6 @@ def test_run_sim(benchmark, goto_tempdir, refsim):
     # and simply return a UVData object
     # uses long_ref_sims global array to determine if pedantic benchmarking should be used
     if refsim in long_ref_sims:
-        print("\n\n" + "pedantic" + "\n\n")
         uv_new = benchmark.pedantic(
             run_uvsim,   
             args=[yaml_filepath],   
@@ -151,7 +146,6 @@ def test_run_sim(benchmark, goto_tempdir, refsim):
             warmup_rounds=0,   
             iterations=1) 
     else:
-        print("\n\n" + "automatic" + "\n\n")
         uv_new = benchmark(run_uvsim, yaml_filepath, return_uv=True)
 
     # loading the file and comparing is only done on rank 0.
