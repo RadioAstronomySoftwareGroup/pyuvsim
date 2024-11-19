@@ -16,22 +16,44 @@ hasbench = importlib.util.find_spec("pytest_benchmark") is not None
 
 pytest.importorskip("mpi4py")  # noqa
 
+#TODO: make downloading simulation output file and companion files more robust (add retries, etc...)
+
 # gets latest pid from api call
 def get_latest_pid(response):
-    response_content_arr = response.json()['response']['docs']
+    import requests
 
-    # construct an array of just the timestamps for object creation from all the search results
-    time_arr = [item['object_created_dsi'] for item in response_content_arr]
+    # list of item dicts
+    collection_response_items  = response.json()['items']['docs']
 
-    if len(time_arr) == 0:
-        print("fail")
-        return
+    if len(collection_response_items) == 0:
+        return "No items found in collection matching query."
+
+    # using "object_created_dsi" key to sort the items, so need to request that
+    # for each item via the "json_uri", and get the pid as well to return
+    print(f"requesting json_uri for each item in reponse, and parsing 'object_created_dsi' and 'pid'")
+    json_uris = [ item['json_uri'] for item in collection_response_items ]
+    object_created_dsis = []
+    pids = []
+    for uri in json_uris:
+        # get response for item as json
+        response_json = requests.get(uri).json()
+
+        # get values from json
+        time_created = response_json['object_created_dsi']
+        item_pid = response_json['pid']
+
+        # append to lists
+        object_created_dsis.append(time_created)
+        pids.append(item_pid)
 
     # get the max timestamp, then get the index at which the max time occurs
     # this corresponds to the latest created object
-    latest_item_pos = time_arr.index(max(time_arr))
-    # get the pid of the latest item
-    latest_pid = response_content_arr[latest_item_pos]['pid']
+    latest_item_pos = object_created_dsis.index(max(object_created_dsis))
+    
+    # get the pid of the latest item by shared pos
+    latest_pid = pids[latest_item_pos]
+
+    print("returning pid of most recent file uploaded to the collection matching the query")
     
     return latest_pid
 
@@ -41,11 +63,18 @@ def download_sim(target_dir, sim_name):
     import requests
     import urllib.request
 
-    api_url="https://repository.library.brown.edu/api/search/?q="
+    api_url="https://repository.library.brown.edu/api/collections/bdr:wte2qah8/?q="
+    
+    print(f"\nquerying BDR collection for items matching {sim_name} via api: {api_url+sim_name}")
     response=requests.get(api_url+sim_name)
 
+    # parse out the latest file in the collection from the search result and return its pid
+    pid = get_latest_pid(response)
+
+    # append results_data to the target directory download path
     target_dir = os.path.join(target_dir, "results_data")
 
+    # check if we need to make target_dir
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
 
@@ -53,11 +82,10 @@ def download_sim(target_dir, sim_name):
     fname = "ref_" + sim_name + ".uvh5"
     fname = os.path.join(target_dir, fname)
 
-    pid = get_latest_pid(response)
-
     # download url
     download_url = f"https://repository.library.brown.edu/storage/{pid}/content/"
 
+    print(f"attempting download of requested file by http: {download_url}\n")
     # download the file to the location
     urllib.request.urlretrieve(download_url, fname)
 
