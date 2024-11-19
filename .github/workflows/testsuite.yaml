@@ -209,9 +209,8 @@ jobs:
           env_vars: OS,PYTHON
           fail_ci_if_error: true
 
-  #   TODO: implement benchmarking that doesn't rely on caching if possible -- probably via pushing to another git repository or similar
-  #   TODO: Redo matrix using new pytest test with refsim command line argument so it runs an independent environment for each ref sim 
-  #        NOTE: can technically improve this by grouping reference sims by generation in the matrix and then have them be parametrized in batches! (DO THIS!)
+  #   TODO: implement benchmarking that doesn't rely on caching -- probably via pushing to another git repository or similar
+  #   TODO: can technically improve this by grouping reference sims by generation in the matrix and then have them be parametrized in batches! (DO THIS!) (not sure how to nicely do this)
   benchmark:
     name: Performance Benchmark
     needs: tests
@@ -285,9 +284,7 @@ jobs:
           key: ${{ matrix.id }}-benchmark
 
       # TODO: figure out if this appropriately updates the cache 
-      # 1
-      # this step also EDITS the ./cache/benchmark-data.json file
-      # We do not need to add output.json to the cache directory
+      # TODO: more research on this
       - name: Compare benchmarks
         uses: benchmark-action/github-action-benchmark@v1
         with:
