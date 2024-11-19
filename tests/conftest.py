@@ -67,6 +67,7 @@ def pytest_addoption(parser):
         help="list of refsim names to pass to test functions."
     )
 
+
 def pytest_generate_tests(metafunc):
     if "refsim" in metafunc.fixturenames:
         metafunc.parametrize("refsim", metafunc.config.getoption("refsim"))
