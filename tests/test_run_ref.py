@@ -140,13 +140,11 @@ def goto_tempdir(tmpdir):
     os.chdir(cwd)
 
 
-# TODO: FIXME: ASK WHY MWA 1.2 BEAM HARD TO RUN?
-# TODO: FIXME: (TECHNICALLY GOES ABOVE BUT HAVE IT EXPLICITLY SEARCH COLLECTION AND NOT GENERAL SEARCH API FOR BETTER RESULTS)
-
 # list of sims to benchmark pedantically as they are too long to run many times
 # TODO: if need be swap to a dictionary with more specific custom pedantic arguments
 long_ref_sims = ["1.2_uniform", "1.2_gauss"]
 
+# TODO: generic comment on top about how this is used (conftest command line / workflow setup)
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
 def test_run_sim(benchmark, goto_tempdir, refsim):
     # download reference sim output to compare
