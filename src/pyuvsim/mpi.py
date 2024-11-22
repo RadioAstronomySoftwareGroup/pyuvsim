@@ -436,12 +436,13 @@ def get_max_node_rss(return_per_node=False):
     """
     try:
         import resource
+
         USE_RESOURCE = True
     except ImportError:
         import psutil
+
         USE_RESOURCE = False
-        
-        
+
     # On linux, getrusage returns in kiB
     # On Mac systems, getrusage returns in B
     scale = 1.0
@@ -455,7 +456,7 @@ def get_max_node_rss(return_per_node=False):
     else:
         process = psutil.Process()
         memory_usage_GiB = process.memory_info().rss / 2**30
-        
+
     node_mem_tot = node_comm.allreduce(memory_usage_GiB, op=MPI.SUM)
     if return_per_node:
         return node_mem_tot
