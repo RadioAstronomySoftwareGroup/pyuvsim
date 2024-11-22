@@ -1,7 +1,5 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
-import resource
-import sys
 import time
 
 import numpy as np
@@ -99,13 +97,7 @@ def test_mem_usage():
     # Also check that making a variable of a given size
     # increases memory usage by the expected amount.
 
-    scale = 1.0
-    if "linux" in sys.platform:
-        scale = 2**10
-
-    memory_usage_GiB = (
-        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 2**30
-    )
+    memory_usage_GiB = mpi.get_rusage()
     assert np.isclose(memory_usage_GiB, mpi.get_max_node_rss())
     incsize = 50 * 2**20  # 50 MiB
     arr = bytearray(incsize)
