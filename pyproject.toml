@@ -49,7 +49,7 @@ classifiers = [
 casa = ["python-casacore>=3.5.2"]
 healpix = ["astropy-healpix>=1.0.2"]
 moon = ["lunarsky>=0.2.5"]
-sim = ["mpi4py>=3.1.1"]
+sim = ["mpi4py>=3.1.1", "psutil"]
 all = ["pyuvsim[casa,healpix,moon,sim]"]
 test = ["coverage", "pre-commit", "pytest", "pytest-cov>=5.0"]
 doc = ["matplotlib", "pypandoc", "sphinx"]
