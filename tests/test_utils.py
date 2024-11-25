@@ -2,6 +2,7 @@
 # Licensed under the 3-clause BSD License
 
 import os
+import sys
 import warnings
 
 import numpy as np
@@ -113,6 +114,8 @@ def test_write_uvdata(save_format, tmpdir):
     """Test function that defines filenames from parameter dict"""
     if save_format == "ms":
         pytest.importorskip("casacore")
+    if save_format == "miriad" and sys.platform.startswith("win"):
+        pytest.skip("miriad is not supported on Windows")
 
     uv = UVData.from_file(triangle_uvfits_file)
 
@@ -155,6 +158,9 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     """Test overwriting a uvdata object yields the expected results."""
     if save_format == "ms":
         pytest.importorskip("casacore")
+
+    if save_format == "miriad" and sys.platform.startswith("win"):
+        pytest.skip("miriad is not supported on windows")
 
     uv = UVData.from_file(triangle_uvfits_file)
 
