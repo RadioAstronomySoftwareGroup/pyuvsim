@@ -105,6 +105,10 @@ jobs:
       # Checkout repo for the github-action-benchmark action
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
       # should only download from current workflow
       - name: Download result artifacts
         uses: actions/download-artifact@v4
@@ -116,6 +120,32 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R
 
+      # test approach to putting all the benchmark output in one file
+      - uses: jannekem/run-python-script-action@v1
+        with:
+          script: |
+            import os
+            import json
+
+            test_arr = [os.path.join('artifacts', bench) for bench in os.listdir('artifacts') if not bench.startswith('.')]
+            print(test_arr)
+
+            output_jsons = []
+
+            for file in test_arr:
+                with open(file) as f:
+                    output_jsons.append(json.load(f))
+
+            net_json = output_jsons[0]
+
+            for ind in range(len(output_jsons)-1):
+                net_json['benchmarks'].append(output_jsons[ind+1]['benchmarks'][0])
+
+            with open('output.json', 'w') as f:
+                json.dump(net_json, f)
+
+      - name: Display structure of downloaded files
+        run: ls -R
 
 
 # TODO: swap to be pytest and the works
