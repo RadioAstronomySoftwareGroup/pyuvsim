@@ -141,7 +141,7 @@ def goto_tempdir(tmpdir):
 
 
 # list of sims to benchmark pedantically as they are too long to run many times
-# TODO: if need be swap to a dictionary with more specific custom pedantic arguments
+# if need be can swap to a dictionary with more specific custom pedantic arguments
 long_ref_sims = ["1.2_uniform", "1.2_gauss"]
 
 # TODO: generic comment on top about how this is used (conftest command line / workflow setup)

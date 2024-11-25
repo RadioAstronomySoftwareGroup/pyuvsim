@@ -148,6 +148,32 @@ jobs:
         run: ls -R
 
 
+      # TODO: figure out if this appropriately updates the cache 
+      # this step also EDITS the ./cache/benchmark-data.json file
+      # We do not need to add output.json to the cache directory
+      # 2
+      - name: Compare benchmarks
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          # What benchmark tool the output.txt came from
+          tool: 'pytest'
+          # Where the output from the benchmark tool is stored
+          output-file-path: output.json
+          # Where the previous data file is stored
+          external-data-json-path: ./cache/benchmark-data.json
+          # should fail consistently
+          alert-threshold: "120%"
+          # Workflow will fail when an alert happens
+          fail-on-alert: true
+          # Comment on the PR if the branch is not a fork
+          comment-on-alert: true
+          # Enable Job Summary for PRs
+          summary-always: true
+          # Always leave a comment
+          comment-always: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+
 # TODO: swap to be pytest and the works
 #- name: Store benchmark result
 #  uses: benchmark-action/github-action-benchmark@v1
