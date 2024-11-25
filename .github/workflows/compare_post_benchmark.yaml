@@ -160,7 +160,6 @@ jobs:
           # Where the output from the benchmark tool is stored
           output-file-path: output.json
           # Where the previous data file is stored
-          external-data-json-path: ./cache/benchmark-data.json
           # should fail consistently
           alert-threshold: "120%"
           # Workflow will fail when an alert happens
@@ -172,6 +171,8 @@ jobs:
           # Always leave a comment
           comment-always: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Push and deploy GitHub pages branch automatically
+          auto-push: true
 
 
 # TODO: swap to be pytest and the works
