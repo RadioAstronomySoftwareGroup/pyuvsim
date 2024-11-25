@@ -5,14 +5,14 @@
 #TODO: SET UP TO RUN AFTER THE BENCHMARKING IS DONE (FOLLOW YEW GUIDE!)
 
 name: "Post benchmark results"
+on: [push, pull_request]
 
-on:
+#on:
 # replace this after other stuff starts functioning
 #  workflow_run:
 #    workflows: ["Tests"]
 #    types:
 #      - completed
-on: [push, pull_request]
 
 jobs:
   #   TODO: implement benchmarking that doesn't rely on caching -- probably via pushing to another git repository or similar
@@ -106,7 +106,7 @@ jobs:
 
       # should only download from current workflow
       - name: Download result artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           pattern: ${{ github.run_id }}-${{ github.run_attempt }}-*
