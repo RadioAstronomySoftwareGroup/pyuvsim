@@ -1,0 +1,131 @@
+#TODO: configure run on benchmark action completion!
+#TODO: setup
+#TODO: load artifacts
+#TODO: collate artifacts (for now skip!)
+#TODO: SET UP TO RUN AFTER THE BENCHMARKING IS DONE (FOLLOW YEW GUIDE!)
+
+name: "Post benchmark results"
+
+on:
+# replace this after other stuff starts functioning
+#  workflow_run:
+#    workflows: ["Tests"]
+#    types:
+#      - completed
+on: [push, pull_request]
+
+jobs:
+  #   TODO: implement benchmarking that doesn't rely on caching -- probably via pushing to another git repository or similar
+  #   TODO: can technically improve this by grouping reference sims by generation in the matrix and then have them be parametrized in batches! (DO THIS!) (not sure how to nicely do this)
+  # TODO: swap to saving artifact for each sim run with slightly custom json (?) follow yew 
+  # TODO: write script that concatenates the json output of multiple benchmark runs! (get this working first)
+  # make artifacts path for safety reasons
+  # configure download of artifacts according to the actions and have them be in the one path with merge
+  # specify the downloading "name" using pattern (for now just *json or something)
+  # (obviously add this to the other yaml file for post benchmark runs, then once we have the post-benchmark run outputing the found artifacts and this benchmark successfully saving the artifacts (and clarified the uniqueness of artifacts across commits! because idk how that is kept separate and if it isn't separate need to delete / avoid that issue!))
+  # then can go back to concatenation (or figure out how best to simplify that / scriptwise!)
+  # then can work on the github-action-benchmark on gh-pages and see how that looks once it's all concatenated, and determine if we need the write permissions
+  # note: need to separate the push attempt and do so only if we are pushing to "main" ie (I THINK) autopush: false, all else should be comfortable
+  # if this works then gh-pages only updated with a push when it is to "main", and all else will just compare hopefully, I THINK I CAN GET AWAY WITH DOING "autopush: (fix syntax here) branch == "main""
+  benchmark:
+    if: github.event.workflow_run.conclusion == 'success'
+    name: Performance Benchmark
+    env:
+      ENV_NAME: pyuvsim_tests_mpich
+      PYTHON: "3.12"
+    runs-on: ubuntu-latest
+
+    strategy:
+      #max-parallel: 1
+      matrix:
+        include:
+          - id: 1.1_uniform
+          - id: 1.1_gauss
+#          - id: 1.1_mwa
+#          - id: 1.2_uniform
+#          - id: 1.2_gauss
+#          - id: 1.3_uniform
+#          - id: 1.3_gauss
+
+    defaults:
+      run:
+        # Adding -l {0} helps ensure conda can be found properly.
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@main
+      
+      - name: Setup Miniforge
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          python-version: ${{ env.PYTHON }}
+          environment-file: ci/${{ env.ENV_NAME }}.yaml
+          activate-environment: ${{ env.ENV_NAME }}
+          run-post: false
+
+      - name: Conda Info
+        run: |
+          conda info -a
+          conda list
+          PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
+          if [[ $PYVER != $PYTHON ]]; then
+            exit 1;
+          fi
+
+      # also install benchmark utility and requests
+      - name: Install
+        run: |
+          pip install pytest-benchmark
+          pip install requests
+          pip install .
+
+      - name: Run benchmark
+        run: |
+          # TODO: determine if can specify a directory for file output if directory exists (if so delete third line in ez modification)
+          mkdir artifacts/
+          mpiexec -n 1 -np 1 pytest --refsim=${{ matrix.id }} --benchmark-only --benchmark-json artifacts/output_${{ matrix.id }}.json -s 
+
+      - name: Upload result artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.id }}
+          path: artifacts/
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1
+
+  collate-post-benchmark:
+    name: Concatenate and Post Benchmark Results
+    needs: benchmark
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout repo for the github-action-benchmark action
+      - uses: actions/checkout@v4
+
+      # should only download from current workflow
+      - name: Download result artifacts
+        uses: actions/download-artifact@v3
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          pattern: ${{ github.run_id }}-${{ github.run_attempt }}-*
+          merge-multiple: true
+          path: artifacts
+      - name: Display structure of downloaded files
+        run: ls -R
+
+
+
+# TODO: swap to be pytest and the works
+#- name: Store benchmark result
+#  uses: benchmark-action/github-action-benchmark@v1
+#  with:
+#    name: My Project Go Benchmark
+#    tool: 'go'
+#    output-file-path: output.txt
+#    # Set auto-push to false since GitHub API token is not given
+#    auto-push: false # todo put in logic if branch == main && push or something!
+# Push gh-pages branch by yourself
+#- name: Push benchmark result
+#  run: git push 'https://you:${{ secrets.GITHUB_TOKEN }}@github.com/you/repo-name.git' gh-pages:gh-pages
