@@ -28,7 +28,8 @@ jobs:
   # note: need to separate the push attempt and do so only if we are pushing to "main" ie (I THINK) autopush: false, all else should be comfortable
   # if this works then gh-pages only updated with a push when it is to "main", and all else will just compare hopefully, I THINK I CAN GET AWAY WITH DOING "autopush: (fix syntax here) branch == "main""
   benchmark:
-    if: github.event.workflow_run.conclusion == 'success'
+    # uncomment when stuff is working
+    #if: github.event.workflow_run.conclusion == 'success'
     name: Performance Benchmark
     env:
       ENV_NAME: pyuvsim_tests_mpich
