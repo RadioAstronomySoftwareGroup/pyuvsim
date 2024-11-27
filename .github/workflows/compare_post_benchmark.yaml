@@ -5,14 +5,18 @@
 #TODO: SET UP TO RUN AFTER THE BENCHMARKING IS DONE (FOLLOW YEW GUIDE!)
 
 name: "Post benchmark results"
-on: [push, pull_request]
-
-#on:
+# on: [push, pull_request]
+on:
 # replace this after other stuff starts functioning
-#  workflow_run:
-#    workflows: ["Tests"]
-#    types:
-#      - completed
+  workflow_run:
+    workflows: ["Tests"]
+    types:
+      - completed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 
 jobs:
   #   TODO: implement benchmarking that doesn't rely on caching -- probably via pushing to another git repository or similar
@@ -29,7 +33,7 @@ jobs:
   # if this works then gh-pages only updated with a push when it is to "main", and all else will just compare hopefully, I THINK I CAN GET AWAY WITH DOING "autopush: (fix syntax here) branch == "main""
   benchmark:
     # uncomment when stuff is working
-    #if: github.event.workflow_run.conclusion == 'success'
+    if: github.event.workflow_run.conclusion == 'success'
     name: Performance Benchmark
     env:
       ENV_NAME: pyuvsim_tests_mpich
@@ -144,9 +148,11 @@ jobs:
             with open('output.json', 'w') as f:
                 json.dump(net_json, f)
 
-      - name: Display structure of downloaded files
-        run: ls -R
-
+      - name: Print things
+        run: |
+          echo ${{ github.event_name }}
+          echo ${{ github.ref_name }}
+          echo ${{ github.event_name == 'push' && github.ref_name == '1.1_ref_sim_ci_workflow' }}
 
       # TODO: figure out if this appropriately updates the cache 
       # this step also EDITS the ./cache/benchmark-data.json file
@@ -172,8 +178,8 @@ jobs:
           comment-always: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Push and deploy GitHub pages branch automatically
-          auto-push: true
-
+          auto-push: ${{ github.event_name == 'push' && github.ref_name == '1.1_ref_sim_ci_workflow' }}
+          save-data-file: ${{ github.event_name == 'push' && github.ref_name == '1.1_ref_sim_ci_workflow' }}
 
 
 # 1
