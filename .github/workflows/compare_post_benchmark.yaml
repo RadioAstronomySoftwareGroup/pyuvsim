@@ -5,13 +5,13 @@
 #TODO: SET UP TO RUN AFTER THE BENCHMARKING IS DONE (FOLLOW YEW GUIDE!)
 
 name: "Post benchmark results"
-# on: [push, pull_request]
-on:
-# replace this after other stuff starts functioning
-  workflow_run:
-    workflows: ["Tests"]
-    types:
-      - completed
+ on: [push, pull_request]
+#on:
+## replace this after other stuff starts functioning
+#  workflow_run:
+#    workflows: ["Tests"]
+#    types:
+#      - completed
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
