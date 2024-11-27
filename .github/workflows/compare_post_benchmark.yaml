@@ -1,11 +1,5 @@
-#TODO: configure run on benchmark action completion!
-#TODO: setup
-#TODO: load artifacts
-#TODO: collate artifacts (for now skip!)
-#TODO: SET UP TO RUN AFTER THE BENCHMARKING IS DONE (FOLLOW YEW GUIDE!)
-
 name: "Post benchmark results"
- on: [push, pull_request]
+on: [push, pull_request]
 #on:
 ## replace this after other stuff starts functioning
 #  workflow_run:
@@ -33,7 +27,7 @@ jobs:
   # if this works then gh-pages only updated with a push when it is to "main", and all else will just compare hopefully, I THINK I CAN GET AWAY WITH DOING "autopush: (fix syntax here) branch == "main""
   benchmark:
     # uncomment when stuff is working
-    if: github.event.workflow_run.conclusion == 'success'
+    #if: github.event.workflow_run.conclusion == 'success'
     name: Performance Benchmark
     env:
       ENV_NAME: pyuvsim_tests_mpich
