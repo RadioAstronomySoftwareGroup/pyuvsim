@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732546324894,
+  "lastUpdate": 1732742954682,
   "repoUrl": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim",
   "entries": {
     "Benchmark": [
@@ -76,6 +76,44 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.03028631947542372",
             "extra": "mean: 1.5190355657999988 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "burdorfmitchell@gmail.com",
+            "name": "Mitchell Burdorf",
+            "username": "burdorfmitchell"
+          },
+          "committer": {
+            "email": "burdorfmitchell@gmail.com",
+            "name": "Mitchell Burdorf",
+            "username": "burdorfmitchell"
+          },
+          "distinct": true,
+          "id": "02afbbb65442e3c73b620d9e3b1ee36ef96d58a4",
+          "message": "hopefully fixed yaml syntax",
+          "timestamp": "2024-11-27T16:23:53-05:00",
+          "tree_id": "9eae8498b8566d8679e19e5e6042f8589aad4acb",
+          "url": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim/commit/02afbbb65442e3c73b620d9e3b1ee36ef96d58a4"
+        },
+        "date": 1732742954188,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_gauss]",
+            "value": 0.6438940097042679,
+            "unit": "iter/sec",
+            "range": "stddev: 0.017792662522649428",
+            "extra": "mean: 1.5530506339999761 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_uniform]",
+            "value": 0.6376225388510612,
+            "unit": "iter/sec",
+            "range": "stddev: 0.02355089459906877",
+            "extra": "mean: 1.568325990799997 sec\nrounds: 5"
           }
         ]
       }
