@@ -157,8 +157,8 @@ jobs:
             net_json = output_jsons[0]
 
             # iterate through the other jsons (1-n) and append their benchmark data to net_json
-            for json in output_jsons[1:]:
-                net_json['benchmarks'].append(json['benchmarks'][0])
+            for json_out in output_jsons[1:]:
+                net_json['benchmarks'].append(json_out['benchmarks'][0])
 
             # save net_json as json with name output.json in current working directory
             with open('output.json', 'w') as f:
