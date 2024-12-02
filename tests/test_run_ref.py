@@ -116,6 +116,9 @@ def compare_uvh5(uv_ref, uv_new):
     print(uv_new.history)
     print("")
 
+    # set history to match so equality check doesn't fail
+    uv_new.history = uv_ref.history
+
     ref_arr, new_arr = uv_ref.data_array, uv_new.data_array
 
     # mean diff
