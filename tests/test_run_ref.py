@@ -102,17 +102,54 @@ def download_sim(target_dir, sim_name):
             urllib.request.urlretrieve(download_url, fname)
 
 
+
 # TODO: make more complete
 def compare_uvh5(uv_ref, uv_new):
-    # fix part(s) that should deviate
-    # TODO: maybe assert that deviation occurred
-    uv_new.history = uv_ref.history
+    import numpy as np
 
-    # perform equality check between historical and current reference
+    # print histories
+    print("History 1:")
+    print(uv_ref.history)
+    print("")
+
+    print("History 2:")
+    print(uv_new.history)
+    print("")
+
+    ref_arr, new_arr = uv_ref.data_array, uv_new.data_array
+
+    # mean diff
+    mean_diff_of_vis = np.mean(np.abs(new_arr - ref_arr))
+    mean_diff_of_abs = np.mean(np.abs(ref_arr) - np.abs(new_arr))
+
+    # compute max absolute difference and max relative difference
+    # should be identical to the allclose output for maximum absolute
+    # and relative difference
+    max_absolute_diff=np.amax(np.abs(new_arr - ref_arr))
+    frac_diff=frac_diff=np.abs(new_arr - ref_arr)/np.abs(ref_arr)
+    frac_diff[np.isnan(frac_diff)]=0
+    max_relative_diff=np.amax(frac_diff)
+
+    # generate a true/false ndarray for passing and failing cases
+    # should match output of np.testing.assert_allclose 
+    cases = np.abs(new_arr - ref_arr) <= (1e-8 + 1e-5 * np.abs(ref_arr))
+    outcome = cases.all()
+    num_mismatched = str(len(cases[cases == False])) + "/" + str(cases.size)
+
+    # print some things for reference
+    print(f"mean of abs of diff of visibilities 'mean(abs(old_data_arr - new_data_arr)): {mean_diff_of_vis}")
+    print(f"mean of diff of abs of visibilities 'mean(abs(old_data_arr) - abs(new_data_arr)): {mean_diff_of_abs}")
+    print(f"max_absolute_diff: {max_absolute_diff}")
+    print(f"max_relative_diff: {max_relative_diff}")
+    print(f"outcome: {outcome}")
+    print(f"num_mismatched: {num_mismatched}")
+
+    # perform basic equality check between historical and current reference
     # simulation output
-    # TODO: implement better asserts
-    #       include lower tolerance for deviations
     assert uv_new == uv_ref
+
+    # perform more intensive check
+    # TODO
 
 def construct_filepaths(target_dir, sim):
     # construct filename and filepath of downloaded file
