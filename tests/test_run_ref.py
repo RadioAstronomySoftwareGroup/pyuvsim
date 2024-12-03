@@ -8,7 +8,8 @@ import pytest
 from pyuvdata import UVData
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-#from pyuvsim.mpi import rank
+
+# from pyuvsim.mpi import rank
 import pyuvsim
 from pyuvsim.uvsim import run_uvsim
 
@@ -23,24 +24,31 @@ def robust_response(url, n_retry=5):
     from requests.adapters import HTTPAdapter, Retry
 
     s = requests.Session()
-    retries = Retry(total=n_retry, backoff_factor=1, raise_on_status=True, status_forcelist=range(500, 600))
-    s.mount('http://', HTTPAdapter(max_retries=retries))
+    retries = Retry(
+        total=n_retry,
+        backoff_factor=1,
+        raise_on_status=True,
+        status_forcelist=range(500, 600),
+    )
+    s.mount("http://", HTTPAdapter(max_retries=retries))
 
-    return s.get(url) 
+    return s.get(url)
 
 
 # gets latest pid from api call
 def get_latest_pid(response):
     # list of item dicts
-    collection_response_items  = response.json()['items']['docs']
+    collection_response_items = response.json()["items"]["docs"]
 
     if len(collection_response_items) == 0:
         return "No items found in collection matching query."
 
     # using "object_created_dsi" key to sort the items, so need to request that
     # for each item via the "json_uri", and get the pid as well to return
-    print(f"requesting json_uri for each item in reponse, and parsing 'object_created_dsi' and 'pid'")
-    json_uris = [ item['json_uri'] for item in collection_response_items ]
+    print(
+        f"requesting json_uri for each item in reponse, and parsing 'object_created_dsi' and 'pid'"
+    )
+    json_uris = [item["json_uri"] for item in collection_response_items]
     object_created_dsis = []
     pids = []
     for uri in json_uris:
@@ -48,8 +56,8 @@ def get_latest_pid(response):
         response_json = robust_response(uri).json()
 
         # get values from json
-        time_created = response_json['object_created_dsi']
-        item_pid = response_json['pid']
+        time_created = response_json["object_created_dsi"]
+        item_pid = response_json["pid"]
 
         # append to lists
         object_created_dsis.append(time_created)
@@ -58,22 +66,26 @@ def get_latest_pid(response):
     # get the max timestamp, then get the index at which the max time occurs
     # this corresponds to the latest created object
     latest_item_pos = object_created_dsis.index(max(object_created_dsis))
-    
+
     # get the pid of the latest item by shared pos
     latest_pid = pids[latest_item_pos]
 
-    print("returning pid of most recent file uploaded to the collection matching the query")
-    
+    print(
+        "returning pid of most recent file uploaded to the collection matching the query"
+    )
+
     return latest_pid
 
 
 # TODO: fix up order of operations and comment the method better
 def download_sim(target_dir, sim_name):
     # api url
-    api_url="https://repository.library.brown.edu/api/collections/bdr:wte2qah8/?q="
-    
-    print(f"\nquerying BDR collection for items matching {sim_name} via api: {api_url+sim_name}")
-    response=robust_response(api_url+sim_name)
+    api_url = "https://repository.library.brown.edu/api/collections/bdr:wte2qah8/?q="
+
+    print(
+        f"\nquerying BDR collection for items matching {sim_name} via api: {api_url+sim_name}"
+    )
+    response = robust_response(api_url + sim_name)
 
     # parse out the latest file in the collection from the search result and return its pid
     pid = get_latest_pid(response)
@@ -95,13 +107,15 @@ def download_sim(target_dir, sim_name):
     # download the file to the location
     print(f"attempting download of requested file by http: {download_url}\n")
     bdr_file_response = robust_response(download_url)
-    with open(fname, 'wb') as f:
+    with open(fname, "wb") as f:
         f.write(bdr_file_response.content)
 
     # additionally download mwa uvbeam to SIM_DATA_PATH if necessary
     if "mwa" in sim_name:
-        download_url = "http://ws.mwatelescope.org/static/mwa_full_embedded_element_pattern.h5"
-        fname=os.path.join(SIM_DATA_PATH,"mwa_full_embedded_element_pattern.h5")
+        download_url = (
+            "http://ws.mwatelescope.org/static/mwa_full_embedded_element_pattern.h5"
+        )
+        fname = os.path.join(SIM_DATA_PATH, "mwa_full_embedded_element_pattern.h5")
 
         # download the file to the location if not already downloaded
         if os.path.isfile(fname):
@@ -109,7 +123,7 @@ def download_sim(target_dir, sim_name):
         else:
             print(f"attempting download of requested file by http: {download_url}\n")
             mwa_beam_response = robust_response(download_url)
-            with open(fname, 'wb') as f:
+            with open(fname, "wb") as f:
                 f.write(mwa_beam_response.content)
 
 
@@ -138,30 +152,34 @@ def compare_uvh5(uv_ref, uv_new):
     # compute max absolute difference and max relative difference
     # should be identical to the allclose output for maximum absolute
     # and relative difference
-    max_absolute_diff=np.amax(np.abs(new_arr - ref_arr))
-    frac_diff=frac_diff=np.abs(new_arr - ref_arr)/np.abs(ref_arr)
-    frac_diff[np.isnan(frac_diff)]=0
-    max_relative_diff=np.amax(frac_diff)
+    max_absolute_diff = np.amax(np.abs(new_arr - ref_arr))
+    frac_diff = frac_diff = np.abs(new_arr - ref_arr) / np.abs(ref_arr)
+    frac_diff[np.isnan(frac_diff)] = 0
+    max_relative_diff = np.amax(frac_diff)
 
     # generate a true/false ndarray for passing and failing cases
-    # should match output of np.testing.assert_allclose 
+    # should match output of np.testing.assert_allclose
     cases = np.abs(new_arr - ref_arr) <= (1e-8 + 1e-5 * np.abs(ref_arr))
     outcome = cases.all()
     num_mismatched = str(len(cases[cases == False])) + "/" + str(cases.size)
 
     # print some things for reference
-    print(f"mean of abs of diff of visibilities 'mean(abs(old_data_arr - new_data_arr)): {mean_diff_of_vis}")
-    print(f"mean of diff of abs of visibilities 'mean(abs(old_data_arr) - abs(new_data_arr)): {mean_diff_of_abs}")
+    print(
+        f"mean of abs of diff of visibilities 'mean(abs(old_data_arr - new_data_arr)): {mean_diff_of_vis}"
+    )
+    print(
+        f"mean of diff of abs of visibilities 'mean(abs(old_data_arr) - abs(new_data_arr)): {mean_diff_of_abs}"
+    )
     print(f"max_absolute_diff: {max_absolute_diff}")
     print(f"max_relative_diff: {max_relative_diff}")
     print(f"outcome: {outcome}")
     print(f"num_mismatched: {num_mismatched}")
 
     # perform equality check between historical and current reference
-    # simulation output 
+    # simulation output
     assert uv_new == uv_ref
-    
-    # fail if any element of data_array is different between new and ref 
+
+    # fail if any element of data_array is different between new and ref
     # currently commented out but might be worth implementing and updating ref_sim file each time
     # the assertion fails for the relevant files
     # assert (ref_arr == new_arr).all()
@@ -217,13 +235,14 @@ def test_run_sim(benchmark, goto_tempdir, refsim):
     # uses long_ref_sims global array to determine if pedantic benchmarking should be used
     if refsim in long_ref_sims:
         uv_new = benchmark.pedantic(
-            run_uvsim,   
-            args=[yaml_filepath],   
-            kwargs={'return_uv':True},   
-            setup=None,   
-            rounds=1,   
-            warmup_rounds=0,   
-            iterations=1) 
+            run_uvsim,
+            args=[yaml_filepath],
+            kwargs={"return_uv": True},
+            setup=None,
+            rounds=1,
+            warmup_rounds=0,
+            iterations=1,
+        )
     else:
         uv_new = benchmark(run_uvsim, yaml_filepath, return_uv=True)
 
