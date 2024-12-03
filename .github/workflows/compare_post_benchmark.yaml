@@ -171,6 +171,7 @@ jobs:
           echo ${{ github.ref_name }}
           echo ${{ github.event_name == 'push' && github.ref_name == '1.1_ref_sim_ci_workflow' }}
 
+      # counter for dummy commmit: 1
       # Compares the data from the specified "output-file-path" and compares
       # with the latest data from the gh-pages branch. If performance regression
       # occurs, fails the test and alerts. If no performance regression, (TODO: FIXME: Currently still comments, but will only comment in final version if performance regression has occurred)
