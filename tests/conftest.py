@@ -63,8 +63,10 @@ def pytest_addoption(parser):
         "--nompi", action="store_true", help="skip mpi-parallelized tests."
     )
     parser.addoption(
-        "--refsim", action="append", default=[], 
-        help="list of refsim names to pass to test functions."
+        "--refsim",
+        action="append",
+        default=[],
+        help="list of refsim names to pass to test functions.",
     )
 
 
