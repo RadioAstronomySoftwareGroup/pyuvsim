@@ -31,16 +31,16 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      #max-parallel: 1
+      # all jobs should run in parallel (unless implementing above TODO)
       matrix:
         include:
           - id: 1.1_uniform
           - id: 1.1_gauss
-#          - id: 1.1_mwa
-#          - id: 1.2_uniform
-#          - id: 1.2_gauss
-#          - id: 1.3_uniform
-#          - id: 1.3_gauss
+          - id: 1.1_mwa
+          - id: 1.2_uniform
+          - id: 1.2_gauss
+          - id: 1.3_uniform
+          - id: 1.3_gauss
 
     defaults:
       run:
