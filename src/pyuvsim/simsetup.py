@@ -2407,10 +2407,7 @@ def initialize_uvdata_from_keywords(
     param_dict["obs_param_file"] = os.path.basename(output_yaml_filename)
     param_dict["telescope"].update(layout_params)
     uv_obj = initialize_uvdata_from_params(
-        param_dict,
-        return_beams=False,
-        force_beam_check=force_beam_check,
-        check_kw=check_kw,
+        param_dict, return_beams=False, check_kw=check_kw
     )
 
     if complete:
