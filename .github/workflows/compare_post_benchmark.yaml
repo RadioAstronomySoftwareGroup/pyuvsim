@@ -20,7 +20,7 @@ jobs:
     # input is passed as a flag to pytest which parametrizes the reference simulation test
     # function. pytest-benchmark output is saved as an artifact with its current workflow run
     # and attempt as part of name key.
-    
+
     #   TODO: can technically improve this by grouping reference sims by generation in the matrix and then have them be parametrized in batches! (DO THIS!) (not sure how to nicely do this)
     # uncomment when Tests is working and done testing
     #if: github.event.workflow_run.conclusion == 'success'
@@ -48,7 +48,7 @@ jobs:
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@main
-      
+
       - name: Setup Miniforge
         uses: conda-incubator/setup-miniconda@v3
         with:
@@ -74,15 +74,15 @@ jobs:
           pip install requests
           pip install .
 
-      # make the artifacts directory, then run pytest using mpiexec with only 1 node and core, specifying the 
+      # make the artifacts directory, then run pytest using mpiexec with only 1 node and core, specifying the
       # reference simulation to run using the "refsim" flag. Save the pytest benchmark output in artifacts/
       # with a sufficiently unique name
       - name: Run benchmark
         run: |
           mkdir artifacts/
-          mpiexec -n 1 -np 1 pytest --refsim=${{ matrix.id }} --benchmark-only --benchmark-json artifacts/output_${{ matrix.id }}.json -s 
+          mpiexec -n 1 -np 1 pytest --refsim=${{ matrix.id }} --benchmark-only --benchmark-json artifacts/output_${{ matrix.id }}.json -s
 
-      # upload the benchmark output as an artifact with name key corresponding to the current 
+      # upload the benchmark output as an artifact with name key corresponding to the current
       # workflow run and attempt only store artifacts for 1 day
       - name: Upload result artifacts
         uses: actions/upload-artifact@v4
@@ -94,12 +94,12 @@ jobs:
           retention-days: 1
 
   collate-post-benchmark:
-    # Job that loads the saved artifacts corresponding to the specific workflow run and attempt id, 
+    # Job that loads the saved artifacts corresponding to the specific workflow run and attempt id,
     # then creates a net benchmark output file named output.json with a python script action. The
     # net benchmark file should still be accurate except the explicit machine info will be mostly
-    # lost. The net benchmark file is then fed to github-actions-benchmark which compares the 
+    # lost. The net benchmark file is then fed to github-actions-benchmark which compares the
     # current benchmark output with the latest data in the gh-pages branch. If the current workflow
-    # is a push to main, github-actions-benchmark then pushes the current benchmark output to 
+    # is a push to main, github-actions-benchmark then pushes the current benchmark output to
     # gh-pages. If, during the benchmark comparison, a performance regression occurs, a comment of
     # the benchmark comparison output is made on the workflow and this Job fails.
     name: Concatenate and Post Benchmark Results
@@ -177,7 +177,7 @@ jobs:
       # occurs, fails the test and alerts. If no performance regression, (TODO: FIXME: Currently still comments, but will only comment in final version if performance regression has occurred)
       # NOTE: it is important that this does not modify gh-pages on pull request
       # https://github.com/benchmark-action/github-action-benchmark?tab=readme-ov-file#caveats
-      # This only updates gh-pages if a push to main occurs 
+      # This only updates gh-pages if a push to main occurs
       - name: Compare benchmarks
         uses: benchmark-action/github-action-benchmark@v1
         with:
