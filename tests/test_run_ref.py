@@ -16,12 +16,21 @@ hasbench = importlib.util.find_spec("pytest_benchmark") is not None
 
 pytest.importorskip("mpi4py")  # noqa
 
-#TODO: make downloading simulation output file and companion files more robust (add retries, etc...)
+
+# attempt to GET the url n_retry times (if return code in range)
+def robust_response(url, n_retry=5):
+    import requests
+    from requests.adapters import HTTPAdapter, Retry
+
+    s = requests.Session()
+    retries = Retry(total=n_retry, backoff_factor=1, raise_on_status=True, status_forcelist=range(500, 600))
+    s.mount('http://', HTTPAdapter(max_retries=retries))
+
+    return s.get(url) 
+
 
 # gets latest pid from api call
 def get_latest_pid(response):
-    import requests
-
     # list of item dicts
     collection_response_items  = response.json()['items']['docs']
 
@@ -36,7 +45,7 @@ def get_latest_pid(response):
     pids = []
     for uri in json_uris:
         # get response for item as json
-        response_json = requests.get(uri).json()
+        response_json = robust_response(uri).json()
 
         # get values from json
         time_created = response_json['object_created_dsi']
@@ -60,13 +69,11 @@ def get_latest_pid(response):
 
 # TODO: fix up order of operations and comment the method better
 def download_sim(target_dir, sim_name):
-    import requests
-    import urllib.request
-
+    # api url
     api_url="https://repository.library.brown.edu/api/collections/bdr:wte2qah8/?q="
     
     print(f"\nquerying BDR collection for items matching {sim_name} via api: {api_url+sim_name}")
-    response=requests.get(api_url+sim_name)
+    response=robust_response(api_url+sim_name)
 
     # parse out the latest file in the collection from the search result and return its pid
     pid = get_latest_pid(response)
@@ -85,22 +92,25 @@ def download_sim(target_dir, sim_name):
     # download url
     download_url = f"https://repository.library.brown.edu/storage/{pid}/content/"
 
-    print(f"attempting download of requested file by http: {download_url}\n")
     # download the file to the location
-    urllib.request.urlretrieve(download_url, fname)
+    print(f"attempting download of requested file by http: {download_url}\n")
+    bdr_file_response = robust_response(download_url)
+    with open(fname, 'wb') as f:
+        f.write(bdr_file_response.content)
 
     # additionally download mwa uvbeam to SIM_DATA_PATH if necessary
     if "mwa" in sim_name:
         download_url = "http://ws.mwatelescope.org/static/mwa_full_embedded_element_pattern.h5"
         fname=os.path.join(SIM_DATA_PATH,"mwa_full_embedded_element_pattern.h5")
-        print(fname)
 
-        # download the file to the location
+        # download the file to the location if not already downloaded
         if os.path.isfile(fname):
             print("skipping download mwa uvbeam file already downloaded")
         else:
-            urllib.request.urlretrieve(download_url, fname)
-
+            print(f"attempting download of requested file by http: {download_url}\n")
+            mwa_beam_response = robust_response(download_url)
+            with open(fname, 'wb') as f:
+                f.write(mwa_beam_response.content)
 
 
 # TODO: make more complete
@@ -147,12 +157,13 @@ def compare_uvh5(uv_ref, uv_new):
     print(f"outcome: {outcome}")
     print(f"num_mismatched: {num_mismatched}")
 
-    # perform basic equality check between historical and current reference
-    # simulation output
+    # perform equality check between historical and current reference
+    # simulation output 
     assert uv_new == uv_ref
+    
+    # fail if any element of data_array is different between new and ref 
+    assert (ref_arr == new_arr).all()
 
-    # perform more intensive check
-    # TODO
 
 def construct_filepaths(target_dir, sim):
     # construct filename and filepath of downloaded file
@@ -180,10 +191,6 @@ def goto_tempdir(tmpdir):
     os.chdir(cwd)
 
 
-# list of sims to benchmark pedantically as they are too long to run many times
-# if need be can swap to a dictionary with more specific custom pedantic arguments
-long_ref_sims = ["1.2_uniform", "1.2_gauss"]
-
 # TODO: generic comment on top about how this is used (conftest command line / workflow setup)
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
 def test_run_sim(benchmark, goto_tempdir, refsim):
@@ -196,6 +203,10 @@ def test_run_sim(benchmark, goto_tempdir, refsim):
     # instantiate UVData object and read in the downloaded uvh5
     # file as the point of historical comparison
     uv_ref = UVData.from_file(uvh5_filepath)
+
+    # list of sims to benchmark pedantically as they are too long to run many times
+    # if need be can swap to a dictionary with more specific custom pedantic arguments
+    long_ref_sims = ["1.2_uniform", "1.2_gauss"]
 
     # benchmark uvsim.run_uvsim method with param_filename argument
     # runs multiple times to get benchmark data
