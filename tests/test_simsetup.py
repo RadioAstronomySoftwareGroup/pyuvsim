@@ -4,6 +4,7 @@
 import copy
 import os
 import shutil
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -589,7 +590,7 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
         expected_ofilepath = simutils.write_uvdata(
             uv_obj, param_dict, return_filename=True, dryrun=True
         )
-    assert expected_ofilepath == "./sim_results.uvh5"
+    assert Path(expected_ofilepath).name == "sim_results.uvh5"
 
     # Spoof attributes that won't match.
     uv_obj.history = uv_in.history
