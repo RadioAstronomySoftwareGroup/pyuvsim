@@ -127,6 +127,10 @@ One other package, pytest-xdist, is not required, but can be used to speed up ru
 the test suite by running tests in parallel. To use it call pytest with the
 ```-n auto``` option.
 
+Additionally, two packages, pytest-benchmark and requests, are required if one needs to locally
+run benchmarking of the reference simulations using pytest. pytest-benchmark is not necessary
+otherwise, and requests is used for minor scripts in /reference_simulations.
+
 One way to ensure you have all the needed packages is to use the included
 `environment.yaml` file to create a new environment that will
 contain all the optional dependencies along with dependencies required for
