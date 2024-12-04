@@ -1,16 +1,13 @@
 name: "Post benchmark results"
-on: [push, pull_request]
-#on:
-## replace this after other stuff starts functioning
-#  workflow_run:
-#    workflows: ["Tests"]
-#    types:
-#      - completed
+on:
+  workflow_run:
+    workflows: ["Tests"]
+    types:
+      - completed
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
-
 
 jobs:
   benchmark:
@@ -20,11 +17,11 @@ jobs:
     # input is passed as a flag to pytest which parametrizes the reference simulation test
     # function. pytest-benchmark output is saved as an artifact with its current workflow run
     # and attempt as part of name key.
-    
+    #
     # Link to discussion of artifacts
     # https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/storing-and-sharing-data-from-a-workflow#about-workflow-artifacts
     # https://github.com/actions/upload-artifact
-
+    #
     # uncomment when Tests is working and done testing
     #if: github.event.workflow_run.conclusion == 'success'
     name: Performance Benchmark
@@ -96,7 +93,6 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
-
   collate-post-benchmark:
     # Job that loads the saved artifacts corresponding to the specific workflow run and attempt id,
     # then creates a net benchmark output file named output.json with a python script action. The
@@ -106,13 +102,13 @@ jobs:
     # is a push to main, github-actions-benchmark then pushes the current benchmark output to
     # gh-pages. If, during the benchmark comparison, a performance regression occurs, a comment of
     # the benchmark comparison output is made on the workflow and this Job fails.
-    
+    #
     # Inspired by this workflow by yewstack/yew and the github-action-benchmark README:
     # https://github.com/yewstack/yew/blob/master/.github/workflows/benchmark.yml
     # https://github.com/yewstack/yew/blob/master/.github/workflows/post-benchmark.yml
     # https://github.com/benchmark-action/github-action-benchmark
     # https://github.com/actions/download-artifact
-    
+
     name: Concatenate and Post Benchmark Results
     needs: benchmark
     runs-on: ubuntu-latest
