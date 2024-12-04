@@ -1,13 +1,13 @@
 name: "Post benchmark results"
 on:
   workflow_run:
-    workflows: ["Tests"]
+    workflows: [Tests]
     types:
-      - completed
+      - in_progress
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
+#concurrency:
+#  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+#  cancel-in-progress: true
 
 jobs:
   benchmark:
