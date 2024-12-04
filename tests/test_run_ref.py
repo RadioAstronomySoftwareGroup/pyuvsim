@@ -9,7 +9,6 @@ from pyuvdata import UVData
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
-# from pyuvsim.mpi import rank
 import pyuvsim
 from pyuvsim.uvsim import run_uvsim
 
@@ -18,8 +17,12 @@ hasbench = importlib.util.find_spec("pytest_benchmark") is not None
 pytest.importorskip("mpi4py")  # noqa
 
 
-# attempt to GET the url n_retry times (if return code in range)
 def robust_response(url, n_retry=5):
+    # attempt to GET the url n_retry times (if return code in range)
+    # returns the GET request
+    # Stackoverflow / Docs link for approach / Retry:
+    # https://stackoverflow.com/questions/15431044/can-i-set-max-retries-for-requests-request
+    # https://urllib3.readthedocs.io/en/latest/reference/urllib3.util.html#module-urllib3.util.retry
     import requests
     from requests.adapters import HTTPAdapter, Retry
 
@@ -37,13 +40,18 @@ def robust_response(url, n_retry=5):
 
 # gets latest pid from api call
 def get_latest_pid(response):
-    # list of item dicts
+    # takes as input the response from an api call to the Brown Digital Repository for the 
+    # collection "pyuvsim historical reference simulations". Parses the response for the latest 
+    # uploaded created item matching the query, then returns the PID of that item to be downloaded.
+    # In order to parse the response, further API calls are sent to get explicit data for each 
+    # item. If the increased number of API calls becomes an issue then this function can be changed
+    # to simply determine basic datetime info from the input response with no further calls. 
     collection_response_items = response.json()["items"]["docs"]
 
     if len(collection_response_items) == 0:
         return "No items found in collection matching query."
 
-    # using "object_created_dsi" key to sort the items, so need to request that
+    # using "object_created_dsi" key to sort the items, so we need to request that
     # for each item via the "json_uri", and get the pid as well to return
     print(
         f"requesting json_uri for each item in reponse, and parsing 'object_created_dsi' and 'pid'"
@@ -77,8 +85,16 @@ def get_latest_pid(response):
     return latest_pid
 
 
-# TODO: fix up order of operations and comment the method better
 def download_sim(target_dir, sim_name):
+    # method to download the historical reference simulations from the Brown Digital
+    # Repository. Sends an api call to the "pyuvsim historical reference simulations" collection,
+    # then identifies the latest uploaded object in the response. Downloads that object to the
+    # target directory and if the object requires the mwa beam file downloads that to the 
+    # SIM_DATA_PATH
+
+    # Link to BDR API DOCS:
+    # https://repository.library.brown.edu/studio/api-docs/
+
     # api url
     api_url = "https://repository.library.brown.edu/api/collections/bdr:wte2qah8/?q="
 
@@ -127,8 +143,11 @@ def download_sim(target_dir, sim_name):
                 f.write(mwa_beam_response.content)
 
 
-# TODO: make more complete
 def compare_uvh5(uv_ref, uv_new):
+    # takes as input two UVData objects, and computes relevant quantities for determining how 
+    # similar the data are. Prints the histories before setting them equal. Currently only runs 
+    # an equality check but (TODO: FIXME) should make a much more exhaustive check OR just turn
+    # back on the exact check and update the sim output when it differs (Do this tbh)
     import numpy as np
 
     # print histories
@@ -186,6 +205,10 @@ def compare_uvh5(uv_ref, uv_new):
 
 
 def construct_filepaths(target_dir, sim):
+    # takes as input the sim name (NEEDS TO BE AN EXISTING SIM IN THE DATA DIRECTORY), then 
+    # constructs the expected yaml_filepath to run the simulation and uvh5_filepath to locate
+    # the downloaded historical output
+
     # construct filename and filepath of downloaded file
     uvh5_filename = "ref_" + sim + ".uvh5"
     uvh5_filepath = os.path.join(target_dir, "results_data", uvh5_filename)
@@ -194,6 +217,8 @@ def construct_filepaths(target_dir, sim):
     # to run simulation
     yaml_filename = "obsparam_ref_" + sim + ".yaml"
     yaml_filepath = os.path.join(SIM_DATA_PATH, "test_config", yaml_filename)
+
+    # if yaml_filepath does not exist then comparison should fail
     assert os.path.exists(yaml_filepath)
 
     return uvh5_filepath, yaml_filepath
@@ -211,9 +236,13 @@ def goto_tempdir(tmpdir):
     os.chdir(cwd)
 
 
-# TODO: generic comment on top about how this is used (conftest command line / workflow setup)
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
 def test_run_sim(benchmark, goto_tempdir, refsim):
+    # pytest method to benchmark reference simulations. currently only called on one reference
+    # simulation at a time. takes as input the benchmark fixture, a fixture to generate a temporary
+    # directory for testing, and a fixture defined in conftest.py that is used to parametrize this
+    # method with a specific reference simulation name via command line input.
+
     # download reference sim output to compare
     download_sim(goto_tempdir, refsim)
 
@@ -251,4 +280,5 @@ def test_run_sim(benchmark, goto_tempdir, refsim):
     if pyuvsim.mpi.rank != 0:
         return
 
+    # performs any assertions to confirm that the reference simulation output hasn't diverged 
     compare_uvh5(uv_ref, uv_new)
