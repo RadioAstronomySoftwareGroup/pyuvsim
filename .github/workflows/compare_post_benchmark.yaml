@@ -20,8 +20,11 @@ jobs:
     # input is passed as a flag to pytest which parametrizes the reference simulation test
     # function. pytest-benchmark output is saved as an artifact with its current workflow run
     # and attempt as part of name key.
+    
+    # Link to discussion of artifacts
+    # https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/storing-and-sharing-data-from-a-workflow#about-workflow-artifacts
+    # https://github.com/actions/upload-artifact
 
-    #   TODO: can technically improve this by grouping reference sims by generation in the matrix and then have them be parametrized in batches! (DO THIS!) (not sure how to nicely do this)
     # uncomment when Tests is working and done testing
     #if: github.event.workflow_run.conclusion == 'success'
     name: Performance Benchmark
@@ -31,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      # all jobs should run in parallel (unless implementing above TODO)
+      # all jobs should run in parallel
       matrix:
         include:
           - id: 1.1_uniform
@@ -93,6 +96,7 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
+
   collate-post-benchmark:
     # Job that loads the saved artifacts corresponding to the specific workflow run and attempt id,
     # then creates a net benchmark output file named output.json with a python script action. The
@@ -102,9 +106,15 @@ jobs:
     # is a push to main, github-actions-benchmark then pushes the current benchmark output to
     # gh-pages. If, during the benchmark comparison, a performance regression occurs, a comment of
     # the benchmark comparison output is made on the workflow and this Job fails.
+    
+    # Inspired by this workflow by yewstack/yew and the github-action-benchmark README:
+    # https://github.com/yewstack/yew/blob/master/.github/workflows/benchmark.yml
+    # https://github.com/yewstack/yew/blob/master/.github/workflows/post-benchmark.yml
+    # https://github.com/benchmark-action/github-action-benchmark
+    # https://github.com/actions/download-artifact
+    
     name: Concatenate and Post Benchmark Results
     needs: benchmark
-    #if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
 
     steps:
@@ -164,14 +174,13 @@ jobs:
             with open('output.json', 'w') as f:
                 json.dump(net_json, f)
 
-      # TODO: FIXME: decide what is novel output for the run (maybe just make it look better?)
+      # Print github event_name and ref_name and the boolean check for whether gh-pages should be updated
       - name: Print things
         run: |
-          echo ${{ github.event_name }}
-          echo ${{ github.ref_name }}
-          echo ${{ github.event_name == 'push' && github.ref_name == '1.1_ref_sim_ci_workflow' }}
+          echo "Event Name: ${{ github.event_name }}"
+          echo "Ref Name: ${{ github.ref_name }}"
+          echo "Update gh-pages: ${{ github.event_name == 'push' && github.ref_name == '1.1_ref_sim_ci_workflow' }}"
 
-      # counter for dummy commmit: 1
       # Compares the data from the specified "output-file-path" and compares
       # with the latest data from the gh-pages branch. If performance regression
       # occurs, fails the test and alerts. If no performance regression, (TODO: FIXME: Currently still comments, but will only comment in final version if performance regression has occurred)
