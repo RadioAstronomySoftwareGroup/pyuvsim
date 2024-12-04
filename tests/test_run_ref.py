@@ -7,9 +7,8 @@ import os
 import pytest
 from pyuvdata import UVData
 
-from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
-
 import pyuvsim
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.uvsim import run_uvsim
 
 hasbench = importlib.util.find_spec("pytest_benchmark") is not None
@@ -40,12 +39,12 @@ def robust_response(url, n_retry=5):
 
 # gets latest pid from api call
 def get_latest_pid(response):
-    # takes as input the response from an api call to the Brown Digital Repository for the 
-    # collection "pyuvsim historical reference simulations". Parses the response for the latest 
+    # takes as input the response from an api call to the Brown Digital Repository for the
+    # collection "pyuvsim historical reference simulations". Parses the response for the latest
     # uploaded created item matching the query, then returns the PID of that item to be downloaded.
-    # In order to parse the response, further API calls are sent to get explicit data for each 
+    # In order to parse the response, further API calls are sent to get explicit data for each
     # item. If the increased number of API calls becomes an issue then this function can be changed
-    # to simply determine basic datetime info from the input response with no further calls. 
+    # to simply determine basic datetime info from the input response with no further calls.
     collection_response_items = response.json()["items"]["docs"]
 
     if len(collection_response_items) == 0:
@@ -54,7 +53,7 @@ def get_latest_pid(response):
     # using "object_created_dsi" key to sort the items, so we need to request that
     # for each item via the "json_uri", and get the pid as well to return
     print(
-        f"requesting json_uri for each item in reponse, and parsing 'object_created_dsi' and 'pid'"
+        "requesting json_uri for each item in reponse, and parsing 'object_created_dsi' and 'pid'"
     )
     json_uris = [item["json_uri"] for item in collection_response_items]
     object_created_dsis = []
@@ -89,7 +88,7 @@ def download_sim(target_dir, sim_name):
     # method to download the historical reference simulations from the Brown Digital
     # Repository. Sends an api call to the "pyuvsim historical reference simulations" collection,
     # then identifies the latest uploaded object in the response. Downloads that object to the
-    # target directory and if the object requires the mwa beam file downloads that to the 
+    # target directory and if the object requires the mwa beam file downloads that to the
     # SIM_DATA_PATH
 
     # Link to BDR API DOCS:
@@ -144,8 +143,8 @@ def download_sim(target_dir, sim_name):
 
 
 def compare_uvh5(uv_ref, uv_new):
-    # takes as input two UVData objects, and computes relevant quantities for determining how 
-    # similar the data are. Prints the histories before setting them equal. Currently only runs 
+    # takes as input two UVData objects, and computes relevant quantities for determining how
+    # similar the data are. Prints the histories before setting them equal. Currently only runs
     # an equality check but (TODO: FIXME) should make a much more exhaustive check OR just turn
     # back on the exact check and update the sim output when it differs (Do this tbh)
     import numpy as np
@@ -180,14 +179,26 @@ def compare_uvh5(uv_ref, uv_new):
     # should match output of np.testing.assert_allclose
     cases = np.abs(new_arr - ref_arr) <= (1e-8 + 1e-5 * np.abs(ref_arr))
     outcome = cases.all()
-    num_mismatched = str(len(cases[cases == False])) + "/" + str(cases.size)
+
+    # get unique outcomes (true / false) and corresponding counts
+    # then convert to dict and get result
+    unique, counts = np.unique(cases, return_counts=True)
+    outcome_dict = dict(zip(unique, counts, strict=False))
+
+    # need to check that key exists
+    if False in outcome_dict:
+        num_mismatched = str(outcome_dict[False]) + "/" + str(cases.size)
+    else:
+        num_mismatched = "0" + "/" + str(cases.size)
 
     # print some things for reference
     print(
-        f"mean of abs of diff of visibilities 'mean(abs(old_data_arr - new_data_arr)): {mean_diff_of_vis}"
+        f"mean of abs of diff of visibilities "
+        f"'mean(abs(old_data_arr - new_data_arr))': {mean_diff_of_vis}"
     )
     print(
-        f"mean of diff of abs of visibilities 'mean(abs(old_data_arr) - abs(new_data_arr)): {mean_diff_of_abs}"
+        f"mean of diff of abs of visibilities "
+        f"'mean(abs(old_data_arr) - abs(new_data_arr))': {mean_diff_of_abs}"
     )
     print(f"max_absolute_diff: {max_absolute_diff}")
     print(f"max_relative_diff: {max_relative_diff}")
@@ -205,7 +216,7 @@ def compare_uvh5(uv_ref, uv_new):
 
 
 def construct_filepaths(target_dir, sim):
-    # takes as input the sim name (NEEDS TO BE AN EXISTING SIM IN THE DATA DIRECTORY), then 
+    # takes as input the sim name (NEEDS TO BE AN EXISTING SIM IN THE DATA DIRECTORY), then
     # constructs the expected yaml_filepath to run the simulation and uvh5_filepath to locate
     # the downloaded historical output
 
@@ -280,5 +291,5 @@ def test_run_sim(benchmark, goto_tempdir, refsim):
     if pyuvsim.mpi.rank != 0:
         return
 
-    # performs any assertions to confirm that the reference simulation output hasn't diverged 
+    # performs any assertions to confirm that the reference simulation output hasn't diverged
     compare_uvh5(uv_ref, uv_new)
