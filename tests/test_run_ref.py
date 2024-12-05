@@ -145,8 +145,8 @@ def download_sim(target_dir, sim_name):
 def compare_uvh5(uv_ref, uv_new):
     # takes as input two UVData objects, and computes relevant quantities for determining how
     # similar the data are. Prints the histories before setting them equal. Currently only runs
-    # an equality check but (TODO: FIXME) should make a much more exhaustive check OR just turn
-    # back on the exact check and update the sim output when it differs (Do this tbh)
+    # an equality check but should make a much more exhaustive check OR just turn
+    # back on the exact check and update the sim output when it differs
     import numpy as np
 
     # print histories
