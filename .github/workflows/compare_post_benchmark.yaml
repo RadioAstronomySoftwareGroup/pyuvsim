@@ -1,4 +1,4 @@
-name: "Post benchmark results"
+name: "Run Compare Post Benchmark"
 on: [push, pull_request]
 #on:
 #  workflow_run:
@@ -172,15 +172,16 @@ jobs:
                 json.dump(net_json, f)
 
       # Print github event_name and ref_name and the boolean check for whether gh-pages should be updated
-      - name: Print things
+      - name: Print Event, Ref, and Upload Boolean
         run: |
           echo "Event Name: ${{ github.event_name }}"
           echo "Ref Name: ${{ github.ref_name }}"
-          echo "Update gh-pages: ${{ github.event_name == 'push' && github.ref_name == '1.1_ref_sim_ci_workflow' }}"
+          echo "Update gh-pages: ${{ github.event_name == 'push' && github.ref_name == 'main' }}"
 
       # Compares the data from the specified "output-file-path" and compares
       # with the latest data from the gh-pages branch. If performance regression
-      # occurs, fails the test and alerts. If no performance regression, (TODO: FIXME: Currently still comments, but will only comment in final version if performance regression has occurred)
+      # occurs, fails the test and alerts. Will only comment in if performance
+      # regression has occurred.
       # NOTE: it is important that this does not modify gh-pages on pull request
       # https://github.com/benchmark-action/github-action-benchmark?tab=readme-ov-file#caveats
       # This only updates gh-pages if a push to main occurs
@@ -201,8 +202,8 @@ jobs:
           # Enable Job Summary for PRs
           summary-always: true
           # Always leave a comment
-          comment-always: true
+          #comment-always: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Push and deploy GitHub pages branch automatically
-          auto-push: ${{ github.event_name == 'push' && github.ref_name == '1.1_ref_sim_ci_workflow' }}
-          save-data-file: ${{ github.event_name == 'push' && github.ref_name == '1.1_ref_sim_ci_workflow' }}
+          auto-push: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+          save-data-file: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
