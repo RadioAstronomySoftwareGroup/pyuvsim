@@ -35,14 +35,7 @@ jobs:
       # all jobs should run in parallel
       matrix:
         include:
-          - id: 1.1_uniform
-          - id: 1.1_gauss
-          - id: 1.1_mwa
-          - id: 1.2_uniform
-          - id: 1.2_gauss
-          - id: 1.3_uniform
-          - id: 1.3_gauss
-
+          - id: [1.1_uniform, 1.1_gauss, 1.1_mwa, 1.2_uniform, 1.2_gauss, 1.3_uniform, 1.3_gauss]
     defaults:
       run:
         # Adding -l {0} helps ensure conda can be found properly.
