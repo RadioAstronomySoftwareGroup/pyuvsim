@@ -144,9 +144,7 @@ def download_sim(target_dir, sim_name):
 
 def compare_uvh5(uv_ref, uv_new):
     # takes as input two UVData objects, and computes relevant quantities for determining how
-    # similar the data are. Prints the histories before setting them equal. Currently only runs
-    # an equality check but should make a much more exhaustive check OR just turn
-    # back on the exact check and update the sim output when it differs
+    # similar the data are. Prints the histories before setting them equal.
     import numpy as np
 
     # print histories
@@ -175,9 +173,13 @@ def compare_uvh5(uv_ref, uv_new):
     frac_diff[np.isnan(frac_diff)] = 0
     max_relative_diff = np.amax(frac_diff)
 
+    # using np.testing.assert_allclose defaults for comparison
+    rtol = 1e-7
+    atol = 0
+
     # generate a true/false ndarray for passing and failing cases
     # should match output of np.testing.assert_allclose
-    cases = np.abs(new_arr - ref_arr) <= (1e-8 + 1e-5 * np.abs(ref_arr))
+    cases = np.abs(new_arr - ref_arr) <= (atol + rtol * np.abs(ref_arr))
     outcome = cases.all()
 
     # get unique outcomes (true / false) and corresponding counts
@@ -208,11 +210,6 @@ def compare_uvh5(uv_ref, uv_new):
     # perform equality check between historical and current reference
     # simulation output
     assert uv_new == uv_ref
-
-    # fail if any element of data_array is different between new and ref
-    # currently commented out but might be worth implementing and updating ref_sim file each time
-    # the assertion fails for the relevant files
-    # assert (ref_arr == new_arr).all()
 
 
 def construct_filepaths(target_dir, sim):
