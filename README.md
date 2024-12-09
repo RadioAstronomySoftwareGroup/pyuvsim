@@ -127,9 +127,21 @@ One other package, pytest-xdist, is not required, but can be used to speed up ru
 the test suite by running tests in parallel. To use it call pytest with the
 ```-n auto``` option.
 
-Two additional packages, pytest-benchmark and requests, are required if one needs to locally run
+Two additional packages, pytest-benchmark and requests, are required if you need to locally run
 single core regression testing of the reference simulations. For more realistic benchmarking at
 any level of scale, see [Benchmarking](https://pyuvsim.readthedocs.io/en/latest/developers.html#benchmarking).
+To run a single core regression test of the reference simulations, you need to specify a reference
+simulation with the ```refsim``` flag and use ```benchmark-only```. Additionally, use mpiexec to
+run pytest as follows:
+```
+  mpiexec -n 1 -np 1 pytest --refsim=1.1_uniform --benchmark-only
+```
+, where 1.1_uniform is the specific reference simulation being tested. You can use the ```refsim```
+flag multiple times --
+```
+--refsim=refsim1 --refsim=refsim2
+```
+-- to parametrize multiple reference simulations.
 
 One way to ensure you have all the needed packages is to use the included
 `environment.yaml` file to create a new environment that will
