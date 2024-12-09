@@ -136,12 +136,8 @@ run pytest as follows:
 ```
 mpiexec -n 1 -np 1 pytest --refsim=1.1_uniform --benchmark-only
 ```
-, where 1.1_uniform is the specific reference simulation being tested. You can use the ```refsim```
-flag multiple times --
-```
---refsim=refsim1 --refsim=refsim2
-```
--- to parametrize multiple reference simulations.
+1.1_uniform would be the specific reference simulation being tested. You can use the ```refsim```
+flag multiple times to parametrize multiple reference simulations: ```--refsim=refsim1 --refsim=refsim2```.
 
 One way to ensure you have all the needed packages is to use the included
 `environment.yaml` file to create a new environment that will
