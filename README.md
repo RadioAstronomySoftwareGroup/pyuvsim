@@ -134,7 +134,7 @@ To run a single core regression test of the reference simulations, you need to s
 simulation with the ```refsim``` flag and use ```benchmark-only```. Additionally, use mpiexec to
 run pytest as follows:
 ```
-  mpiexec -n 1 -np 1 pytest --refsim=1.1_uniform --benchmark-only
+mpiexec -n 1 -np 1 pytest --refsim=1.1_uniform --benchmark-only
 ```
 , where 1.1_uniform is the specific reference simulation being tested. You can use the ```refsim```
 flag multiple times --
