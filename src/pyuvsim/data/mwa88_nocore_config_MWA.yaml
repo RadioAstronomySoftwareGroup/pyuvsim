@@ -1,0 +1,7 @@
+beam_paths:
+  0: !UVBeam
+      filename: mwa_full_embedded_element_pattern.h5
+      path_variable: pyuvsim.data.DATA_PATH
+      pixels_per_deg: 1
+telescope_location: (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
+telescope_name: MWA

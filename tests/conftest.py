@@ -62,6 +62,17 @@ def pytest_addoption(parser):
     parser.addoption(
         "--nompi", action="store_true", help="skip mpi-parallelized tests."
     )
+    parser.addoption(
+        "--refsim",
+        action="append",
+        default=[],
+        help="list of refsim names to pass to test functions.",
+    )
+
+
+def pytest_generate_tests(metafunc):
+    if "refsim" in metafunc.fixturenames:
+        metafunc.parametrize("refsim", metafunc.config.getoption("refsim"))
 
 
 def pytest_runtest_setup(item):
