@@ -129,15 +129,7 @@ the test suite by running tests in parallel. To use it call pytest with the
 
 Two additional packages, pytest-benchmark and requests, are required if you need to locally run
 single core regression testing of the reference simulations. For more realistic benchmarking at
-any level of scale, see [Benchmarking](https://pyuvsim.readthedocs.io/en/latest/developers.html#benchmarking).
-To run a single core regression test of the reference simulations, you need to specify a reference
-simulation with the ```refsim``` flag and use ```benchmark-only```. Additionally, use mpiexec to
-run pytest as follows:
-```
-mpiexec -n 1 -np 1 pytest --refsim=1.1_uniform --benchmark-only
-```
-1.1_uniform would be the specific reference simulation being tested. You can use the ```refsim```
-flag multiple times to parametrize multiple reference simulations: ```--refsim=refsim1 --refsim=refsim2```.
+any level of scale, and for instruction on regression testing with pytest, see [Benchmarking](https://pyuvsim.readthedocs.io/en/latest/developers.html#benchmarking).
 
 One way to ensure you have all the needed packages is to use the included
 `environment.yaml` file to create a new environment that will
