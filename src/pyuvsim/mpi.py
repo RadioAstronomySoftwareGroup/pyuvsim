@@ -3,7 +3,6 @@
 """MPI setup."""
 
 import atexit
-import resource
 import struct as _struct
 import sys
 from array import array as _array
@@ -420,6 +419,25 @@ class Counter:
         return nval[0]
 
 
+def get_rusage() -> float:
+    """Get the RSS usage of current process."""
+    # On linux, getrusage returns in kiB
+    # On Mac systems, getrusage returns in B
+    scale = 1.0
+    if "linux" in sys.platform:
+        scale = 2**10
+
+    try:
+        import resource
+
+        return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 2**30
+    except ImportError:
+        import psutil
+
+        process = psutil.Process()
+        return process.memory_info().rss / 2**30
+
+
 def get_max_node_rss(return_per_node=False):
     """
     Find the maximum memory usage on any node in the job in GiB.
@@ -435,15 +453,7 @@ def get_max_node_rss(return_per_node=False):
         Maximum memory usage in GiB across the job.
 
     """
-    # On linux, getrusage returns in kiB
-    # On Mac systems, getrusage returns in B
-    scale = 1.0
-    if "linux" in sys.platform:
-        scale = 2**10
-
-    memory_usage_GiB = (
-        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * scale / 2**30
-    )
+    memory_usage_GiB = get_rusage()
     node_mem_tot = node_comm.allreduce(memory_usage_GiB, op=MPI.SUM)
     if return_per_node:
         return node_mem_tot
