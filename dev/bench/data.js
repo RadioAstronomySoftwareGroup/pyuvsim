@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733370662491,
+  "lastUpdate": 1734625245650,
   "repoUrl": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim",
   "entries": {
     "Benchmark": [
@@ -657,6 +657,79 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.014473674288897587",
             "extra": "mean: 1.5245879046000084 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "90595017+burdorfmitchell@users.noreply.github.com",
+            "name": "burdorfmitchell",
+            "username": "burdorfmitchell"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8cb4e68f47dffa95209d8011c6ea242c07d7639f",
+          "message": "1.1 ref sim ci workflow (#514)\n\n* added catalog file for 1.1 reference simulations to /data\r\n\r\n* possible approach to packaging reference simulation data files\r\n\r\n* moved files to better location\r\n\r\n* fixed up filepaths for 1.1_uniform reference simulation in /data\r\n\r\n* attempting to add benchmarks and updated ref_sim_1.1 in /data\r\n\r\n* benchmark needs more work but almost there\r\n\r\n* re-commented line\r\n\r\n* preliminary commit for benchmark workflow. Still need to set up 1.1_uniform for remote downloading.\r\n\r\n* pytest should now hopefully work remotely -- file on gdrive\r\n\r\n* trying slight change to see if all other tests run to completion properly\r\n\r\n* updated testsuite to install requests\r\n\r\n* test change\r\n\r\n* change and mpiexec\r\n\r\n* tried possibly fixing caching\r\n\r\n* benchmark action stuff\r\n\r\n* minor updates to see if alert works and if -np 4 speeds up run\r\n\r\n* test 3\r\n\r\n* just alert\r\n\r\n* test failed assert\r\n\r\n* swap back to ==\r\n\r\n* swapping back\r\n\r\n* small TODO\r\n\r\n* started adding new ref sim tests\r\n\r\n* formatting\r\n\r\n* added 1.1_gauss\r\n\r\n* got 1.1 uniform and gauss working, and resolved warnings\r\n\r\n* cosmetic update to testsuite\r\n\r\n* slight changes to test_run_ref.py\r\n\r\n* swapped to no longer writing the UVData objects and just returning one\r\n\r\n* changed gaussian beam to have proper syntax as well\r\n\r\n* preliminary attempt at sequential execution using matrix-lock\r\n\r\n* hopefully fixes the issue\r\n\r\n* 2nd attempt\r\n\r\n* had bad version of matrix-lock\r\n\r\n* removed matrix-lock\r\n\r\n* attempt to fix up caching\r\n\r\n* dummy commit\r\n\r\n* swapped back to triplicate for tests -- no longer doing command line input to pytest\r\n\r\n* added 1.3 sim files to data\r\n\r\n* added 1.2 simulations to data\r\n\r\n* google drive links\r\n\r\n* swapped workflow simulation run order\r\n\r\n* Swapped to downloading files from the BDR -- will trim workflow runtime down to ~1 hour using pedantic. Added mwa uvbeam sim files to data not yet tested.\r\n\r\n* figured out approach to parametrize all reference simulation tests using workflow. Still need to integrate mwa sims. Added pedantic benchmarking. Need to determine best approach to setting up workflow matrix.\r\n\r\n* filled out workflow refsim names, and added 1.1_mwa reference simulation to pytest and workflow.\r\n\r\n* changed the Brown Digital Repository file downloading to use a collection approach, added some print statements, added a line for formatting\r\n\r\n* removed 1.2_mwa files, minor comments change\r\n\r\n* Intermediate commit while attempting to switch benchmarking approach to use artifacts. Need to re-integrate the benchmark action, and create structure for concatenating benchmark output and uploading it.\r\n\r\n* fixed syntax error\r\n\r\n* commented out line to be re-added later\r\n\r\n* failed to comment out another line that skipped second part of workflow\r\n\r\n* test for python script which concatenates benchmarks\r\n\r\n* intermediate commit\r\n\r\n* first attempt at gh-pages approach\r\n\r\n* dummy change\r\n\r\n* preliminary approach to only pushing results of benchmark if push to 'main', and running only if Tests finishes successfully\r\n\r\n* removed dependence on Tests as that workflow seems to be failing independently\r\n\r\n* hopefully fixed yaml syntax\r\n\r\n* added initial output statistics to the reference simulation comparisons. currently only asserts '==' can implement others or even an absolute check\r\n\r\n* re-added setting history to be equal\r\n\r\n* fix\r\n\r\n* all current ref sims should run now, and implemented hopefully more robust downloading\r\n\r\n* commented out the 0 tolerance sim comparison check\r\n\r\n* added dummy counter (#513)\r\n\r\n* added dummy counter\r\n\r\n* [pre-commit.ci] auto fixes from pre-commit.com hooks\r\n\r\nfor more information, see https://pre-commit.ci\r\n\r\n---------\r\n\r\nCo-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>\r\n\r\n* only one TODO left to resolve in test_run_ref (determining how strict object comparison should be)\r\n\r\n* cleaned up compare_post_benchmark.yaml a bit. now need to test running compare_post_benchmark using completion of another workflow (pull request and push)\r\n\r\n* updated approach to computing num_mismatched and fixed style\r\n\r\n* swapped compare_post_benchmark to run after Tests\r\n\r\n* minor edits to compare_post_benchmark so hopefully it runs\r\n\r\n* not sure why linking to tests isn't working -- swapping back\r\n\r\n* edited README / environment.yaml to discuss/require requests and pytest-benchmark\r\n\r\n* edited README\r\n\r\n* swapping to have defaults expected for pull request\r\n\r\n* changed underscore to hyphen to match style\r\n\r\n* Tentative README update -- should probably add a section of regression testing / ci  in the developer section of the docs, and amend README to link to it\r\n\r\n* made data comparison same as np.testing.assert_allclose defaults, removed some commented out code and comments\r\n\r\n* fixed typos in ci workflow\r\n\r\n* fixed formatting for a line\r\n\r\n* Futher updated the README\r\n\r\n* switching back to multiple ids\r\n\r\n* refactored job matrix\r\n\r\n* swapped discussion to docs for pytest regression testing\r\n\r\n---------\r\n\r\nCo-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>",
+          "timestamp": "2024-12-19T08:07:21-08:00",
+          "tree_id": "f581b3ea4c0cb95a364a0bb8842db789a6ffd8c1",
+          "url": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim/commit/8cb4e68f47dffa95209d8011c6ea242c07d7639f"
+        },
+        "date": 1734625244587,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_gauss]",
+            "value": 0.0015316148227591836,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 652.9056686710001 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_uniform]",
+            "value": 0.02199833779669115,
+            "unit": "iter/sec",
+            "range": "stddev: 0.4068254557319895",
+            "extra": "mean: 45.45798001840001 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_uniform]",
+            "value": 0.0015591259077841462,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 641.3850190080001 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_gauss]",
+            "value": 0.021299215624968264,
+            "unit": "iter/sec",
+            "range": "stddev: 0.34236769288015534",
+            "extra": "mean: 46.95008575000001 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_uniform]",
+            "value": 0.6362727591334831,
+            "unit": "iter/sec",
+            "range": "stddev: 0.020287485070246032",
+            "extra": "mean: 1.5716530146000025 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_mwa]",
+            "value": 0.07819577129785138,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11114088323826432",
+            "extra": "mean: 12.788415324800019 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_gauss]",
+            "value": 0.6447595720808491,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01805891351413621",
+            "extra": "mean: 1.5509657293999908 sec\nrounds: 5"
           }
         ]
       }
