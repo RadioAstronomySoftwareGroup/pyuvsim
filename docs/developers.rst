@@ -31,6 +31,9 @@ For more details, see `reference_simulations/README.md <https://github.com/Radio
 Benchmarking
 ------------
 
+Benchmarking Simulations
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 The ``benchmarking`` directory contains tools to test the runtime and memory usage of large simulations. There is no requirement to check benchmarks for pull requests, but it's a good idea to make sure changes don't drastically alter the runtime. The file BENCHMARKS.log keeps a record of performance over time.
 
 The README file in the ``benchmarking`` directory gives more details on how to do benchmarking.
@@ -38,3 +41,30 @@ The README file in the ``benchmarking`` directory gives more details on how to d
 Note that the benchmarking scripts are designed only for SLURM systems.
 
 For more details, see `benchmarking/README.md <https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/benchmarking>`_.
+
+Running a Reference Simulation with pytest-benchmark
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To run a single core regression test of the reference simulations, you need to specify a reference
+simulation with the ``refsim`` flag and use ``benchmark-only``. Additionally, you need to use
+mpiexec to run pytest as follows:
+
+    .. code-block:: python
+
+        # use mpiexec to run pytest specifying one core
+        > mpiexec -n 1 -np 1 pytest --refsim=1.1_uniform --benchmark-only
+
+Here "1.1_uniform" would be the specific reference simulation being tested. You can use the ``refsim``
+flag multiple times to parametrize multiple reference simulations: ``--refsim=refsim1 --refsim=refsim2``.
+
+We run single core regression tests of the available reference simulations with pytest and pytest-benchmark via our github ci workflow on every push or pull request. We do so to ensure output and runtime consistency. As we only run the simulations with a single core, the benchmarking aspect of these tests is only relevant for linear operations and not a test of any parallelism.
+
+The available ``refsim`` values are:
+
+* 1.1_uniform
+* 1.1_gauss
+* 1.1_mwa
+* 1.2_uniform
+* 1.2_gauss
+* 1.3_uniform
+* 1.3_gauss
