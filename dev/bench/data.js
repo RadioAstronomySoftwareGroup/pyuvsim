@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734625245650,
+  "lastUpdate": 1736272205683,
   "repoUrl": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim",
   "entries": {
     "Benchmark": [
@@ -730,6 +730,79 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.01805891351413621",
             "extra": "mean: 1.5509657293999908 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "66853113+pre-commit-ci[bot]@users.noreply.github.com",
+            "name": "pre-commit-ci[bot]",
+            "username": "pre-commit-ci[bot]"
+          },
+          "committer": {
+            "email": "brynah@phys.washington.edu",
+            "name": "Bryna Hazelton",
+            "username": "bhazelton"
+          },
+          "distinct": true,
+          "id": "d8253e99306b928fad9d231be272d5e2c36ee4e4",
+          "message": "[pre-commit.ci] pre-commit autoupdate\n\nupdates:\n- [github.com/astral-sh/ruff-pre-commit: v0.8.3 → v0.8.6](https://github.com/astral-sh/ruff-pre-commit/compare/v0.8.3...v0.8.6)",
+          "timestamp": "2025-01-07T10:36:57-07:00",
+          "tree_id": "7ae38b9a30b3805247158d95c3896ff9d92e4ce9",
+          "url": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim/commit/d8253e99306b928fad9d231be272d5e2c36ee4e4"
+        },
+        "date": 1736272205130,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_gauss]",
+            "value": 0.0015521162975521727,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 644.2816183150001 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_uniform]",
+            "value": 0.021727920687523387,
+            "unit": "iter/sec",
+            "range": "stddev: 0.2716723886891983",
+            "extra": "mean: 46.023732062600004 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_uniform]",
+            "value": 0.001526862590887347,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 654.937782855 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_gauss]",
+            "value": 0.021597186964759908,
+            "unit": "iter/sec",
+            "range": "stddev: 0.07158112960252856",
+            "extra": "mean: 46.302326392400005 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_uniform]",
+            "value": 0.6312704993526635,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03003446692160079",
+            "extra": "mean: 1.5841069731999995 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_mwa]",
+            "value": 0.07892553528927293,
+            "unit": "iter/sec",
+            "range": "stddev: 0.09678511045031156",
+            "extra": "mean: 12.670170640399999 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_gauss]",
+            "value": 0.6685658909425418,
+            "unit": "iter/sec",
+            "range": "stddev: 0.021678772385816808",
+            "extra": "mean: 1.4957388845999957 sec\nrounds: 5"
           }
         ]
       }
