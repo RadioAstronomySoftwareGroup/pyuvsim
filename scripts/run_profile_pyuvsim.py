@@ -19,9 +19,7 @@ from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 parser = argparse.ArgumentParser(
     description=(
-        "A command-line script "
-        "to execute a pyuvsim simulation for"
-        "profiling purposes."
+        "A command-line script to execute a pyuvsim simulation forprofiling purposes."
     )
 )
 
