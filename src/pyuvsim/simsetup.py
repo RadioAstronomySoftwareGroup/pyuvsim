@@ -1086,16 +1086,16 @@ def _construct_beam_list(
 
     """
     beam_list = []
-    assert isinstance(
-        beam_ids, np.ndarray | list | tuple
-    ), "beam_ids must be a list, tuple or numpy array."
+    assert isinstance(beam_ids, np.ndarray | list | tuple), (
+        "beam_ids must be a list, tuple or numpy array."
+    )
     beam_ids = np.asarray(beam_ids, dtype=int)
     assert isinstance(telconfig, dict), "telconfig must be a dict."
 
     if freq_range is not None:
-        assert isinstance(
-            freq_range, np.ndarray | list | tuple
-        ), "If passed, freq_range must be a list, tuple or numpy array"
+        assert isinstance(freq_range, np.ndarray | list | tuple), (
+            "If passed, freq_range must be a list, tuple or numpy array"
+        )
         freq_range = np.asarray(freq_range, dtype=float).squeeze()
         if freq_range.size != 2:
             raise ValueError("If passed, freq_range have 2 elements")
@@ -1649,8 +1649,7 @@ def parse_time_params(time_params):
         if not it:
             if not dd:
                 raise ValueError(
-                    "Either duration or integration time "
-                    "must be specified: " + kws_used
+                    "Either duration or integration time must be specified: " + kws_used
                 )
             # In seconds
             time_params["integration_time"] = (

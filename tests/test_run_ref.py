@@ -98,7 +98,7 @@ def download_sim(target_dir, sim_name):
     api_url = "https://repository.library.brown.edu/api/collections/bdr:wte2qah8/?q="
 
     print(
-        f"\nquerying BDR collection for items matching {sim_name} via api: {api_url+sim_name}"
+        f"\nquerying BDR collection for items matching {sim_name} via api: {api_url + sim_name}"
     )
     response = robust_response(api_url + sim_name)
 
