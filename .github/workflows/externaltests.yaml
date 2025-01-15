@@ -43,6 +43,15 @@ jobs:
           cd ../hera_sim
           pip install .[tests]
 
+      # re-install pyuvsim last to ensure the checked out code is installed
+      # (because sometimes the hera_sim install overwrites the earlier install.)
+      # keep the earlier install because it ensures the right dependencies are grabbed.
+      - name: Install pyuvsim
+        run: |
+          cd ../pyuvsim
+          pip install .
+          cd ../hera_sim
+
       - name: Environment Info
         run: |
           pip list
