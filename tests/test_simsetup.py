@@ -1831,7 +1831,7 @@ def test_beamlist_init_freqrange(sel_type):
     }
 
     Nfreqs = 10
-    freqs = np.linspace(120, 145, Nfreqs) * 1e6 * units.Hz
+    freqs = np.linspace(120, 145, Nfreqs) * 1e6
 
     freq_range = [117e6, 148e6]
     if sel_type == "freq_range":
@@ -2057,7 +2057,7 @@ def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
     assert smd_copy.stokes_I.base is smd.stokes_I.base
 
 
-def test_simsetup_with_freq_buffer():
+def test_simsetup_with_obsparam_freq_buffer():
     fl = os.path.join(SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky_freqbuf.yaml")
 
     with check_warnings(
@@ -2067,5 +2067,13 @@ def test_simsetup_with_freq_buffer():
         "version 1.5",
     ):
         _, beams, _ = simsetup.initialize_uvdata_from_params(fl, return_beams=True)
+
+    assert beams[0].beam.freq_array.max() < 101e6
+
+
+def test_simsetup_with_freq_buffer():
+    fl = os.path.join(SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky_freqbuf_tel.yaml")
+
+    _, beams, _ = simsetup.initialize_uvdata_from_params(fl, return_beams=True)
 
     assert beams[0].beam.freq_array.max() < 101e6
