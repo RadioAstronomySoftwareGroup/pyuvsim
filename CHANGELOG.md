@@ -14,6 +14,10 @@ string/object mode switch.
 - Setting the `select.bls` property in the obsparams file now selects baselines _before_
 creating the UVData object, rather than down-selecting afterwards, saving memory and time.
 
+### Fixed
+- A bug when specifying a frequency buffer for beam frequency selects in telescope
+config files.
+
 ## [1.3.1] - 2024-07-18
 
 ### Added

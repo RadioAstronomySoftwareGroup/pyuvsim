@@ -1,0 +1,23 @@
+filing:
+  outdir: '.'
+  outfile_name: 'sim_results.uvfits'
+freq:
+  Nfreqs: 1
+  bandwidth: 800000.0
+  start_freq: 100000000.0
+sources:
+  catalog: 'mock'
+  time: 2457458.1738949567
+  mock_arrangement: 'diffuse'
+  diffuse_model: 'monopole'
+  map_nside: 128
+telescope:
+  telescope_config_name: '28m_triangle_10time_10chan_freqbuff.yaml'
+  array_layout: 'triangle_bl_layout.csv'
+time:
+  Ntimes: 1
+  integration_time: 11.0
+  start_time: 2457458.1738949567
+ordering:
+  conjugation_convention: ant1<ant2
+  blt_order: [time, baseline]
