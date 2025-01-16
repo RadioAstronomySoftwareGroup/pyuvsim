@@ -1110,11 +1110,7 @@ def _construct_beam_list(
 
     select = telconfig.pop("select", {})
     freq_buffer = select.pop("freq_buffer", None)
-    if (
-        freq_range is not None
-        and "freq_range" not in select
-        and freq_buffer is None
-    ):
+    if freq_range is not None and "freq_range" not in select and freq_buffer is None:
         select["freq_range"] = freq_range
     if freq_buffer is not None and "freq_range" not in select:
         freq_arr_val = freq_array

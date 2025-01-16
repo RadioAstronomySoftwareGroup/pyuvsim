@@ -2072,7 +2072,9 @@ def test_simsetup_with_obsparam_freq_buffer():
 
 
 def test_simsetup_with_freq_buffer():
-    fl = os.path.join(SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky_freqbuf_tel.yaml")
+    fl = os.path.join(
+        SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky_freqbuf_tel.yaml"
+    )
 
     _, beams, _ = simsetup.initialize_uvdata_from_params(fl, return_beams=True)
 
