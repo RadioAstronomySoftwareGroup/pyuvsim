@@ -13,7 +13,7 @@ import pyuvdata.utils.history as history_utils
 import yaml
 from astropy import units
 from astropy.constants import c as speed_of_light
-from astropy.coordinates import Latitude, Longitude
+from astropy.coordinates import EarthLocation, Latitude, Longitude
 from astropy.time import Time
 from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
 from pyuvdata import ShortDipoleBeam, UniformBeam, UVData
@@ -169,6 +169,86 @@ def test_analytic_diffuse(model, tol, tmpdir):
     uvw_lam = uv_out.uvw_array * uv_out.freq_array[0] / c_ms
     ana = soln(uvw_lam, **params)
     np.testing.assert_allclose(ana / 2, dat, atol=tol, rtol=0)
+
+
+def test_diffuse_units(tmpdir):
+    pytest.importorskip("analytic_diffuse")
+    pytest.importorskip("astropy_healpix")
+
+    sky_k, _, _, _, _ = pyuvsim.simsetup._create_catalog_diffuse(
+        map_nside=128,
+        diffuse_model="polydome",
+        diffuse_params={"n": 2},
+        time=Time(2457458.1738949567, format="jd"),
+        array_location=EarthLocation.from_geodetic(
+            lat=-30.72153, lon=21.42830, height=1073.0
+        ),
+    )
+
+    sky_k.spectral_type = "spectral_index"
+    sky_k.reference_frequency = np.full(sky_k.Ncomponents, 1e8) * units.Hz
+    sky_k.spectral_index = np.full(sky_k.Ncomponents, -0.8)
+    sky_k.check()
+
+    sky_jy = sky_k.copy()
+    sky_jy.kelvin_to_jansky()
+    assert sky_jy.stokes.unit == units.Unit("Jy/sr")
+
+    catpath_k = str(tmpdir.join("diffuse_units_k.skyh5"))
+    sky_k.write_skyh5(catpath_k)
+
+    catpath_jy = str(tmpdir.join("diffuse_units_jy.skyh5"))
+    sky_jy.write_skyh5(catpath_jy)
+
+    # Making configuration files for this simulation.
+    template_path = os.path.join(
+        SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky.yaml"
+    )
+    obspar_path = str(tmpdir.join("obsparam_diffuse_sky.yaml"))
+    layout_path = str(tmpdir.join("threeant_layout.csv"))
+    herauniform_path = str(tmpdir.join("hera_uniform.yaml"))
+
+    teleconfig = {
+        "beam_paths": {0: UniformBeam()},
+        "telescope_location": "(-30.72153, 21.42830, 1073.0)",
+        "telescope_name": "HERA",
+    }
+    antpos_enu = np.array([[0, 0, 0], [0, 3, 0], [5, 0, 0]], dtype=float)
+
+    pyuvsim.simsetup._write_layout_csv(
+        layout_path, antpos_enu, np.arange(3).astype(str), np.arange(3)
+    )
+    with open(herauniform_path, "w") as ofile:
+        yaml.dump(teleconfig, ofile, default_flow_style=False)
+
+    with open(template_path) as yfile:
+        obspar = yaml.safe_load(yfile)
+    obspar["telescope"]["array_layout"] = layout_path
+    obspar["telescope"]["telescope_config_name"] = herauniform_path
+    obspar["sources"] = {"catalog": catpath_k}
+
+    obspar["filing"]["outfile_name"] = "diffuse_units_k_sim.uvh5"
+    obspar["filing"]["output_format"] = "uvh5"
+    obspar["filing"]["outdir"] = str(tmpdir)
+
+    with open(obspar_path, "w") as ofile:
+        yaml.dump(obspar, ofile, default_flow_style=False)
+
+    uv_out_k = pyuvsim.run_uvsim(obspar_path, return_uv=True)
+
+    obspar["sources"] = {"catalog": catpath_jy}
+    obspar["filing"]["outfile_name"] = "diffuse_units_jy_sim.uvh5"
+    with open(obspar_path, "w") as ofile:
+        yaml.dump(obspar, ofile, default_flow_style=False)
+
+    uv_out_jy = pyuvsim.run_uvsim(obspar_path, return_uv=True)
+
+    # make the histories the same for comparison
+    uv_out_jy.history = uv_out_k.history
+    # harmonize phase center catalog info
+    uv_out_jy._consolidate_phase_center_catalogs(other=uv_out_k, ignore_name=True)
+
+    assert uv_out_k == uv_out_jy
 
 
 @pytest.mark.filterwarnings("ignore:Fixing auto polarization power beams")
