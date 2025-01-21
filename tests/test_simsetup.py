@@ -2013,24 +2013,34 @@ def test_mock_catalog_moon():
 
 
 @pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
-@pytest.mark.parametrize("unit", ["Jy", "K"])
+@pytest.mark.parametrize("unit", ["Jy", "K", "Jy/sr", "K sr"])
 def test_skymodeldata_with_quantity_stokes(unit, cat_with_some_pols):
     # Support for upcoming pyradiosky change setting SkyModel.stokes
     # to an astropy Quantity.
-    if unit == "Jy":
+    if unit in ["Jy", "K sr"]:
         sky = cat_with_some_pols
+        if unit != "Jy":
+            sky.jansky_to_kelvin()
     else:
         pytest.importorskip("analytic_diffuse")
         pytest.importorskip("astropy_healpix")
         sky, _ = simsetup.create_mock_catalog(
             Time.now(), arrangement="diffuse", diffuse_model="monopole", map_nside=16
         )
+        sky.spectral_type = "spectral_index"
+        sky.reference_frequency = np.full(sky.Ncomponents, 1e8) * units.Hz
+        sky.spectral_index = np.full(sky.Ncomponents, -0.8)
+        sky.check()
+
+        if unit != "K":
+            sky.kelvin_to_jansky()
+
     if not isinstance(sky.stokes, units.Quantity):
         sky.stokes *= units.Unit(unit)
 
     smd = simsetup.SkyModelData(sky)
     assert np.all(sky.stokes.to_value(unit)[0] == smd.stokes_I)
-    assert smd.flux_unit == unit
+    assert units.Unit(smd.flux_unit) == units.Unit(unit)
 
     sky2 = smd.get_skymodel()
     assert sky2 == sky
