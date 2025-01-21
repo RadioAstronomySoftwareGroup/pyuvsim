@@ -681,12 +681,8 @@ class SkyModelData:
             stokes_in = sky_in.stokes
 
             if isinstance(stokes_in, units.Quantity):
-                if stokes_in.unit.is_equivalent("Jy"):
-                    stokes_in = stokes_in.to_value("Jy")
-                    self.flux_unit = "Jy"
-                elif stokes_in.unit.is_equivalent("K"):
-                    stokes_in = stokes_in.to_value("K")
-                    self.flux_unit = "K"
+                self.flux_unit = stokes_in.unit.to_string()
+                stokes_in = stokes_in.value
 
             self.stokes_I = stokes_in[0, ...]
 
