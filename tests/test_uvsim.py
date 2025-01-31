@@ -67,6 +67,13 @@ def multi_beams():
         ):
             beam5.to_healpix(nside=8)
         beams.append(beam5)
+    except AssertionError:
+        # If we have an assert error, that means that import worked, but the warning
+        # was not raised due to the change in UVBeam warning behavior. Try again...
+        # TODO: Simplify this once pyuvdata v3.2 is required
+        with check_warnings(None):
+            beam5.to_healpix(nside=8)
+        beams.append(beam5)
     except ImportError:
         pass
 
