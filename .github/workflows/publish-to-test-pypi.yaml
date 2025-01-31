@@ -1,6 +1,10 @@
 name: Publish Python distributions to PyPI and TestPyPI
 
-on: push
+on:
+  release:
+    types: [published]
+  pull_request:
+    branch: main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
