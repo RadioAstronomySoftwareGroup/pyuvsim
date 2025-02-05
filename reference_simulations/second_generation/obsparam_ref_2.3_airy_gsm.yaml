@@ -7,6 +7,7 @@ freq:
   channel_width: 80000.0
   start_freq: 100000000.0
 sources:
+  # file needs to be added manually to the catalog_files
   catalog: '../catalog_files/healpix_gsm_shell.hdf5'
 telescope:
   array_layout: 'telescope_config/mwa_nocore_layout.csv'

@@ -7,7 +7,10 @@ freq:
   channel_width: 80000.0
   start_freq: 100000000.0
 sources:
-  catalog: '../catalog_files/gleam.vot'
+  filetype: "gleam"
+  catalog: "file://gleam.vot"
+  non_nan: "all"
+  non_negative: True
   min_flux: 0.05
 telescope:
   array_layout: 'telescope_config/mwa_nocore_layout.csv'
