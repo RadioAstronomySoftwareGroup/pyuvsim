@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738350798062,
+  "lastUpdate": 1738731668878,
   "repoUrl": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim",
   "entries": {
     "Benchmark": [
@@ -1168,6 +1168,58 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.24576428906398823",
             "extra": "mean: 12.746614947800015 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "66853113+pre-commit-ci[bot]@users.noreply.github.com",
+            "name": "pre-commit-ci[bot]",
+            "username": "pre-commit-ci[bot]"
+          },
+          "committer": {
+            "email": "brynah@phys.washington.edu",
+            "name": "Bryna Hazelton",
+            "username": "bhazelton"
+          },
+          "distinct": true,
+          "id": "2b5fc85962a823db9338c527e4c056a9cfa81f3d",
+          "message": "[pre-commit.ci] pre-commit autoupdate\n\nupdates:\n- [github.com/astral-sh/ruff-pre-commit: v0.9.3 → v0.9.4](https://github.com/astral-sh/ruff-pre-commit/compare/v0.9.3...v0.9.4)",
+          "timestamp": "2025-02-05T06:32:36+02:00",
+          "tree_id": "70ac35799725cda3c7e3c7540c1098a29a9f1196",
+          "url": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim/commit/2b5fc85962a823db9338c527e4c056a9cfa81f3d"
+        },
+        "date": 1738731668558,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_uniform]",
+            "value": 0.0015562281108657252,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 642.5793192000001 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_gauss]",
+            "value": 0.022340248037365614,
+            "unit": "iter/sec",
+            "range": "stddev: 0.22197327642193207",
+            "extra": "mean: 44.762260397800006 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_gauss]",
+            "value": 0.0015379803264720232,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 650.203375679 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_uniform]",
+            "value": 0.02210496469102122,
+            "unit": "iter/sec",
+            "range": "stddev: 0.25681121144814395",
+            "extra": "mean: 45.2387060544 sec\nrounds: 5"
           }
         ]
       }
