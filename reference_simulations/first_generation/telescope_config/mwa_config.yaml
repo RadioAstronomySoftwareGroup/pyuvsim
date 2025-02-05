@@ -1,0 +1,5 @@
+beam_paths:
+    0 : !AnalyticBeam
+        class: ShortDipoleBeam
+telescope_location: (-26.70331940, 116.67081524, 371.98) # 377.83 m
+telescope_name: MWA
