@@ -1,0 +1,21 @@
+filing:
+  outdir: "./results_data/"
+  outfile_name: 'ref_1.5_uvbeam'
+  output_format: 'uvh5'
+freq:
+  # start at freq in MWA UVBeam, then interpolate second freq
+  Nfreqs: 2
+  channel_width: 640000.0
+  start_freq: 189440000.0
+sources:
+  catalog: "../test_catalogs/R.txt"
+telescope:
+  array_layout: ../mwa_128T_layout.csv
+  telescope_config_name: ../mwa_config_uvbeam.yaml
+time:
+  Ntimes: 2
+  integration_time: 10.0
+  start_time: 2460000.0
+ordering:
+  conjugation_convention: ant1<ant2
+  blt_order: [time, baseline]

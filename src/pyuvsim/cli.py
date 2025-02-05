@@ -3,22 +3,33 @@
 """Command line scripts."""
 
 import argparse
+import os
 import subprocess  # nosec
 import time as pytime
 import warnings
+from argparse import RawTextHelpFormatter
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
 import psutil
 from astropy import units as u
+from astropy.config import get_cache_dir
 from astropy.coordinates import Angle, EarthLocation, SkyCoord
 from astropy.time import Time
 from astropy.units import Quantity
+from astropy.utils.data import (
+    clear_download_cache,
+    download_file,
+    get_cached_urls,
+    import_file_to_cache,
+)
 from pyradiosky import SkyModel
+from pyradiosky.utils import download_gleam
 from pyuvdata import UVBeam, UVData
 
 from pyuvsim import profiling, simsetup, telescope, utils, uvsim
+from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.simsetup import _parse_layout_csv as parse_csv
 
 
@@ -587,3 +598,344 @@ def plot_csv_antpos(argv=None):
     plt.gca().set_aspect("equal")
     plt.savefig(str(plot_path), bbox_inches="tight")
     plt.clf()
+
+
+def download_gleam_vot(url="file://gleam.vot", row_limit=None):
+    """
+    Download gleam.vot to pyuvsim cache specified by astropy.
+
+    Runs import_file_to_cache to format the installed file to be recognizable through astropy.
+    Includes adding a fake url with which to specify the file. The fake download url acts as
+    the key to load the file in astropy -- allowing filename specification in yaml files
+    without any path details as astropy handles searching the cache with get_cached_urls
+    and download_file.
+
+    Parameters
+    ----------
+    url: str
+        A fake url for the gleam.vot file.
+    """
+    # check if url already cached
+    if url in get_cached_urls("pyuvsim"):
+        warnings.warn(
+            f"astropy cached url for {url} already exists! If you want to redownload,"
+            " please clear the cached url."
+        )
+        return
+
+    # around 1/4 of total rows print warning
+    if row_limit is None or row_limit > 75000:
+        print("gleam.vot download can take a while")
+
+    # downloads gleam.vot using astroquery
+    cache_dir = get_cache_dir("pyuvsim")
+    download_gleam(path=cache_dir, filename="gleam.vot", row_limit=row_limit)
+
+    path_to_file = os.path.join(cache_dir, "gleam.vot")
+
+    # converts downloaded gleam.vot to format recognizable for astropy with fake url key
+    if os.path.exists(path_to_file):
+        print("running import_file_to_cache to convert to astropy downloaded format")
+        path_to_file = import_file_to_cache(
+            url, path_to_file, remove_original=True, pkgname="pyuvsim"
+        )
+    else:  # pragma: nocover
+        warnings.warn(f"gleam.vot not downloaded to expected location: {path_to_file}")
+
+    return path_to_file
+
+
+def download_file_using_astropy(url):
+    """
+    Download file at url to pyuvsim cache specified by astropy using download_file.
+
+    Parameters
+    ----------
+    url: str
+        The url of the file to be downloaded.
+
+    The download url acts as the key to load the file in astropy -- allowing filename
+    specification in yaml files without any path details as astropy handles searching
+    the cache with get_cached_urls and download_file.
+    """
+    # check if url already cached
+    if url in get_cached_urls("pyuvsim"):
+        warnings.warn(
+            f"astropy cached url for {url} already exists! If you want to redownload,"
+            " please clear the cached url."
+        )
+
+    # astropy file download method which defaults to cached file and hashes the file
+    # should have a default timeout of 10 seconds
+    filepath = download_file(url, cache=True, pkgname="pyuvsim")
+
+    return filepath
+
+
+def download_data_files(argv=None):
+    """
+    Large file downloading using the astropy cache to store beams and catalogs.
+
+    Takes a command line argument of the file to download.
+
+    Current options:
+        - "gleam": the gleam catalog as a VOTable
+        - "mwa": mwa uvbeam file
+        - "healpix": gsm 2016 nside 128 healpix map saved as skyh5
+
+    All files require astropy. Gleam additionally requires pyradiosky and astroquery.
+
+    Downloads files to astropy default cache location for pyuvsim e.g. "get_cache_dir(pyuvsim)"
+
+    The intention is to have all files downloaded under the astropy paradigm, and thus findable
+    in cache throug the same paradigm with methods get_cached_urls and download_file. This allows
+    us to list only the file url corresponding to the astropy cached file in either yaml instead
+    of having to worry about relative or absolute path variables.
+    """
+    parser = argparse.ArgumentParser(
+        description="A command-line script to download large data files "
+        "for the reference simulations.",
+        formatter_class=RawTextHelpFormatter,
+    )
+
+    # dictionary of keywords for downloadable files with url values (gleam we don't have a url)
+    file_download_dict = {
+        # mwa uvbeam
+        "mwa": "http://ws.mwatelescope.org/static/mwa_full_embedded_element_pattern.h5",
+        # gsm 2016 nside 128 healpix map
+        "healpix": "https://repository.library.brown.edu/storage/bdr:eafzyycj/content/",
+        "gleam": "",
+    }
+
+    # create some strings for formatted help output
+    formatted_key_list = "\n\t-" + "\n\t-".join(file_download_dict.keys()) + "\n\n"
+    keyword_options = " ".join(list(file_download_dict.keys())[:2])
+
+    parser.add_argument(
+        "files",
+        nargs="*",  # '*' consumes zero or more arguments, storing them in a list
+        default=file_download_dict.keys(),  # If no arguments are provided, use the full list
+        help="List of files to download via keyword. Downloads all available files as default if "
+        "no file arguments are given. Currently available file keywords:"
+        f'{formatted_key_list}Sample use: "download_data_files {keyword_options}"',
+    )
+
+    parser.add_argument(
+        "--row_limit",
+        type=int,
+        default=None,
+        help="Optionally specify a maximum number of rows to download for GLEAM. May not always "
+        "download the same set of rows so this option should not be used for anything requiring "
+        "repeatablility!",
+    )
+
+    parser.add_argument(
+        "--clear",
+        action="store_true",
+        default=False,
+        help="If clear is passed, the pyuvsim cache is first wiped by calling "
+        'astropy\'s clear_download_cache(pkgname="pyuvsim"). All other input '
+        "is treated subsequently.",
+    )
+
+    args = parser.parse_args(argv)
+
+    if args.clear:
+        print("Clearing entirety of pyuvsim cache.")
+        clear_download_cache(pkgname="pyuvsim")
+
+    return_paths = []
+
+    # loop through every file keyword in the list of filenames passed in from the command line
+    # for each file keyword, check that it exists in the dictionary, then try to download
+    for file in args.files:
+        if file in file_download_dict:
+            # call download_gleam_vot if gleam, otherwise download from url
+            if file == "gleam":
+                filepath = download_gleam_vot(row_limit=args.row_limit)
+            else:
+                filepath = download_file_using_astropy(file_download_dict[file])
+
+            return_paths.append(filepath)
+        else:
+            warnings.warn(
+                f'file "{file}" not found! Check the available keys in the file_download_dict'
+                "or the listed current options at the top of the file."
+            )
+
+    # NOTE: this causes a print (maybe to stderr?) at the end which I don't know how to avoid
+    return return_paths
+
+
+def robust_response(url, n_retry=10):
+    """
+    Attempt to GET the url n_retry times if return code in range.
+
+    returns the GET request
+    Stackoverflow / Docs link for approach / Retry:
+    https://stackoverflow.com/questions/15431044/can-i-set-max-retries-for-requests-request
+    https://urllib3.readthedocs.io/en/latest/reference/urllib3.util.html#module-urllib3.util.retry
+    """
+    import requests
+    from requests.adapters import HTTPAdapter, Retry
+
+    s = requests.Session()
+    retries = Retry(
+        total=n_retry,
+        backoff_factor=10,
+        raise_on_status=True,
+        status_forcelist=range(500, 600),
+    )
+    s.mount("http://", HTTPAdapter(max_retries=retries))
+
+    return s.get(url)
+
+
+def get_latest_api_response_pid(sim_name):
+    """
+    Get the pid of the most recent upload matching the sim_name on the Brown Digital Repository.
+
+    Sends an api call to the "pyuvsim historical reference simulations" collection,
+    then identifies and returns the latest uploaded object in the response.
+
+    Link to BDR API DOCS:
+    https://repository.library.brown.edu/studio/api-docs/
+
+    Parameters
+    ----------
+    sim_name: str
+        The simulation name to use as a search pattern
+
+    Returns
+    -------
+    str
+        the pid as a string
+    """
+    # api url
+    api_url = (
+        "https://repository.library.brown.edu/api/collections/bdr:wte2qah8/?q="
+        f"primary_title:{sim_name}&wt=json&sort=object_last_modified_dsi desc&rows=1"
+    )
+
+    print(
+        f"\nquerying BDR collection for latest item matching {sim_name} via api: {api_url}"
+    )
+    response = robust_response(api_url)
+
+    # attempt to parse json assuming we have the result
+    try:
+        # get pid from first response item as we query by time desc and only get 1 result
+        pid = response.json()["items"]["docs"][0]["pid"]
+    except Exception as e:
+        warnings.warn(f"Failed to parse BDR response for file PID with error: {e}")
+
+    return pid
+
+
+def download_ref_sims(argv=None):
+    """Download latest reference simulations from the Brown Digital Repository using astropy."""
+    ref_sims = [
+        "1.1_baseline_number",
+        "1.2_time_axis",
+        "1.3_frequency_axis",
+        "1.4_source_axis",
+        "1.5_uvbeam",
+        "1.6_healpix",
+        "1.7_multi_beam",
+        "1.8_lunar",
+    ]
+
+    # create parser that grabs all input command line arguments as file keywords
+    parser = argparse.ArgumentParser(
+        description="A command line script to download the latest reference simulations.",
+        formatter_class=RawTextHelpFormatter,
+    )
+
+    # create some strings for formatted help output
+    formatted_key_list = "\n\t-" + "\n\t-".join(ref_sims) + "\n\n"
+    keyword_options = " ".join(ref_sims[:2])
+
+    parser.add_argument(
+        "sims",
+        nargs="*",  # '*' consumes zero or more arguments, storing them in a list
+        default=ref_sims,  # If no arguments are provided, use FULL_LIST as the default
+        help="List of reference simulations to download via keyword. Downloads all available "
+        "files if no arguments given. Currently available file keywords:"
+        f'{formatted_key_list}Sample use: "download_ref_sims {keyword_options}"',
+    )
+
+    args = parser.parse_args(argv)
+
+    return_paths = []
+
+    for sim in args.sims:
+        if sim in ref_sims:
+            # for each sim: get pid, construct download url, download file and return path
+            pid = get_latest_api_response_pid(sim)
+            download_url = (
+                f"https://repository.library.brown.edu/storage/{pid}/content/"
+            )
+            filepath = download_file_using_astropy(download_url)
+            return_paths.append(filepath)
+        else:
+            warnings.warn(
+                f'sim "{sim}" not found! Check the available keys in the ref_sims list'
+                " or the listed current options at the top of the file."
+            )
+
+    # NOTE: this causes a print (maybe to stderr?) at the end which I don't know how to avoid
+    return return_paths
+
+
+def run_ref_sim(argv=None):
+    """Run the reference simulations using a wrapper of run_pyuvsim."""
+    ref_sims = {
+        "1": "1.1_baseline_number",
+        "2": "1.2_time_axis",
+        "3": "1.3_frequency_axis",
+        "4": "1.4_source_axis",
+        "5": "1.5_uvbeam",
+        "6": "1.6_healpix",
+        "7": "1.7_multi_beam",
+        "8": "1.8_lunar",
+    }
+
+    # create parser that grabs all input command line arguments as file keywords
+    parser = argparse.ArgumentParser(
+        description="A command line script to run the reference simulations.",
+        formatter_class=RawTextHelpFormatter,
+    )
+
+    parser.add_argument(
+        "version",
+        type=str,
+        help="Specify which first generation reference simulation you wish to run. Can be done "
+        "with numbers (1-8) or by explicit name:"
+        "\n\t1: 1.1_baseline_number"
+        "\n\t2: 1.2_time_axis"
+        "\n\t3: 1.3_freq_axis"
+        "\n\t4: 1.4_source_axis"
+        "\n\t5: 1.5_uvbeam"
+        "\n\t6: 1.6_healpix"
+        "\n\t7: 1.7_multi_beam"
+        "\n\t8: 1.8_lunar\n\n"
+        'Sample use: "mpiexec run_ref_sim 1" or "mpiexec run_ref_sim 1.1_baseline_number"',
+    )
+
+    args = parser.parse_args(argv)
+
+    ver = args.version
+
+    # if passed as a number (1-8), convert to the actual name
+    if ver in ref_sims:
+        ver = ref_sims[ver]
+
+    if ver not in ref_sims.values():
+        raise ValueError("No match found for Input reference simulation.")
+
+    # yaml filepath construction
+    yaml_filename = "obsparam_ref_" + ver + ".yaml"
+    yaml_filepath = os.path.join(SIM_DATA_PATH, "test_config", yaml_filename)
+
+    # use run_pyuvsim to run the simulation
+    run_pyuvsim(["--param", yaml_filepath])

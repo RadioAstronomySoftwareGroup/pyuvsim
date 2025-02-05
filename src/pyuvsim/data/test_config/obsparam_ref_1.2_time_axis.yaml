@@ -1,0 +1,19 @@
+filing:
+  outdir: "./results_data/"
+  outfile_name: 'ref_1.2_time_axis'
+  output_format: 'uvh5'
+freq:
+  freq_array : [1.0000e+08]
+  channel_width: 100000.0
+sources:
+  catalog: "../test_catalogs/two_points_on_opposite_horizon.txt"
+telescope:
+  array_layout: ../baseline_lite_4x.csv
+  telescope_config_name: ../mwa_config_uniform.yaml
+time:
+  Ntimes: 3600
+  start_time: 2460000.0
+  duration_hours: 0.75
+ordering:
+  conjugation_convention: ant1<ant2
+  blt_order: [time, baseline]
