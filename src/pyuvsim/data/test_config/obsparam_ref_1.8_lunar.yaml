@@ -1,0 +1,19 @@
+filing:
+  outdir: "./results_data/"
+  outfile_name: 'ref_1.8_lunar'
+  output_format: 'uvh5'
+freq:
+  freq_array : [1.0000e+08]
+  channel_width: 100000.0
+sources:
+  catalog: "../test_catalogs/MOON.txt"
+telescope:
+  array_layout: ../mwa_128T_layout.csv
+  telescope_config_name: ../moon_config_uniform.yaml
+time:
+  Ntimes: 1
+  integration_time: 10.0
+  start_time: 2460000.0
+ordering:
+  conjugation_convention: ant1<ant2
+  blt_order: [time, baseline]

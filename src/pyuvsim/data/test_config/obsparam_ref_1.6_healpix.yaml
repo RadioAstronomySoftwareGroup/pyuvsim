@@ -1,0 +1,20 @@
+filing:
+  outdir: "./results_data/"
+  outfile_name: 'ref_1.6_healpix'
+  output_format: 'uvh5'
+freq:
+  freq_array : [1.0000e+08]
+  channel_width: 100000.0
+sources:
+  filetype: "skyh5"
+  catalog: "https://repository.library.brown.edu/storage/bdr:eafzyycj/content/"
+telescope:
+  array_layout: ../baseline_lite.csv
+  telescope_config_name: ../mwa_config_airy.yaml
+time:
+  Ntimes: 1
+  integration_time: 10.0
+  start_time: 2460000.0
+ordering:
+  conjugation_convention: ant1<ant2
+  blt_order: [time, baseline]
