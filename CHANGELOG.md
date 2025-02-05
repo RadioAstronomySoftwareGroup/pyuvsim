@@ -14,6 +14,9 @@ feed_angle, mount_type) which will be released in pyuvdata 3.2
 - Updated minimum dependency versions: python>=3.11, pyuvdata>=3.1.2, pyradiosky>=1.1.0, scipy>=1.9
 - Updated minimum optional dependency versions: mpi4py>=3.1.3
 - Only import lunarsky if needed.
+- Implemented a new set of first generation reference simulations and updated documentation. Moved
+data and reference simulation download scripts to entry points which download files to the pyuvsim
+cache using astropy.
 
 ### Fixed
 - A bug where antennas that did not have visibilities associated with them were
