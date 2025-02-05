@@ -20,7 +20,7 @@ Running and Comparing Reference Simulations
 
 The *reference simulations* comprise a set of standard simulations with well-defined, simple parameters that most instrument simulation tools should be capable of running. As such, they represent a standard point of comparison between ``pyuvsim`` and other simulators. They are also used to track that ``pyuvsim`` produces consistent results over time.
 
-For some types of pull requests, we ask that the reference simulations be re-run with the new code to confirm that any changes to results are detected. The older set of files are stored in a Google drive, and are downloadable using scripts in the ``reference_simulations`` directory. If a change to the reference simulations is expected, it should be documented in the CHANGELOG and the new simulation file given to the project managers to store on the Google drive.
+The first generation reference simulations run automatically upon pull request to ensure consistent runtime and output. For some types of pull requests, we ask that the 2nd generation reference simulations be re-run with the new code to confirm that any changes to results are detected. The older first generation reference simulation files are stored on the `Brown Digital Repository <https://repository.library.brown.edu/studio/collections/bdr:wte2qah8/>`_. Some old second generation reference simulations are available from this `Google Drive <https://drive.google.com/drive/folders/14hH-zBhHGddVacc0ncqRWq7ofhGLWfND?usp=drive_link>`_. If a change to the reference simulations is expected, it should be documented in the CHANGELOG and the new simulation files given to the project managers to store on the Brown Digital Repository. This process is documented in `Benchmarking <https://pyuvsim.readthedocs.io/en/latest/developers.html#benchmarking>`_. Reference simulation files are stored on the BDR with name corresponding to the name of the simulation. All versions of the output from the same reference simulation will have the same name, and their order is distinguishable by upload date, with the latest uploaded simulation of the same name taken as the standard for comparison. Specific information about an individual run can be found by loading the saved uvh5 file and viewing the attributes of interest (for example the history attribute of the object to see the versions of pyuvsim and pyuvdata used to run the simulation).
 
 More information on checking the reference simulations can be found in the README in the ``reference_simulations`` directory in the repository.
 
@@ -50,21 +50,22 @@ To run a single core regression test of the reference simulations, you need to s
     .. code-block:: python
 
         # use mpiexec to run pytest specifying one core
-        > mpiexec -n 1 -np 1 pytest --refsim=1.1_uniform --benchmark-only
+        > mpiexec -n 1 -np 1 pytest --refsim=1.1_baseline_number --benchmark-only
 
-Here "1.1_uniform" would be the specific reference simulation being tested. You can use the ``refsim`` flag multiple times to parametrize multiple reference simulations: ``--refsim=refsim1 --refsim=refsim2``. Multiple simulations can also be specified with ``--refsim={refsim1,refsim2,...}``.
+Here "1.1_baseline_number" would be the specific reference simulation being tested. You can use the ``refsim`` flag multiple times to parametrize multiple reference simulations: ``--refsim=refsim1 --refsim=refsim2``. Multiple simulations can also be specified with ``--refsim={refsim1,refsim2,...}``.
 
 We run single core regression tests of the available reference simulations with pytest and pytest-benchmark via our github ci workflow on every pull request. We do so to ensure output and runtime consistency. As we only run the simulations with a single core, the benchmarking aspect of these tests is only relevant for linear operations and not a test of any parallelism. Historical simulation output is currently stored on the Brown Digital Repository.
 
 The available ``refsim`` values are:
 
-* 1.1_uniform
-* 1.1_gauss
-* 1.1_mwa
-* 1.2_uniform
-* 1.2_gauss
-* 1.3_uniform
-* 1.3_gauss
+* 1.1_baseline_number
+* 1.2_time_axis
+* 1.3_frequency_axis
+* 1.4_source_axis
+* 1.5_uvbeam
+* 1.6_healpix
+* 1.7_multi_beam
+* 1.8_lunar
 
 These values, and additional custom options defined for pytest such as ``--savesim``, can be seen under the custom options section of the output of ``pytest --help``.
 
@@ -73,6 +74,6 @@ To merge a pull request that changes the output of the reference simulations, yo
     .. code-block:: python
 
         # use mpiexec to run pytest specifying one core
-        > mpiexec -n 1 -np 1 pytest --refsim={1.1_uniform,1.1_gauss,1.1_mwa,1.2_uniform,1.2_gauss,1.3_uniform,1.3_gauss} --benchmark-only --savesim
+        > mpiexec -n 1 -np 1 pytest --refsim={1.1_baseline_number,1.2_time_axis,1.3_frequency_axis,1.4_source_axis,1.5_uvbeam,1.6_healpix,1.7_multi_beam,1.8_lunar} --benchmark-only --savesim
 
-This will run all the active reference simulations, and write the new and reference data out in a ``test_sim_output`` directory located in the current working directory. The ``new_data`` subdirectory should then be uploaded to the Brown Digital Repository to serve as the updated reference simulations. If you just want to run the reference simulations locally but not save anything, the ``--savesim`` flag can be dropped -- in this case it can be nice to use the ``-s`` flag to see all printed output.
+This will run all the active reference simulations, and write the new reference simulation output out in a ``new_data`` directory located in the current working directory. The files in the ``new_data`` directory should then be uploaded to the Brown Digital Repository to serve as the updated reference simulations. If you just want to run the reference simulations locally but not save anything, the ``--savesim`` flag can be dropped -- in this case it can be nice to use the ``-s`` flag to see all printed output.

@@ -1,0 +1,22 @@
+filing:
+  outdir: "./results_data/"
+  outfile_name: 'ref_1.4_source_axis'
+  output_format: 'uvh5'
+freq:
+  freq_array : [1.0000e+08]
+  channel_width: 100000.0
+sources:
+  filetype: "gleam"
+  catalog: "file://gleam.vot"
+  non_nan: "all"
+  non_negative: True
+telescope:
+  array_layout: ../5km_triangle_layout.csv
+  telescope_config_name: ../mwa_config_airy.yaml
+time:
+  Ntimes: 1
+  integration_time: 10.0
+  start_time: 2460000.0
+ordering:
+  conjugation_convention: ant1<ant2
+  blt_order: [time, baseline]

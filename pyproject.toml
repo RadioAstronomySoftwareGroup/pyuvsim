@@ -74,6 +74,9 @@ uvdata_to_telescope_config = "pyuvsim.cli:uvdata_to_telescope_config"
 text_to_catalog = "pyuvsim.cli:text_to_catalog"
 im_to_catalog = "pyuvsim.cli:im_to_catalog"
 plot_csv_antpos = "pyuvsim.cli:plot_csv_antpos"
+download_data_files = "pyuvsim.cli:download_data_files"
+download_ref_sims = "pyuvsim.cli:download_ref_sims"
+run_ref_sim = "pyuvsim.cli:run_ref_sim"
 
 [tool.setuptools_scm]
 

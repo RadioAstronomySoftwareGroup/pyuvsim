@@ -59,13 +59,14 @@ def pytest_addoption(parser):
         default=[],
         help="specify an available reference simulation to pass to test functions",
         choices=[
-            "1.1_uniform",
-            "1.1_gauss",
-            "1.1_mwa",
-            "1.2_uniform",
-            "1.2_gauss",
-            "1.3_uniform",
-            "1.3_gauss",
+            "1.1_baseline_number",
+            "1.2_time_axis",
+            "1.3_frequency_axis",
+            "1.4_source_axis",
+            "1.5_uvbeam",
+            "1.6_healpix",
+            "1.7_multi_beam",
+            "1.8_lunar",
         ],
     )
 

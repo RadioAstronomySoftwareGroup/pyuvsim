@@ -1,105 +1,172 @@
 # Reference simulations
 
-The goal of a reference simulation is to provide a simulated instrument output for a set of precisely defined inputs (sky model, antenna positions, primary beam, etc.) to serve as a point of comparison for other simulators and later versions of pyuvsim. Ideally, these tests should span multiple axes at once, but computational limitations in the earlier versions of pyuvsim prohibited this. Therefore, the version 1 reference simulations span these axes separately (e.g., time, frequency, baselines, sources), and each serve to test for different expected behavior.
+The goal of a reference simulation is to provide a simulated instrument output for a set of
+precisely defined inputs (sky model, antenna positions, primary beam, etc.) to serve as a point
+of comparison for other simulators and later versions of pyuvsim. Ideally, these tests should
+span multiple axes at once, but computational limitations in continuous regression testing
+prohibit this. The version 1 reference simulations span these axes separately (e.g., time,
+frequency, baselines, sources), and each serve to test for different expected behavior. We also
+implement tests of UVBeam interpolation, integration with HEALPix maps, lunar simulation, and
+using multiple analytic beams.
 
-We detail the set of reference simulations and the high-level outcomes of
-comparisons with PRISim below, for more detailed writeups see the Memos folder.
+We detail the set of reference simulations below. For more detailed writeups see the
+[Memos](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/reference_simulations/first_generation/Memos)
+folder.
+
+The first generation reference simulation files are stored in
+[data](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/src/pyuvsim/data),
+with the yaml config files located in
+[test_config](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/src/pyuvsim/data/test_config).
 
 
 ## First Reference Simulations
- | Name (beam) | Purpose |
- |:-----|:------|
- |1.1 | Test imaging and source orientation.|
- |1.2 (gauss) | Check that sources move appropriate and rise/set, and pass through the beam properly.|
- |1.2 (uniform) | Check that sources move appropriate and rise/set (stay visible near horizon). |
- |1.3 (gauss) | Check that visibilities have sensible frequency evolution. Get observable fringes. Realistic primary beam.|
- |1.3 (uniform) | Check that visibilities have sensible frequency evolution. Get observable fringes. |
- |1.4 | Check phasing precision and simulate realistic data.|
+ |        Name        | Purpose |
+ |:-------------------|:--------|
+ |1.1 Baseline Number | Test imaging and source orientation.|
+ |1.2 Time Axis       | Check that sources behave appropriately near the horizon and rise/set.|
+ |1.3 Frequency Axis  | Check that visibilities have sensible frequency evolution. Get observable fringes and delay transform.|
+ |1.4 Source Axis     | Simulate a realistic sky model with many sources.|
+ |1.5 UVBeam          | Test interpolation of UVBeam.|
+ |1.6 HEALPix         | Test interface with HEALPix.|
+ |1.7 Multi Beam      | Test use of multiple analytic beams at once.|
+ |1.8 Lunar           | Test simulating and imaging on the moon.|
 
 
 ### Details
-|         Obsparam File         |                   Catalog                  | Ntimes | Nfreqs |     Layout    |        Beam       |    Results Filename    |
-|:-----------------------------:|:------------------------------------------:|:------:|:------:|:-------------:|:-----------------:|:----------------------:|
-|     obsparam_ref_1.1.yaml     | mock_catalog_heratext_2458098.38824015.txt |    1   |    1   |   MWA_nocore  |      uniform      | ref_1.1_uniform.uvfits |
-|  obsparam_ref_1.2_gauss.yaml  |   two_distant_points_2458098.38824015.txt  |  86400 |    1   | Baseline-lite | 11° FWHM gaussian |  ref_1.2_gauss.uvfits  |
-| obsparam_ref_1.2_uniform.yaml |   two_distant_points_2458098.38824015.txt  |  86400 |    1   | Baseline-lite |      uniform      | ref_1.2_uniform.uvfits |
-|  obsparam_ref_1.3_gauss.yaml  |     letter_R_12pt_2458098.38824015.txt     |    2   |  64400 | Baseline-lite | 11° FWHM gaussian |  ref_1.3_gauss.uvfits  |
-| obsparam_ref_1.3_uniform.yaml |     letter_R_12pt_2458098.38824015.txt     |    2   |  64400 | Baseline-lite |      uniform      | ref_1.3_uniform.uvfits |
-|     obsparam_ref_1.4.yaml     |                  gleam.vot                 |    1   |    1   |  5km triangle | 11° FWHM gaussian | ref_1.4_uniform.uvfits |
+|              Obsparam File               |              Catalog               | Ntimes  | Nfreqs  |       Layout       |        Beam       |       Results Filename       |
+|:----------------------------------------:|:----------------------------------:|:-------:|:-------:|:------------------:|:-----------------:|:----------------------------:|
+|     obsparam_ref_1.1_baseline_number.yaml|              RASG.txt              |    1    |    1    | MWA Phase I (128T) |    Short Dipole   | ref_1.1_baseline_number.uvh5 |
+|     obsparam_ref_1.2_time_axis.yaml      | two_points_on_opposite_horizon.txt |  3600   |    1    |  Baseline Lite 4x  |      Uniform      |    ref_1.2_time_axis.uvh5    |
+|   obsparam_ref_1.3_frequency_axis.yaml   |                R.txt               |    1    |  10000  |    Baseline Lite   | 23° FWHM Gaussian |  ref_1.3_frequency_axis.uvh5 |
+|     obsparam_ref_1.4_source_axis.yaml    |              gleam.vot             |    1    |    1    |    5 km Triangle   | 14m Diameter Airy |   ref_1.4_source_axis.uvh5   |
+|       obsparam_ref_1.5_uvbeam.yaml       |                R.txt               |    2    |    2    | MWA Phase I (128T) |     MWA UVBeam    |      ref_1.5_uvbeam.uvh5     |
+|      obsparam_ref_1.6_healpix.yaml       |     gsm16_nside128_100mhz.skyh5    |    1    |    1    |    Baseline Lite   | 14m Diameter Airy |     ref_1.6_healpix.uvh5     |
+|     obsparam_ref_1.7_multi_beam.yaml     |                R.txt               |   100   |   100   |    Baseline Lite   |   All 4 Analytic  |    ref_1.7_multi_beam.uvh5   |
+|       obsparam_ref_1.8_lunar.yaml        |              MOON.txt              |    1    |    1    | MWA Phase I (128T) |      Uniform      |      ref_1.8_lunar.uvh5      |
 
 
+The total number of data points is chosen to be sufficient to perform relevant analysis (seen in
+the Memo folder) but still lightweight enough to run quickly on a single core
+for regression testing in CI using Github Actions.
 
-The total number of data points is constrained by the current level of optimization and availability of computing resources. pyuvsim is currently running on the Oscar cluster at Brown University, given limitations of memory and processor availability.
+The text catalogs and beam/layout files can be found in
+[data](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/src/pyuvsim/data).
+UVBeam models and large catalog files will need to be downloaded using `../download_data_files.py`
+and placed appropriately.
 
-The catalogs may be found in the **catalog_files** folder, and the beam/layout files are in the **telescope_config** folder.
+For a full description of how antenna layouts, instrument configuration, and catalogs are all
+written into parameter files, please see the
+[parameter file section of the pyuvsim docs](https://pyuvsim.readthedocs.io/en/latest/parameter_files.html).
+As a quick summary: antenna layout is specified by a csv file, overall array configuration and
+primary beam assignments are defined by a yaml file, and catalogs are defined either by VOTable
+files or csv files. The "obsparam" yaml files define the simulations themselves, including the
+catalog, telescope configuration, array layout, and time/frequency array structures, as well as
+output filing information and any additional UVData parameters that may be desired.
 
-For a full description of how antenna layouts, instrument configuration, and catalogs are all written into parameter files, please see the documentation at https://pyuvsim.readthedocs.io/en/latest/parameter_files.html. As a quick summary: antenna layout is specified by a csv file, overall array configuration and primary beam assignments are defined by a yaml file, and catalogs are defined either by VOTable files or csv files. The "obsparam" yaml files define the simulations themselves, including the catalog, telescope configuration, array layout, and time/frequency array structures, as well as output filing information and any additional UVData parameters that may be desired.
 
 ### Catalogs
 
-mock_catalog_heratext_2458098.38824015.txt:
+RASG.txt:
 
-   - This is a set of point sources near zenith at JD 2458098.38824015 for an observer at the HERA location. They spell out the word "HERA" from east to west across the sky with the tops of the letters to the north.
+   - This is a set of point sources near zenith at JD 2460000.0 for an observer at the MWA
+   location. They spell out the word "RASG" from east to
+   west across the sky with the tops of the letters to the north.
 
-two_distant_points_2458098.38824015.txt:
+two_points_on_opposite_horizon.txt:
 
-   - This is two points near the opposite horizons at the specified julian date for an observer at the HERA location. This is chosen so that one source will rise and cross the sky for a given time, and we can see if the other sets appropriately.
+   - This is two points near opposite horizons at JD 2460000.0 for an observer at the MWA location.
+   This is chosen so that one source comes on the horizon at 15 minutes, while the other leaves
+   the opposite horizon at 30 minutes.
 
-letter_R_12pt_2458098.38824015.txt:
+R.txt
 
-   - This is just the letter "R" from the HERA text catalog. It was chosen to have a smaller catalog with a recognizable orientation on the sky.
+   - This is a set of point sources ~30° RA away from zenith at JD 2460000.0 for an observer at
+   the MWA location. They spell out the letter "R" from east
+   to west across the sky with the tops of the letters to the north.
 
-gleam.vot
+MOON.txt
 
-   - The GLEAM catalog. It's too large to fit on github, so it's not included in the data directory, but it's on lustre.
+   - This is a set of point sources near zenith at JD 2460000.0 for an observer on the moon at
+   selenodetic coordinates (0.6875, 24.433, 0). They spell out the word "MOON".
 
+gleam.vot:
+
+   - The GLEAM catalog. It's too large to fit on github, so it's not included in the data
+   directory. You can download it using `download_data_files gleam`.
+
+gsm16_nside128_100mhz.skyh5:
+
+  -  This is a HEALPix map created using pygdsm GlobalSkyModel16 and scaled down to nside 128
+  using healpy, then saved as a skyh5 file using pyradiosky. You can download it using
+  `download_data_files healpix`.
 
 
 ### Antenna Layouts
 
+128T:
 
-MWA_nocore:
+   - This is the full MWA128 Phase I layout with 128 antennas.
+   - The layout is in `telescope_config/mwa_128T_layout.csv`.
 
-   - This is the MWA128 Phase I layout with the core 40 antennas removed (88 antennas remain).
-   - The layout is written in mwa_nocore_layout.csv and the telescope configuration is in mwa88_nocore_config.yaml. The configuration specifies that all antennas have the unphysical "uniform" beam.
+baseline lite:
 
-![mwa88_layout.png](Memos/figures/mwa88_layout.png "MWA-88 layout")
+   - This consists of a right triangle of antennas with an additional antenna sqrt(2) meters off
+   of the center of the hypotenuse. This provides a perfectly N-S and E-W and diagonal baselines,
+   as well as some that don't perfectly fit the symmetry.
+   - The layout is in `telescope_config/baseline_lite.csv`.
 
+baseline lite 4x:
 
-baseline-lite:
+   - This is just baseline lite but every baseline is increased by 4x for better sensitivity --
+   e.g. (50,0) --> (200,0).
+   - The layout is in `telescope_config/baseline_lite_4x.csv`.
 
-   - This consists of a right triangle of antennas with an additional antenna sqrt(2) meters off of the center of the hypotenuse. This provides a perfectly N-S and E-W and diagonal baselines, as well as some that don't perfectly fit the symmetry.
-   - The layout is in baseline_lite.csv, and the bl_lite_gauss.yaml and bl_lite_uniform.yaml files respectively assign gaussian and uniform beams to all four antennas.
+baseline lite multi beam:
 
-![bllite_layout.png](Memos/figures/bllite_layout.png "Baseline-lite layout")
-
-
+   - This is just baseline lite but each of the 4 antennas has a different analytic beam (short
+   dipole,uniform,gaussian,airy).
+   - The layout is in `telescope_config/baseline_lite_multi_beam.csv`.
 
 5km triangle:
 
    - An isosceles triangle consisting of two 5km baselines.
-   - Layout and configuration (gaussian beam) are in 5km_triangle_layout.csv and 5km_triangle_config.yaml.
+   - The layout is in `telescope_config/5km_triangle_layout.csv`.
 
-![5km_triangle_layout.png](Memos/figures/5km_triangle_layout.png "5km triangle layout")
+See
+[documentation_of_new_reference_simulations](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/reference_simulations/first_generation/Memos/new_reference_simulations/documentation_of_new_reference_simulations.pdf)
+for plots of the array layouts.
+
 
 ### Beams
 
-Only two types of primary beams were used in these simulations: The uniform beam, which has unit response at all alt/az, and an 11° fwhm Gaussian beam. Both are AnalyticBeam objects.
+Four types of AnalyticBeam objects were used as primary beams in the reference simulations: short
+dipole, uniform, gaussian, and airy. One UVBeam object was used as a primary beam: the MWA UVBeam
+found [here](https://github.com/MWATelescope/mwa_pb), and downloaded with
+`download_data_files mwa`.
+
+For discussion of the analytic beams, see the
+[pyuvdata documentation](https://pyuvdata.readthedocs.io/en/latest/analytic_beams.html).
+For discussion of the UVBeam, see the
+[pyuvdata documentation](https://pyuvdata.readthedocs.io/en/latest/uvbeam.html).
 
 
 ### Other design choices
 
-All simulations chose the HERA site as their telescope_location, for simplicity. This is lat/lon/alt (-30.72153°, 21.42831°, 1073.0 m). This includes the MWA128-like array (MWA_nocore).
+All simulations have the MWA site as their telescope_location for simplicity with the exception
+of the lunar simulation. This is lat/lon/alt (-26.70331941, 116.6708152, 377.827). The lunar
+simulation has telescope location at selenodetic coordinates (0.6875, 24.433, 0). All simulations
+start at Julian Date 2460000.0 (2023-02-24 12:00:00 UTC). Unless specified otherwise, simulations
+have a 10 second integration time, a frequency channel width of 100 KHz, and a frequency of 100
+MHz. For further simulation specification, see
+[documentation_of_new_reference_simulations](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/reference_simulations/first_generation/Memos/new_reference_simulations/documentation_of_new_reference_simulations.pdf).
 
 
 ## Old data
 
-Results from previous iterations of the reference simulations are stored on the NRAO computing cluster, under `/lustre/aoc/projects/hera/ref\_sim/`.
-
-
-## Comparison with PRISim
-The PRISim simulator was designed with the intent of simulating wide field, high bandwidth interferometers specifically targeting 21 cm instruments. It has mainly been used in the context of a delay-spectrum style analysis, though images have been made and are known to be roughly correct. The data for this comparison can be found on the NRAO computing cluster at `/lustre/aoc/projects/hera/djacobs/prisim_ref/`.
-
-- In the frequency domain, PRISim simulations agree at 10^-5 with pyuvsim, with quantization type errors at 10^-6.
-- The difference shows a floor in the delay spectrum at 1e-6 which is above the expected Blackman-Harris floor at 1e-10
-- In the image domain a phase offset at roughly the psf size and can be traced to differences in uvw calculation.  Antenna positions agree to tolerance which suggests uvw difference is related to phasing.  PRISim and pyvusim use different codes for phasing and time calculation. The PRISim phasing code is not covered with analytic tests.
+Old reference simulation data is stored on the
+[Brown Digital Repository (BDR)](https://repository.library.brown.edu/studio/collections/bdr:wte2qah8/)
+and ideally updated regularly. The latest first generation reference simulation data can be
+downloaded with `../download_ref_sims.py` for comparison, though comparison with latest first
+generation reference simulations is handled with pytest. All reference simulations uploaded
+to the BDR are available to download via https -- through script or manual page navigation -- and
+the BDR has a solid API.

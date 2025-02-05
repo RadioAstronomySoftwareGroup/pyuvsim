@@ -1,0 +1,8 @@
+beam_paths:
+    0 : !AnalyticBeam
+        class: UniformBeam
+# taken from example in
+# https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#telescopes-on-the-moon
+telescope_location: (0.6875, 24.433, 0)
+world: 'moon'
+telescope_name: apollo11

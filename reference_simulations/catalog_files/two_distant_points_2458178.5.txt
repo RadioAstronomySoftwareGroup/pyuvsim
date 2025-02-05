@@ -1,3 +1,0 @@
-SOURCE_ID       RA_J2000 [deg]  Dec_J2000 [deg] Flux [Jy]
-TWOPOINT0       308.32686       -31.00000      1
-TWOPOINT1       103.32686       -31.00000      1
