@@ -1,0 +1,28 @@
+name: pyuvsim_tests_refsim
+channels:
+  - conda-forge
+dependencies:
+  - astropy>=6.0
+  - astropy-healpix>=1.0.2
+  - coverage
+  - line_profiler
+  - mpich
+  - mpi4py>=3.1.3
+  - numpy>=1.23
+  - pip
+  - psutil
+  - python-casacore>=3.5.2
+  - pytest
+  - pytest-cov>=5.0
+  - pytest-xdist
+  #- pyuvdata>=3.1.2
+  - pyyaml>=5.4.1
+  - scipy>=1.9
+  - setuptools_scm>=8.1
+  - pip:
+    - pyradiosky>=1.1.0
+    - mpi-pytest>=2025.7.0
+    - lunarsky>=0.2.5
+    - astroquery
+    - git+https://github.com/aelanman/analytic_diffuse
+    - git+https://github.com/RadioAstronomySoftwareGroup/pyuvdata.git@9bdd3c05910750f12964ab6036a5cd9735f361db

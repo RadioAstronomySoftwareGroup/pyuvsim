@@ -1,0 +1,6 @@
+beam_paths:
+    0 : !AnalyticBeam
+        class: UniformBeam
+# taken from https://mwatelescope.github.io/mwa_hyperdrive/defs/coords.html
+telescope_location: (-26.70331941, 116.6708152, 377.827)
+telescope_name: MWA
