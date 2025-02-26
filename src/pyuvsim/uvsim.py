@@ -780,6 +780,15 @@ def run_uvdata_uvsim(
             "line_profiler installed."
         )
 
+    if beam_list.beam_type != "efield":
+        raise ValueError("Beam type must be efield!")
+
+    if (
+        beam_list.data_normalization is not None
+        and beam_list.data_normalization != "peak"
+    ):
+        raise ValueError("UVBeams must be peak normalized.")
+
     mpi.start_mpi(block_nonroot_stdout=block_nonroot_stdout)
     rank = mpi.get_rank()
     comm = mpi.get_comm()
@@ -852,15 +861,6 @@ def run_uvdata_uvsim(
 
     # wrap this in a try/finally (no exception handling) to ensure resources are freed
     try:
-        if beam_list.beam_type != "efield":
-            raise ValueError("Beam type must be efield!")
-
-        if (
-            beam_list.data_normalization is not None
-            and beam_list.data_normalization != "peak"
-        ):
-            raise ValueError("UVBeams must be peak normalized.")
-
         if beam_interp_check is None:
             # check that all the beams cover the full sky
             beam_interp_check = not beam_list.check_all_azza_beams_full_sky()
