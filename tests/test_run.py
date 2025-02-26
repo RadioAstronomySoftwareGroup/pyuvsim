@@ -3,6 +3,7 @@
 
 import copy
 import os
+import re
 import shutil
 
 import numpy as np
@@ -330,13 +331,32 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
 
 
 @pytest.mark.parametrize("spectral_type", ["flat", "subband", "spectral_index"])
-def test_run_gleam_uvsim(spectral_type):
+@pytest.mark.parametrize("nfeeds", [1, 2])
+def test_run_gleam_uvsim(spectral_type, nfeeds):
     params = pyuvsim.simsetup._config_str_to_dict(
         os.path.join(SIM_DATA_PATH, "test_config", "param_1time_testgleam.yaml")
     )
     params["sources"]["spectral_type"] = spectral_type
     params["sources"].pop("min_flux")
     params["sources"].pop("max_flux")
+
+    if nfeeds == 1:
+        if spectral_type == "subband":
+            tel_config = "28m_triangle_10time_10chan_yfeed.yaml"
+            select_pol = ["yy"]
+        else:
+            tel_config = "28m_triangle_10time_10chan_xfeed.yaml"
+            select_pol = ["xx"]
+        params["telescope"]["telescope_config_name"] = tel_config
+
+    input_uv, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(
+        params, return_beams=True
+    )
+
+    assert input_uv.Npols == nfeeds**2
+
+    for beam_inter in beam_list:
+        assert beam_inter.Nfeeds == nfeeds
 
     uv_out = pyuvsim.run_uvsim(params, return_uv=True)
     assert uv_out.telescope.name == "Triangle"
@@ -347,6 +367,13 @@ def test_run_gleam_uvsim(spectral_type):
     uv_in.conjugate_bls()
     uv_in.reorder_blts()
     uv_in.integration_time = np.full_like(uv_in.integration_time, 11.0)
+
+    assert uv_out.Npols == nfeeds**2
+
+    if nfeeds == 1:
+        assert uv_out.Npols == 1
+        uv_in.select(polarizations=select_pol)
+
     # This just tests that we get the same answer as an earlier run, not that
     # the data are correct (that's covered in other tests)
     uv_out.history = uv_in.history
@@ -417,7 +444,10 @@ def test_pol_error():
     hera_uv.polarizations = ["xx"]
     beam_list = BeamList([ShortDipoleBeam()])
 
-    with pytest.raises(ValueError, match="input_uv must have XX,YY,XY,YX polarization"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("input_uv must have polarizations: ['xx', 'yy', 'xy', 'yx']"),
+    ):
         pyuvsim.run_uvdata_uvsim(hera_uv, beam_list, {}, catalog=pyuvsim.SkyModelData())
 
 

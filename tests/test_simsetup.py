@@ -3,6 +3,7 @@
 
 import copy
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -705,6 +706,14 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
             ValueError,
             "Unrecognized beam file or model",
         ),
+        (
+            {"polarization_array": [-1]},
+            ValueError,
+            re.escape(
+                "Specified polarization array [-1] requires feeds {'r'} but the "
+                "beams have feeds ['x' 'y']."
+            ),
+        ),
     ],
 )
 def test_param_reader_errors(subdict, error, msg):
@@ -1213,6 +1222,28 @@ def test_param_set_cat_name(key):
     assert uv_obj.phase_center_catalog[0]["cat_name"] == "foo"
 
 
+@pytest.mark.parametrize("pol_array", [[-5, -6], None])
+@pytest.mark.parametrize("set_x_orient", [True, False])
+def test_param_polarization_array(pol_array, set_x_orient):
+    param_filename = os.path.join(
+        SIM_DATA_PATH, "test_config", "obsparam_mwa_nocore.yaml"
+    )
+    param_dict = simsetup._config_str_to_dict(param_filename)
+
+    if pol_array is None:
+        pol_array = [-5, -6, -7, -8]
+    else:
+        param_dict["polarization_array"] = pol_array
+
+    if set_x_orient:
+        param_dict["telescope"]["telescope_config_name"] = (
+            "../mwa88_nocore_config_dipole.yaml"
+        )
+
+    uv_obj, _, _ = simsetup.initialize_uvdata_from_params(param_dict, return_beams=True)
+    assert uv_obj.polarization_array.tolist() == pol_array
+
+
 def test_uvdata_keyword_init(uvdata_keyword_dict):
     # check it runs through
 
@@ -1247,15 +1278,29 @@ def test_uvdata_keyword_init_select_bls(uvdata_keyword_dict):
     assert antpairs == bls
 
 
+@pytest.mark.parametrize("pols", [["xx", "yy"], ["xx", "yy", "xy", "yx"], ["yy"], None])
+def test_uvdata_keyword_init_polarization_array(uvdata_keyword_dict, pols):
+    if pols is None:
+        del uvdata_keyword_dict["polarization_array"]
+        pols = ["xx", "yy", "xy", "yx"]
+    else:
+        uvdata_keyword_dict["polarization_array"] = pols
+    uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
+
+    assert uvd.get_pols() == pols
+
+
 def test_uvdata_keyword_init_select_antnum_str(uvdata_keyword_dict):
     # check that '1' gets converted to [1]
-    uvdata_keyword_dict["polarization_array"] = ["xx", "yy"]
     uvdata_keyword_dict["no_autos"] = False
     uvdata_keyword_dict["antenna_nums"] = "1"
     uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
 
     assert uvd.Nbls == 1
-    assert uvd.polarization_array.tolist() == [-5, -6]
+    if not hasattr(Telescope(), "feed_array"):
+        assert uvd.polarization_array.tolist() == [-5]
+    else:
+        assert uvd.polarization_array.tolist() == [-5, -6]
 
 
 def test_uvdata_keyword_init_time_freq_override(uvdata_keyword_dict):
