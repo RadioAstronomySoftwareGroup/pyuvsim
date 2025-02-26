@@ -1949,6 +1949,57 @@ def set_ordering(uv_obj, param_dict, reorder_blt_kw):
         uv_obj.reorder_blts(**reorder_blt_kw)
 
 
+def _initialize_polarization_helper(param_dict, uvparam_dict, beam_list=None):
+    # There does not seem to be any way to get polarization_array into uvparam_dict, so
+    # let's add it explicitly.
+    if param_dict.get("polarization_array", None) is not None:
+        if beam_list is not None:
+            polstr_list = uvutils.polnum2str(param_dict["polarization_array"])
+            feed_set = set()
+            for polstr in polstr_list:
+                feed_set = feed_set.union(uvutils.pol.POL_TO_FEED_DICT[polstr])
+            for feed in feed_set:
+                beam_feeds = beam_list[0].feed_array
+                if "e" in beam_feeds or "n" in beam_feeds:
+                    feed_map = uvutils.x_orientation_pol_map(beam_list.x_orientation)
+                    inv_feed_map = {value: key for key, value in feed_map.items()}
+                    beam_feeds = [inv_feed_map[feed] for feed in beam_feeds]
+
+                if feed not in beam_feeds:
+                    raise ValueError(
+                        f"Specified polarization array {param_dict['polarization_array']} "
+                        f"requires feeds {feed_set} but the beams have feeds {beam_feeds}."
+                    )
+
+        uvparam_dict["polarization_array"] = np.array(param_dict["polarization_array"])
+
+    # Parse polarizations
+    if uvparam_dict.get("polarization_array") is None:
+        if beam_list is not None:
+            # default polarization array based on the beam feeds
+            try:
+                uvparam_dict["polarization_array"] = uvutils.pol.convert_feeds_to_pols(
+                    feed_array=beam_list[0].feed_array,
+                    include_cross_pols=True,
+                    x_orientation=beam_list.x_orientation,
+                )
+            except AttributeError:
+                from pyuvdata.uvbeam.uvbeam import _convert_feeds_to_pols
+
+                uvparam_dict["polarization_array"], _ = _convert_feeds_to_pols(
+                    feed_array=beam_list[0].feed_array,
+                    calc_cross_pols=bool(np.asarray(beam_list[0].feed_array).size > 1),
+                    x_orientation=beam_list.x_orientation,
+                )
+        else:
+            uvparam_dict["polarization_array"] = np.array([-5, -6, -7, -8])
+
+    if "Npols" not in uvparam_dict:
+        uvparam_dict["Npols"] = len(uvparam_dict["polarization_array"])
+
+    return uvparam_dict
+
+
 def initialize_uvdata_from_params(
     obs_params, return_beams=False, reorder_blt_kw=None, check_kw=None
 ):
@@ -2076,17 +2127,14 @@ def initialize_uvdata_from_params(
     uvparam_dict["integration_time"] = parsed_time_dict["integration_time"]
     logger.info("Finished Setup of Time Dict")
 
-    # There does not seem to be any way to get polarization_array into uvparam_dict, so
-    # let's add it explicitly.
-    if param_dict.get("polarization_array", None) is not None:
-        uvparam_dict["polarization_array"] = np.array(param_dict["polarization_array"])
-
-    # Parse polarizations
-    if uvparam_dict.get("polarization_array") is None:
-        uvparam_dict["polarization_array"] = np.array([-5, -6, -7, -8])
-
-    if "Npols" not in uvparam_dict:
-        uvparam_dict["Npols"] = len(uvparam_dict["polarization_array"])
+    # figure out polarization
+    if return_beams:
+        bl_pass = beam_list
+    else:
+        bl_pass = None
+    uvparam_dict = _initialize_polarization_helper(
+        param_dict, uvparam_dict, beam_list=bl_pass
+    )
 
     # telescope frame is set from world in parse_telescope_params.
     # Can only be itrs or (if lunarsky is installed) mcmf
