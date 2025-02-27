@@ -79,8 +79,9 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     )
     assert history_utils._check_history_version(uv_new.history, "Npus =")
 
-    # Reset history because it will deviate
+    # Reset history and extra_keywords because they will deviate
     uv_new.history = uv_ref.history
+    uv_new.extra_keywords = uv_ref.extra_keywords
 
     assert uv_new == uv_ref
 
@@ -265,6 +266,7 @@ def test_run_gleam_uvsim(spectral_type):
     # This just tests that we get the same answer as an earlier run, not that
     # the data are correct (that's covered in other tests)
     uv_out.history = uv_in.history
+    uv_in.extra_keywords = uv_out.extra_keywords
     assert uv_in.telescope._location == uv_out.telescope._location
     assert uv_in == uv_out
 

@@ -4,6 +4,7 @@
 import copy
 import itertools
 import os
+import warnings
 
 import astropy.constants as const
 import numpy as np
@@ -61,17 +62,12 @@ def multi_beams():
 
     try:
         beam5 = beam0.copy()
-        with check_warnings(
-            UserWarning,
-            match="key beam_path in extra_keywords is longer than 8 characters.",
-        ):
-            beam5.to_healpix(nside=8)
-        beams.append(beam5)
-    except AssertionError:
-        # If we have an assert error, that means that import worked, but the warning
-        # was not raised due to the change in UVBeam warning behavior. Try again...
-        # TODO: Simplify this once pyuvdata v3.2 is required
-        with check_warnings(None):
+        # filter it this way because the warning only happens in some pyuvdata versions
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="key beam_path in extra_keywords is longer than 8 characters.",
+            )
             beam5.to_healpix(nside=8)
         beams.append(beam5)
     except ImportError:

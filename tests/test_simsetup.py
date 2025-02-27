@@ -558,13 +558,11 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
 
     # Check default configuration
     with check_warnings(
-        [DeprecationWarning, DeprecationWarning],
+        [DeprecationWarning],
         match=[
             "The reorder_blt_kw parameter is deprecated in favor of setting "
             "obs_param['ordering']['blt_order']. This will become an error in "
-            "version 1.5",
-            "The check_kw parameter is deprecated and has no effect. This will "
-            "become an error in version 1.5",
+            "version 1.5"
         ],
     ):
         uv_obj, new_beam_list, new_beam_dict = simsetup.initialize_uvdata_from_params(
@@ -610,6 +608,21 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
 
     # renumber/rename the phase centers so the equality check will pass.
     uv_obj._consolidate_phase_center_catalogs(other=uv_in, ignore_name=True)
+
+    # file is missing extra_keywords info
+    assert uv_obj._extra_keywords != uv_in._extra_keywords
+    if telparam_in_obsparam:
+        uv_in.extra_keywords = {
+            "obsparam": "new_obsparam.yaml",
+            "telecfg": new_telconfig_file,
+            "layout": "triangle_bl_layout.csv",
+        }
+    else:
+        uv_in.extra_keywords = {
+            "obsparam": "param_10time_10chan_0.yaml",
+            "telecfg": "28m_triangle_10time_10chan.yaml",
+            "layout": "triangle_bl_layout.csv",
+        }
 
     assert uv_obj == uv_in
 
