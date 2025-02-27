@@ -1902,7 +1902,10 @@ def initialize_uvdata_from_params(
         the setup process. Typical parameters include "order" and "minor_order". Default
         values are ``order='time'`` and ``minor_order='baseline'``.
     check_kw : dict (optional)
-        Deprecated and has no effect.
+        A dictionary of keyword arguments to pass to the :func:`uvdata.UVData.check`
+        method after object creation. Caution: turning off critical checks can
+        result in a UVData object that cannot be written to a file.
+
 
     Returns
     -------
@@ -1925,12 +1928,6 @@ def initialize_uvdata_from_params(
             DeprecationWarning,
         )
 
-    if check_kw is not None:
-        warnings.warn(
-            "The check_kw parameter is deprecated and has no effect. This will "
-            "become an error in version 1.5",
-            DeprecationWarning,
-        )
     uvparam_dict = {}  # Parameters that will go into UVData
     if isinstance(obs_params, str):
         param_dict = _config_str_to_dict(obs_params)  # Container for received settings.
@@ -2078,6 +2075,7 @@ def initialize_uvdata_from_params(
         do_blt_outer=True,
         time_axis_faster_than_bls=False,
         antpairs=antpairs,
+        check_kw=check_kw,
         **uvparam_dict,
     )
 
@@ -2104,12 +2102,11 @@ def initialize_uvdata_from_params(
         return uv_obj
 
 
-def _complete_uvdata(uv_in, inplace=False, check_kw=None):
+def _complete_uvdata(uv_in, inplace=False):
     """
-    Fill out all required parameters of a :class:`pyuvdata.UVData` object.
+    Initialize data-like arrays on a a :class:`pyuvdata.UVData` object.
 
-    Ensure that it passes the :func:`pyuvdata.UVData.check()`.
-    This will overwrite existing data in `uv_in`!
+    This will overwrite any existing data in `uv_in` unless inplace=True.
 
     Parameters
     ----------
@@ -2117,15 +2114,12 @@ def _complete_uvdata(uv_in, inplace=False, check_kw=None):
         Usually an incomplete object, containing only metadata.
     inplace : bool, optional
         Whether to perform the filling on the passed object, or a copy.
-    check_kw : dict, optional
-        A dict of kwargs to pass to :func:`pyuvdata.UVData.check()`. If not provided,
-        will be an empty dict (i.e. default checks are run). If set to False, no checks
-        will be run at all.
 
     Returns
     -------
-    :class:`pyuvdata.UVData` : filled/completed object (if `inplace` is `True`, it is
-        the modified input). With zeroed data_array, no flags and nsample_array of all ones.
+    :class:`pyuvdata.UVData` : object with initialized data-like arrays
+        (if `inplace` is `True`, it is on a copy of the input). With zeroed
+        data_array, no flags and nsample_array of all ones.
 
     """
     if not inplace:
@@ -2144,13 +2138,6 @@ def _complete_uvdata(uv_in, inplace=False, check_kw=None):
     uv_obj.data_array = np.zeros(_shape, dtype=complex)
     uv_obj.flag_array = np.zeros(_shape, dtype=bool)
     uv_obj.nsample_array = np.ones(_shape, dtype=float)
-
-    uv_obj.extra_keywords = {}
-
-    if check_kw is not False:
-        if check_kw is None:
-            check_kw = {}
-        uv_obj.check(**check_kw)
 
     return uv_obj
 
@@ -2259,6 +2246,10 @@ def initialize_uvdata_from_keywords(
     complete : bool (optional)
         Whether to fill out the :class:`pyuvdata.UVData` object with its requisite
         data arrays, and check if it's all consistent.
+    check_kw : dict (optional)
+        A dictionary of keyword arguments to pass to the :func:`uvdata.UVData.check`
+        method after object creation. Caution: turning off critical checks can
+        result in a UVData object that cannot be written to a file.
     kwargs : dictionary
         Any additional valid :class:`pyuvdata.UVData` attribute to assign to object.
 
@@ -2407,7 +2398,7 @@ def initialize_uvdata_from_keywords(
     )
 
     if complete:
-        _complete_uvdata(uv_obj, inplace=True, check_kw=False)
+        _complete_uvdata(uv_obj, inplace=True)
 
     return uv_obj
 
