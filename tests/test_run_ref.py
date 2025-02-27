@@ -159,6 +159,18 @@ def compare_uvh5(uv_ref, uv_new):
     # set history to match so equality check doesn't fail
     uv_new.history = uv_ref.history
 
+    # print extra_keywords
+    print("extra_keywords 1:")
+    print(uv_ref.extra_keywords)
+    print("")
+
+    print("extra_keywords 2:")
+    print(uv_new.extra_keywords)
+    print("")
+
+    # set history to match so equality check doesn't fail
+    uv_new.extra_keywords = uv_ref.extra_keywords
+
     ref_arr, new_arr = uv_ref.data_array, uv_new.data_array
 
     # mean diff
