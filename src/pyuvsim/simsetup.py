@@ -2169,7 +2169,6 @@ def initialize_uvdata_from_keywords(
     write_files=True,
     path_out=None,
     complete=False,
-    force_beam_check=False,
     check_kw: dict | None = None,
     **kwargs,
 ):
