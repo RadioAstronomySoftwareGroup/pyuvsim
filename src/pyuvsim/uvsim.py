@@ -693,18 +693,13 @@ def _update_uvd(uv_container, *, input_uv, catalog, input_order):
         history += (
             " Sources from source list(s): [" + ", ".join(catalog.filename) + "]."
         )
-    if "obsparam" in input_uv.extra_keywords:
-        obs_param_file = input_uv.extra_keywords["obsparam"]
-        telescope_config_file = input_uv.extra_keywords["telecfg"]
-        antenna_location_file = input_uv.extra_keywords["layout"]
-        history += (
-            " Based on config files: "
-            + obs_param_file
-            + ", "
-            + telescope_config_file
-            + ", "
-            + antenna_location_file
-        )
+    config_files = []
+    for kwd in ["obsparam", "telecfg", "layout"]:
+        if kwd in input_uv.extra_keywords:
+            config_files.append(input_uv.extra_keywords[kwd])
+
+    if len(config_files) > 0:
+        history += " Based on config files: " + ", ".join(config_files)
     elif uv_container.filename is not None:
         history += (
             " Based on uvdata file(s): [" + ", ".join(uv_container.filename) + "]."
