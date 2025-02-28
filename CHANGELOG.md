@@ -6,6 +6,9 @@
 - Updated minimum dependency versions: pyuvdata>=3.1.2
 
 ### Fixed
+- A bug in handling diffuse maps with units of Jy/sr.
+- A bug when specifying a frequency buffer for beam frequency selects in telescope
+config files.
 - A bug when specifying a frequency buffer for beam frequency selects in telescope
 config files.
 
