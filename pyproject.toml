@@ -55,7 +55,7 @@ test = ["coverage", "pre-commit", "pytest", "pytest-cov>=5.0"]
 doc = ["matplotlib", "pypandoc", "sphinx"]
 profiler = ["line-profiler"]
 dev = ["pyuvsim[all,test,doc,profiler]"]
-
+windows-dev = ["pyuvsim[test,doc,profiler,healpix,moon,sim]"]
 
 [project.urls]
 Repository = "https://github.com/RadioAstronomySoftwareGroup/pyuvsim"

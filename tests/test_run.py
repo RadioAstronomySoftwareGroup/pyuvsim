@@ -438,9 +438,6 @@ def test_sim_on_moon(goto_tempdir, selenoid):
     uv_compare.read(uv_filename)
     assert uv_out.telescope._location == uv_compare.telescope._location
 
-    # Cleanup
-    os.remove(uv_filename)
-
 
 @pytest.mark.parametrize("selenoid", ["SPHERE", "GSFC", "GRAIL23", "CE-1-LAM-GEO"])
 def test_lunar_gauss(goto_tempdir, selenoid):

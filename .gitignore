@@ -114,3 +114,4 @@ docs/index.rst
 pyuvsim/GIT_INFO
 pyuvsim/data/temporary_test_data/*
 .vscode/
+.qodo
