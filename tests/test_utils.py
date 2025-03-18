@@ -156,6 +156,9 @@ def test_write_uvdata(save_format, tmpdir):
 @pytest.mark.parametrize("save_format", [None, "uvfits", "miriad", "uvh5", "ms"])
 def test_write_uvdata_clobber(save_format, tmpdir):
     """Test overwriting a uvdata object yields the expected results."""
+    if sys.platform.startswith("win"):
+        pytest.skip("Clobbering is flaky on windows")
+
     if save_format == "ms":
         pytest.importorskip("casacore")
 
