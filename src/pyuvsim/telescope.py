@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import warnings
 from dataclasses import KW_ONLY, InitVar, dataclass
 from typing import Literal
@@ -17,13 +18,6 @@ try:
     from . import mpi
 except ImportError:
     mpi = None
-
-try:
-    from lunarsky import MoonLocation
-
-    hasmoon = True
-except ImportError:
-    hasmoon = False
 
 
 class BeamConsistencyError(Exception):
@@ -438,8 +432,11 @@ class Telescope:
         beam_list: BeamList,
     ):
         allowed_location_types = [EarthLocation]
-        if hasmoon:
-            allowed_location_types.append(MoonLocation)
+        if not isinstance(telescope_location, tuple(allowed_location_types)):
+            with contextlib.suppress(ImportError):
+                from lunarsky import MoonLocation
+
+                allowed_location_types.append(MoonLocation)
 
         if not isinstance(telescope_location, tuple(allowed_location_types)):
             raise ValueError(

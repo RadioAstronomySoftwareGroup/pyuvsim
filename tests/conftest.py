@@ -25,13 +25,6 @@ try:
 except ImportError:
     mpi = None
 
-try:
-    from lunarsky import MoonLocation
-
-    hasmoon = True
-except ImportError:
-    hasmoon = False
-
 issubproc = os.environ.get("TEST_IN_PARALLEL", 0)
 with contextlib.suppress(ValueError):
     issubproc = bool(int(issubproc))
@@ -278,7 +271,9 @@ def hera_loc():
 
 @pytest.fixture(scope="session")
 def apollo_loc():
-    if hasmoon:
+    try:
+        from lunarsky import MoonLocation
+
         return MoonLocation(lat=0.6875, lon=24.433, height=0)
-    else:
+    except ImportError:
         return None
