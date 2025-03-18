@@ -12,6 +12,7 @@ objects and empty :class:`pyuvdata.UVData` objects from configuration files.
 """
 
 import ast
+import contextlib
 import copy
 import logging
 import os
@@ -69,13 +70,6 @@ except ImportError:
         return 0
 
     mpi = None
-
-try:
-    from lunarsky import LunarTopo, MoonLocation, SkyCoord as LunarSkyCoord
-
-    hasmoon = True
-except ImportError:
-    hasmoon = False
 
 
 from .utils import check_file_exists_and_increment
@@ -249,11 +243,19 @@ def _create_catalog_diffuse(
     hpix = astropy_healpix.HEALPix(nside=map_nside, frame=ICRS())
     icrs_coord = hpix.healpix_to_skycoord(pixinds)
 
-    if hasmoon and isinstance(array_location, MoonLocation):
-        localframe = LunarTopo(location=array_location, obstime=time)
-        icrs_coord = LunarSkyCoord(icrs_coord)
-    else:
+    use_altaz = True
+    if not isinstance(array_location, EarthLocation):
+        with contextlib.suppress(ImportError):
+            from lunarsky import LunarTopo, MoonLocation, SkyCoord as LunarSkyCoord
+
+            if isinstance(array_location, MoonLocation):
+                localframe = LunarTopo(location=array_location, obstime=time)
+                icrs_coord = LunarSkyCoord(icrs_coord)
+                use_altaz = False
+
+    if use_altaz:
         localframe = AltAz(location=array_location, obstime=time)
+
     source_coord = icrs_coord.transform_to(localframe)
 
     alts = source_coord.alt.rad
@@ -307,12 +309,15 @@ def _create_catalog_discrete(Nsrcs, alts, azs, fluxes, time, array_location):
         Astropy SkyCoord object containing the coordinates for the sources in ICRS.
 
     """
-    if hasmoon and isinstance(array_location, MoonLocation):
-        localframe = LunarTopo
-        coord_class = LunarSkyCoord
-    else:
-        localframe = AltAz
-        coord_class = SkyCoord
+    localframe = AltAz
+    coord_class = SkyCoord
+    if not isinstance(array_location, EarthLocation):
+        with contextlib.suppress(ImportError):
+            from lunarsky import LunarTopo, MoonLocation, SkyCoord as LunarSkyCoord
+
+            if isinstance(array_location, MoonLocation):
+                localframe = LunarTopo
+                coord_class = LunarSkyCoord
 
     source_coord = coord_class(
         alt=Angle(alts, unit=units.deg),
@@ -445,10 +450,13 @@ def create_mock_catalog(
         ),
     }
 
-    if hasmoon and isinstance(array_location, MoonLocation):
-        mock_keywords["world"] = "moon"
-    else:
-        mock_keywords["world"] = "earth"
+    mock_keywords["world"] = "earth"
+    if not isinstance(array_location, EarthLocation):
+        with contextlib.suppress(ImportError):
+            from lunarsky import MoonLocation
+
+            if isinstance(array_location, MoonLocation):
+                mock_keywords["world"] = "moon"
 
     if arrangement == "off-zenith":
         if alt is None:
@@ -2087,6 +2095,9 @@ def initialize_uvdata_from_params(
             *tele_params["telescope_location"], unit="m"
         )
     elif tele_params["telescope_frame"] == "mcmf":
+        # to get here, lunarsky has to be installed, so don't need to test for it
+        from lunarsky import MoonLocation
+
         telescope_location = MoonLocation.from_selenocentric(
             *tele_params["telescope_location"], unit="m"
         )
