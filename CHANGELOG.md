@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- Support for beams with only one feed (resulting in a single polarization in the visibilities).
+
 ### Changed
 - Updated minimum dependency versions: pyuvdata>=3.1.2
 
