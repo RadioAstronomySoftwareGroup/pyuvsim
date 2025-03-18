@@ -29,13 +29,6 @@ try:
 except ImportError:
     mpi = None
 
-try:
-    from lunarsky import MoonLocation, Time as LTime
-
-    hasmoon = True
-except ImportError:
-    hasmoon = False
-
 import pyuvsim
 import pyuvsim.utils as simutils
 from pyuvsim import simsetup
@@ -715,7 +708,8 @@ def test_tele_parser(world, selenoid):
     freqs = np.linspace(100, 130, Nfreqs) * 1e6 * units.Hz
 
     if world is not None:
-        pytest.importorskip("lunarsky")
+        if world != "earth":
+            pytest.importorskip("lunarsky")
         tdict["world"] = world
         if selenoid is not None:
             tdict["ellipsoid"] = selenoid
@@ -1884,6 +1878,7 @@ def test_beamlist_init_freqrange(sel_type):
 def test_moon_lsts():
     # Check that setting lsts for a Moon simulation works as expected.
     pytest.importorskip("lunarsky")
+    from lunarsky import Time as LTime
 
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_tranquility_hex.yaml"
@@ -1924,6 +1919,7 @@ def test_moon_lsts():
 def test_mock_catalog_moon():
     # A mock catalog made with a MoonLocation.
     pytest.importorskip("lunarsky")
+    from lunarsky import MoonLocation, Time as LTime
 
     time = LTime.now()
     loc = MoonLocation.from_selenodetic(24.433333333, 0.687500000)

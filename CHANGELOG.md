@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- Only import lunarsky if needed.
 - Updated minimum dependency versions: pyuvdata>=3.1.2
 
 ### Fixed
