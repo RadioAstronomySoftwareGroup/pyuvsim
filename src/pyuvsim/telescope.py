@@ -158,12 +158,15 @@ class BeamList:
             elif item == "feed_array":
                 items = {}
                 for i, bi in enumerate(self):
-                    if "e" in bi.beam.feed_array or "n" in bi.beam.feed_array:
+                    items[i] = bi.beam.feed_array
+                    # this can go aways once we require pyuvdata >= 3.2
+                    if not hasattr(bi.beam, "feed_angle") and (
+                        "e" in bi.beam.feed_array or "n" in bi.beam.feed_array
+                    ):
                         feed_map = uvutils.x_orientation_pol_map(bi.beam.x_orientation)
                         inv_feed_map = {value: key for key, value in feed_map.items()}
                         items[i] = [inv_feed_map[feed] for feed in bi.beam.feed_array]
-                    else:
-                        items[i] = bi.beam.feed_array
+
             else:
                 items = {
                     i: getattr(bi.beam, item)
@@ -185,12 +188,18 @@ class BeamList:
                     )
 
         check_thing("beam_type")
-        check_thing("x_orientation")
         check_thing("data_normalization")
+        check_thing("Nfeeds")
+
+        if self[0].beam_type == "efield" or hasattr(self[0].beam, "feed_angle"):
+            # always do this once we require pyuvdata >= 3.2
+            check_thing("feed_array")
+
+        if not hasattr(self[0].beam, "feed_angle"):
+            # this can go aways once we require pyuvdata >= 3.2
+            check_thing("x_orientation")
 
         if self[0].beam_type == "efield":
-            check_thing("Nfeeds")
-            check_thing("feed_array")
             check_thing("basis")
 
         elif self[0].beam_type == "power":
@@ -226,15 +235,19 @@ class BeamList:
         if len(self) == 0:
             return None
 
-        for bi in self:
-            xorient = bi.beam.x_orientation
-            break
+        if hasattr(self[0].beam, "feed_angle"):
+            # don't use x_orientation.
+            return None
+        else:
+            for bi in self:
+                xorient = bi.beam.x_orientation
+                break
 
-        if xorient is None:
-            warnings.warn(
-                "All polarized beams have x_orientation set to None. This will make it "
-                "hard to interpret the polarizations of the simulated visibilities."
-            )
+            if xorient is None:
+                warnings.warn(
+                    "All polarized beams have x_orientation set to None. This will make it "
+                    "hard to interpret the polarizations of the simulated visibilities."
+                )
 
         return xorient
 

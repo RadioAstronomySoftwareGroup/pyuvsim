@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+- Support for new feed information in pyuvdata's Telescope object (feed_array,
+feed_angle, mount_type) which will be released in pyuvdata 3.2
+
 ### Changed
 - Updated minimum dependency versions: pyuvdata>=3.1.2
 

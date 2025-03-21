@@ -17,10 +17,12 @@ from pyuvdata import (
     AiryBeam,
     GaussianBeam,
     ShortDipoleBeam,
+    Telescope,
     UniformBeam,
     UVBeam,
     UVData,
 )
+from pyuvdata.analytic_beam import AnalyticBeam
 from pyuvdata.data import DATA_PATH as UV_DATA_PATH
 from pyuvdata.testing import check_warnings
 
@@ -513,7 +515,6 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
         param_dict = yaml.safe_load(fhandle)
 
     if telparam_in_obsparam:
-        print("setting up new param file")
         new_param_file = os.path.join(tmpdir, "new_obsparam.yaml")
         new_telconfig_file = os.path.join(tmpdir, "new_tel_config.yaml")
         new_layout_file = os.path.join(tmpdir, "triangle_bl_layout.csv")
@@ -524,6 +525,7 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
             param_dict["telescope"]["telescope_config_name"],
         )
 
+        # add an instrument here to make sure it gets picked up properly
         param_dict["telescope"]["instrument"] = "foo"
         param_dict["telescope"]["telescope_config_name"] = new_telconfig_file
 
@@ -532,6 +534,11 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
             tel_config["beam_paths"][0].filename = os.path.join(
                 SIM_DATA_PATH, tel_config["beam_paths"][0].filename[0]
             )
+            # add a mount type
+            for beam in tel_config["beam_paths"].values():
+                if issubclass(type(beam), AnalyticBeam):
+                    beam.mount_type = "fixed"
+            assert tel_config["beam_paths"][1].mount_type is not None
         with open(new_telconfig_file, "w") as fhandle:
             yaml.safe_dump(tel_config, fhandle)
         with open(new_param_file, "w") as fhandle:
@@ -552,6 +559,7 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
     beam1 = UniformBeam()
     beam2 = GaussianBeam(sigma=0.02)
     beam3 = AiryBeam(diameter=14.6)
+
     beam_list = pyuvsim.BeamList([beam0, beam1, beam2, beam3])
 
     beam_dict = {"ANT1": 0, "ANT2": 1, "ANT3": 2, "ANT4": 3}
@@ -571,7 +579,28 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
             check_kw={"run_check_acceptability": True},
             return_beams=True,
         )
-    assert uv_obj.telescope.x_orientation == "east"
+
+    mount_set = False
+    if hasattr(uv_obj.telescope, "feed_angle"):
+        # always do this once we require pyuvdata >= 3.2
+        for bi in new_beam_list:
+            if bi.beam.mount_type is not None:
+                mount_set = True
+        if telparam_in_obsparam:
+            for bi in new_beam_list:
+                if issubclass(type(bi.beam), AnalyticBeam):
+                    assert bi.beam.mount_type is not None
+            assert mount_set
+
+        assert np.all(uv_obj.telescope.feed_angle[:, 0] == np.pi / 2)
+        assert np.all(uv_obj.telescope.feed_angle[:, 1] == 0)
+
+        if mount_set:
+            assert uv_obj.telescope.mount_type is not None
+        assert uv_obj.telescope.get_x_orientation_from_feeds() == "east"
+    else:
+        assert uv_obj.telescope.x_orientation == "east"
+
     if telparam_in_obsparam:
         assert uv_obj.telescope.instrument == "foo"
         # reset it for equality check
@@ -624,6 +653,9 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
             "layout": "triangle_bl_layout.csv",
         }
 
+    if mount_set:
+        assert uv_obj.telescope.mount_type is not None
+        uv_in.telescope.mount_type = uv_obj.telescope.mount_type
     assert uv_obj == uv_in
 
 
@@ -720,7 +752,20 @@ def test_tele_parser(world, selenoid):
         if selenoid is not None:
             tdict["ellipsoid"] = selenoid
 
-    tpars, blist, _ = simsetup.parse_telescope_params(tdict, freq_array=freqs)
+    # always do this once we require pyuvdata >= 3.2
+    if hasattr(Telescope(), "feed_angle"):
+        warn_type = UserWarning
+        warn_str = [
+            "No beam information, so cannot determine telescope mount_type, "
+            "feed_array or feed_angle. Specify a telescope config file in the "
+            "obs param file to get beam information."
+        ]
+    else:
+        warn_str = []
+        warn_type = None
+
+    with check_warnings(warn_type, match=warn_str):
+        tpars, blist, _ = simsetup.parse_telescope_params(tdict, freq_array=freqs)
 
     assert tpars["Nants_data"] == 6
     assert len(blist) == 0
@@ -1039,13 +1084,29 @@ def test_param_select_cross():
         SIM_DATA_PATH, "test_config", "obsparam_mwa_nocore.yaml"
     )
     param_dict = simsetup._config_str_to_dict(param_filename)
-    uv_obj_full = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
+
+    # always do this once we require pyuvdata >= 3.2
+    if hasattr(Telescope(), "feed_angle"):
+        warn_type = UserWarning
+        warn_str = [
+            "No beam information, so cannot determine telescope mount_type, feed_array "
+            "or feed_angle. Set return_beams=True to get beam information."
+        ]
+    else:
+        warn_str = []
+        warn_type = None
+
+    with check_warnings(warn_type, match=warn_str):
+        uv_obj_full = simsetup.initialize_uvdata_from_params(
+            param_dict, return_beams=False
+        )
 
     # test only keeping cross pols
     param_dict["select"] = {"ant_str": "cross"}
-    uv_obj_cross = simsetup.initialize_uvdata_from_params(
-        param_dict, return_beams=False
-    )
+    with check_warnings(warn_type, match=warn_str):
+        uv_obj_cross = simsetup.initialize_uvdata_from_params(
+            param_dict, return_beams=False
+        )
     uv_obj_cross2 = uv_obj_full.select(ant_str="cross", inplace=False)
 
     # histories are different because of time stamp from UVData.new() method
@@ -1054,6 +1115,7 @@ def test_param_select_cross():
     assert uv_obj_cross == uv_obj_cross2
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 def test_param_select_bls():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_mwa_nocore.yaml"
@@ -1070,6 +1132,7 @@ def test_param_select_bls():
     assert uv_obj_bls == uv_obj_bls2
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 def test_param_select_redundant():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_hex37_14.6m.yaml"
@@ -1087,6 +1150,7 @@ def test_param_select_redundant():
     assert uv_obj_red.Nbls < uv_obj_full.Nbls
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 @pytest.mark.parametrize(
     "order_dict",
     [
@@ -1106,18 +1170,26 @@ def test_param_ordering(order_dict):
     param_dict2 = copy.deepcopy(param_dict)
     if order_dict is None:
         param_dict2.pop("ordering")
-        warn_str = (
+        warn_str = [
             "The default baseline conjugation convention has changed. In the past "
             "it was 'ant2<ant1', it now defaults to 'ant1<ant2'. You can specify "
             "the baseline conjugation convention in `obs_param` by setting the "
             "obs_param['ordering']['conjugation_convention'] field. This warning "
             "will go away in version 1.5."
-        )
+        ]
         warn_type = UserWarning
     else:
         warn_type = None
-        warn_str = ""
+        warn_str = []
         param_dict2["ordering"] = order_dict
+
+    # always do this once we require pyuvdata >= 3.2
+    if hasattr(Telescope(), "feed_angle"):
+        warn_type = UserWarning
+        warn_str.append(
+            "No beam information, so cannot determine telescope mount_type, feed_array "
+            "or feed_angle. Set return_beams=True to get beam information."
+        )
 
     with check_warnings(warn_type, match=warn_str):
         uv_obj2 = simsetup.initialize_uvdata_from_params(
@@ -1149,6 +1221,7 @@ def test_param_ordering(order_dict):
     assert uv_obj2 == uv_obj_orig
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 @pytest.mark.parametrize("key", ["cat_name", "object_name"])
 def test_param_set_cat_name(key):
     param_filename = os.path.join(
@@ -1161,6 +1234,7 @@ def test_param_set_cat_name(key):
     assert uv_obj.phase_center_catalog[0]["cat_name"] == "foo"
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 def test_uvdata_keyword_init(uvdata_keyword_dict):
     # check it runs through
     uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
@@ -1183,6 +1257,7 @@ def test_uvdata_keyword_init(uvdata_keyword_dict):
     assert not np.any(uvd.ant_1_array == uvd.ant_2_array)
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 def test_uvdata_keyword_init_select_bls(uvdata_keyword_dict):
     # check bls and antenna_nums selections work
     bls = [(0, 1), (0, 2), (0, 3)]
@@ -1192,6 +1267,7 @@ def test_uvdata_keyword_init_select_bls(uvdata_keyword_dict):
     assert antpairs == bls
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 def test_uvdata_keyword_init_select_antnum_str(uvdata_keyword_dict):
     # check that '1' gets converted to [1]
     uvdata_keyword_dict["polarization_array"] = ["xx", "yy"]
@@ -1203,6 +1279,7 @@ def test_uvdata_keyword_init_select_antnum_str(uvdata_keyword_dict):
     assert uvd.get_pols() == uvdata_keyword_dict["polarization_array"]
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 def test_uvdata_keyword_init_time_freq_override(uvdata_keyword_dict):
     # check time and freq array definitions supersede other parameters
     fa = np.linspace(100, 200, 11) * 1e6
@@ -1215,6 +1292,7 @@ def test_uvdata_keyword_init_time_freq_override(uvdata_keyword_dict):
     np.testing.assert_allclose(uvd.freq_array, fa)
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 def test_uvdata_keyword_init_layout_dict(uvdata_keyword_dict, tmpdir):
     # test feeding array layout as dictionary
     uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
@@ -1245,6 +1323,7 @@ def test_uvdata_keyword_init_layout_dict(uvdata_keyword_dict, tmpdir):
 
 
 @pytest.mark.parametrize("pass_layout", [True, False])
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 def test_uvdata_keyword_init_write(pass_layout, uvdata_keyword_dict, tmpdir):
     # Check defaults when writing to file.
 
@@ -1280,6 +1359,7 @@ def test_uvdata_keyword_init_write(pass_layout, uvdata_keyword_dict, tmpdir):
     os.chdir(cwd)
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 def test_initialize_uvdata_from_keywords_errors(uvdata_keyword_dict):
     del uvdata_keyword_dict["antenna_layout_filepath"]
 
@@ -1290,6 +1370,7 @@ def test_initialize_uvdata_from_keywords_errors(uvdata_keyword_dict):
         simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 def test_uvfits_to_config(tmp_path):
     """
     Loopback test of reading parameters from uvfits file, generating uvfits file, and reading
@@ -1510,6 +1591,7 @@ def test_mock_catalog_error():
         simsetup.create_mock_catalog(time, "invalid_catalog_name")
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 def test_keyword_param_loop(tmpdir):
     # Check that yaml/csv files made by intialize_uvdata_from_keywords will work
     # on their own.
@@ -1601,6 +1683,7 @@ def test_multi_analytic_beams(tmpdir):
         assert beam_list[bid].beam == expected[bid]
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 def test_direct_fname(tmpdir):
     shutil.copyfile(
         os.path.join(SIM_DATA_PATH, "test_config", "28m_triangle_10time_10chan.yaml"),
@@ -1881,6 +1964,7 @@ def test_beamlist_init_freqrange(sel_type):
         )
 
 
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 def test_moon_lsts():
     # Check that setting lsts for a Moon simulation works as expected.
     pytest.importorskip("lunarsky")
@@ -2074,10 +2158,12 @@ def test_simsetup_with_obsparam_freq_buffer():
     fl = os.path.join(SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky_freqbuf.yaml")
 
     with check_warnings(
-        DeprecationWarning,
-        match="Beam selections should be specified in the telescope "
-        "configuration, not in the obsparam. This will become an error in "
-        "version 1.5",
+        [DeprecationWarning],
+        match=[
+            "Beam selections should be specified in the telescope "
+            "configuration, not in the obsparam. This will become an error in "
+            "version 1.5"
+        ],
     ):
         _, beams, _ = simsetup.initialize_uvdata_from_params(fl, return_beams=True)
 
