@@ -235,7 +235,9 @@ class BeamList:
         if len(self) == 0:
             return None
 
-        if hasattr(self[0].beam, "feed_angle"):
+        # remove this property once we require pyuvdata >= 3.2
+        # remove pragma once pyuvdata 3.2 is released.
+        if hasattr(self[0].beam, "feed_angle"):  # pragma: no cover
             # don't use x_orientation.
             return None
         else:

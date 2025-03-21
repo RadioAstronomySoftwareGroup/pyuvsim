@@ -1401,7 +1401,8 @@ def parse_telescope_params(
         # if no info on beams, just return what we have
         # if telescope has feed angle, warn
         # always do this once we require pyuvdata >= 3.2
-        if hasattr(Telescope(), "feed_angle"):
+        # remove pragma once pyuvdata 3.2 is released.
+        if hasattr(Telescope(), "feed_angle"):  # pragma: no cover
             msg = (
                 "No beam information, so cannot determine telescope mount_type, "
                 "feed_array or feed_angle."
@@ -1433,7 +1434,8 @@ def parse_telescope_params(
     # construct feed_angles if appropriate
     # always do this once we require pyuvdata >= 3.2
     add_feed_angle = False
-    if hasattr(beam_list[0].beam, "feed_angle"):
+    # remove pragma once pyuvdata 3.2 is released.
+    if hasattr(beam_list[0].beam, "feed_angle"):  # pragma: no cover
         add_feed_angle = True
         # use dtype=object so strings don't get truncated.
         mount_type = np.full((antnames.size,), None, dtype=object)
@@ -1448,11 +1450,13 @@ def parse_telescope_params(
         which_ants = antnames[wh_this_beam]
         for ant in which_ants:
             beam_dict[ant] = beam_ind
-        if add_feed_angle:
+        # remove pragma once pyuvdata 3.2 is released.
+        if add_feed_angle:  # pragma: no cover
             mount_type[wh_this_beam] = beam_list[beam_ind].beam.mount_type
             feed_angle[wh_this_beam, :] = beam_list[beam_ind].beam.feed_angle
 
-    if add_feed_angle:
+    # remove pragma once pyuvdata 3.2 is released.
+    if add_feed_angle:  # pragma: no cover
         if np.any(mount_type):
             if not np.all(mount_type):
                 mount_type[np.nonzero(mount_type == np.array(None))] = "other"
