@@ -55,6 +55,9 @@ def test_comparison(beam_objs):
 
 def test_en_feed_beamlist_no_errors(beam_objs):
     beams = beam_objs
+    if hasattr(beams[0], "feed_angle"):
+        # remove this test once we require pyuvdata >= 3.2
+        pytest.skip("This doesn't apply for beams with feed angles.")
 
     beams[0].feed_array = ["e", "n"]
     beams[0].check()
@@ -68,23 +71,25 @@ def test_beamlist_errors(beam_objs):
     beams = copy.deepcopy(beam_objs)
     beam_list_init = BeamList(beam_objs)
 
-    # test error on beams with different x_orientation
-    beams[0].x_orientation = None
-    with pytest.raises(
-        BeamConsistencyError,
-        match="x_orientation of beam 2 is not consistent with beam 1",
-    ):
-        BeamList(beams)
+    if not hasattr(beams[0], "feed_angle"):
+        # remove this conditional once we require pyuvdata >= 3.2
+        # test error on beams with different x_orientation
+        beams[0].x_orientation = None
+        with pytest.raises(
+            BeamConsistencyError,
+            match="x_orientation of beam 2 is not consistent with beam 1",
+        ):
+            BeamList(beams)
 
-    # test warning on beams with no x_orientation
-    beams[0].x_orientation = None
-    beams[1].x_orientation = None
-    with check_warnings(
-        UserWarning,
-        match="All polarized beams have x_orientation set to None. This will make it "
-        "hard to interpret the polarizations of the simulated visibilities.",
-    ):
-        assert BeamList(beams[:2]).x_orientation is None
+        # test warning on beams with no x_orientation
+        beams[0].x_orientation = None
+        beams[1].x_orientation = None
+        with check_warnings(
+            UserWarning,
+            match="All polarized beams have x_orientation set to None. This will make it "
+            "hard to interpret the polarizations of the simulated visibilities.",
+        ):
+            assert BeamList(beams[:2]).x_orientation is None
 
     # Compare Telescopes with beamlists of different lengths
     beam_list_init = BeamList(beam_objs)
@@ -107,7 +112,11 @@ def test_beamlist_consistency(beam_objs):
 def test_beamlist_consistency_properties(beam_objs):
     beams = beam_objs
     beamlist = BeamList(beams[:2])
-    assert beamlist.x_orientation == beams[0].x_orientation
+    if hasattr(beams[0], "feed_angle"):
+        assert beamlist.x_orientation is None
+    else:
+        # remove this once we require pyuvdata >= 3.2
+        assert beamlist.x_orientation == beams[0].x_orientation
 
 
 def test_beam_basis_type(beam_objs):
