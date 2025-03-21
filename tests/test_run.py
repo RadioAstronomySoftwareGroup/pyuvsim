@@ -169,6 +169,7 @@ def test_analytic_diffuse(model, tol, tmpdir):
 
 
 @pytest.mark.filterwarnings("ignore:Fixing auto polarization power beams")
+@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 @pytest.mark.parametrize(
     ("problem", "err_msg"),
     [

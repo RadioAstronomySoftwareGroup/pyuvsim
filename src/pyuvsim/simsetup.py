@@ -1216,6 +1216,21 @@ def _construct_beam_list(
     return beam_list_obj
 
 
+def _get_tel_loc(tel_dict: dict):
+    """Get the telescope location info out of a dict."""
+    telescope_location_latlonalt = tel_dict["telescope_location"]
+    if isinstance(telescope_location_latlonalt, str):
+        telescope_location_latlonalt = ast.literal_eval(telescope_location_latlonalt)
+    world = tel_dict.pop("world", None)
+    # get the lunar ellipsoid. Default to None for earth or SPHERE for moon
+    if world == "moon":
+        ellipsoid = tel_dict.pop("ellipsoid", "SPHERE")
+    else:
+        ellipsoid = tel_dict.pop("ellipsoid", None)
+
+    return telescope_location_latlonalt, world, ellipsoid
+
+
 def parse_telescope_params(
     tele_params: dict,
     *,
@@ -1258,7 +1273,8 @@ def parse_telescope_params(
         * `telescope_config_file`: Path to configuration yaml file
         * `antenna_location_file`: Path to csv layout file
         * `telescope_name`: observatory name
-        * `x_orientation`: physical orientation of the dipole labelled as "x"
+        * `x_orientation`: old, prefer feed_angle set on beams. physical
+            orientation of the dipole labelled as "x"
         * `world`: Either "earth" or "moon" (requires lunarsky).
     beam_list : :class:`pyuvsim.BeamList`
         This is a BeamList object, only returned if return_beams is True.
@@ -1282,13 +1298,8 @@ def parse_telescope_params(
                 raise ValueError("telescope_config_name file from yaml does not exist")
         with open(telescope_config_name) as yf:
             telconfig = yaml.safe_load(yf)
-        telescope_location_latlonalt = ast.literal_eval(telconfig["telescope_location"])
-        world = telconfig.pop("world", None)
-        # get the lunar ellipsoid. Default to None for earth or SPHERE for moon
-        if world == "moon":
-            ellipsoid = telconfig.pop("ellipsoid", "SPHERE")
-        else:
-            ellipsoid = telconfig.pop("ellipsoid", None)
+
+        telescope_location_latlonalt, world, ellipsoid = _get_tel_loc(telconfig)
 
         tele_params["telescope_name"] = telconfig["telescope_name"]
     else:
@@ -1303,17 +1314,8 @@ def parse_telescope_params(
                 "If telescope_config_name not provided in `telescope` obsparam section, "
                 "you must provide telescope_name"
             )
-        telescope_location_latlonalt = tele_params["telescope_location"]
-        if isinstance(telescope_location_latlonalt, str):
-            telescope_location_latlonalt = ast.literal_eval(
-                telescope_location_latlonalt
-            )
-        world = tele_params.pop("world", None)
-        # get the lunar ellipsoid. Default to None for earth or SPHERE for moon
-        if world == "moon":
-            ellipsoid = tele_params.pop("ellipsoid", "SPHERE")
-        else:
-            ellipsoid = tele_params.pop("ellipsoid", None)
+
+        telescope_location_latlonalt, world, ellipsoid = _get_tel_loc(tele_params)
 
     lat_rad = telescope_location_latlonalt[0] * np.pi / 180.0
     long_rad = telescope_location_latlonalt[1] * np.pi / 180.0
@@ -1397,7 +1399,22 @@ def parse_telescope_params(
 
     if not tele_config or not return_beams:
         # if no info on beams, just return what we have
-        beam_dict = dict.fromkeys(antnames, 0)
+        # if telescope has feed angle, warn
+        # always do this once we require pyuvdata >= 3.2
+        if hasattr(Telescope(), "feed_angle"):
+            msg = (
+                "No beam information, so cannot determine telescope mount_type, "
+                "feed_array or feed_angle."
+            )
+            if not tele_config:
+                msg += (
+                    " Specify a telescope config file in the obs param file to "
+                    "get beam information."
+                )
+            if not return_beams:
+                msg += " Set return_beams=True to get beam information."
+            warnings.warn(msg)
+
         if not return_beams:
             return return_dict
         else:
@@ -1409,14 +1426,40 @@ def parse_telescope_params(
     beam_ids_inc = np.unique(beam_ids)
     beam_dict = {}
 
-    for beam_ind, beam_id in enumerate(beam_ids_inc):
-        which_ants = antnames[np.where(beam_ids == beam_id)]
-        for ant in which_ants:
-            beam_dict[ant] = beam_ind
-
     beam_list = _construct_beam_list(
         beam_ids_inc, telconfig, freq_array=freq_array, freq_range=freq_range
     )
+
+    # construct feed_angles if appropriate
+    # always do this once we require pyuvdata >= 3.2
+    add_feed_angle = False
+    if hasattr(beam_list[0].beam, "feed_angle"):
+        add_feed_angle = True
+        # use dtype=object so strings don't get truncated.
+        mount_type = np.full((antnames.size,), None, dtype=object)
+        feed_angle = np.zeros((antnames.size, beam_list[0].beam.Nfeeds), dtype=float)
+        # feed_arrays have to be the same -- checked in consistency checker
+        feed_array = np.repeat(
+            beam_list[0].beam.feed_array[np.newaxis, :], antnames.size, axis=0
+        )
+
+    for beam_ind, beam_id in enumerate(beam_ids_inc):
+        wh_this_beam = np.nonzero(beam_ids == beam_id)
+        which_ants = antnames[wh_this_beam]
+        for ant in which_ants:
+            beam_dict[ant] = beam_ind
+        if add_feed_angle:
+            mount_type[wh_this_beam] = beam_list[beam_ind].beam.mount_type
+            feed_angle[wh_this_beam, :] = beam_list[beam_ind].beam.feed_angle
+
+    if add_feed_angle:
+        if np.any(mount_type):
+            if not np.all(mount_type):
+                mount_type[np.nonzero(mount_type == np.array(None))] = "other"
+            return_dict["mount_type"] = mount_type
+        return_dict["feed_angle"] = feed_angle
+        return_dict["feed_array"] = feed_array
+        _ = return_dict.pop("x_orientation", None)
 
     return return_dict, beam_list, beam_dict
 
@@ -1972,6 +2015,8 @@ def initialize_uvdata_from_params(
     if return_beams:
         tele_params, beam_list, beam_dict = ptp_ret
         # overwrite x_orientation with the beam list x_orientation if we have it
+        # This will return None (so no effect) if beams have feed_angles specified.
+        # if they are, no reason to use x_orientation
         tele_params["x_orientation"] = beam_list.x_orientation
     else:
         tele_params = ptp_ret
@@ -2057,6 +2102,9 @@ def initialize_uvdata_from_params(
         "antenna_positions": "antenna_positions",
         "antenna_diameters": "antenna_diameters",
         "x_orientation": "x_orientation",
+        "feed_angle": "feed_angle",
+        "feed_array": "feed_array",
+        "mount_type": "mount_type",
         "instrument": "instrument",
     }
     for key, tel_key in telescope_param_map.items():

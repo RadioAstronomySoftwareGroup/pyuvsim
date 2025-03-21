@@ -254,7 +254,11 @@ def cst_beam():
         model_name="E-field pattern - Rigging height 4.9m",
         model_version="1.0",
     )
-    beam.x_orientation = "east"
+    if hasattr(beam, "feed_angle"):
+        beam.set_feeds_from_x_orientation("east")
+    else:
+        # this can go aways once we require pyuvdata >= 3.2
+        beam.x_orientation = "east"
     beam.peak_normalize()
     return beam
 
