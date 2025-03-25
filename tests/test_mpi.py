@@ -1,5 +1,6 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+import sys
 import time
 
 import numpy as np
@@ -58,7 +59,10 @@ def fake_tasks(single_source):
 
 
 def test_mpi_version():
-    assert MPI.VERSION >= 3
+    if sys.platform.startswith("win"):
+        assert MPI.VERSION >= 2
+    else:
+        assert MPI.VERSION >= 3
 
 
 @pytest.mark.parallel(2)

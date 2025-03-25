@@ -116,8 +116,6 @@ def pytest_runtest_call(item):
 
     call = [
         "mpiexec",
-        "--host",
-        "localhost:10",
         "-n",
         str(nproc),
         "python",
