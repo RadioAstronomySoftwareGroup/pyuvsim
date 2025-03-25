@@ -12,6 +12,7 @@ import warnings
 
 import astropy.units as units
 import numpy as np
+import pyuvdata.utils as uvutils
 import yaml
 from astropy.constants import c as speed_of_light
 from astropy.time import Time
@@ -81,7 +82,7 @@ class UVTask:
         Indexes for this visibility location in the uvdata data_array, length 3 giving
         (blt_index, 0, frequency_index), where the zero index is for the old spw axis.
     visibility_vector : ndarray of complex
-        The calculated visibility, shape (4,) ordered as [xx, yy, xy, yx].
+        The calculated visibility, shape (Npols,) ordered as [xx, yy, xy, yx].
 
     """
 
@@ -391,8 +392,13 @@ class UVEngine:
         # Sum over source component axis:
         vij = np.sum(vij, axis=2)
 
-        # Reshape to be [xx, yy, xy, yx]
-        vis_vector = np.asarray([vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]])
+        Nfeeds = vij.shape[0]
+        assert Nfeeds <= 2
+        # Reshape to be [xx] for one feed or [xx, yy, xy, yx] for two feeds
+        if Nfeeds == 1:
+            vis_vector = np.asarray([vij[0, 0]])
+        elif Nfeeds == 2:
+            vis_vector = np.asarray([vij[0, 0], vij[1, 1], vij[0, 1], vij[1, 0]])
         return vis_vector
 
 
@@ -774,6 +780,15 @@ def run_uvdata_uvsim(
             "line_profiler installed."
         )
 
+    if beam_list.beam_type != "efield":
+        raise ValueError("Beam type must be efield!")
+
+    if (
+        beam_list.data_normalization is not None
+        and beam_list.data_normalization != "peak"
+    ):
+        raise ValueError("UVBeams must be peak normalized.")
+
     mpi.start_mpi(block_nonroot_stdout=block_nonroot_stdout)
     rank = mpi.get_rank()
     comm = mpi.get_comm()
@@ -787,11 +802,28 @@ def run_uvdata_uvsim(
     if not isinstance(input_uv, UVData):
         raise TypeError("input_uv must be UVData object")
 
+    exp_npols = beam_list[0].Nfeeds ** 2
+    try:
+        exp_pols = uvutils.convert_feeds_to_pols(
+            feed_array=beam_list[0].feed_array,
+            include_cross_pols=True,
+            x_orientation=beam_list.x_orientation,
+        )
+    except AttributeError:
+        from pyuvdata.uvbeam.uvbeam import _convert_feeds_to_pols
+
+        exp_pols, _ = _convert_feeds_to_pols(
+            feed_array=beam_list[0].feed_array,
+            calc_cross_pols=bool(exp_npols > 1),
+            x_orientation=beam_list.x_orientation,
+        )
+
     if not (
-        (input_uv.Npols == 4)
-        and (input_uv.polarization_array.tolist() == [-5, -6, -7, -8])
+        (input_uv.Npols == exp_npols)
+        and (input_uv.polarization_array.tolist() == exp_pols.tolist())
     ):
-        raise ValueError("input_uv must have XX,YY,XY,YX polarization")
+        exp_pols_str = uvutils.polnum2str(exp_pols)
+        raise ValueError(f"input_uv must have polarizations: {exp_pols_str}")
 
     input_order = input_uv.blt_order
     if input_order != ("time", "baseline"):
@@ -817,6 +849,7 @@ def run_uvdata_uvsim(
     Nbls = input_uv.Nbls
     Nblts = input_uv.Nblts
     Nfreqs = input_uv.Nfreqs
+    Npols = input_uv.Npols
     Nsrcs = catalog.Ncomponents
 
     task_inds, src_inds, Ntasks_local, Nsrcs_local = _make_task_inds(
@@ -828,15 +861,6 @@ def run_uvdata_uvsim(
 
     # wrap this in a try/finally (no exception handling) to ensure resources are freed
     try:
-        if beam_list.beam_type != "efield":
-            raise ValueError("Beam type must be efield!")
-
-        if (
-            beam_list.data_normalization is not None
-            and beam_list.data_normalization != "peak"
-        ):
-            raise ValueError("UVBeams must be peak normalized.")
-
         if beam_interp_check is None:
             # check that all the beams cover the full sky
             beam_interp_check = not beam_list.check_all_azza_beams_full_sky()
@@ -869,7 +893,7 @@ def run_uvdata_uvsim(
 
         engine = UVEngine()
         size_complex = np.ones(1, dtype=complex).nbytes
-        data_array_shape = (Nblts, Nfreqs, 4)
+        data_array_shape = (Nblts, Nfreqs, Npols)
         uvdata_indices = []
 
         for task in local_task_iter:
