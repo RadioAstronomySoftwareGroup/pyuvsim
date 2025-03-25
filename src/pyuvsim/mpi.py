@@ -69,8 +69,12 @@ def start_mpi(block_nonroot_stdout=True):
 
     if (rank != 0) and block_nonroot_stdout:  # pragma: no cover
         # For non-root ranks, do not print to stdout.
-        with open("/dev/null", "w") as devnull:
-            sys.stdout = devnull
+        if sys.platform.startswith("win"):
+            with open("NUL", "w") as devnull:
+                sys.stdout = devnull
+        else:
+            with open("/dev/null", "w") as devnull:
+                sys.stdout = devnull
         atexit.register(sys.stdout.close)
     atexit.register(free_shared)
 
