@@ -29,13 +29,6 @@ try:
 except ImportError:
     mpi = None
 
-try:
-    import lunarsky  # noqa
-
-    hasmoon = True
-except ImportError:
-    hasmoon = False
-
 import pyuvsim
 import pyuvsim.utils as simutils
 from pyuvsim import BeamList, SkyModelData, simsetup

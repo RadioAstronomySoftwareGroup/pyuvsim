@@ -8,22 +8,17 @@ The :class:`~UVTask` and :class:`~UVEngine` classes and the functions that actua
 the simulation.
 """
 
+import contextlib
 import warnings
 
 import astropy.units as units
 import numpy as np
 import yaml
 from astropy.constants import c as speed_of_light
+from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from astropy.units import Quantity
 from pyuvdata import UVData
-
-try:
-    from lunarsky import MoonLocation, Time as LTime
-
-    hasmoon = True
-except ImportError:
-    hasmoon = False
 
 try:
     from . import mpi
@@ -542,10 +537,14 @@ def uvdata_to_task_iter(
     order = np.lexsort((_bls[task_slice], _freqs[task_slice], _times[task_slice]))
 
     freq_array = input_uv.freq_array * units.Hz
-    if hasmoon and isinstance(tel_loc, MoonLocation):
-        tclass = LTime
-    else:
-        tclass = Time
+    tclass = Time
+    if not isinstance(tel_loc, EarthLocation):
+        with contextlib.suppress(ImportError):
+            from lunarsky import MoonLocation, Time as LTime
+
+            if isinstance(tel_loc, MoonLocation):
+                tclass = LTime
+
     time_array = tclass(input_uv.time_array, scale="utc", format="jd", location=tel_loc)
     for src_i in src_iter:
         sky = catalog.get_skymodel(src_i)
