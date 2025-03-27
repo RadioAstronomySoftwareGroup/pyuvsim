@@ -7,6 +7,7 @@ import contextlib
 import os
 import pickle as pkl
 import re
+import sys
 from subprocess import DEVNULL, CalledProcessError, TimeoutExpired, check_output
 
 import pytest
@@ -116,8 +117,6 @@ def pytest_runtest_call(item):
 
     call = [
         "mpiexec",
-        "--host",
-        "localhost:10",
         "-n",
         str(nproc),
         "python",
@@ -125,6 +124,9 @@ def pytest_runtest_call(item):
         "pytest",
         f"{str(item.fspath):s}::{str(item.name):s}",
     ]
+    if not sys.platform.startswith("win"):
+        call.insert(1, "localhost:10")
+        call.insert(1, "--host")
     if not issubproc:
         try:
             envcopy = os.environ.copy()
