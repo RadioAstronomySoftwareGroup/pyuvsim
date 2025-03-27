@@ -30,6 +30,9 @@ jobs:
           - env_name: pyuvsim_tests_mpich
             python-version: "3.11"
             os: macos-latest
+          - env_name: pyuvsim_tests_windows
+            python-version: "3.12"
+            os: windows-latest
     steps:
       - uses: actions/checkout@main
         with:
@@ -59,9 +62,15 @@ jobs:
           git version
           SETUPTOOLS_SCM_DEBUG=1 pip install --no-deps .
 
-      - name: Run Tests
+      - name: Run Tests Linux/MacOS
+        if: matrix.os != 'windows-latest'
         run: |
           python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+      - name: Run Tests Windows
+        if: matrix.os == 'windows-latest'
+        # Windows can't handle pytest-xdist in our experience
+        run: |
+          python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v4
