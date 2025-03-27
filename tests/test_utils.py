@@ -162,9 +162,6 @@ def test_write_uvdata_clobber(save_format, tmpdir):
     if save_format == "ms":
         pytest.importorskip("casacore")
 
-    if save_format == "miriad" and sys.platform.startswith("win"):
-        pytest.skip("miriad is not supported on windows")
-
     uv = UVData.from_file(triangle_uvfits_file)
 
     uv.set_lsts_from_time_array()

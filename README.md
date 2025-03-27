@@ -63,7 +63,9 @@ By default, `mpi` capabilities are not enabled -- many of the utilities provided
 in `pyuvsim` do not require it. To use the simulator within `pyuvsim`, you
 should install `pyuvsim` with  `pip install pyuvsim[sim]`. Note that the
 `pyuvsim` simulator is intended to run on clusters running the linux operating
-system, but we test against Mac OSX as well. We test against both Open MPI and MPICH.
+system, but we test against Mac OSX and MS Windows as well.
+We test against both Open MPI and MPICH on Linux/MacOS and MS-MPI on Windows.
+**However, note that casacore functionality is not supported on Windows.**
 
 There are a few more optional dependencies for `pyuvsim` which enable some features,
 such as `astropy_healpix` to use healpix based sky catalogs or healpix beams,
@@ -71,6 +73,9 @@ such as `astropy_healpix` to use healpix based sky catalogs or healpix beams,
 on the moon. If you would like these tools as well as the full simulator, install
 `pyuvsim` with `pip install pyuvsim[all]` (or use the `[healpix]`, `[casa]` or `[moon]`
 options to only get the dependencies for each of those functionalities).
+
+If you are planning to develop `pyuvsim` on Windows, you can install all necessary
+dependencies with `pyuvsim[windows-dev]`.
 
 If you wish to manage dependencies manually read on.
 
@@ -95,7 +100,7 @@ Optional:
 * astropy-healpix>=1.0.2 (for using healpix based sky catalogs or beams)
 * mpi4py>=3.1.1 (for actually running simulations)
 * lunarsky>=0.2.5 (for simulating telescopes on the moon)
-* python-casacore>=3.5.2 (for writing CASA measurement sets)
+* python-casacore>=3.5.2 (for writing CASA measurement sets, not available on Windows)
 
 ### Developer Installation
 If you are developing `pyuvsim`, you will need to download and install the
@@ -138,7 +143,8 @@ testing and development (```conda env create -f environment.yaml```).
 Alternatively, you can specify `test`, `doc`, or `dev` when installing pyuvdata
 (as in `pip install .[dev]`) to install the packages needed for testing
 (including coverage and linting) and documentation development;
-`dev` includes everything in `test` and `doc`.
+`dev` includes everything in `test` and `doc`. If you are developing on Windows,
+use the `[windows-dev]` extra instead of plain `[dev]`.
 
 Finally, install the pre-commit hook using `pre-commit install` to help prevent
 committing code that does not meet our style guidelines.
