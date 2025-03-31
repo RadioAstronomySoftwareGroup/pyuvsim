@@ -1231,6 +1231,42 @@ def _get_tel_loc(tel_dict: dict):
     return telescope_location_latlonalt, world, ellipsoid
 
 
+def _get_array_layout(tele_params, config_path):
+    # get array layout
+    if "array_layout" not in tele_params:
+        raise KeyError("array_layout must be provided.")
+    array_layout = tele_params.pop("array_layout")
+    if not isinstance(array_layout, str | dict):
+        raise ValueError(
+            "array_layout must be a string or have options that parse as a dict."
+        )
+    if isinstance(array_layout, str):
+        # Interpet as file path to layout csv file.
+        layout_csv = array_layout
+        # if array layout is a str, parse it as .csv filepath
+        if isinstance(layout_csv, str):
+            if not os.path.exists(layout_csv) and isinstance(config_path, str):
+                layout_csv = os.path.join(config_path, layout_csv)
+                if not os.path.exists(layout_csv):
+                    raise ValueError(
+                        f"layout_csv file {layout_csv} from yaml does not exist"
+                    )
+            ant_layout = _parse_layout_csv(layout_csv)
+            east, north, up = ant_layout["e"], ant_layout["n"], ant_layout["u"]
+            antnames = ant_layout["name"]
+            antnums = np.array(ant_layout["number"])
+            beam_ids = ant_layout["beamid"]
+    elif isinstance(array_layout, dict):
+        # Receiving antenna positions directly
+        antnums = tele_params.pop("antenna_numbers")
+        antnames = tele_params.pop("antenna_names")
+        east, north, up = np.array([array_layout[an] for an in antnums]).T
+        layout_csv = "user-fed dict"
+        beam_ids = None
+
+    return antnames, antnums, east, north, up, layout_csv, beam_ids
+
+
 def parse_telescope_params(
     tele_params: dict,
     *,
@@ -1273,8 +1309,13 @@ def parse_telescope_params(
         * `telescope_config_file`: Path to configuration yaml file
         * `antenna_location_file`: Path to csv layout file
         * `telescope_name`: observatory name
-        * `x_orientation`: old, prefer feed_angle set on beams. physical
-            orientation of the dipole labelled as "x"
+        * `x_orientation`: old, prefer feed_array + feed_angle + mount_type.
+            physical orientation of the dipole labelled as "x"
+        * `feed_array`: array of feeds (e.g. ['x', 'y']). Must be
+        * `feed_angle`: array of feed angles. Interpretation depends on mount_type
+            see pyuvdata docs.
+        * `mount_type`: antenna mount type, see pyuvdata docs. Defaults to "fixed"
+            if feed_array and feed_angle are passed.
         * `world`: Either "earth" or "moon" (requires lunarsky).
     beam_list : :class:`pyuvsim.BeamList`
         This is a BeamList object, only returned if return_beams is True.
@@ -1337,35 +1378,9 @@ def parse_telescope_params(
 
     telescope_name = tele_params["telescope_name"]
 
-    # get array layout
-    if "array_layout" not in tele_params:
-        raise KeyError("array_layout must be provided.")
-    array_layout = tele_params.pop("array_layout")
-    if not isinstance(array_layout, str | dict):
-        raise ValueError(
-            "array_layout must be a string or have options that parse as a dict."
-        )
-    if isinstance(array_layout, str):
-        # Interpet as file path to layout csv file.
-        layout_csv = array_layout
-        # if array layout is a str, parse it as .csv filepath
-        if isinstance(layout_csv, str):
-            if not os.path.exists(layout_csv) and isinstance(config_path, str):
-                layout_csv = os.path.join(config_path, layout_csv)
-                if not os.path.exists(layout_csv):
-                    raise ValueError(
-                        f"layout_csv file {layout_csv} from yaml does not exist"
-                    )
-            ant_layout = _parse_layout_csv(layout_csv)
-            E, N, U = ant_layout["e"], ant_layout["n"], ant_layout["u"]
-            antnames = ant_layout["name"]
-            antnums = np.array(ant_layout["number"])
-    elif isinstance(array_layout, dict):
-        # Receiving antenna positions directly
-        antnums = tele_params.pop("antenna_numbers")
-        antnames = tele_params.pop("antenna_names")
-        E, N, U = np.array([array_layout[an] for an in antnums]).T
-        layout_csv = "user-fed dict"
+    antnames, antnums, east, north, up, layout_csv, beam_ids = _get_array_layout(
+        tele_params=tele_params, config_path=config_path
+    )
 
     # fill in outputs with just array info
     return_dict = {}
@@ -1373,7 +1388,7 @@ def parse_telescope_params(
     return_dict["Nants_telescope"] = antnames.size
     return_dict["antenna_names"] = np.array(antnames.tolist())
     return_dict["antenna_numbers"] = np.array(antnums)
-    antpos_enu = np.vstack((E, N, U)).T
+    antpos_enu = np.vstack((east, north, up)).T
     return_dict["antenna_positions"] = (
         uvutils.ECEF_from_ENU(
             antpos_enu,
@@ -1397,24 +1412,26 @@ def parse_telescope_params(
     )
     return_dict["telescope_name"] = telescope_name
 
-    if not tele_config or not return_beams:
-        # if no info on beams, just return what we have
-        # if telescope has feed angle, warn
-        # always do this once we require pyuvdata >= 3.2
-        # remove pragma once pyuvdata 3.2 is released.
+    if not tele_config:
+        beam_info = False
         if hasattr(Telescope(), "feed_angle"):  # pragma: no cover
-            msg = (
-                "No beam information, so cannot determine telescope mount_type, "
-                "feed_array or feed_angle."
-            )
-            if not tele_config:
-                msg += (
-                    " Specify a telescope config file in the obs param file to "
-                    "get beam information."
+            # always do this once we require pyuvdata >= 3.2
+            # remove pragma once pyuvdata 3.2 is released.
+            for key in ["feed_array", "feed_angle", "mount_type"]:
+                if key in tele_params:
+                    return_dict[key] = tele_params[key]
+                    beam_info = True
+            if not beam_info:
+                # if no info on beams, just return what we have
+                # if telescope has feed angle, warn
+                msg = (
+                    "No beam information, so cannot determine telescope mount_type, "
+                    "feed_array or feed_angle. Specify a telescope config file in "
+                    "the obs param file to get beam information or, if calling "
+                    "from `initialize_uvdata_from_keywords`, specify mount_type, "
+                    "feed_array and feed_angle."
                 )
-            if not return_beams:
-                msg += " Set return_beams=True to get beam information."
-            warnings.warn(msg)
+                warnings.warn(msg)
 
         if not return_beams:
             return return_dict
@@ -1423,7 +1440,6 @@ def parse_telescope_params(
 
     # if provided, parse sections related to beam files and types
     return_dict["telescope_config_name"] = telescope_config_name
-    beam_ids = ant_layout["beamid"]
     beam_ids_inc = np.unique(beam_ids)
     beam_dict = {}
 
@@ -1465,7 +1481,10 @@ def parse_telescope_params(
         return_dict["feed_array"] = feed_array
         _ = return_dict.pop("x_orientation", None)
 
-    return return_dict, beam_list, beam_dict
+    if not return_beams:
+        return return_dict
+    else:
+        return return_dict, beam_list, beam_dict
 
 
 def parse_frequency_params(freq_params):
@@ -2201,6 +2220,9 @@ def initialize_uvdata_from_keywords(
     array_layout=None,
     telescope_location=None,
     telescope_name=None,
+    feed_array=None,
+    feed_angle=None,
+    mount_type=None,
     Nfreqs=None,
     start_freq=None,
     bandwidth=None,
@@ -2251,6 +2273,33 @@ def initialize_uvdata_from_keywords(
         Telescope location on Earth in LatLonAlt coordinates [deg, deg, meters]
     telescope_name : str
         Name of telescope
+    feed_array : array-like of str or None
+        List of feeds for each antenna in the telescope, must be one of
+        "x", "y", "l", "r". Shape (Nants, Nfeeds), dtype str. Can also be shape
+        (Nfeeds,), in which case the same values for feed_array are used for
+        all antennas in the object.
+    feed_angle : array-like of float or None
+        Orientation of the feed with respect to zenith (or with respect to north if
+        pointed at zenith). Units is in rads, vertical polarization is nominally 0,
+        and horizontal polarization is nominally pi / 2. Shape (Nants, Nfeeds),
+        dtype float.  Can also be shape (Nfeeds,), in which case the same values for
+        feed_angle are used for all antennas in the object.
+    mount_type : str or array-like of str
+        Antenna mount type, which describes the optics of the antenna in question.
+        Supported options include: "alt-az" (primary rotates in azimuth and
+        elevation), "equatorial" (primary rotates in hour angle and declination)
+        "orbiting" (antenna is in motion, and its orientation depends on orbital
+        parameters), "x-y" (primary rotates first in the plane connecting east,
+        west, and zenith, and then perpendicular to that plane),
+        "alt-az+nasmyth-r" ("alt-az" mount with a right-handed 90-degree tertiary
+        mirror), "alt-az+nasmyth-l" ("alt-az" mount with a left-handed 90-degree
+        tertiary mirror), "phased" (antenna is "electronically steered" by
+        summing the voltages of multiple elements, e.g. MWA), "fixed" (antenna
+        beam pattern is fixed in azimuth and elevation, e.g., HERA), and "other"
+        (also referred to in some formats as "bizarre"). See the "Conventions"
+        page of the documentation for further details. Shape (Nants,), dtype str.
+        Can also provide a single string, in which case the same mount_type is
+        used for all antennas in the object.
     Nfreqs : int
         Number of frequency channels
     start_freq : float
@@ -2391,6 +2440,9 @@ def initialize_uvdata_from_keywords(
     tele_params = {
         "telescope_location": repr(tuple(telescope_location)),
         "telescope_name": telescope_name,
+        "feed_array": feed_array,
+        "feed_angle": feed_angle,
+        "mount_type": mount_type,
     }
     layout_params = {
         "antenna_names": antenna_names,
@@ -2531,8 +2583,7 @@ def uvdata_to_telescope_config(
     yaml_dict = {
         "telescope_name": tel_name,
         "telescope_location": repr(tel_lla_deg),
-        "Nants": uvdata_in.Nants_telescope,
-        "beam_paths": beam,
+        "beam_paths": {0: beam},
     }
 
     with open(os.path.join(path_out, telescope_config_name), "w+") as yfile:

@@ -83,6 +83,9 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     uv_new.history = uv_ref.history
     uv_new.extra_keywords = uv_ref.extra_keywords
 
+    if hasattr(uv_new.telescope, "mount_type"):
+        # always do this once we require pyuvdata >= 3.2
+        uv_ref.telescope.mount_type = uv_new.telescope.mount_type
     assert uv_new == uv_ref
 
 
@@ -169,7 +172,6 @@ def test_analytic_diffuse(model, tol, tmpdir):
 
 
 @pytest.mark.filterwarnings("ignore:Fixing auto polarization power beams")
-@pytest.mark.filterwarnings("ignore:No beam information, so cannot determine")
 @pytest.mark.parametrize(
     ("problem", "err_msg"),
     [
@@ -268,6 +270,9 @@ def test_run_gleam_uvsim(spectral_type):
     # the data are correct (that's covered in other tests)
     uv_out.history = uv_in.history
     uv_in.extra_keywords = uv_out.extra_keywords
+    if hasattr(uv_out.telescope, "mount_type"):
+        # always do this once we require pyuvdata >= 3.2
+        uv_in.telescope.mount_type = uv_out.telescope.mount_type
     assert uv_in.telescope._location == uv_out.telescope._location
     assert uv_in == uv_out
 
