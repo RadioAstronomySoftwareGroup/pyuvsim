@@ -2096,6 +2096,8 @@ def initialize_uvdata_from_params(
         )
     elif tele_params["telescope_frame"] == "mcmf":
         # to get here, lunarsky has to be installed, so don't need to test for it
+        # It's checked in the earlier call to parse_telescope_params, which sets
+        # tele_params["telescope_frame"] to either "itrs" or "mcmf"
         from lunarsky import MoonLocation
 
         telescope_location = MoonLocation.from_selenocentric(

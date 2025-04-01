@@ -271,9 +271,8 @@ def hera_loc():
 
 @pytest.fixture(scope="session")
 def apollo_loc():
-    try:
+    with contextlib.suppress(ImportError):
         from lunarsky import MoonLocation
 
         return MoonLocation(lat=0.6875, lon=24.433, height=0)
-    except ImportError:
-        return None
+    return None
