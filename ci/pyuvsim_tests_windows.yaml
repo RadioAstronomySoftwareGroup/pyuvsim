@@ -20,5 +20,4 @@ dependencies:
   - msmpi
   - pip:
     - pyradiosky>=1.0.1
-    - lunarsky>=0.2.5
     - git+https://github.com/aelanman/analytic_diffuse

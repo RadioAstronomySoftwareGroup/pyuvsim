@@ -65,7 +65,7 @@ should install `pyuvsim` with  `pip install pyuvsim[sim]`. Note that the
 `pyuvsim` simulator is intended to run on clusters running the linux operating
 system, but we test against Mac OSX and MS Windows as well.
 We test against both Open MPI and MPICH on Linux/MacOS and MS-MPI on Windows.
-**However, note that casacore functionality is not supported on Windows.**
+**However, note that casacore and lunarsky functionalities are not supported on Windows.**
 
 There are a few more optional dependencies for `pyuvsim` which enable some features,
 such as `astropy_healpix` to use healpix based sky catalogs or healpix beams,
