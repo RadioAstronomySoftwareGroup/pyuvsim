@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742857669886,
+  "lastUpdate": 1743537742538,
   "repoUrl": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim",
   "entries": {
     "Benchmark": [
@@ -1585,6 +1585,79 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 645.329097898 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "bryna.hazelton@gmail.com",
+            "name": "Bryna Hazelton",
+            "username": "bhazelton"
+          },
+          "committer": {
+            "email": "brynah@phys.washington.edu",
+            "name": "Bryna Hazelton",
+            "username": "bhazelton"
+          },
+          "distinct": true,
+          "id": "0c270cad1e05fd6086e6f6f238898687d60332ba",
+          "message": "test: properly skip moon tests when lunarsky is missing",
+          "timestamp": "2025-04-01T12:47:46-07:00",
+          "tree_id": "c81f32d5600ddd3170c43a2aa665b69c837c62e5",
+          "url": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim/commit/0c270cad1e05fd6086e6f6f238898687d60332ba"
+        },
+        "date": 1743537742119,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_mwa]",
+            "value": 0.07977853351323444,
+            "unit": "iter/sec",
+            "range": "stddev: 0.19716584687982872",
+            "extra": "mean: 12.534700200199973 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_uniform]",
+            "value": 0.6725724286711087,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03244492440678495",
+            "extra": "mean: 1.486828715199988 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_uniform]",
+            "value": 0.022019601218072296,
+            "unit": "iter/sec",
+            "range": "stddev: 0.19539537587299047",
+            "extra": "mean: 45.41408312059999 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_gauss]",
+            "value": 0.6555161025628943,
+            "unit": "iter/sec",
+            "range": "stddev: 0.02805482749949094",
+            "extra": "mean: 1.5255155381999999 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_gauss]",
+            "value": 0.001529886205181916,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 653.643386425 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_gauss]",
+            "value": 0.021577478066435094,
+            "unit": "iter/sec",
+            "range": "stddev: 0.14906773794324496",
+            "extra": "mean: 46.34461900140002 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_uniform]",
+            "value": 0.0015883524120518862,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 629.5832035839999 sec\nrounds: 1"
           }
         ]
       }
