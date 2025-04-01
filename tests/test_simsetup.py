@@ -277,6 +277,7 @@ def test_mock_diffuse_maps(modname, modkwargs, hera_loc, apollo_loc, location):
     if location == "earth":
         loc = hera_loc
     else:
+        pytest.importorskip("lunarsky")
         loc = apollo_loc
     map_nside = 128
     t0 = Time.now()
