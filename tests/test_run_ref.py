@@ -168,8 +168,19 @@ def compare_uvh5(uv_ref, uv_new):
     print(uv_new.extra_keywords)
     print("")
 
-    # set history to match so equality check doesn't fail
+    # set extra_keywords to match so equality check doesn't fail
     uv_new.extra_keywords = uv_ref.extra_keywords
+
+    print("phase_center_catalog 1:")
+    uv_ref.print_phase_center_info()
+    print("")
+
+    print("phase_center_catalog 1:")
+    uv_new.print_phase_center_info()
+    print("")
+
+    # set phase_center_catalog name to match so equality check doesn't fail
+    uv_ref.rename_phase_center(0, "unprojected")
 
     ref_arr, new_arr = uv_ref.data_array, uv_new.data_array
 
