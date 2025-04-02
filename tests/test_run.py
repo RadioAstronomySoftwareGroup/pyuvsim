@@ -263,6 +263,7 @@ def test_run_gleam_uvsim(spectral_type):
 
     file_name = f"gleam_triangle_{spectral_type}.uvh5"
     uv_in = UVData.from_file(os.path.join(SIM_DATA_PATH, file_name))
+    uv_in.rename_phase_center(0, "unprojected")
     uv_in.conjugate_bls()
     uv_in.reorder_blts()
     uv_in.integration_time = np.full_like(uv_in.integration_time, 11.0)

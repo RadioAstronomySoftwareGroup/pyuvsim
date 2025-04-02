@@ -2106,18 +2106,7 @@ def initialize_uvdata_from_params(
         telescope_location.ellipsoid = tele_params["ellipsoid"]
 
     if "cat_name" not in param_dict and "object_name" not in param_dict:
-        tloc = EarthLocation.from_geocentric(
-            *tele_params["telescope_location"], unit="m"
-        )
-        time = Time(parsed_time_dict["time_array"][0], scale="utc", format="jd")
-        src, _ = create_mock_catalog(time, arrangement="zenith", array_location=tloc)
-        if "sources" in param_dict:
-            source_file_name = os.path.basename(param_dict["sources"]["catalog"])
-            cat_name = (
-                f"{source_file_name}_ra{src.ra.deg[0]:.4f}_dec{src.dec.deg[0]:.4f}"
-            )
-        else:
-            cat_name = "unprojected"
+        cat_name = "unprojected"
     elif "object_name" in param_dict:
         cat_name = param_dict["object_name"]
     else:
