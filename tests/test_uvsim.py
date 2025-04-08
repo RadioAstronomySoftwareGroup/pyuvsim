@@ -153,24 +153,40 @@ def uvdata_two_redundant_bls_triangle_sources():
     return uv_obj, beam_list, beam_dict, sources
 
 
-@pytest.mark.parametrize("beam_type", ["hera", "uniform", "gaussian", "airy", "dipole"])
-def test_visibility_single_zenith_source(cst_beam, hera_loc, beam_type):
+@pytest.mark.parametrize(
+    ("beam_type", "feed_list"),
+    [
+        ("hera", ["e", "n"]),
+        ("hera", ["e"]),
+        ("hera", ["n"]),
+        ("uniform", ["x", "y"]),
+        ("gaussian", ["x", "y"]),
+        ("airy", ["x", "y"]),
+        ("dipole", ["x", "y"]),
+        ("dipole", ["x"]),
+        ("dipole", ["y"]),
+    ],
+)
+def test_visibility_single_zenith_source(cst_beam, hera_loc, beam_type, feed_list):
     """Test single zenith source."""
+    nfeeds = len(feed_list)
 
     if beam_type == "hera":
         beam = cst_beam.copy()
         pol_beam = True
+        if nfeeds == 1:
+            beam.select(feeds="e")
     elif beam_type == "uniform":
-        beam = UniformBeam()
+        beam = UniformBeam(feed_array=feed_list)
         pol_beam = False
     elif beam_type == "gaussian":
-        beam = GaussianBeam(sigma=np.radians(10.0))
+        beam = GaussianBeam(sigma=np.radians(10.0), feed_array=feed_list)
         pol_beam = False
     elif beam_type == "airy":
-        beam = AiryBeam(diameter=14.0)
+        beam = AiryBeam(diameter=14.0, feed_array=feed_list)
         pol_beam = False
     elif beam_type == "dipole":
-        beam = ShortDipoleBeam()
+        beam = ShortDipoleBeam(feed_array=feed_list)
         pol_beam = True
 
     array_location = hera_loc
@@ -203,6 +219,12 @@ def test_visibility_single_zenith_source(cst_beam, hera_loc, beam_type):
         # for unpolarized beams, each feed has the same response, so the
         # cross-pols match the auto-pols
         expected_vis = np.array([0.5, 0.5, 0.5, 0.5])
+    if nfeeds == 1:
+        if "x" in feed_list or "e" in feed_list:
+            expected_vis = expected_vis[:1]
+        else:
+            expected_vis = expected_vis[1:2]
+
     np.testing.assert_allclose(visibility, expected_vis, atol=5e-3, rtol=0)
 
 
