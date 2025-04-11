@@ -102,10 +102,16 @@ def test_mem_usage():
     # increases memory usage by the expected amount.
 
     memory_usage_GiB = mpi.get_rusage()
+    max_node_rss = mpi.get_max_node_rss()
     print("get_rusage:", mpi.get_rusage())
     print()
-    print("get_max_node_rss:", mpi.get_max_node_rss())
-    assert np.isclose(memory_usage_GiB, mpi.get_max_node_rss())
+    print("get_max_node_rss:", max_node_rss)
+    print()
+    diff = memory_usage_GiB - max_node_rss
+    avg = (memory_usage_GiB + max_node_rss) / 2
+    print("diff:", diff)
+    print("frac_diff", diff / avg)
+    assert np.isclose(memory_usage_GiB, max_node_rss)
     incsize = 50 * 2**20  # 50 MiB
     print()
     print("incsize:", incsize)
