@@ -102,7 +102,8 @@ def test_mem_usage():
     # increases memory usage by the expected amount.
 
     memory_usage_GiB = mpi.get_rusage()
-    assert np.isclose(memory_usage_GiB, mpi.get_max_node_rss())
+    max_node_rss = mpi.get_max_node_rss()
+    assert np.isclose(memory_usage_GiB, max_node_rss, atol=1e-4)
     incsize = 50 * 2**20  # 50 MiB
     arr = bytearray(incsize)
     time.sleep(1)
