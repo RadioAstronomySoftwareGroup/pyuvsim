@@ -103,23 +103,11 @@ def test_mem_usage():
 
     memory_usage_GiB = mpi.get_rusage()
     max_node_rss = mpi.get_max_node_rss()
-    print("get_rusage:", mpi.get_rusage())
-    print()
-    print("get_max_node_rss:", max_node_rss)
-    print()
-    diff = memory_usage_GiB - max_node_rss
-    avg = (memory_usage_GiB + max_node_rss) / 2
-    print("diff:", diff)
-    print("frac_diff", diff / avg)
-    assert np.isclose(memory_usage_GiB, max_node_rss)
+    assert np.isclose(memory_usage_GiB, max_node_rss, atol=1e-4)
     incsize = 50 * 2**20  # 50 MiB
-    print()
-    print("incsize:", incsize)
     arr = bytearray(incsize)
     time.sleep(1)
     change = mpi.get_max_node_rss() - memory_usage_GiB
-    print()
-    print("change:", change)
     del arr
     assert np.isclose(change, incsize / 2**30, atol=5e-2)
 
