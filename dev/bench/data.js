@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744572690597,
+  "lastUpdate": 1744653512426,
   "repoUrl": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim",
   "entries": {
     "Benchmark": [
@@ -1877,6 +1877,79 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 640.4239218399999 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "bryna.hazelton@gmail.com",
+            "name": "Bryna Hazelton",
+            "username": "bhazelton"
+          },
+          "committer": {
+            "email": "matthew.kolopanis@gmail.com",
+            "name": "Matthew Kolopanis",
+            "username": "mkolopanis"
+          },
+          "distinct": true,
+          "id": "fc43d8a5e930505416b33f80ab7c55fc27c37bf6",
+          "message": "Fix a bug in properly handling diffuse maps with units of Jy/sr",
+          "timestamp": "2025-04-14T10:45:20-07:00",
+          "tree_id": "40b98484e681685f9bd3c52e906cc0d390d0ac41",
+          "url": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim/commit/fc43d8a5e930505416b33f80ab7c55fc27c37bf6"
+        },
+        "date": 1744653512052,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_mwa]",
+            "value": 0.08012885674402977,
+            "unit": "iter/sec",
+            "range": "stddev: 0.14383607211046417",
+            "extra": "mean: 12.47989851139999 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_uniform]",
+            "value": 0.6325725360290329,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03252005203677497",
+            "extra": "mean: 1.5808463742000072 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_uniform]",
+            "value": 0.021838759261684843,
+            "unit": "iter/sec",
+            "range": "stddev: 0.19245381896001246",
+            "extra": "mean: 45.79014714240001 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_gauss]",
+            "value": 0.6427761032162558,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03999475297610742",
+            "extra": "mean: 1.5557516762000092 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_gauss]",
+            "value": 0.0016002538073820213,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 624.900872216 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_gauss]",
+            "value": 0.021966711130174947,
+            "unit": "iter/sec",
+            "range": "stddev: 0.5719038626553553",
+            "extra": "mean: 45.523428340000024 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_uniform]",
+            "value": 0.0015528378344352308,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 643.982248387 sec\nrounds: 1"
           }
         ]
       }
