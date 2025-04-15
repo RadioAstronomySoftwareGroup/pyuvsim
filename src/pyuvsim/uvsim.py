@@ -39,7 +39,7 @@ class UVTask:
 
     Parameters
     ----------
-    sources : :class:`pyuvsim.simsetup.SkyModelData`
+    sources : :class:`pyradiosky.SkyModel`
         The sources to include in the visibility.
     time : :class:`astropy.time.Time` object or float
         Time at which to calculate the visibility, either an astropy Time object or a
@@ -58,7 +58,7 @@ class UVTask:
 
     Attributes
     ----------
-    sources : :class:`pyuvsim.simsetup.SkyModelData`
+    sources : :class:`pyradiosky.SkyModel`
         The sources to include in the visibility.
     time : :class:`astropy.time.Time`
         Time at which to calculate the visibility.
@@ -554,10 +554,6 @@ def uvdata_to_task_iter(
             and sky.reference_frequency is None
         ):
             sky.freq_array = freq_array
-        if sky.component_type == "healpix" and hasattr(sky, "healpix_to_point"):
-            sky.healpix_to_point()
-        if sky.spectral_type != "flat":
-            sky.at_frequencies(freq_array)
 
         # Use flat here to get a 1D iterator
         for index in order.flat:
@@ -778,23 +774,55 @@ def run_uvdata_uvsim(
     comm = mpi.get_comm()
     Npus = mpi.get_Npus()
 
+    # ensure that we have full or flat spectral type and that we have points not
+    # healpix
+    if rank == 0:
+        if not isinstance(input_uv, UVData):
+            raise TypeError("input_uv must be UVData object")
+
+        if not (
+            (input_uv.Npols == 4)
+            and (input_uv.polarization_array.tolist() == [-5, -6, -7, -8])
+        ):
+            raise ValueError("input_uv must have XX,YY,XY,YX polarization")
+
+        input_order = input_uv.blt_order
+        if input_order != ("time", "baseline"):
+            input_uv.reorder_blts(order="time", minor_order="baseline")
+
+        freq_array = input_uv.freq_array * units.Hz
+        if catalog.spectral_type == "full" and not np.allclose(
+            catalog.freq_array,
+            input_uv.freq_array,
+            rtol=input_uv._freq_array.tols[0],
+            atol=input_uv._freq_array.tols[1],
+        ):
+            raise ValueError(
+                "Input catalog does not have the same frequencies as the "
+                "requested simulation parameters (or input uvdata object "
+                "if passed directly)."
+            )
+        if (
+            catalog.spectral_type not in ["flat", "full"]
+            or catalog.component_type != "point"
+        ):
+            sky = catalog.get_skymodel()
+            if sky.spectral_type not in ["flat", "full"]:
+                sky.at_frequencies(freq_array)
+            if sky.component_type == "healpix" and hasattr(sky, "healpix_to_point"):
+                if (
+                    catalog.spectral_type == "flat"
+                    and sky.freq_array is None
+                    and sky.reference_frequency is None
+                ):
+                    sky.freq_array = freq_array
+                sky.healpix_to_point()
+            catalog = SkyModelData(sky)
+
     input_uv = comm.bcast(input_uv, root=0)
     beam_dict = comm.bcast(beam_dict, root=0)
     catalog.share(root=0)
     beam_list.share(root=0)
-
-    if not isinstance(input_uv, UVData):
-        raise TypeError("input_uv must be UVData object")
-
-    if not (
-        (input_uv.Npols == 4)
-        and (input_uv.polarization_array.tolist() == [-5, -6, -7, -8])
-    ):
-        raise ValueError("input_uv must have XX,YY,XY,YX polarization")
-
-    input_order = input_uv.blt_order
-    if input_order != ("time", "baseline"):
-        input_uv.reorder_blts(order="time", minor_order="baseline")
 
     # The root node will initialize our simulation
     # Read input file and make uvtask list
