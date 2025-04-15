@@ -1074,6 +1074,7 @@ def test_overflow_check():
 def test_fullfreq_check(uvdata_two_redundant_bls_triangle_sources):
     # Check that run_uvdata_uvsim will error if 'spectral_type' is 'full'
     # and the frequencies on the catalog do not match the simulation's.
+    pytest.importorskip("mpi4py")
 
     uvdata_linear, beam_list, beam_dict, sky_model = (
         uvdata_two_redundant_bls_triangle_sources
