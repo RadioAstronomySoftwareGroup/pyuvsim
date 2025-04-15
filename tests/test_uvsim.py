@@ -4,6 +4,7 @@
 import copy
 import itertools
 import os
+import re
 import warnings
 
 import astropy.constants as const
@@ -11,7 +12,7 @@ import numpy as np
 import pyradiosky
 import pytest
 from astropy import units
-from astropy.coordinates import Angle, Latitude, Longitude, SkyCoord
+from astropy.coordinates import Angle, SkyCoord
 from astropy.time import Time
 from pyuvdata import (
     AiryBeam,
@@ -1070,59 +1071,31 @@ def test_overflow_check():
         pyuvsim.uvsim._check_ntasks_valid(should_fail)
 
 
-def test_fullfreq_check(uvobj_beams_srcs):
-    # Check that the task iter will error if 'spectral_type' is 'full'
+def test_fullfreq_check(uvdata_two_redundant_bls_triangle_sources):
+    # Check that run_uvdata_uvsim will error if 'spectral_type' is 'full'
     # and the frequencies on the catalog do not match the simulation's.
 
-    uv_obj, beam_list, beam_dict, _ = uvobj_beams_srcs
-
-    Nsrcs = 30
-
-    freqs0 = np.linspace(100, 130, uv_obj.Nfreqs) * 1e6 * units.Hz
-    freqs1 = uv_obj.freq_array * units.Hz
-
-    stokes = np.zeros((4, uv_obj.Nfreqs, Nsrcs)) * units.Jy
-    stokes[0, :, :] = 1.0 * units.Jy
-
-    ra = Longitude(np.linspace(0, 2 * np.pi, Nsrcs), "rad")
-    dec = Latitude(np.linspace(-np.pi / 2, np.pi / 3, Nsrcs), "rad")
-
-    sky0 = pyradiosky.SkyModel(
-        name=np.arange(Nsrcs).astype(str),
-        ra=ra,
-        dec=dec,
-        stokes=stokes,
-        spectral_type="full",
-        freq_array=freqs0,
-        frame="icrs",
+    uvdata_linear, beam_list, beam_dict, sky_model = (
+        uvdata_two_redundant_bls_triangle_sources
     )
 
-    sky1 = pyradiosky.SkyModel(
-        name=np.arange(Nsrcs).astype(str),
-        ra=ra,
-        dec=dec,
-        stokes=stokes,
-        spectral_type="full",
-        freq_array=freqs1,
-        frame="icrs",
-    )
+    sky = sky_model.get_skymodel()
+    sky.at_frequencies((uvdata_linear.freq_array + 1000.0) * units.Hz)
+    sky_model = SkyModelData(sky)
 
-    Ntasks = uv_obj.Nblts * uv_obj.Nfreqs
-
-    sky0 = SkyModelData(sky0)
-    sky1 = SkyModelData(sky1)
-
-    taskiter0 = pyuvsim.uvdata_to_task_iter(
-        np.arange(Ntasks), uv_obj, sky0, beam_list, beam_dict
-    )
-    taskiter1 = pyuvsim.uvdata_to_task_iter(
-        np.arange(Ntasks), uv_obj, sky1, beam_list, beam_dict
-    )
-
-    with pytest.raises(ValueError, match="Some requested frequencies are not present"):
-        next(taskiter0)
-
-    next(taskiter1)
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Input catalog does not have the same frequencies as the requested "
+            "simulation parameters (or input uvdata object if passed directly)"
+        ),
+    ):
+        pyuvsim.uvsim.run_uvdata_uvsim(
+            input_uv=uvdata_linear.copy(),
+            beam_list=beam_list,
+            beam_dict=beam_dict,
+            catalog=sky_model,
+        )
 
 
 def test_run_mpierr(hera_loc, cst_beam):
