@@ -40,7 +40,6 @@ def goto_tempdir(tmpdir):
     os.chdir(cwd)
 
 
-@pytest.mark.filterwarnings("ignore:antenna_diameters are not set")
 @pytest.mark.filterwarnings("ignore:Fixing auto-correlations to be be real-only")
 @pytest.mark.parametrize(
     "paramfile", ["param_1time_1src_testcat.yaml", "param_1time_1src_testvot.yaml"]

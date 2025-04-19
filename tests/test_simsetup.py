@@ -43,6 +43,10 @@ from . import compare_dictionaries
 
 herabeam_default = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:antenna_diameters are not set or are being overwritten."
+)
+
 # Five different test configs
 param_filenames = [
     os.path.join(SIM_DATA_PATH, "test_config", f"param_10time_10chan_{x}.yaml")
@@ -575,7 +579,7 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
         "version 1.5"
     ]
     # always do this once we require pyuvdata >= 3.2
-    if not telparam_in_obsparam and hasattr(Telescope, "mount_type"):
+    if not telparam_in_obsparam and hasattr(Telescope(), "mount_type"):
         warn_list.append("The mount_type parameter must be set for UVBeam objects")
 
     # Check default configuration
@@ -1629,7 +1633,7 @@ def test_keyword_param_loop(tmpdir):
     antpos_d = dict(zip(antnums, antpos_enu, strict=False))
 
     tel_feed_kwargs = {}
-    if hasattr(Telescope, "feed_array"):
+    if hasattr(Telescope(), "feed_array"):
         # always do this once we require pyuvdata >= 3.2
         tel_feed_kwargs = {
             "feed_array": ["x", "y"],
@@ -1927,7 +1931,7 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
     ] * entries_warnings
 
     # always do this once we require pyuvdata >= 3.2
-    if hasattr(Telescope, "mount_type"):
+    if hasattr(Telescope(), "mount_type"):
         warn_list.append("The mount_type parameter must be set for UVBeam objects")
 
     warn_types = DeprecationWarning
@@ -1988,7 +1992,7 @@ def test_beamlist_init_freqrange(sel_type):
     ] * 5
 
     # always do this once we require pyuvdata >= 3.2
-    if hasattr(Telescope, "mount_type"):
+    if hasattr(Telescope(), "mount_type"):
         warn_list.append("The mount_type parameter must be set for UVBeam objects")
 
     with check_warnings(DeprecationWarning, match=warn_list):
@@ -2217,7 +2221,7 @@ def test_simsetup_with_obsparam_freq_buffer():
     ]
 
     # always do this once we require pyuvdata >= 3.2
-    if hasattr(Telescope, "mount_type"):
+    if hasattr(Telescope(), "mount_type"):
         warn_list.append("The mount_type parameter must be set for UVBeam objects")
 
     with check_warnings(DeprecationWarning, match=warn_list):
