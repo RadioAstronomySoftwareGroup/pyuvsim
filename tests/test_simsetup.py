@@ -42,6 +42,10 @@ from . import compare_dictionaries
 
 herabeam_default = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:antenna_diameters are not set or are being overwritten."
+)
+
 # Five different test configs
 param_filenames = [
     os.path.join(SIM_DATA_PATH, "test_config", f"param_10time_10chan_{x}.yaml")
@@ -568,15 +572,17 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
 
     beam_dict = {"ANT1": 0, "ANT2": 1, "ANT3": 2, "ANT4": 3}
 
+    warn_list = [
+        "The reorder_blt_kw parameter is deprecated in favor of setting "
+        "obs_param['ordering']['blt_order']. This will become an error in "
+        "version 1.5"
+    ]
+    # always do this once we require pyuvdata >= 3.2
+    if not telparam_in_obsparam and hasattr(Telescope(), "mount_type"):
+        warn_list.append("The mount_type parameter must be set for UVBeam objects")
+
     # Check default configuration
-    with check_warnings(
-        [DeprecationWarning],
-        match=[
-            "The reorder_blt_kw parameter is deprecated in favor of setting "
-            "obs_param['ordering']['blt_order']. This will become an error in "
-            "version 1.5"
-        ],
-    ):
+    with check_warnings(DeprecationWarning, match=warn_list):
         uv_obj, new_beam_list, new_beam_dict = simsetup.initialize_uvdata_from_params(
             new_param_file,
             reorder_blt_kw={"order": "time", "minor_order": "baseline"},
@@ -1582,7 +1588,7 @@ def test_keyword_param_loop(tmpdir):
     antpos_d = dict(zip(antnums, antpos_enu, strict=False))
 
     tel_feed_kwargs = {}
-    if hasattr(Telescope, "feed_array"):
+    if hasattr(Telescope(), "feed_array"):
         # always do this once we require pyuvdata >= 3.2
         tel_feed_kwargs = {
             "feed_array": ["x", "y"],
@@ -1878,6 +1884,11 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
         "analytic beam without the AnalyticBeam constructors will cause an "
         "error in version 1.6"
     ] * entries_warnings
+
+    # always do this once we require pyuvdata >= 3.2
+    if hasattr(Telescope(), "mount_type"):
+        warn_list.append("The mount_type parameter must be set for UVBeam objects")
+
     warn_types = DeprecationWarning
 
     Nfreqs = 10
@@ -1927,17 +1938,19 @@ def test_beamlist_init_freqrange(sel_type):
         telconfig["select"] = {"freq_buffer": 0}
         freq_range_pass = None
 
-    with check_warnings(
-        DeprecationWarning,
-        match=[
-            "Entries in 'beam_paths' should be specified using either the UVBeam "
-            "or AnalyticBeam constructors or using a dict syntax for UVBeams. "
-            "For examples see the parameter_files documentation. Specifying "
-            "analytic beam without the AnalyticBeam constructors will cause an "
-            "error in version 1.6"
-        ]
-        * 5,
-    ):
+    warn_list = [
+        "Entries in 'beam_paths' should be specified using either the UVBeam "
+        "or AnalyticBeam constructors or using a dict syntax for UVBeams. "
+        "For examples see the parameter_files documentation. Specifying "
+        "analytic beam without the AnalyticBeam constructors will cause an "
+        "error in version 1.6"
+    ] * 5
+
+    # always do this once we require pyuvdata >= 3.2
+    if hasattr(Telescope(), "mount_type"):
+        warn_list.append("The mount_type parameter must be set for UVBeam objects")
+
+    with check_warnings(DeprecationWarning, match=warn_list):
         beam_list = simsetup._construct_beam_list(
             np.arange(6), telconfig, freq_range=freq_range_pass, freq_array=freqs
         )
@@ -2156,14 +2169,17 @@ def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
 def test_simsetup_with_obsparam_freq_buffer():
     fl = os.path.join(SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky_freqbuf.yaml")
 
-    with check_warnings(
-        [DeprecationWarning],
-        match=[
-            "Beam selections should be specified in the telescope "
-            "configuration, not in the obsparam. This will become an error in "
-            "version 1.5"
-        ],
-    ):
+    warn_list = [
+        "Beam selections should be specified in the telescope "
+        "configuration, not in the obsparam. This will become an error in "
+        "version 1.5"
+    ]
+
+    # always do this once we require pyuvdata >= 3.2
+    if hasattr(Telescope(), "mount_type"):
+        warn_list.append("The mount_type parameter must be set for UVBeam objects")
+
+    with check_warnings(DeprecationWarning, match=warn_list):
         _, beams, _ = simsetup.initialize_uvdata_from_params(fl, return_beams=True)
 
     assert beams[0].beam.freq_array.max() < 101e6
