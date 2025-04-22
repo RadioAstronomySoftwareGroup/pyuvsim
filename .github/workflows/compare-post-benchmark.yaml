@@ -33,6 +33,7 @@ jobs:
 
     strategy:
       # all jobs should run in parallel
+      fail-fast: false
       matrix:
         id: [1.1_uniform, 1.1_gauss, 1.1_mwa, 1.2_uniform, 1.2_gauss, 1.3_uniform, 1.3_gauss]
 
