@@ -1915,6 +1915,10 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
         beam_file = beamfits_file
         telconfig["beam_paths"][0] = {"filename": beam_file, "file_type": "beamfits"}
 
+    # always do this once we require pyuvdata >= 3.2
+    if hasattr(Telescope(), "mount_type"):
+        telconfig["beam_paths"][0]["mount_type"] = "fixed"
+
     telconfig["beam_paths"][6]["filename"] = os.path.join(
         UV_DATA_PATH, "mwa_full_EE_test.h5"
     )
@@ -1929,10 +1933,6 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
         "analytic beam without the AnalyticBeam constructors will cause an "
         "error in version 1.6"
     ] * entries_warnings
-
-    # always do this once we require pyuvdata >= 3.2
-    if hasattr(Telescope(), "mount_type"):
-        warn_list.append("The mount_type parameter must be set for UVBeam objects")
 
     warn_types = DeprecationWarning
 
