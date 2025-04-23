@@ -331,7 +331,7 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
 
 @pytest.mark.parametrize("spectral_type", ["flat", "subband", "spectral_index"])
 @pytest.mark.parametrize("nfeeds", [1, 2])
-def test_run_gleam_uvsim(spectral_type, nfeeds):
+def test_run_gleam_uvsim(tmp_path, spectral_type, nfeeds):
     params = pyuvsim.simsetup._config_str_to_dict(
         os.path.join(SIM_DATA_PATH, "test_config", "param_1time_testgleam.yaml")
     )
@@ -348,7 +348,31 @@ def test_run_gleam_uvsim(spectral_type, nfeeds):
             select_pol = ["xx"]
         params["telescope"]["telescope_config_name"] = tel_config
 
-    input_uv, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(
+    if hasattr(UVData().telescope, "mount_type"):
+        # update the yaml files in the repo so doing it on the fly isn't necessary
+        # once we require pyuvdata >= 3.2
+        # copy telescope config file to temporary directory so we can add mount_type
+        os.makedirs(os.path.join(tmp_path, "test_config"))
+        new_tel_config = os.path.join(
+            tmp_path, "test_config", params["telescope"]["telescope_config_name"]
+        )
+        shutil.copyfile(
+            os.path.join(
+                SIM_DATA_PATH,
+                "test_config",
+                params["telescope"]["telescope_config_name"],
+            ),
+            new_tel_config,
+        )
+        params["telescope"]["telescope_config_name"] = new_tel_config
+        with open(new_tel_config) as fconfig:
+            lines = fconfig.readlines()
+        lines.insert(4, "    mount_type: fixed\n")
+        with open(new_tel_config, "w") as fconfig:
+            lines = "".join(lines)
+            fconfig.write(lines)
+
+    input_uv, beam_list, _ = pyuvsim.simsetup.initialize_uvdata_from_params(
         params, return_beams=True
     )
 
@@ -371,7 +395,11 @@ def test_run_gleam_uvsim(spectral_type, nfeeds):
 
     if nfeeds == 1:
         assert uv_out.Npols == 1
+        select_feed = select_pol[0][0]
         uv_in.select(polarizations=select_pol)
+        if hasattr(uv_in.telescope, "feed_array"):
+            feed_index = np.nonzero(uv_in.telescope.feed_array[0] == select_feed)[0]
+            uv_in.telescope._select_along_param_axis({"Nfeeds": feed_index})
 
     # This just tests that we get the same answer as an earlier run, not that
     # the data are correct (that's covered in other tests)

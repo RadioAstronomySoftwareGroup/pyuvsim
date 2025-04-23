@@ -1291,9 +1291,24 @@ def test_uvdata_keyword_init_polarization_array(uvdata_keyword_dict, pols):
         pols = ["xx", "yy", "xy", "yx"]
     else:
         uvdata_keyword_dict["polarization_array"] = pols
-    uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
 
-    assert uvd.get_pols() == pols
+    if hasattr(Telescope(), "feed_angle"):
+        # restructure this as a parametrize once we require pyuvdata >= 3.2
+        for feed_angle in [[np.pi / 2, 0], [0, np.pi / 2], [np.pi / 4, np.pi * 3 / 4]]:
+            uvdata_keyword_dict["feed_angle"] = feed_angle
+            uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
+            exp_pols = copy.deepcopy(pols)
+            if feed_angle[0] == np.pi / 2:
+                exp_pols = [pol.replace("x", "e") for pol in exp_pols]
+                exp_pols = [pol.replace("y", "n") for pol in exp_pols]
+            elif feed_angle[0] == 0:
+                exp_pols = [pol.replace("x", "n") for pol in exp_pols]
+                exp_pols = [pol.replace("y", "e") for pol in exp_pols]
+
+            assert uvd.get_pols() == exp_pols
+    else:
+        uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
+        assert uvd.get_pols() == pols
 
 
 def test_uvdata_keyword_init_select_antnum_str(uvdata_keyword_dict):
@@ -1303,10 +1318,7 @@ def test_uvdata_keyword_init_select_antnum_str(uvdata_keyword_dict):
     uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
 
     assert uvd.Nbls == 1
-    if not hasattr(Telescope(), "feed_array"):
-        assert uvd.polarization_array.tolist() == [-5]
-    else:
-        assert uvd.polarization_array.tolist() == [-5, -6]
+    assert uvd.polarization_array.tolist() == [-5]
 
 
 def test_uvdata_keyword_init_time_freq_override(uvdata_keyword_dict):
