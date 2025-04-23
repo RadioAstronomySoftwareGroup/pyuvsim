@@ -43,7 +43,11 @@ herabeam_default = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
 def multi_beams():
     beam0 = UVBeam()
-    beam0.read_beamfits(herabeam_default)
+    # always do this once we require pyuvdata >= 3.2
+    if hasattr(UVData().telescope, "mount_type"):
+        beam0.read(herabeam_default, mount_type="fixed")
+    else:
+        beam0.read(herabeam_default)
     beam0.extra_keywords["beam_path"] = herabeam_default
     beam0.peak_normalize()
 
