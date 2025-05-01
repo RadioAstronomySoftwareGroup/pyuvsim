@@ -90,6 +90,7 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
 
 
 @pytest.mark.filterwarnings("ignore:Input ra and dec parameters are being used instead")
+@pytest.mark.filterwarnings("ignore:antenna_diameters are not set")
 @pytest.mark.filterwarnings("ignore:invalid value encountered in divide")
 # Set the tolerances as low as we can achieve currently. Ideally these tolerances
 # would be lower, but it's complicated.
@@ -171,6 +172,7 @@ def test_analytic_diffuse(model, tol, tmpdir):
     np.testing.assert_allclose(ana / 2, dat, atol=tol, rtol=0)
 
 
+@pytest.mark.filterwarnings("ignore:antenna_diameters are not set")
 def test_diffuse_units(tmpdir):
     pytest.importorskip("analytic_diffuse")
     pytest.importorskip("astropy_healpix")
@@ -259,7 +261,7 @@ def test_diffuse_units(tmpdir):
         ("normalization", "UVBeams must be peak normalized."),
     ],
 )
-def test_uvsim_beamlist_errors(cst_beam, problem, err_msg):
+def test_uvsim_beamlist_errors(tmp_path, cst_beam, problem, err_msg):
     new_cst = copy.deepcopy(cst_beam)
     if problem == "beam_type":
         new_cst.efield_to_power()
@@ -273,7 +275,35 @@ def test_uvsim_beamlist_errors(cst_beam, problem, err_msg):
         peak_normalize = True
     beams = BeamList([new_cst] * 4, beam_type=beam_type, peak_normalize=peak_normalize)
     cfg = os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
-    input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(cfg, return_beams=False)
+
+    params = pyuvsim.simsetup._config_str_to_dict(cfg)
+    if hasattr(UVData().telescope, "mount_type"):
+        # update the yaml files in the repo so doing it on the fly isn't necessary
+        # once we require pyuvdata >= 3.2
+        # copy telescope config file to temporary directory so we can add mount_type
+        os.makedirs(os.path.join(tmp_path, "test_config"))
+        new_tel_config = os.path.join(
+            tmp_path, "test_config", params["telescope"]["telescope_config_name"]
+        )
+        shutil.copyfile(
+            os.path.join(
+                SIM_DATA_PATH,
+                "test_config",
+                params["telescope"]["telescope_config_name"],
+            ),
+            new_tel_config,
+        )
+        params["telescope"]["telescope_config_name"] = new_tel_config
+        with open(new_tel_config) as fconfig:
+            lines = fconfig.readlines()
+        lines.insert(4, "    mount_type: fixed\n")
+        with open(new_tel_config, "w") as fconfig:
+            lines = "".join(lines)
+            fconfig.write(lines)
+
+    input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(
+        params, return_beams=False
+    )
     sky_model = pyuvsim.simsetup.initialize_catalog_from_params(
         cfg, return_catname=False
     )
@@ -306,6 +336,16 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
         )
         shutil.copyfile(telescope_param_file, new_telescope_param_file)
 
+        if hasattr(UVData().telescope, "mount_type"):
+            # update the yaml files in the repo so doing it on the fly isn't necessary
+            # once we require pyuvdata >= 3.2
+            with open(new_telescope_param_file) as fconfig:
+                lines = fconfig.readlines()
+            lines.insert(4, "    mount_type: fixed\n")
+            with open(new_telescope_param_file, "w") as fconfig:
+                lines = "".join(lines)
+                fconfig.write(lines)
+
         telescope_layout_file = os.path.join(
             SIM_DATA_PATH, "test_config", "triangle_bl_layout.csv"
         )
@@ -325,6 +365,30 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
         params = pyuvsim.simsetup._config_str_to_dict(new_param_file)
     else:
         params = pyuvsim.simsetup._config_str_to_dict(param_file)
+
+        if hasattr(UVData().telescope, "mount_type"):
+            # update the yaml files in the repo so doing it on the fly isn't necessary
+            # once we require pyuvdata >= 3.2
+            # copy telescope config file to temporary directory so we can add mount_type
+            os.makedirs(os.path.join(tmp_path, "test_config"))
+            new_tel_config = os.path.join(
+                tmp_path, "test_config", params["telescope"]["telescope_config_name"]
+            )
+            shutil.copyfile(
+                os.path.join(
+                    SIM_DATA_PATH,
+                    "test_config",
+                    params["telescope"]["telescope_config_name"],
+                ),
+                new_tel_config,
+            )
+            params["telescope"]["telescope_config_name"] = new_tel_config
+            with open(new_tel_config) as fconfig:
+                lines = fconfig.readlines()
+            lines.insert(4, "    mount_type: fixed\n")
+            with open(new_tel_config, "w") as fconfig:
+                lines = "".join(lines)
+                fconfig.write(lines)
 
     pyuvsim.run_uvsim(params, return_uv=True)
 
@@ -457,6 +521,30 @@ def test_zenith_spectral_sim(spectral_type, tmpdir):
     params["freq"] = freq_params
     params["time"]["start_time"] = kwds["time"]
     params["select"] = {"antenna_nums": [1, 2]}
+
+    if hasattr(UVData().telescope, "mount_type"):
+        # update the yaml files in the repo so doing it on the fly isn't necessary
+        # once we require pyuvdata >= 3.2
+        # copy telescope config file to temporary directory so we can add mount_type
+        os.makedirs(os.path.join(tmpdir, "test_config"))
+        new_tel_config = os.path.join(
+            tmpdir, "test_config", params["telescope"]["telescope_config_name"]
+        )
+        shutil.copyfile(
+            os.path.join(
+                SIM_DATA_PATH,
+                "test_config",
+                params["telescope"]["telescope_config_name"],
+            ),
+            new_tel_config,
+        )
+        params["telescope"]["telescope_config_name"] = new_tel_config
+        with open(new_tel_config) as fconfig:
+            lines = fconfig.readlines()
+        lines.insert(4, "    mount_type: fixed\n")
+        with open(new_tel_config, "w") as fconfig:
+            lines = "".join(lines)
+            fconfig.write(lines)
 
     uv_out = pyuvsim.run_uvsim(params, return_uv=True)
 

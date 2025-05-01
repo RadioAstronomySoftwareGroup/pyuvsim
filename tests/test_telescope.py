@@ -16,7 +16,10 @@ herabeam_default = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 @pytest.fixture(scope="module")
 def beam_objs_main():
     uvb = UVBeam()
-    uvb.read_beamfits(herabeam_default)
+    if hasattr(UVBeam, "mount_type"):
+        uvb.read_beamfits(herabeam_default, mount_type="fixed")
+    else:
+        uvb.read_beamfits(herabeam_default)
 
     uvb2 = uvb.copy()
 
