@@ -1886,7 +1886,7 @@ def subselect(uv_obj, param_dict):
         uv_obj.select(ant_str="cross")
 
     if redundant_threshold is not None:
-        uv_obj.compress_by_redundancy(tol=redundant_threshold)
+        uv_obj.compress_by_redundancy(tol=redundant_threshold, use_grid_alg=True)
 
 
 def set_ordering(uv_obj, param_dict, reorder_blt_kw):
@@ -2620,10 +2620,11 @@ def uvdata_to_telescope_config(
         os.path.join(path_out, layout_csv_name), antpos_enu, ant_names, ant_numbers
     )
 
-    # create a nearly empty beam object, only defining the filepath for the
-    # yaml dumper
+    # create a nearly empty beam object, only defining the filepath and
+    # mount_type for the yaml dumper
     beam = UVBeam()
     beam.filename = [beam_filepath]
+    beam.mount_type = uvdata_in.telescope.mount_type[0]
 
     # Write the rest to a yaml file.
     yaml_dict = {

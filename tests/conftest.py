@@ -8,9 +8,9 @@ import os
 import pickle as pkl
 import re
 import sys
-import warnings
 from subprocess import DEVNULL, CalledProcessError, TimeoutExpired, check_output
 
+import numpy as np
 import pytest
 from _pytest._code.code import ExceptionChainRepr
 from _pytest.reports import TestReport
@@ -239,27 +239,25 @@ def cst_beam():
 
     cst_files = ["HERA_NicCST_150MHz.txt", "HERA_NicCST_123MHz.txt"]
     beam_files = [os.path.join(DATA_PATH, "NicCSTbeams", f) for f in cst_files]
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", "Feed information not supplied and x-orientation not specified"
-        )
-        beam.read_cst_beam(
-            beam_files,
-            beam_type="efield",
-            frequency=freqs,
-            telescope_name="HERA",
-            feed_name="PAPER",
-            feed_version="0.1",
-            feed_pol=["x"],
-            model_name="E-field pattern - Rigging height 4.9m",
-            model_version="1.0",
-        )
+    kwargs = {
+        "beam_type": "efield",
+        "frequency": freqs,
+        "telescope_name": "HERA",
+        "feed_name": "PAPER",
+        "feed_version": "0.1",
+        "feed_pol": ["x"],
+        "model_name": "E-field pattern - Rigging height 4.9m",
+        "model_version": "1.0",
+    }
     if hasattr(beam, "feed_angle"):
-        beam.set_feeds_from_x_orientation("east")
-        beam.mount_type = "fixed"
+        kwargs["feed_angle"] = [np.pi / 2]
+        kwargs["mount_type"] = "fixed"
     else:
         # this can go aways once we require pyuvdata >= 3.2
-        beam.x_orientation = "east"
+        kwargs["x_orientation"] = "east"
+    beam.read_cst_beam(beam_files, **kwargs)
+    if hasattr(beam, "feed_angle") and beam.get_x_orientation_from_feeds() is None:
+        beam.set_feeds_from_x_orientation("east")
     beam.peak_normalize()
     return beam
 

@@ -533,6 +533,23 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
             "test_config",
             param_dict["telescope"]["telescope_config_name"],
         )
+        if hasattr(UVBeam(), "mount_type"):
+            # update the yaml files in the repo so doing it on the fly isn't necessary
+            # once we require pyuvdata >= 3.2
+            # copy telescope config file to temporary directory so we can add mount_type
+            os.makedirs(os.path.join(tmpdir, "test_config"))
+            new_tel_config = os.path.join(
+                tmpdir, "test_config", param_dict["telescope"]["telescope_config_name"]
+            )
+            shutil.copyfile(orig_tel_config, new_tel_config)
+            param_dict["telescope"]["telescope_config_name"] = new_tel_config
+            with open(new_tel_config) as fconfig:
+                lines = fconfig.readlines()
+            lines.insert(4, "    mount_type: fixed\n")
+            with open(new_tel_config, "w") as fconfig:
+                lines = "".join(lines)
+                fconfig.write(lines)
+            orig_tel_config = new_tel_config
 
         # add an instrument here to make sure it gets picked up properly
         param_dict["telescope"]["instrument"] = "foo"
@@ -564,7 +581,11 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
     uv_in = UVData.from_file(triangle_uvfits_file)
     uv_in.unproject_phase()
 
-    beam0 = UVBeam.from_file(herabeam_default)
+    # always do this once we require pyuvdata >= 3.2
+    if hasattr(UVData().telescope, "mount_type"):
+        beam0 = UVBeam.from_file(herabeam_default, mount_type="fixed")
+    else:
+        beam0 = UVBeam.from_file(herabeam_default)
     beam1 = UniformBeam()
     beam2 = GaussianBeam(sigma=0.02)
     beam3 = AiryBeam(diameter=14.6)
@@ -722,13 +743,37 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
         ),
     ],
 )
-def test_param_reader_errors(subdict, error, msg):
+def test_param_reader_errors(tmp_path, subdict, error, msg):
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml"
     )
 
     # Error conditions:
     params_bad = simsetup._config_str_to_dict(param_filename)
+
+    if hasattr(UVData().telescope, "mount_type"):
+        # update the yaml files in the repo so doing it on the fly isn't necessary
+        # once we require pyuvdata >= 3.2
+        # copy telescope config file to temporary directory so we can add mount_type
+        os.makedirs(os.path.join(tmp_path, "test_config"))
+        new_tel_config = os.path.join(
+            tmp_path, "test_config", params_bad["telescope"]["telescope_config_name"]
+        )
+        shutil.copyfile(
+            os.path.join(
+                SIM_DATA_PATH,
+                "test_config",
+                params_bad["telescope"]["telescope_config_name"],
+            ),
+            new_tel_config,
+        )
+        params_bad["telescope"]["telescope_config_name"] = new_tel_config
+        with open(new_tel_config) as fconfig:
+            lines = fconfig.readlines()
+        lines.insert(4, "    mount_type: fixed\n")
+        with open(new_tel_config, "w") as fconfig:
+            lines = "".join(lines)
+            fconfig.write(lines)
 
     for key, value in subdict.items():
         if isinstance(value, dict):
@@ -1147,7 +1192,9 @@ def test_param_select_redundant():
     # test only keeping one baseline per redundant group
     param_dict["select"] = {"redundant_threshold": 0.1}
     uv_obj_red = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
-    uv_obj_red2 = uv_obj_full.compress_by_redundancy(tol=0.1, inplace=False)
+    uv_obj_red2 = uv_obj_full.compress_by_redundancy(
+        tol=0.1, inplace=False, use_grid_alg=True
+    )
     uv_obj_red.history, uv_obj_red2.history = "", ""
 
     assert uv_obj_red == uv_obj_red2
@@ -1736,15 +1783,17 @@ def test_multi_analytic_beams(tmpdir):
 
 
 def test_direct_fname(tmpdir):
+    new_tel_config = os.path.join(tmpdir, "28m_triangle_10time_10chan.yaml")
     shutil.copyfile(
         os.path.join(SIM_DATA_PATH, "test_config", "28m_triangle_10time_10chan.yaml"),
-        os.path.join(tmpdir, "28m_triangle_10time_10chan.yaml"),
+        new_tel_config,
     )
+    new_param_file = os.path.join(tmpdir, "param_100times_1.5days_triangle.yaml")
     shutil.copyfile(
         os.path.join(
             SIM_DATA_PATH, "test_config", "param_100times_1.5days_triangle.yaml"
         ),
-        os.path.join(tmpdir, "param_100times_1.5days_triangle.yaml"),
+        new_param_file,
     )
     shutil.copyfile(
         os.path.join(SIM_DATA_PATH, "test_config", "triangle_bl_layout.csv"),
@@ -1753,6 +1802,16 @@ def test_direct_fname(tmpdir):
 
     cwd = os.getcwd()
     os.chdir(tmpdir)
+
+    if hasattr(UVData().telescope, "mount_type"):
+        # update the yaml files in the repo so doing it on the fly isn't necessary
+        # once we require pyuvdata >= 3.2
+        with open(new_tel_config) as fconfig:
+            lines = fconfig.readlines()
+        lines.insert(4, "    mount_type: fixed\n")
+        with open(new_tel_config, "w") as fconfig:
+            lines = "".join(lines)
+            fconfig.write(lines)
 
     simsetup.initialize_uvdata_from_params(
         "param_100times_1.5days_triangle.yaml", return_beams=False
@@ -2242,11 +2301,37 @@ def test_simsetup_with_obsparam_freq_buffer():
     assert beams[0].beam.freq_array.max() < 101e6
 
 
-def test_simsetup_with_freq_buffer():
-    fl = os.path.join(
+def test_simsetup_with_freq_buffer(tmp_path):
+    param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky_freqbuf_tel.yaml"
     )
 
-    _, beams, _ = simsetup.initialize_uvdata_from_params(fl, return_beams=True)
+    params = simsetup._config_str_to_dict(param_filename)
+
+    if hasattr(UVData().telescope, "mount_type"):
+        # update the yaml files in the repo so doing it on the fly isn't necessary
+        # once we require pyuvdata >= 3.2
+        # copy telescope config file to temporary directory so we can add mount_type
+        os.makedirs(os.path.join(tmp_path, "test_config"))
+        new_tel_config = os.path.join(
+            tmp_path, "test_config", params["telescope"]["telescope_config_name"]
+        )
+        shutil.copyfile(
+            os.path.join(
+                SIM_DATA_PATH,
+                "test_config",
+                params["telescope"]["telescope_config_name"],
+            ),
+            new_tel_config,
+        )
+        params["telescope"]["telescope_config_name"] = new_tel_config
+        with open(new_tel_config) as fconfig:
+            lines = fconfig.readlines()
+        lines.insert(4, "    mount_type: fixed\n")
+        with open(new_tel_config, "w") as fconfig:
+            lines = "".join(lines)
+            fconfig.write(lines)
+
+    _, beams, _ = simsetup.initialize_uvdata_from_params(params, return_beams=True)
 
     assert beams[0].beam.freq_array.max() < 101e6

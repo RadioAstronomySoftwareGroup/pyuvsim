@@ -24,6 +24,7 @@ def profdata_dir_setup(tmpdir):
     return outpath
 
 
+@pytest.mark.filterwarnings("ignore:The mount_type parameter must be set for UVBeam")
 def test_profiler(tmpdir):
     line_profiler = pytest.importorskip("line_profiler")
     outpath = profdata_dir_setup(tmpdir)
