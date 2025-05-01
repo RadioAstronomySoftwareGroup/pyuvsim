@@ -153,7 +153,7 @@ class BeamList:
                 items = {}
                 for i, bi in enumerate(self):
                     items[i] = bi.beam.feed_array
-                    # this can go aways once we require pyuvdata >= 3.2
+                    # this can go away once we require pyuvdata >= 3.2
                     if not hasattr(bi.beam, "feed_angle") and (
                         "e" in bi.beam.feed_array or "n" in bi.beam.feed_array
                     ):
@@ -230,8 +230,7 @@ class BeamList:
             return None
 
         # remove this property once we require pyuvdata >= 3.2
-        # remove pragma once pyuvdata 3.2 is released.
-        if hasattr(self[0].beam, "feed_angle"):  # pragma: no cover
+        if hasattr(self[0].beam, "feed_angle"):
             # don't use x_orientation.
             return None
         else:

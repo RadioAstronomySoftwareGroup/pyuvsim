@@ -1418,9 +1418,8 @@ def parse_telescope_params(
 
     if not tele_config:
         beam_info = False
-        if hasattr(Telescope(), "feed_angle"):  # pragma: no cover
+        if hasattr(Telescope(), "feed_angle"):
             # always do this once we require pyuvdata >= 3.2
-            # remove pragma once pyuvdata 3.2 is released.
             for key in ["feed_array", "feed_angle", "mount_type"]:
                 if key in tele_params:
                     return_dict[key] = tele_params[key]
@@ -1455,7 +1454,8 @@ def parse_telescope_params(
     # always do this once we require pyuvdata >= 3.2
     add_feed_angle = False
     # remove pragma once pyuvdata 3.2 is released.
-    if hasattr(beam_list[0].beam, "feed_angle"):  # pragma: no cover
+    if hasattr(beam_list[0].beam, "feed_angle"):
+        # always do this once we require pyuvdata >= 3.2
         add_feed_angle = True
         # use dtype=object so strings don't get truncated.
         mount_type = np.full((antnames.size,), None, dtype=object)
@@ -1470,13 +1470,13 @@ def parse_telescope_params(
         which_ants = antnames[wh_this_beam]
         for ant in which_ants:
             beam_dict[ant] = beam_ind
-        # remove pragma once pyuvdata 3.2 is released.
-        if add_feed_angle:  # pragma: no cover
+        if add_feed_angle:
+            # always do this once we require pyuvdata >= 3.2
             mount_type[wh_this_beam] = beam_list[beam_ind].beam.mount_type
             feed_angle[wh_this_beam, :] = beam_list[beam_ind].beam.feed_angle
 
-    # remove pragma once pyuvdata 3.2 is released.
-    if add_feed_angle:  # pragma: no cover
+    if add_feed_angle:
+        # always do this once we require pyuvdata >= 3.2
         if np.any(mount_type):
             if not np.all(mount_type):
                 mount_type[np.nonzero(mount_type == np.array(None))] = "other"
@@ -2624,7 +2624,9 @@ def uvdata_to_telescope_config(
     # mount_type for the yaml dumper
     beam = UVBeam()
     beam.filename = [beam_filepath]
-    beam.mount_type = uvdata_in.telescope.mount_type[0]
+    if hasattr(beam, "mount_type"):
+        # always do this once we require pyuvdata >= 3.2
+        beam.mount_type = uvdata_in.telescope.mount_type[0]
 
     # Write the rest to a yaml file.
     yaml_dict = {
