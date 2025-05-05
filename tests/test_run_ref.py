@@ -175,12 +175,23 @@ def compare_uvh5(uv_ref, uv_new):
     uv_ref.print_phase_center_info()
     print("")
 
-    print("phase_center_catalog 1:")
+    print("phase_center_catalog 2:")
     uv_new.print_phase_center_info()
     print("")
 
     # set phase_center_catalog name to match so equality check doesn't fail
     uv_ref.rename_phase_center(0, "unprojected")
+
+    print("mount type 1:")
+    print(uv_ref.telescope.mount_type)
+    print("")
+
+    print("mount type 2:")
+    print(uv_new.telescope.mount_type)
+    print("")
+
+    # set telescope mount_type to match so equality check doesn't fail
+    uv_ref.telescope.mount_type = uv_new.telescope.mount_type
 
     ref_arr, new_arr = uv_ref.data_array, uv_new.data_array
 
