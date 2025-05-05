@@ -78,14 +78,14 @@ Frequency
 ^^^^^^^^^
 
     As is the standard with ``pyuvdata``, the frequencies refer to the
-    **frequency at the channel center**. The ``bandpass`` refers to the total band
+    **frequency at the channel center**. The ``bandwidth`` refers to the total band
     covered by all channels, and the channel width is the separation between channel
     centers. Therefore, the following relations hold::
 
-		bandpass = Nfreqs * channel_width
-		bandpass = (end_freq + channel_width/2.) - (start_freq - channel_width/2.) = ( end_freq - start_freq) + channel_width
-		start_freq = end_freq - bandpass + channel_width
-		end_freq = start_freq + bandpass - channel_width
+		bandwidth = Nfreqs * channel_width
+		bandwidth = (end_freq + channel_width/2.) - (start_freq - channel_width/2.) = ( end_freq - start_freq) + channel_width
+		start_freq = end_freq - bandwidth + channel_width
+		end_freq = start_freq + bandwidth - channel_width
 
 
     Time and frequency structure may be defined with different combinations of keywords
@@ -102,7 +102,7 @@ Frequency
 
     Specify channel width via:
 
-        * (``bandwidth``, ``Nfreqs``)
+        * (``Nfreqs``)
         * (``channel width``)
 
     Specify a reference frequency via:
@@ -150,7 +150,7 @@ Time
 
     Time step:
 
-        * (``duration_hours`` or ``duration_days``, ``Ntimes``)
+        * (``Ntimes``)
         * (``integration_time``)
 
     Reference time:
@@ -159,9 +159,23 @@ Time
         * (``end_time``)
 
     As long as one of the sets from each category above is met by the supplied keywords,
-    the time array will be successfully built.
+    the time array will be successfully built.  You can also just give an explicit ``time_array``.
 
+    The ``integration_time`` should be specified as a scalar unless ``time_array`` is specified,
+    in which case ``integration_time`` can either be a scalar or an array of the same
+    length as ``time_array``.
 
+    If you specify an explicit ``time_array`` that is not evenly spaced or is only
+    length one, you must specify the ``integration_time``, either as a single value (in s)
+    or as an array of the same length as ``time_array``.
+
+    Note that to get sufficient precision, the parameters that contain absolute
+    times (``start_time``, ``end_time``, ``time_array``) must be 64bit floats.
+    As a convenience, a ``time_offset`` parameter can be supplied which will be
+    added to the the parameters that contain absolute times so that those
+    parameters can be written as lower precision numbers. This is needed to support
+    automated generation of parameter yamls as the standard yaml dumpers do not
+    write the full precision of 64bit values.
 
 Telescope Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^
