@@ -12,6 +12,11 @@ feed_angle, mount_type) which will be released in pyuvdata 3.2
 - Updated minimum dependency versions: pyuvdata>=3.1.2
 
 ### Fixed
+- A bug in the way the time and frequency arrays were set up from the obsparam
+yamls when they were specified with the start, end, spacing, number and width
+parameters rather than with the arrays.
+- A bug in round-tripping times through obsparam yaml files caused by precision
+loss when writing out the yaml files.
 - A bug causing large memory usage for simulations using sky models with spectral
 index or subband spectral types.
 - A bug in handling diffuse maps with units of Jy/sr.

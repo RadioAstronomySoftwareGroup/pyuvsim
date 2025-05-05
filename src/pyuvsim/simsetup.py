@@ -1491,6 +1491,179 @@ def parse_telescope_params(
         return return_dict, beam_list, beam_dict
 
 
+def _setup_coord_arrays(coord_params, param_map, tols):
+    kws_given = ", ".join(sorted([param_map[coord_key] for coord_key in coord_params]))
+    if "coord_array" in coord_params:
+        # If the coordinate array is provided just use it.
+        kwds_used = ["coord_array"]
+        coord_params["coord_array"] = np.asarray(coord_params["coord_array"])
+        coord_params["coord_n"] = coord_params["coord_array"].size
+        coord_params["coord_start"] = coord_params["coord_array"][0]
+        coord_params["coord_end"] = coord_params["coord_array"][-1]
+        if "coord_delta" in coord_params:
+            # If the deltas are provided use them
+            coord_params["coord_delta"] = np.atleast_1d(coord_params["coord_delta"])
+            if coord_params["coord_delta"].size == 1:
+                coord_params["coord_delta"] = np.full(
+                    (coord_params["coord_n"],),
+                    coord_params["coord_delta"][0],
+                    dtype=float,
+                )
+            elif coord_params["coord_delta"].size != coord_params["coord_n"]:
+                raise ValueError(
+                    f"If {param_map['coord_delta']} has multiple elements, the "
+                    f"{param_map['coord_delta']} must be the same length as "
+                    f"{param_map['coord_array']}."
+                )
+            kwds_used.append("coord_delta")
+        else:
+            # Can only calculate the delta if coords are evenly spaced
+            if coord_params["coord_n"] > 1:
+                if not uvutils.tools._test_array_constant_spacing(
+                    coord_params["coord_array"], tols=tols
+                ):
+                    raise ValueError(
+                        f"{param_map['coord_delta']} must be specified if spacing "
+                        f"in {param_map['coord_array']} is uneven."
+                    )
+                coord_params["coord_delta"] = np.full(
+                    (coord_params["coord_n"],),
+                    np.mean(np.diff(coord_params["coord_array"])),
+                    dtype=float,
+                )
+            else:
+                raise ValueError(
+                    f"{param_map['coord_delta']} must be specified if "
+                    f"{param_map['coord_array']} has length 1"
+                )
+        # length is the *full length including widths* so delta is needed to
+        # calculate the lengths
+        coord_params["coord_length"] = (
+            coord_params["coord_array"][-1] + coord_params["coord_delta"][-1] * 0.5
+        ) - (coord_params["coord_array"][0] - coord_params["coord_delta"][0] * 0.5)
+    else:
+        # The final linspace call needs coord_start, coord_end and coord_n.
+        # Calculate any of these we need from the other available parameters
+        # Also calculate the other parameters so we can test for consistency
+        # on any extra parameters that are provided
+        if not ("coord_start" in coord_params or "coord_end" in coord_params):
+            raise ValueError(
+                f"Either {param_map['coord_start']} or {param_map['coord_end']} "
+                "must be specified. The parameters that were specified were: "
+                + kws_given
+            )
+        if (
+            "coord_delta" in coord_params
+            and np.asarray(coord_params["coord_delta"]).size > 1
+        ):
+            raise ValueError(
+                f"{param_map['coord_delta']} must be a scalar if "
+                f"{param_map['coord_array']} is not specified"
+            )
+        if "coord_start" in coord_params and "coord_end" in coord_params:
+            # Both start and end are specified
+            kwds_used = ["coord_start", "coord_end"]
+            if not ("coord_n" in coord_params or "coord_delta" in coord_params):
+                raise ValueError(
+                    f"If both {param_map['coord_start']} and {param_map['coord_end']} "
+                    f"are specified, either {param_map['coord_n']} or "
+                    f"{param_map['coord_delta']} must be specified as well. The "
+                    "parameters that were specified were: " + kws_given
+                )
+            if "coord_n" in coord_params:
+                kwds_used.append("coord_n")
+                coord_delta = (
+                    coord_params["coord_end"] - coord_params["coord_start"]
+                ) / (coord_params["coord_n"] - 1)
+                coord_length = (
+                    coord_params["coord_end"]
+                    - coord_params["coord_start"]
+                    + coord_delta
+                )
+                coord_params["coord_delta"] = coord_delta
+            else:
+                kwds_used.append("coord_delta")
+                coord_length = (
+                    coord_params["coord_end"]
+                    - coord_params["coord_start"]
+                    + coord_params["coord_delta"]
+                )
+                coord_params["coord_n"] = float(
+                    coord_length / coord_params["coord_delta"]
+                )
+            coord_params["coord_length"] = coord_length
+        else:
+            # Only one of start & end are specified
+            other_specs = [
+                "coord_n" in coord_params,
+                "coord_delta" in coord_params,
+                "coord_length" in coord_params,
+            ]
+            if np.sum(other_specs) < 2:
+                raise ValueError(
+                    f"If only one of {param_map['coord_start']} and "
+                    f"{param_map['coord_end']} is specified, two more of "
+                    f"{param_map['coord_n']}, {param_map['coord_delta']} and "
+                    f"{param_map['coord_length']} must be specified as well. "
+                    "The parameters that were specified were: " + kws_given
+                )
+            if "coord_n" in coord_params:
+                kwds_used = ["coord_n"]
+                if "coord_delta" in coord_params:
+                    kwds_used.append("coord_delta")
+                    coord_length = coord_params["coord_n"] * coord_params["coord_delta"]
+                    coord_params["coord_length"] = coord_length
+                else:
+                    kwds_used.append("coord_length")
+                    coord_params["coord_delta"] = (
+                        coord_params["coord_length"] / coord_params["coord_n"]
+                    )
+            else:
+                kwds_used = ["coord_delta", "coord_length"]
+                coord_params["coord_n"] = (
+                    coord_params["coord_length"] / coord_params["coord_delta"]
+                )
+
+            if "coord_start" in coord_params:
+                kwds_used.append("coord_start")
+                coord_params["coord_end"] = (
+                    coord_params["coord_start"]
+                    + coord_params["coord_length"]
+                    - coord_params["coord_delta"]
+                )
+            else:
+                kwds_used.append("coord_end")
+                coord_params["coord_start"] = (
+                    coord_params["coord_end"]
+                    - coord_params["coord_length"]
+                    + coord_params["coord_delta"]
+                )
+
+        if not np.isclose(coord_params["coord_n"], np.round(coord_params["coord_n"])):
+            raise ValueError(
+                f"{param_map['coord_end']} - {param_map['coord_start']} must be "
+                f"evenly divisible by {param_map['coord_delta']}"
+            )
+        coord_params["coord_n"] = int(np.round(coord_params["coord_n"]))
+
+        coord_params["coord_array"], coord_delta = np.linspace(
+            coord_params["coord_start"],
+            coord_params["coord_end"],
+            coord_params["coord_n"],
+            retstep=True,
+            endpoint=True,
+        )
+        if coord_params["coord_n"] > 1:
+            # Set the delta to be the linspace step size unless there's only
+            # one value, in which case use the value that was passed in or
+            # calculated earlier
+            coord_params["coord_delta"] = np.full(
+                (coord_params["coord_n"],), coord_delta, dtype=float
+            )
+    coord_params["params_used"] = kwds_used
+    return coord_params
+
+
 def parse_frequency_params(freq_params):
     """
     Parse the "freq" section of obsparam.
@@ -1514,116 +1687,72 @@ def parse_frequency_params(freq_params):
               centers in Hz
 
     """
-    freq_keywords = [
-        "freq_array",
-        "start_freq",
-        "end_freq",
-        "Nfreqs",
-        "channel_width",
-        "bandwidth",
-    ]
-    fa, sf, ef, nf, cw, bw = (fk in freq_params for fk in freq_keywords)
-    kws_used = ", ".join(sorted(freq_params.keys()))
-    freq_params = copy.deepcopy(freq_params)
+    freq_params_orig = copy.deepcopy(freq_params)
+    # remove Nspws because we don't use it we set it to 1 it at the end anyway
+    if "Nspws" in freq_params_orig:
+        del freq_params_orig["Nspws"]
+    freq_params = copy.deepcopy(freq_params_orig)
+    ftols = UVData()._freq_array.tols
 
-    if fa:
-        freq_arr = np.asarray(freq_params["freq_array"])
-        freq_params["Nfreqs"] = freq_arr.size
-        if "channel_width" not in freq_params:
-            if freq_params["Nfreqs"] > 1:
-                freq_params["channel_width"] = np.diff(freq_arr)[0]
-                if not np.allclose(np.diff(freq_arr), freq_params["channel_width"]):
-                    raise ValueError(
-                        "Channel width must be specified if spacing in freq_array is uneven."
-                    )
-            else:
-                raise ValueError(
-                    "Channel width must be specified if freq_array has length 1"
+    freq_param_map = {
+        "coord_array": "freq_array",
+        "coord_delta": "channel_width",
+        "coord_start": "start_freq",
+        "coord_end": "end_freq",
+        "coord_n": "Nfreqs",
+        "coord_length": "bandwidth",
+    }
+
+    freq_param_map_rev = {
+        freq_key: coord_key for coord_key, freq_key in freq_param_map.items()
+    }
+
+    coord_params = {
+        freq_param_map_rev[freq_key]: value for freq_key, value in freq_params.items()
+    }
+    coord_params = _setup_coord_arrays(
+        coord_params, param_map=freq_param_map, tols=ftols
+    )
+
+    freq_params = {
+        freq_key: coord_params[coord_key]
+        for coord_key, freq_key in freq_param_map.items()
+    }
+    kwds_used = [freq_param_map[coord_key] for coord_key in coord_params["params_used"]]
+
+    # Warn about inconsistencies in supplied parameters
+    inconsistent_params = []
+    for kwd in freq_params_orig:
+        if kwd in kwds_used:
+            continue
+        if kwd == "channel_width":
+            orig_cw = np.atleast_1d(freq_params_orig[kwd])
+            if orig_cw.size != freq_params[kwd].size:
+                orig_cw = np.full(
+                    (freq_params["Nfreqs"],), freq_params_orig[kwd], dtype=float
                 )
-    else:
-        if not (sf or ef):
-            raise ValueError(
-                "Either start or end frequency must be specified: " + kws_used
-            )
-        if cw and np.asarray(freq_params["channel_width"]).size > 1:
-            raise ValueError(
-                "channel_width must be a scalar if freq_array is not specified"
-            )
+            if not np.allclose(orig_cw, freq_params[kwd], rtol=ftols[0], atol=ftols[1]):
+                inconsistent_params.append(kwd)
+        else:
+            if not np.isclose(
+                freq_params_orig[kwd], freq_params[kwd], rtol=ftols[0], atol=ftols[1]
+            ):
+                inconsistent_params.append(kwd)
 
-        if not nf:
-            if not cw:
-                raise ValueError(
-                    "Either channel_width or Nfreqs "
-                    " must be included in parameters:" + kws_used
-                )
-
-            if sf and ef:
-                freq_params["bandwidth"] = (
-                    freq_params["end_freq"]
-                    - freq_params["start_freq"]
-                    + freq_params["channel_width"]
-                )
-
-                bw = True
-            if bw:
-                Nfreqs = float(freq_params["bandwidth"] / freq_params["channel_width"])
-                freq_params["Nfreqs"] = Nfreqs
-
-            else:
-                raise ValueError(
-                    "Either bandwidth or band edges must be specified: " + kws_used
-                )
-
-        if not cw:
-            if not bw:
-                raise ValueError(
-                    "Either bandwidth or channel width must be specified: " + kws_used
-                )
-            freq_params["channel_width"] = freq_params["bandwidth"] / float(
-                freq_params["Nfreqs"]
-            )
-
-        if not bw:
-            freq_params["bandwidth"] = (
-                freq_params["channel_width"] * freq_params["Nfreqs"]
-            )
-            bw = True
-
-        if not sf and ef and bw:
-            freq_params["start_freq"] = (
-                freq_params["end_freq"]
-                - freq_params["bandwidth"]
-                + freq_params["channel_width"]
-            )
-
-        if not ef and sf and bw:
-            freq_params["end_freq"] = (
-                freq_params["start_freq"]
-                + freq_params["bandwidth"]
-                - freq_params["channel_width"]
-            )
-
-        if not np.isclose(freq_params["Nfreqs"] % 1, 0):
-            raise ValueError(
-                "end_freq - start_freq must be evenly divisible by channel_width"
-            )
-        freq_params["Nfreqs"] = int(freq_params["Nfreqs"])
-
-        freq_arr = np.linspace(
-            freq_params["start_freq"],
-            freq_params["end_freq"] + freq_params["channel_width"],
-            freq_params["Nfreqs"],
-            endpoint=False,
+    if len(inconsistent_params) > 0:
+        warnings.warn(
+            f"The {', '.join(inconsistent_params)} is not consistent with "
+            f"the {', '.join(kwds_used)} specified. Using the values calculated "
+            f"from the {', '.join(kwds_used)} parameters. Input values were: "
+            f"{[freq_params_orig[kwd] for kwd in inconsistent_params]}, calculated "
+            f"values were: {[freq_params[kwd] for kwd in inconsistent_params]}."
         )
 
-    chan_width = np.atleast_1d(freq_params["channel_width"])
-    if chan_width.size < freq_params["Nfreqs"] and chan_width.size == 1:
-        chan_width = np.full((freq_params["Nfreqs"],), chan_width, dtype=float)
-
+    # return the things needed for UVData objects
     return_dict = {}
     return_dict["Nfreqs"] = freq_params["Nfreqs"]
-    return_dict["freq_array"] = freq_arr
-    return_dict["channel_width"] = chan_width
+    return_dict["freq_array"] = freq_params["freq_array"]
+    return_dict["channel_width"] = freq_params["channel_width"]
     return_dict["Nspws"] = 1
 
     return return_dict
@@ -1651,118 +1780,168 @@ def parse_time_params(time_params):
             * `time_array`: (dtype float, ndarray, shape=(Ntimes,)) Time step centers in JD.
 
     """
-    return_dict = {}
-
     init_time_params = copy.deepcopy(time_params)
-    time_params = copy.deepcopy(time_params)
+    # Handle the time_offset: add it to all absolute time parameters unless
+    # it looks like they already have it, in which case warn!
+    if "time_offset" in init_time_params:
+        for param in ["start_time", "end_time", "time_array"]:
+            if param in init_time_params:
+                if np.max(init_time_params[param]) > init_time_params["time_offset"]:
+                    warnings.warn(
+                        f"time_offset is present, but {param} is larger than "
+                        f"time_offset, so not adding time_offset to {param}."
+                    )
+                else:
+                    if isinstance(init_time_params[param], list):
+                        init_time_params[param] = (
+                            np.asarray(init_time_params[param])
+                            + init_time_params["time_offset"]
+                        ).tolist()
+                    else:
+                        init_time_params[param] += init_time_params["time_offset"]
+        del init_time_params["time_offset"]
 
-    time_keywords = [
-        "time_array",
-        "start_time",
-        "end_time",
-        "Ntimes",
-        "integration_time",
-        "duration_hours",
-        "duration_days",
-    ]
-    ta, st, et, nt, it, dh, dd = (tk in time_params for tk in time_keywords)
-    kws_used = ", ".join(sorted(time_params.keys()))
+    time_params = copy.deepcopy(init_time_params)
+    dtols = UVData()._time_array.tols
+    stols = UVData()._integration_time.tols
+
+    # deal with the different units for different time parameters
     daysperhour = 1 / 24.0
     hourspersec = 1 / 60.0**2
     dayspersec = daysperhour * hourspersec
-
-    if ta:
-        # Time array is defined. Supersedes all other parameters:
-        time_arr = time_params["time_array"]
-        time_params["Ntimes"] = len(time_arr)
-        time_params["start_time"] = np.min(time_arr)
-        time_params["integration_time"] = np.mean(np.diff(time_arr))
-
-    else:
-        if not (st or et):
-            raise ValueError("Start or end time must be specified: " + kws_used)
-        if dh and not dd:
-            time_params["duration"] = time_params["duration_hours"] * daysperhour
-            dd = True
-        elif dd:
-            time_params["duration"] = time_params["duration_days"]
-
-        if not nt:
-            if not it:
-                raise ValueError(
-                    "Either integration_time or Ntimes must be "
-                    "included in parameters: " + kws_used
-                )
-            if st and et:
-                time_params["duration"] = (
-                    time_params["end_time"]
-                    - time_params["start_time"]
-                    + time_params["integration_time"] * dayspersec
-                )
-
-                dd = True
-            if dd:
-                time_params["Ntimes"] = int(
-                    np.round(
-                        time_params["duration"]
-                        / (time_params["integration_time"] * dayspersec)
-                    )
-                )
-            else:
-                raise ValueError(
-                    "Either duration or time bounds must be specified: " + kws_used
-                )
-
-        if not it:
-            if not dd:
-                raise ValueError(
-                    "Either duration or integration time must be specified: " + kws_used
-                )
-            # In seconds
-            time_params["integration_time"] = (
-                time_params["duration"] / dayspersec / float(time_params["Ntimes"])
-            )
-
-        inttime_days = time_params["integration_time"] * dayspersec
-        if not dd:
-            time_params["duration"] = inttime_days * (time_params["Ntimes"])
-            dd = True
-        if not st and et and dd:
-            time_params["start_time"] = (
-                time_params["end_time"] - time_params["duration"] + inttime_days
-            )
-
-        if not et and st and dd:
-            time_params["end_time"] = (
-                time_params["start_time"] + time_params["duration"] - inttime_days
-            )
-
-        time_arr = np.linspace(
-            time_params["start_time"],
-            time_params["end_time"] + inttime_days,
-            time_params["Ntimes"],
-            endpoint=False,
+    if "integration_time" in time_params:
+        time_params["int_time_days"] = (
+            np.asarray(time_params.pop("integration_time")) * dayspersec
         )
 
-        if time_params["Ntimes"] != 1 and not np.allclose(
-            np.diff(time_arr),
-            inttime_days * np.ones(time_params["Ntimes"] - 1),
-            atol=dayspersec,
-        ):  # To nearest second
-            raise ValueError(
-                "Calculated time array is not consistent with set integration_time."
-                f"\nInput parameters are: {init_time_params}"
+    if "duration_hours" in time_params:
+        if "duration_days" in time_params:
+            warnings.warn(
+                "Both duration_hours and duration_days are specified, using duration_days."
+            )
+            time_params.pop("duration_hours")
+        else:
+            time_params["duration_days"] = (
+                time_params.pop("duration_hours") * daysperhour
             )
 
+    time_param_map = {
+        "coord_array": "time_array",
+        "coord_delta": "int_time_days",
+        "coord_start": "start_time",
+        "coord_end": "end_time",
+        "coord_n": "Ntimes",
+        "coord_length": "duration_days",
+    }
+
+    time_param_map_rev = {
+        freq_key: coord_key for coord_key, freq_key in time_param_map.items()
+    }
+
+    coord_params = {
+        time_param_map_rev[freq_key]: value for freq_key, value in time_params.items()
+    }
+
+    # fix the names in errors/warnings to be the original names
+    time_param_map_for_func = copy.deepcopy(time_param_map)
+    time_param_map_for_func["coord_delta"] = "integration_time"
+    time_param_map_for_func["coord_length"] = "duration"
+
+    coord_params = _setup_coord_arrays(
+        coord_params, param_map=time_param_map_for_func, tols=dtols
+    )
+
+    time_params = {
+        freq_key: coord_params[coord_key]
+        for coord_key, freq_key in time_param_map.items()
+    }
+    kwds_used = [time_param_map[coord_key] for coord_key in coord_params["params_used"]]
+
+    # Go back to the right units
+    time_params["integration_time"] = time_params.pop("int_time_days") / dayspersec
+    kwds_used = [
+        "integration_time" if kwd == "int_time_days" else kwd for kwd in kwds_used
+    ]
+    if "duration_days" in kwds_used and "duration_days" not in init_time_params:
+        kwds_used = [
+            "duration_hours" if kwd == "duration_days" else kwd for kwd in kwds_used
+        ]
+
+    # Warn about inconsistencies in supplied parameters
+    inconsistent_params = []
+    for kwd in init_time_params:
+        if kwd in kwds_used:
+            continue
+        if kwd == "integration_time":
+            orig_cw = np.atleast_1d(init_time_params[kwd])
+            if orig_cw.size != time_params[kwd].size:
+                orig_cw = np.full(
+                    (time_params["Ntimes"],), init_time_params[kwd], dtype=float
+                )
+            if not np.allclose(orig_cw, time_params[kwd], rtol=stols[0], atol=stols[1]):
+                inconsistent_params.append(kwd)
+        elif kwd == "duration_hours":
+            orig_duration_days = init_time_params[kwd] * daysperhour
+            if not np.isclose(
+                orig_duration_days,
+                time_params["duration_days"],
+                rtol=dtols[0],
+                atol=dtols[1],
+            ):
+                inconsistent_params.append(kwd)
+                time_params[kwd] = time_params["duration_days"] / daysperhour
+        else:
+            if not np.isclose(
+                init_time_params[kwd], time_params[kwd], rtol=dtols[0], atol=dtols[1]
+            ):
+                inconsistent_params.append(kwd)
+
+    if len(inconsistent_params) > 0:
+        warnings.warn(
+            f"The {', '.join(inconsistent_params)} is not consistent with "
+            f"the {', '.join(kwds_used)} specified. Using the values calculated "
+            f"from the {', '.join(kwds_used)} parameters. Input values were: "
+            f"{[init_time_params[kwd] for kwd in inconsistent_params]}, calculated "
+            f"values were: {[time_params[kwd] for kwd in inconsistent_params]}."
+        )
+
+    # return the things needed for UVData objects
+    return_dict = {}
     return_dict["integration_time"] = time_params["integration_time"]
-    return_dict["time_array"] = time_arr
+    return_dict["time_array"] = time_params["time_array"]
     return_dict["Ntimes"] = time_params["Ntimes"]
     return_dict["start_time"] = time_params["start_time"]
 
     return return_dict
 
 
-def freq_array_to_params(freq_array):
+def _coord_arrays_to_params(coord_array, coord_delta, tols):
+    if coord_array.size > 1 and (np.asarray(coord_delta)).size == 1:
+        coord_delta = np.full_like(coord_array, coord_delta)
+    if (
+        not uvutils.tools._test_array_constant_spacing(coord_array, tols=tols)
+        or not uvutils.tools._test_array_constant(coord_delta, tols=tols)
+        or not uvutils.tools._test_array_consistent(coord_array, coord_delta, tols=tols)
+        or coord_array.size == 1
+    ):
+        # arrays are not evenly spaced or deltas do not match diffs or only one
+        # value in the array. Just use the arrays and deltas.
+        return {
+            "coord_array": coord_array.tolist(),
+            "coord_delta": coord_delta.tolist(),
+        }
+    else:
+        # Evenly spaced arrays and delta matches array diffs
+        # Use start/end and number because these are easier for people to
+        # read and understand
+        return {
+            "coord_start": float(coord_array[0]),
+            "coord_end": float(coord_array[-1]),
+            "coord_n": coord_array.size,
+        }
+
+
+def freq_array_to_params(freq_array, channel_width):
     """
     Get a set of parameters that can be used to generate a given frequency array.
 
@@ -1770,6 +1949,8 @@ def freq_array_to_params(freq_array):
     ----------
     freq_array : array of float
         Frequencies in Hz.
+    channel_width : array of float
+        Channel widths in Hz.
 
     Returns
     -------
@@ -1780,25 +1961,27 @@ def freq_array_to_params(freq_array):
         https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#frequency
 
     """
-    freq_array = np.asarray(freq_array).ravel()
+    freq_param_map = {
+        "coord_array": "freq_array",
+        "coord_delta": "channel_width",
+        "coord_start": "start_freq",
+        "coord_end": "end_freq",
+        "coord_n": "Nfreqs",
+        "coord_length": "bandwidth",
+    }
 
-    fdict = {}
-    if freq_array.size < 2:
-        fdict["channel_width"] = 1.0
-        fdict["Nfreqs"] = 1
-        fdict["start_freq"] = freq_array.item(0)
-        return fdict
+    coord_params = _coord_arrays_to_params(
+        coord_array=freq_array,
+        coord_delta=channel_width,
+        tols=UVData()._freq_array.tols,
+    )
 
-    fdict["channel_width"] = np.diff(freq_array).item(0)
-    fdict["Nfreqs"] = freq_array.size
-    fdict["bandwidth"] = fdict["channel_width"] * fdict["Nfreqs"]
-    fdict["start_freq"] = freq_array.item(0)
-    fdict["end_freq"] = freq_array.item(-1)
-
-    return fdict
+    return {
+        freq_param_map[coord_key]: value for coord_key, value in coord_params.items()
+    }
 
 
-def time_array_to_params(time_array):
+def time_array_to_params(time_array, integration_time):
     """
     Get a set of parameters that can be used to generate a given time array.
 
@@ -1809,6 +1992,8 @@ def time_array_to_params(time_array):
     ----------
     time_array : array of float
         Julian dates.
+    integration_time : array of float
+        Integration times in seconds.
 
     Returns
     -------
@@ -1819,30 +2004,91 @@ def time_array_to_params(time_array):
         https://pyuvsim.readthedocs.io/en/latest/parameter_files.html#time
 
     """
-    time_array = np.asarray(time_array)
-    Ntimes_uniq = np.unique(time_array).size
+    # times maybe supplied as length Nblts with lots of duplicates.
+    # Find unique times.
+    time_array, unique_inverse = np.unique(np.asarray(time_array), return_inverse=True)
 
-    tdict = {}
-    if Ntimes_uniq < 2:
-        tdict["integration_time"] = 1.0
-        tdict["Ntimes"] = 1
-        tdict["start_time"] = time_array.item(0)
-        return tdict
+    # If there are duplicate times, we need to downselect the integration time array
+    # to match. Easy if integration times are all the same, hard otherwise.
+    if time_array.size < unique_inverse.size:
+        # there were some repeated times
+        int_time_use = np.full_like(time_array, np.nan)
+        if not uvutils.tools._test_array_constant(
+            integration_time, tols=UVData()._integration_time.tols
+        ):
+            int_time_varies_per_time = False
+            for tind in range(time_array.size):
+                int_times_this_time = integration_time[
+                    np.nonzero(unique_inverse == tind)
+                ]
+                if not uvutils.tools._test_array_constant(
+                    int_times_this_time, tols=UVData()._integration_time.tols
+                ):
+                    int_time_varies_per_time = True
+                    int_time_use[tind] = np.min(int_times_this_time)
+                else:
+                    int_time_use[tind] = np.mean(int_times_this_time)
+            if int_time_varies_per_time:
+                warnings.warn(
+                    "integration time varies for unique times, using the shortest "
+                    "integration time for each unique time."
+                )
+        else:
+            int_time_use = np.full_like(time_array, np.mean(integration_time))
+        integration_time = int_time_use
 
-    dt = np.min(np.diff(time_array)).item()
+    # deal with the different units for different time parameters
+    daysperhour = 1 / 24.0
+    hourspersec = 1 / 60.0**2
+    dayspersec = daysperhour * hourspersec
+    int_time_days = integration_time * dayspersec
 
-    if not np.allclose(np.diff(time_array), np.ones(time_array.size - 1) * dt):
-        tdict["time_array"] = time_array.tolist()
+    time_param_map = {
+        "coord_array": "time_array",
+        "coord_delta": "int_time_days",
+        "coord_start": "start_time",
+        "coord_end": "end_time",
+        "coord_n": "Ntimes",
+        "coord_length": "duration_days",
+    }
 
-    tdict["integration_time"] = dt * (24.0 * 3600.0)
-    tdict["Ntimes"] = Ntimes_uniq
-    tdict["duration_days"] = (
-        tdict["integration_time"] * tdict["Ntimes"] / (24.0 * 3600.0)
+    coord_params = _coord_arrays_to_params(
+        coord_array=time_array,
+        coord_delta=int_time_days,
+        tols=UVData()._time_array.tols,
     )
-    tdict["start_time"] = time_array.item(0)
-    tdict["end_time"] = time_array.item(-1)
 
-    return tdict
+    time_params = {
+        time_param_map[coord_key]: value for coord_key, value in coord_params.items()
+    }
+
+    # go back to the right units
+    if "int_time_days" in time_params:
+        time_params["integration_time"] = (
+            np.asarray(time_params.pop("int_time_days")) / dayspersec
+        ).tolist()
+
+    # use time_offset because if these dicts are dumped to yamls we lose too
+    # much precision on the absolute time parameters
+    if "time_array" in time_params:
+        # Set the offset as the JD at midnight of the first time
+        time_params["time_offset"] = float(
+            np.floor(time_params["time_array"][0] - 0.5) + 0.5
+        )
+        time_params["time_array"] = (
+            np.asarray(time_params["time_array"]) - time_params["time_offset"]
+        ).tolist()
+    else:
+        # Set the offset as the JD at midnight of the first time
+        time_params["time_offset"] = float(
+            np.floor(time_params["start_time"] - 0.5) + 0.5
+        )
+        time_params["start_time"] = (
+            time_params["start_time"] - time_params["time_offset"]
+        )
+        time_params["end_time"] = time_params["end_time"] - time_params["time_offset"]
+
+    return time_params
 
 
 def subselect(uv_obj, param_dict):
@@ -2687,18 +2933,12 @@ def uvdata_to_config_file(
         )
         param_filename = os.path.basename(param_filename)
 
-    freq_array = uvdata_in.freq_array
-    time_array = uvdata_in.time_array
-    integration_time_array = np.array(uvdata_in.integration_time)
-    if np.max(integration_time_array) != np.min(integration_time_array):
-        warnings.warn(
-            "The integration time is not constant. Using the shortest integration time"
-        )
-
-    tdict = time_array_to_params(time_array)
-    fdict = freq_array_to_params(freq_array)
-
-    tdict.pop("time_array", None)
+    tdict = time_array_to_params(
+        time_array=uvdata_in.time_array, integration_time=uvdata_in.integration_time
+    )
+    fdict = freq_array_to_params(
+        freq_array=uvdata_in.freq_array, channel_width=uvdata_in.channel_width
+    )
 
     param_dict = {
         "time": tdict,
