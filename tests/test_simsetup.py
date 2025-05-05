@@ -1744,11 +1744,15 @@ def test_multi_analytic_beams(tmpdir):
     telescope_location = (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
     telescope_name = "SKA"
     beam_specs = {
-        0: AiryBeam(diameter=14),
+        0: AiryBeam(diameter=14, mount_type=None),
         1: AiryBeam(diameter=20),
         2: GaussianBeam(sigma=0.5),
     }
-    expected = [AiryBeam(diameter=14), AiryBeam(diameter=20), GaussianBeam(sigma=0.5)]
+    expected_beams = [
+        AiryBeam(diameter=14, mount_type=None),
+        AiryBeam(diameter=20),
+        GaussianBeam(sigma=0.5),
+    ]
 
     Nants = 5
     antenna_numbers = np.arange(Nants)
@@ -1776,10 +1780,16 @@ def test_multi_analytic_beams(tmpdir):
         param_dict, config_path=str(tmpdir), freq_array=freqs
     )
 
+    exp_mount_type = []
     for i, nm in enumerate(names):
         bid = beam_ids[i]
         assert beam_dict[nm] == bid
-        assert beam_list[bid].beam == expected[bid]
+        assert beam_list[bid].beam == expected_beams[bid]
+        if expected_beams[bid].mount_type is None:
+            exp_mount_type.append("other")
+        else:
+            exp_mount_type.append(expected_beams[bid].mount_type)
+    assert np.all(pdict["mount_type"] == exp_mount_type)
 
 
 def test_direct_fname(tmpdir):
