@@ -1743,13 +1743,18 @@ def test_multi_analytic_beams(tmpdir):
 
     telescope_location = (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
     telescope_name = "SKA"
+    if hasattr(AiryBeam, "mount_type"):
+        # always do this once we require pyuvdata >= 3.2
+        mt_kwargs = {"mount_type": None}
+    else:
+        mt_kwargs = {}
     beam_specs = {
-        0: AiryBeam(diameter=14, mount_type=None),
+        0: AiryBeam(diameter=14, **mt_kwargs),
         1: AiryBeam(diameter=20),
         2: GaussianBeam(sigma=0.5),
     }
     expected_beams = [
-        AiryBeam(diameter=14, mount_type=None),
+        AiryBeam(diameter=14, **mt_kwargs),
         AiryBeam(diameter=20),
         GaussianBeam(sigma=0.5),
     ]
@@ -1785,11 +1790,16 @@ def test_multi_analytic_beams(tmpdir):
         bid = beam_ids[i]
         assert beam_dict[nm] == bid
         assert beam_list[bid].beam == expected_beams[bid]
-        if expected_beams[bid].mount_type is None:
-            exp_mount_type.append("other")
-        else:
-            exp_mount_type.append(expected_beams[bid].mount_type)
-    assert np.all(pdict["mount_type"] == exp_mount_type)
+        if hasattr(AiryBeam, "mount_type"):
+            # always do this once we require pyuvdata >= 3.2
+            if expected_beams[bid].mount_type is None:
+                exp_mount_type.append("other")
+            else:
+                exp_mount_type.append(expected_beams[bid].mount_type)
+
+    if hasattr(AiryBeam, "mount_type"):
+        # always do this once we require pyuvdata >= 3.2
+        assert np.all(pdict["mount_type"] == exp_mount_type)
 
 
 def test_direct_fname(tmpdir):
