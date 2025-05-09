@@ -2291,6 +2291,23 @@ def test_skymodeldata_non_icrs(cat_with_some_pols):
     np.testing.assert_allclose(icrs_coord.dec.deg, smd.dec)
 
 
+@pytest.mark.parametrize("spectral_type", ["spectral_index", "subband"])
+def test_skymodel_data_spectype_select(spectral_type):
+    sky = SkyModel.from_file(
+        os.path.join(SIM_DATA_PATH, "gleam_50srcs.vot"), spectral_type=spectral_type
+    )
+
+    smd = simsetup.SkyModelData(sky)
+
+    sky1_sub = smd.get_skymodel(range(8, 13))
+
+    assert sky1_sub.Ncomponents == 5
+
+    sky_sub = sky.select(component_inds=list(range(8, 13)), inplace=False)
+    sky1_sub.history = sky_sub.history
+    assert sky_sub == sky1_sub
+
+
 @pytest.mark.parametrize("inds", [range(30), range(5)])
 def test_skymodeldata_attr_bases(inds, cat_with_some_pols):
     # Check that downselecting doesn't copy length-Ncomponent arrays.
