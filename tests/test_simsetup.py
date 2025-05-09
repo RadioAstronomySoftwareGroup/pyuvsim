@@ -65,34 +65,28 @@ gleam_param_file = os.path.join(
 
 @pytest.fixture(scope="module")
 def times_and_freqs():
-    freqs = np.linspace(100, 200, 1024)
-    times = np.linspace(2458570, 2458570 + 0.5, 239)
+    freqs, fstep = np.linspace(100, 200, 1024, retstep=True)
+    times, tstep = np.linspace(2458570, 2458570 + 0.5, 239, retstep=True)
     # yield the time and frequency arrays to the tests
     # then delete after
-    yield times, freqs
+    yield times, tstep, freqs, fstep
 
     del (times, freqs)
 
 
 @pytest.fixture
 def time_dict_base():
-    daysperhour = 1 / 24.0
-    dayspersec = 1 / (24 * 3600.0)
-
     tdict_base = {
-        "Ntimes": 24,
-        "duration_hours": 0.9999999962747097 / daysperhour,
-        "end_time": 2457458.9583333298,
-        "integration_time": 3599.999986588955,
+        "Ntimes": 25,
+        "duration_hours": 25.0,
         "start_time": 2457458.0,
+        "end_time": 2457459.0,
+        "integration_time": 3600,
     }
 
-    inttime_days = tdict_base["integration_time"] * dayspersec
     time_array = np.linspace(
-        tdict_base["start_time"] + inttime_days / 2.0,
-        tdict_base["start_time"]
-        + tdict_base["duration_hours"] * daysperhour
-        - inttime_days / 2.0,
+        tdict_base["start_time"],
+        tdict_base["end_time"],
         tdict_base["Ntimes"],
         endpoint=True,
     )
@@ -911,7 +905,7 @@ def test_tele_parser_errors(tele_dict, err_type, err_msg):
     "bpass_kwds",
     [("start_freq", "end_freq"), ("channel_width", "Nfreqs"), ("bandwidth",)],
 )
-@pytest.mark.parametrize("chwid_kwds", [("bandwidth", "Nfreqs"), ("channel_width",)])
+@pytest.mark.parametrize("chwid_kwds", [("Nfreqs",), ("channel_width",)])
 @pytest.mark.parametrize("ref_freq_kwds", [("start_freq",), ("end_freq",)])
 def test_freq_parser(bpass_kwds, chwid_kwds, ref_freq_kwds):
     """
@@ -948,20 +942,41 @@ def test_freq_parser(bpass_kwds, chwid_kwds, ref_freq_kwds):
     np.testing.assert_allclose(test["channel_width"], cw_array)
 
 
+def test_freq_parse_linspace_bug():
+    fdict = {
+        "Nfreqs": 500,
+        "end_freq": 150000000.0,
+        "start_freq": 100000000.0,
+        "bandwidth": 50000000.0,
+    }
+
+    freq_array = np.linspace(100000000, 150000000, num=500)
+
+    with check_warnings(
+        UserWarning,
+        match="The bandwidth is not consistent with the start_freq, end_freq, "
+        "Nfreqs specified. Using the values calculated from the start_freq, "
+        "end_freq, Nfreqs parameters.",
+    ):
+        new_fdict = simsetup.parse_frequency_params(fdict)
+    np.testing.assert_allclose(new_fdict["freq_array"], freq_array)
+
+
 @pytest.mark.parametrize(
-    "freq_array", [np.linspace(0.0, 4.5, 10), np.asarray([0.0, 0.5, 2, 4])]
-)
-@pytest.mark.parametrize(
-    "channel_width",
-    [0.5, np.full((10,), 0.5, dtype=float), np.asarray([0.5, 0.5, 1, 2])],
+    ("freq_array", "channel_width"),
+    [
+        (np.linspace(0.0, 4.5, 10), 0.5),
+        (np.asarray([0.0, 0.5, 2, 4]), 0.5),
+        (np.linspace(0.0, 4.5, 10), np.full((10,), 0.5, dtype=float)),
+        (np.asarray([0.0, 0.5, 2, 4]), np.full((4,), 0.5, dtype=float)),
+        (np.asarray([0.0, 0.5, 2, 4]), np.asarray([0.5, 0.5, 1, 2])),
+    ],
 )
 def test_freq_parser_freq_array(freq_array, channel_width):
     """
     Check parsing works with a vector of channel widths.
     """
     subdict = {"freq_array": freq_array, "channel_width": channel_width}
-    # As long as one tuple from each set is represented,
-    # the param parser should work.
     test = simsetup.parse_frequency_params(subdict)
     np.testing.assert_allclose(test["freq_array"], freq_array)
     if not isinstance(channel_width, np.ndarray):
@@ -977,27 +992,39 @@ def test_freq_parser_freq_array(freq_array, channel_width):
     [
         (
             {"bandwidth": 5.0},
-            "Either start or end frequency must be specified: bandwidth",
+            "Either start_freq or end_freq must be specified. The parameters "
+            "that were specified were: bandwidth",
         ),
         (
             {"start_freq": 0.0, "Nfreqs": 10},
-            "Either bandwidth or channel width must be specified: Nfreqs, start_freq",
+            "If only one of start_freq and end_freq is specified, two more of Nfreqs, "
+            "channel_width and bandwidth must be specified as well. The "
+            "parameters that were specified were: Nfreqs, start_freq",
         ),
         (
             {"start_freq": 0.0, "channel_width": 0.5},
-            "Either bandwidth or band edges must be specified: channel_width, start_freq",
+            "If only one of start_freq and end_freq is specified, two more of "
+            "Nfreqs, channel_width and bandwidth must be specified as well. The "
+            "parameters that were specified were: channel_width, start_freq",
         ),
         (
             {"start_freq": 0.0, "end_freq": 4.5},
-            "Either channel_width or Nfreqs  must be included in parameters:end_freq, start_freq",
+            "If both start_freq and end_freq are specified, either Nfreqs or "
+            "channel_width must be specified as well. The parameters "
+            "that were specified were: end_freq, start_freq",
         ),
         (
             {"freq_array": [0.0]},
-            "Channel width must be specified if freq_array has length 1",
+            "channel_width must be specified if freq_array has length 1",
         ),
         (
             {"freq_array": [0.0, 0.5, 2, 4]},
-            "Channel width must be specified if spacing in freq_array is uneven.",
+            "channel_width must be specified if spacing in freq_array is uneven.",
+        ),
+        (
+            {"freq_array": [0.0, 0.5, 2, 4], "channel_width": [0.5, 0.5, 0.5]},
+            "If channel_width has multiple elements, the channel_width must be "
+            "the same length as freq_array",
         ),
         (
             {"channel_width": 3.14, "start_freq": 1.0, "end_freq": 8.3},
@@ -1020,12 +1047,62 @@ def test_freq_parser_errors(freq_dict, msg):
 
 
 @pytest.mark.parametrize(
+    ("freq_dict", "msg"),
+    [
+        (
+            {
+                "freq_array": [100.0, 101.0, 102.0],
+                "start_freq": 100.5,
+                "end_freq": 101.5,
+                "Nfreqs": 5,
+                "bandwidth": 10.0,
+            },
+            "The start_freq, end_freq, Nfreqs, bandwidth is not consistent with "
+            "the freq_array specified. Using the values calculated from the "
+            "freq_array parameters.",
+        ),
+        (
+            {
+                "start_freq": 100,
+                "end_freq": 105,
+                "Nfreqs": 5,
+                "bandwidth": 10.0,
+                "channel_width": 0.5,
+            },
+            "The bandwidth, channel_width is not consistent with the start_freq, "
+            "end_freq, Nfreqs specified. Using the values calculated from the "
+            "start_freq, end_freq, Nfreqs parameters.",
+        ),
+        (
+            {"start_freq": 100, "Nfreqs": 5, "bandwidth": 10.0, "channel_width": 0.5},
+            "The bandwidth is not consistent with the Nfreqs, channel_width, "
+            "start_freq specified. Using the values calculated from the Nfreqs, "
+            "channel_width, start_freq parameters. Input values were: [10.0], "
+            "calculated values were: [2.5].",
+        ),
+    ],
+)
+def test_freq_parser_inconsistency_warnings(freq_dict, msg):
+    # Now check error cases
+    with check_warnings(UserWarning, match=msg):
+        simsetup.parse_frequency_params(freq_dict)
+
+
+@pytest.mark.parametrize(
     "time_keys",
     [
+        [
+            "start_time",
+            "end_time",
+            "integration_time",
+            "duration_hours",
+            "Ntimes",
+            "time_array",
+        ],
         ["start_time", "end_time", "duration_hours", "Ntimes"],
-        ["start_time", "end_time", "integration_time"],
-        ["start_time", "integration_time", "Ntimes", "duration_hours"],
-        ["end_time", "integration_time", "Ntimes", "duration_hours"],
+        ["start_time", "end_time", "integration_time", "Ntimes"],
+        ["start_time", "integration_time", "duration_hours"],
+        ["end_time", "integration_time", "duration_hours"],
         ["start_time", "integration_time", "Ntimes"],
         ["end_time", "integration_time", "Ntimes"],
         ["start_time", "duration_hours", "Ntimes"],
@@ -1042,7 +1119,9 @@ def test_time_parser(time_keys, time_dict_base):
     dayspersec = 1 / (24 * 3600.0)
 
     subdict = {key: time_dict_base[key] for key in time_keys}
+    print(subdict)
     test = simsetup.parse_time_params(subdict)
+    print(test)
     np.testing.assert_allclose(
         test["time_array"], time_dict_base["time_array"], atol=dayspersec
     )
@@ -1051,23 +1130,32 @@ def test_time_parser(time_keys, time_dict_base):
 @pytest.mark.parametrize(
     ("time_keys", "err_msg"),
     [
-        (("duration_hours",), "Start or end time must be specified: duration_hours"),
+        (
+            ("duration_hours",),
+            "Either start_time or end_time must be specified. The parameters "
+            "that were specified were: duration",
+        ),
         (
             ("start_time", "Ntimes"),
-            "Either duration or integration time must be specified: Ntimes, start_time",
+            "If only one of start_time and end_time is specified, two more of "
+            "Ntimes, integration_time and duration must be specified as well. "
+            "The parameters that were specified were: Ntimes, start_time",
         ),
         (
             ("start_time", "integration_time"),
-            "Either duration or time bounds must be specified: integration_time, start_time",
+            "If only one of start_time and end_time is specified, two more of "
+            "Ntimes, integration_time and duration must be specified as well. "
+            "The parameters that were specified were: integration_time, start_time",
         ),
         (
             ("start_time", "end_time"),
-            "Either integration_time or Ntimes must be included in parameters: end_time, "
-            "start_time",
+            "If both start_time and end_time are specified, either Ntimes or "
+            "integration_time must be specified as well. The parameters that were "
+            "specified were: end_time, start_time",
         ),
     ],
 )
-def test_time_parser_missing_keys(time_keys, err_msg, time_dict_base):
+def test_time_parser_errors(time_keys, err_msg, time_dict_base):
     # Now check error cases
     subdict = {key: time_dict_base[key] for key in time_keys}
     with pytest.raises(ValueError, match=err_msg):
@@ -1075,8 +1163,9 @@ def test_time_parser_missing_keys(time_keys, err_msg, time_dict_base):
 
 
 @pytest.mark.parametrize(
-    ("time_dict", "add_base", "rm_keys"),
+    ("time_dict", "add_base", "rm_keys", "msg"),
     [
+        ({}, True, [], None),
         (
             {
                 "integration_time": 3.14,
@@ -1086,62 +1175,108 @@ def test_time_parser_missing_keys(time_keys, err_msg, time_dict_base):
             },
             False,
             [],
+            "The integration_time is not consistent with the start_time, "
+            "end_time, Ntimes specified. Using the values calculated from the "
+            "start_time, end_time, Ntimes parameters.",
         ),
-        ({"Ntimes": 7}, True, ["time_array"]),
+        (
+            {"Ntimes": 7},
+            True,
+            ["time_array"],
+            "The duration_hours, integration_time is not consistent with the "
+            "start_time, end_time, Ntimes specified. Using the values calculated "
+            "from the start_time, end_time, Ntimes parameters.",
+        ),
+        # (
+        #     {"time_offset": 2457457.5},
+        #     True,
+        #     [],
+        #     "foo"
+        # ),
     ],
 )
-def test_time_parser_inconsistent(time_dict, add_base, rm_keys, time_dict_base):
+def test_time_parser_inconsistent(time_dict, add_base, rm_keys, msg, time_dict_base):
     if add_base:
         time_dict = {**time_dict_base, **time_dict}
         for key in rm_keys:
             del time_dict[key]
 
-    with pytest.raises(
-        ValueError,
-        match="Calculated time array is not consistent with set integration_time",
-    ):
+    warn_type = UserWarning
+    if msg is None:
+        warn_type = None
+    with check_warnings(warn_type, match=msg):
         simsetup.parse_time_params(time_dict)
 
 
 def test_single_input_time():
-    time_dict = simsetup.time_array_to_params([1.0])
-    assert time_dict["integration_time"] == 1.0
+    time_dict = simsetup.time_array_to_params(np.asarray([1.0]), np.asarray([1.0]))
+    assert time_dict["integration_time"] == [1.0]
 
 
 def test_freq_time_params_match(times_and_freqs):
-    times, freqs = times_and_freqs
-    time_dict = simsetup.time_array_to_params(times)
-    freq_dict = simsetup.freq_array_to_params(freqs)
+    times, tstep, freqs, fstep = times_and_freqs
+    daysperhour = 1 / 24.0
+    hourspersec = 1 / 60.0**2
+    dayspersec = daysperhour * hourspersec
+    int_time_days = np.full_like(times, tstep)
+    int_times_sec = int_time_days / dayspersec
+    channel_width = np.full_like(freqs, fstep)
+    time_dict = simsetup.time_array_to_params(times, int_times_sec)
+    assert "start_time" in time_dict
+    assert "end_time" in time_dict
+    assert "Ntimes" in time_dict
+    assert "time_array" not in time_dict
+
+    freq_dict = simsetup.freq_array_to_params(freqs, channel_width)
+    assert "start_freq" in freq_dict
+    assert "end_freq" in freq_dict
+    assert "Nfreqs" in freq_dict
+    assert "freq_array" not in freq_dict
+
     ftest = simsetup.parse_frequency_params(freq_dict)
     ttest = simsetup.parse_time_params(time_dict)
     np.testing.assert_allclose(ftest["freq_array"], freqs)
+    np.testing.assert_allclose(ftest["channel_width"], channel_width)
     np.testing.assert_allclose(ttest["time_array"], times)
+    np.testing.assert_allclose(ttest["integration_time"], int_times_sec)
 
 
-def test_uneven_time_array_to_params(times_and_freqs):
-    times, _ = times_and_freqs
+def test_uneven_time_array_to_params():
+    times = np.linspace(2458570, 2458570 + 0.5, 239)
     # Check that this works for unevenly-spaced times
     times = np.random.choice(times, 150, replace=False)
     times.sort()
-    time_dict = simsetup.time_array_to_params(times)
+    daysperhour = 1 / 24.0
+    hourspersec = 1 / 60.0**2
+    dayspersec = daysperhour * hourspersec
+    time_diff = np.diff(times)
+    int_time_days = np.concatenate((time_diff, [time_diff[-1]]))
+    int_times_sec = int_time_days / dayspersec
+    time_dict = simsetup.time_array_to_params(times, int_times_sec)
+    assert "time_array" in time_dict
+    assert "integration_time" in time_dict
+
     ttest = simsetup.parse_time_params(time_dict)
     np.testing.assert_allclose(ttest["time_array"], times)
+    np.testing.assert_allclose(ttest["integration_time"], int_times_sec)
 
 
-def test_single_time_array_to_params(times_and_freqs):
-    times, _ = times_and_freqs
-    # check Ntimes = 1 and Nfreqs = 1 case
+def test_single_time_array_to_params():
+    # check Ntimes = 1 case
     times = np.linspace(2458570, 2458570.5, 1)
-    tdict = simsetup.time_array_to_params(times)
-    assert tdict["Ntimes"] == 1
-    assert tdict["start_time"] == times
+    inttimes = np.asarray([0.5])
+    tdict = simsetup.time_array_to_params(times, inttimes)
+    assert tdict["time_offset"] == 2458569.5
+    assert tdict["time_array"] == times - tdict["time_offset"]
+    assert tdict["integration_time"] == inttimes
 
 
-def test_single_freq_array_to_params(times_and_freqs):
+def test_single_freq_array_to_params():
     freqs = np.linspace(100, 200, 1)
-    fdict = simsetup.freq_array_to_params(freqs)
-    assert fdict["Nfreqs"] == 1
-    assert fdict["start_freq"] == freqs
+    channel_width = np.asarray([2])
+    fdict = simsetup.freq_array_to_params(freqs, channel_width)
+    assert fdict["freq_array"] == freqs
+    assert fdict["channel_width"] == channel_width
 
 
 def test_param_select_cross():
@@ -1368,16 +1503,18 @@ def test_uvdata_keyword_init_select_antnum_str(uvdata_keyword_dict):
     assert uvd.polarization_array.tolist() == [-5]
 
 
+@pytest.mark.filterwarnings("ignore:The Nfreqs, bandwidth is not consistent")
+@pytest.mark.filterwarnings("ignore:The Ntimes is not consistent")
 def test_uvdata_keyword_init_time_freq_override(uvdata_keyword_dict):
     # check time and freq array definitions supersede other parameters
-    fa = np.linspace(100, 200, 11) * 1e6
-    ta = np.linspace(2458101, 2458102, 21)
-    uvdata_keyword_dict["freq_array"] = fa
-    uvdata_keyword_dict["time_array"] = ta
+    freq_array = np.linspace(100, 200, 11) * 1e6
+    time_array = np.linspace(2458101, 2458102, 21)
+    uvdata_keyword_dict["freq_array"] = freq_array
+    uvdata_keyword_dict["time_array"] = time_array
     uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
 
-    np.testing.assert_allclose(uvd.time_array[:: uvd.Nbls], ta)
-    np.testing.assert_allclose(uvd.freq_array, fa)
+    np.testing.assert_allclose(uvd.time_array[:: uvd.Nbls], time_array)
+    np.testing.assert_allclose(uvd.freq_array, freq_array)
 
 
 def test_uvdata_keyword_init_layout_dict(uvdata_keyword_dict, tmpdir):
@@ -1455,7 +1592,8 @@ def test_initialize_uvdata_from_keywords_errors(uvdata_keyword_dict):
         simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
 
 
-def test_uvfits_to_config(tmp_path):
+@pytest.mark.parametrize("int_time_varies", [False, "single", "single_time"])
+def test_uvfits_to_config(tmp_path, int_time_varies):
     """
     Loopback test of reading parameters from uvfits file, generating uvfits file, and reading
     in again.
@@ -1467,7 +1605,7 @@ def test_uvfits_to_config(tmp_path):
         os.makedirs(opath)  # Directory will be deleted when test completed.
 
     # Read uvfits file to params.
-    uv0 = UVData.from_file(longbl_uvfits_file)
+    uv0 = UVData.from_file(triangle_uvfits_file)
 
     path, telescope_config, layout_fname = simsetup.uvdata_to_telescope_config(
         uv0, herabeam_default, path_out=opath, return_names=True
@@ -1478,12 +1616,28 @@ def test_uvfits_to_config(tmp_path):
 
     assert 0 in telconfig["beam_paths"]
 
-    uv0.integration_time[-1] += 2  # Test case of non-uniform integration times
-    with check_warnings(
-        UserWarning,
-        match="The integration time is not constant. "
-        "Using the shortest integration time",
-    ):
+    warn_type = None
+    msg = ""
+    if int_time_varies == "single":
+        # Test case of a single non-uniform integration times: no effect
+        uv0.integration_time[-1] += 2
+        warn_type = UserWarning
+        msg = (
+            "integration time varies for unique times, using the shortest "
+            "integration time for each unique time."
+        )
+    elif int_time_varies == "single_time":
+        # Test case of a non-uniform integration time for last time
+        assert uv0.Ntimes > 1
+        time_array, unique_inds, unique_inverse = np.unique(
+            uv0.time_array, return_index=True, return_inverse=True
+        )
+        assert time_array.size < uv0.time_array.size
+        uv0.integration_time[np.nonzero(unique_inverse == unique_inverse[-1])] += 2
+        assert not uvutils.tools._test_array_constant(
+            uv0.integration_time, tols=UVData()._integration_time.tols
+        )
+    with check_warnings(warn_type, match=msg):
         simsetup.uvdata_to_config_file(
             uv0,
             telescope_config_name=os.path.join(path, telescope_config),
@@ -1493,10 +1647,8 @@ def test_uvfits_to_config(tmp_path):
 
     # From parameters, generate a uvdata object.
     param_dict = simsetup._config_str_to_dict(os.path.join(opath, param_filename))
-
-    orig_param_dict = copy.deepcopy(
-        param_dict
-    )  # The parameter dictionary gets modified in the function below.
+    # make a copy because the parameter dictionary gets modified in the function below.
+    orig_param_dict = copy.deepcopy(param_dict)
     uv1 = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
     # Generate parameters from new uvfits and compare with old.
     path, telescope_config, layout_fname = simsetup.uvdata_to_telescope_config(
