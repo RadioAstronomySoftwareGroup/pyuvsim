@@ -795,9 +795,9 @@ def run_uvdata_uvsim(
         ):
             raise ValueError("UVBeams must be peak normalized.")
 
-        exp_npols = beam_list[0].Nfeeds ** 2
+        beam_npols = beam_list[0].Nfeeds ** 2
         try:
-            exp_pols = uvutils.pol.convert_feeds_to_pols(
+            beam_pols = uvutils.pol.convert_feeds_to_pols(
                 feed_array=beam_list[0].feed_array,
                 include_cross_pols=True,
                 x_orientation=beam_list.x_orientation,
@@ -805,18 +805,23 @@ def run_uvdata_uvsim(
         except AttributeError:
             from pyuvdata.uvbeam.uvbeam import _convert_feeds_to_pols
 
-            exp_pols, _ = _convert_feeds_to_pols(
+            beam_pols, _ = _convert_feeds_to_pols(
                 feed_array=beam_list[0].feed_array,
-                calc_cross_pols=bool(exp_npols > 1),
+                calc_cross_pols=bool(beam_npols > 1),
                 x_orientation=beam_list.x_orientation,
             )
 
         if not (
-            (input_uv.Npols == exp_npols)
-            and (input_uv.polarization_array.tolist() == exp_pols.tolist())
+            (input_uv.Npols == beam_npols)
+            and (input_uv.polarization_array.tolist() == beam_pols.tolist())
         ):
-            exp_pols_str = uvutils.polnum2str(exp_pols)
-            raise ValueError(f"input_uv must have polarizations: {exp_pols_str}")
+            uvd_pols_str = uvutils.polnum2str(input_uv.polarization_array.tolist())
+            beam_pols_str = uvutils.polnum2str(beam_pols)
+            raise ValueError(
+                "Input UVData object/simulation parameters and beams polarizations "
+                f"do not agree. Input beams have output polarizations: {beam_pols_str}, "
+                f"Simulation has expected polarizations {uvd_pols_str}"
+            )
 
         input_order = input_uv.blt_order
         if input_order != ("time", "baseline"):

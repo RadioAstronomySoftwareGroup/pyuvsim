@@ -556,12 +556,16 @@ def test_pol_error():
     # Check that running with a uvdata object without the proper polarizations will fail.
     hera_uv = UVData()
 
-    hera_uv.polarizations = ["xx"]
+    hera_uv.polarization_array = np.asarray([-5])
     beam_list = BeamList([ShortDipoleBeam()])
 
     with pytest.raises(
         ValueError,
-        match=re.escape("input_uv must have polarizations: ['xx', 'yy', 'xy', 'yx']"),
+        match=re.escape(
+            "Input UVData object/simulation parameters and beams polarizations "
+            "do not agree. Input beams have output polarizations: "
+            "['xx', 'yy', 'xy', 'yx'], Simulation has expected polarizations ['xx']"
+        ),
     ):
         pyuvsim.run_uvdata_uvsim(hera_uv, beam_list, {}, catalog=pyuvsim.SkyModelData())
 
