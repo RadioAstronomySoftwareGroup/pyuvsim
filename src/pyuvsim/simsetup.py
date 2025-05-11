@@ -1918,10 +1918,21 @@ def parse_time_params(time_params):
 def _coord_arrays_to_params(coord_array, coord_delta, tols):
     if coord_array.size > 1 and (np.asarray(coord_delta)).size == 1:
         coord_delta = np.full_like(coord_array, coord_delta)
+
+    try:
+        from uvutils.tools import _test_array_consistent
+    except ImportError:
+        # remove this once we require pyuvdata >= 3.2
+        def _test_array_consistent(array, deltas, tols):
+            exp_deltas = (deltas[:-1] + deltas[1:]) * 0.5
+            return np.allclose(
+                np.abs(np.diff(array)), exp_deltas, rtol=tols[0], atol=tols[1]
+            )
+
     if (
         not uvutils.tools._test_array_constant_spacing(coord_array, tols=tols)
         or not uvutils.tools._test_array_constant(coord_delta, tols=tols)
-        or not uvutils.tools._test_array_consistent(coord_array, coord_delta, tols=tols)
+        or not _test_array_consistent(coord_array, coord_delta, tols=tols)
         or coord_array.size == 1
     ):
         # arrays are not evenly spaced or deltas do not match diffs or only one
