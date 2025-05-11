@@ -1187,12 +1187,25 @@ def test_time_parser_errors(time_keys, err_msg, time_dict_base):
             "start_time, end_time, Ntimes specified. Using the values calculated "
             "from the start_time, end_time, Ntimes parameters.",
         ),
-        # (
-        #     {"time_offset": 2457457.5},
-        #     True,
-        #     [],
-        #     "foo"
-        # ),
+        (
+            {"time_offset": 2457457.5},
+            True,
+            [],
+            [
+                "time_offset is present, but start_time is larger than time_offset, "
+                "so not adding time_offset to start_time.",
+                "time_offset is present, but end_time is larger than time_offset, "
+                "so not adding time_offset to end_time.",
+                "time_offset is present, but time_array is larger than time_offset, "
+                "so not adding time_offset to time_array.",
+            ],
+        ),
+        (
+            {"duration_days": 25.0 / 24.0},
+            True,
+            [],
+            "Both duration_hours and duration_days are specified, using duration_days.",
+        ),
     ],
 )
 def test_time_parser_inconsistent(time_dict, add_base, rm_keys, msg, time_dict_base):
