@@ -963,6 +963,33 @@ def test_freq_parse_linspace_bug():
 
 
 @pytest.mark.parametrize(
+    "fdict_add", [{"channel_width": 50000000.0}, {"bandwidth": 50000000.0}, {}]
+)
+def test_freq_parser_single(fdict_add):
+    fdict = {"Nfreqs": 1, "end_freq": 150000000.0, "start_freq": 100000000.0}
+    fdict = fdict | fdict_add
+
+    if len(fdict_add) == 0:
+        with pytest.raises(
+            ValueError,
+            match="If Nfreqs is 1 then either channel_width or bandwidth must be specified.",
+        ):
+            new_fdict = simsetup.parse_frequency_params(fdict)
+        return
+    with check_warnings(
+        UserWarning,
+        match="The end_freq is not consistent with the start_freq, Nfreqs, "
+        f"{', '.join(fdict_add.keys())} specified.",
+    ):
+        new_fdict = simsetup.parse_frequency_params(fdict)
+
+    freq_array = np.asarray([100000000.0])
+    channel_width = np.asarray([50000000.0])
+    np.testing.assert_allclose(new_fdict["freq_array"], freq_array)
+    np.testing.assert_allclose(new_fdict["channel_width"], channel_width)
+
+
+@pytest.mark.parametrize(
     ("freq_array", "channel_width"),
     [
         (np.linspace(0.0, 4.5, 10), 0.5),
