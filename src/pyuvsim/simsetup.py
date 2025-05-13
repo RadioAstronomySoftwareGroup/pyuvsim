@@ -1546,7 +1546,7 @@ def _setup_coord_arrays(coord_params, param_map, tols):
         # Calculate any of these we need from the other available parameters
         # Also calculate the other parameters so we can test for consistency
         # on any extra parameters that are provided
-        if not ("coord_start" in coord_params or "coord_end" in coord_params):
+        if "coord_start" not in coord_params and "coord_end" not in coord_params:
             raise ValueError(
                 f"Either {param_map['coord_start']} or {param_map['coord_end']} "
                 "must be specified. The parameters that were specified were: "
@@ -1563,7 +1563,7 @@ def _setup_coord_arrays(coord_params, param_map, tols):
         if "coord_start" in coord_params and "coord_end" in coord_params:
             # Both start and end are specified
             kwds_used = ["coord_start", "coord_end"]
-            if not ("coord_n" in coord_params or "coord_delta" in coord_params):
+            if "coord_n" not in coord_params and "coord_delta" not in coord_params:
                 raise ValueError(
                     f"If both {param_map['coord_start']} and {param_map['coord_end']} "
                     f"are specified, either {param_map['coord_n']} or "
@@ -1572,15 +1572,34 @@ def _setup_coord_arrays(coord_params, param_map, tols):
                 )
             if "coord_n" in coord_params:
                 kwds_used.append("coord_n")
-                coord_delta = (
-                    coord_params["coord_end"] - coord_params["coord_start"]
-                ) / (coord_params["coord_n"] - 1)
-                coord_length = (
-                    coord_params["coord_end"]
-                    - coord_params["coord_start"]
-                    + coord_delta
-                )
-                coord_params["coord_delta"] = coord_delta
+                extent = coord_params["coord_end"] - coord_params["coord_start"]
+                if coord_params["coord_n"] > 1:
+                    coord_delta = extent / (coord_params["coord_n"] - 1)
+                    coord_length = extent + coord_delta
+                    coord_params["coord_delta"] = coord_delta
+                elif (
+                    "coord_delta" not in coord_params
+                    and "coord_length" not in coord_params
+                ):
+                    raise ValueError(
+                        f"If {param_map['coord_n']} is 1 then either "
+                        f"{param_map['coord_delta']} or {param_map['coord_length']} "
+                        "must be specified."
+                    )
+                elif "coord_delta" in coord_params:
+                    kwds_used.remove("coord_end")
+                    kwds_used.append("coord_delta")
+                    coord_params["coord_delta"] = np.atleast_1d(
+                        coord_params["coord_delta"]
+                    )
+                    coord_length = coord_params["coord_delta"][0]
+                else:
+                    kwds_used.remove("coord_end")
+                    kwds_used.append("coord_length")
+                    coord_length = coord_params["coord_length"]
+                    coord_params["coord_delta"] = np.atleast_1d(
+                        coord_params["coord_length"]
+                    )
             else:
                 kwds_used.append("coord_delta")
                 coord_length = (
@@ -1660,6 +1679,12 @@ def _setup_coord_arrays(coord_params, param_map, tols):
             coord_params["coord_delta"] = np.full(
                 (coord_params["coord_n"],), coord_delta, dtype=float
             )
+        else:
+            # ensure changes in start/end are detected
+            coord_params["coord_start"] = coord_params["coord_array"][0]
+            coord_params["coord_end"] = coord_params["coord_array"][-1]
+            # ensure delta is an array
+            coord_params["coord_delta"] = np.atleast_1d(coord_params["coord_delta"])
     coord_params["params_used"] = kwds_used
     return coord_params
 
@@ -1723,15 +1748,15 @@ def parse_frequency_params(freq_params):
     # Warn about inconsistencies in supplied parameters
     inconsistent_params = []
     for kwd in freq_params_orig:
-        if kwd in kwds_used:
-            continue
-        if kwd == "channel_width":
-            orig_cw = np.atleast_1d(freq_params_orig[kwd])
-            if orig_cw.size != freq_params[kwd].size:
-                orig_cw = np.full(
+        if kwd == "channel_width" or kwd == "freq_array":
+            orig_arr = np.atleast_1d(freq_params_orig[kwd])
+            if orig_arr.size != freq_params[kwd].size:
+                orig_arr = np.full(
                     (freq_params["Nfreqs"],), freq_params_orig[kwd], dtype=float
                 )
-            if not np.allclose(orig_cw, freq_params[kwd], rtol=ftols[0], atol=ftols[1]):
+            if not np.allclose(
+                orig_arr, freq_params[kwd], rtol=ftols[0], atol=ftols[1]
+            ):
                 inconsistent_params.append(kwd)
         else:
             if not np.isclose(
@@ -1870,15 +1895,15 @@ def parse_time_params(time_params):
     # Warn about inconsistencies in supplied parameters
     inconsistent_params = []
     for kwd in init_time_params:
-        if kwd in kwds_used:
-            continue
-        if kwd == "integration_time":
-            orig_cw = np.atleast_1d(init_time_params[kwd])
-            if orig_cw.size != time_params[kwd].size:
-                orig_cw = np.full(
+        if kwd == "integration_time" or kwd == "time_array":
+            orig_arr = np.atleast_1d(init_time_params[kwd])
+            if orig_arr.size != time_params[kwd].size:
+                orig_arr = np.full(
                     (time_params["Ntimes"],), init_time_params[kwd], dtype=float
                 )
-            if not np.allclose(orig_cw, time_params[kwd], rtol=stols[0], atol=stols[1]):
+            if not np.allclose(
+                orig_arr, time_params[kwd], rtol=stols[0], atol=stols[1]
+            ):
                 inconsistent_params.append(kwd)
         elif kwd == "duration_hours":
             orig_duration_days = init_time_params[kwd] * daysperhour
