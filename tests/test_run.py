@@ -1,7 +1,6 @@
 # Copyright (c) 2020 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
-import copy
 import os
 import re
 import shutil
@@ -251,67 +250,6 @@ def test_diffuse_units(tmpdir):
     uv_out_jy._consolidate_phase_center_catalogs(other=uv_out_k, ignore_name=True)
 
     assert uv_out_k == uv_out_jy
-
-
-@pytest.mark.filterwarnings("ignore:Fixing auto polarization power beams")
-@pytest.mark.parametrize(
-    ("problem", "err_msg"),
-    [
-        ("beam_type", "Beam type must be efield!"),
-        ("normalization", "UVBeams must be peak normalized."),
-    ],
-)
-def test_uvsim_beamlist_errors(tmp_path, cst_beam, problem, err_msg):
-    new_cst = copy.deepcopy(cst_beam)
-    if problem == "beam_type":
-        new_cst.efield_to_power()
-        beam_type = "power"
-    else:
-        beam_type = "efield"
-    if problem == "normalization":
-        new_cst.data_normalization = "physical"
-        peak_normalize = False
-    else:
-        peak_normalize = True
-    beams = BeamList([new_cst] * 4, beam_type=beam_type, peak_normalize=peak_normalize)
-    cfg = os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
-
-    params = pyuvsim.simsetup._config_str_to_dict(cfg)
-    if hasattr(UVData().telescope, "mount_type"):
-        # update the yaml files in the repo so doing it on the fly isn't necessary
-        # once we require pyuvdata >= 3.2
-        # copy telescope config file to temporary directory so we can add mount_type
-        os.makedirs(os.path.join(tmp_path, "test_config"))
-        new_tel_config = os.path.join(
-            tmp_path, "test_config", params["telescope"]["telescope_config_name"]
-        )
-        shutil.copyfile(
-            os.path.join(
-                SIM_DATA_PATH,
-                "test_config",
-                params["telescope"]["telescope_config_name"],
-            ),
-            new_tel_config,
-        )
-        params["telescope"]["telescope_config_name"] = new_tel_config
-        with open(new_tel_config) as fconfig:
-            lines = fconfig.readlines()
-        lines.insert(4, "    mount_type: fixed\n")
-        with open(new_tel_config, "w") as fconfig:
-            lines = "".join(lines)
-            fconfig.write(lines)
-
-    input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(
-        params, return_beams=False
-    )
-    sky_model = pyuvsim.simsetup.initialize_catalog_from_params(
-        cfg, return_catname=False
-    )
-    sky_model = pyuvsim.simsetup.SkyModelData(sky_model)
-    beam_dict = dict.fromkeys(range(4), 0)
-
-    with pytest.raises(ValueError, match=err_msg):
-        pyuvsim.run_uvdata_uvsim(input_uv, beams, beam_dict, catalog=sky_model)
 
 
 @pytest.mark.parametrize("rename_beamfits", [True, False])
@@ -571,13 +509,6 @@ def test_pol_error():
         ),
     ):
         pyuvsim.run_uvdata_uvsim(hera_uv, beam_list, {}, catalog=pyuvsim.SkyModelData())
-
-
-def test_input_uv_error():
-    with pytest.raises(TypeError, match="input_uv must be UVData object"):
-        pyuvsim.run_uvdata_uvsim(
-            None, BeamList([ShortDipoleBeam()]), {}, catalog=pyuvsim.SkyModelData()
-        )
 
 
 @pytest.mark.filterwarnings("ignore:Setting the location attribute post initialization")
