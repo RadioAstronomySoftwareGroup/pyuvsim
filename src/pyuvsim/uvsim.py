@@ -987,6 +987,9 @@ def run_uvdata_uvsim(
         vis_data.Free()
 
     if rank == 0:
+        # This needs to be done after the simulation completes because it
+        # changes ordering back to the input order rather than the order
+        # required by the sim.
         uv_container = _update_uvd(
             uv_container, input_uv=input_uv, catalog=catalog, input_order=input_order
         )
