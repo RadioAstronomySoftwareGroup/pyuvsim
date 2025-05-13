@@ -469,6 +469,8 @@ def test_single_offzenith_source(beam, hera_loc):
 @pytest.mark.filterwarnings("ignore:No out format specified for uvdata file.")
 @pytest.mark.filterwarnings("ignore:The mount_type parameter must be set for UVBeam")
 def test_select_antennas():
+    pytest.importorskip("mpi4py")
+
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml"
     )
@@ -1309,6 +1311,7 @@ def test_uvdata_uvsim_uvw_setting(uvdata_two_redundant_bls_triangle_sources):
     ],
 )
 def test_uvsim_beamlist_errors(tmp_path, cst_beam, problem, err_msg):
+    pytest.importorskip("mpi4py")
     new_cst = copy.deepcopy(cst_beam)
     if problem == "beam_type":
         new_cst.efield_to_power()
@@ -1385,5 +1388,6 @@ def test_uvsim_beamlist_errors(tmp_path, cst_beam, problem, err_msg):
     ],
 )
 def test_run_uvdata_uvsim_errors(kwargs, msg):
+    pytest.importorskip("mpi4py")
     with pytest.raises(TypeError, match=msg):
         pyuvsim.run_uvdata_uvsim(**kwargs)
