@@ -1040,7 +1040,7 @@ def initialize_catalog_from_params(
     # If the filename parameter is None (e.g. for mock skies)
     # add the source_list_name to the object so it can be put in the UVData history later
     if sky.filename is None:
-        sky.filename = source_list_name
+        sky.filename = [source_list_name]
 
     if return_catname:
         return sky, source_list_name
@@ -1469,7 +1469,7 @@ def parse_telescope_params(
         wh_this_beam = np.nonzero(beam_ids == beam_id)
         which_ants = antnames[wh_this_beam]
         for ant in which_ants:
-            beam_dict[ant] = beam_ind
+            beam_dict[str(ant)] = beam_ind
         if add_feed_angle:
             # always do this once we require pyuvdata >= 3.2
             mount_type[wh_this_beam] = beam_list[beam_ind].beam.mount_type

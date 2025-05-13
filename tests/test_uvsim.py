@@ -5,6 +5,7 @@ import copy
 import itertools
 import os
 import re
+import shutil
 import warnings
 
 import astropy.constants as const
@@ -462,6 +463,47 @@ def test_single_offzenith_source(beam, hera_loc):
 
     np.testing.assert_allclose(baseline.uvw.to_value("m"), uvw_array.value.squeeze())
     np.testing.assert_allclose(visibility, vis_analytic, atol=atol, rtol=0)
+
+
+@pytest.mark.filterwarnings("ignore:No julian date given for mock catalog.")
+@pytest.mark.filterwarnings("ignore:No out format specified for uvdata file.")
+@pytest.mark.filterwarnings("ignore:The mount_type parameter must be set for UVBeam")
+def test_select_antennas():
+    param_filename = os.path.join(
+        SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml"
+    )
+    params = simsetup._config_str_to_dict(param_filename)
+    # fix frequencies to be covered by the HERA beam
+    params["freq"]["start_freq"] = 130e6
+    params["freq"]["end_freq"] = 140e6
+
+    # reduce Nfreqs and Ntimes to shorten test runtime
+    params["freq"]["Nfreqs"] = 3
+    del params["freq"]["channel_width"]
+    params["time"]["Ntimes"] = 2
+    del params["time"]["integration_time"]
+    uv_full = pyuvsim.run_uvsim(params, return_uv=True)
+
+    uv_single = uv_full.select(bls=(2, 3), inplace=False)
+
+    _, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(
+        params, return_beams=True
+    )
+    skymodel = pyuvsim.simsetup.initialize_catalog_from_params(
+        params, input_uv=uv_single
+    )
+    # only specify the antennas with data in the beam dict for testing
+    # antenna numbers 2,3 correspond to antenna names ANT3, ANT4 in triangle_bl_layout.csv
+    del beam_dict["ANT1"]
+    del beam_dict["ANT2"]
+    uv_new_single = pyuvsim.run_uvdata_uvsim(
+        uv_single, beam_list=beam_list, beam_dict=beam_dict, catalog=skymodel
+    )
+
+    # histories won't match, replace them
+    uv_new_single.history = uv_single.history
+
+    assert uv_new_single == uv_single
 
 
 @pytest.mark.parametrize("beam", multi_beams)
@@ -1256,3 +1298,92 @@ def test_uvdata_uvsim_uvw_setting(uvdata_two_redundant_bls_triangle_sources):
     )
 
     assert out_uv1 == out_uv2
+
+
+@pytest.mark.filterwarnings("ignore:Fixing auto polarization power beams")
+@pytest.mark.parametrize(
+    ("problem", "err_msg"),
+    [
+        ("beam_type", "Beam type must be efield!"),
+        ("normalization", "UVBeams must be peak normalized."),
+    ],
+)
+def test_uvsim_beamlist_errors(tmp_path, cst_beam, problem, err_msg):
+    new_cst = copy.deepcopy(cst_beam)
+    if problem == "beam_type":
+        new_cst.efield_to_power()
+        beam_type = "power"
+    else:
+        beam_type = "efield"
+    if problem == "normalization":
+        new_cst.data_normalization = "physical"
+        peak_normalize = False
+    else:
+        peak_normalize = True
+    beams = BeamList([new_cst] * 4, beam_type=beam_type, peak_normalize=peak_normalize)
+    cfg = os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
+
+    params = pyuvsim.simsetup._config_str_to_dict(cfg)
+    if hasattr(UVData().telescope, "mount_type"):
+        # update the yaml files in the repo so doing it on the fly isn't necessary
+        # once we require pyuvdata >= 3.2
+        # copy telescope config file to temporary directory so we can add mount_type
+        os.makedirs(os.path.join(tmp_path, "test_config"))
+        new_tel_config = os.path.join(
+            tmp_path, "test_config", params["telescope"]["telescope_config_name"]
+        )
+        shutil.copyfile(
+            os.path.join(
+                SIM_DATA_PATH,
+                "test_config",
+                params["telescope"]["telescope_config_name"],
+            ),
+            new_tel_config,
+        )
+        params["telescope"]["telescope_config_name"] = new_tel_config
+        with open(new_tel_config) as fconfig:
+            lines = fconfig.readlines()
+        lines.insert(4, "    mount_type: fixed\n")
+        with open(new_tel_config, "w") as fconfig:
+            lines = "".join(lines)
+            fconfig.write(lines)
+
+    input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(
+        params, return_beams=False
+    )
+    sky_model = pyuvsim.simsetup.initialize_catalog_from_params(
+        cfg, return_catname=False
+    )
+    sky_model = pyuvsim.simsetup.SkyModelData(sky_model)
+    beam_dict = dict.fromkeys(range(4), 0)
+
+    with pytest.raises(ValueError, match=err_msg):
+        pyuvsim.run_uvdata_uvsim(input_uv, beams, beam_dict, catalog=sky_model)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "msg"),
+    [
+        (
+            {
+                "input_uv": None,
+                "beam_list": BeamList([ShortDipoleBeam()]),
+                "beam_dict": {},
+                "catalog": pyuvsim.SkyModelData(),
+            },
+            "input_uv must be UVData object",
+        ),
+        (
+            {
+                "input_uv": UVData(),
+                "beam_list": BeamList([ShortDipoleBeam()]),
+                "beam_dict": {},
+                "catalog": None,
+            },
+            "catalog must be a SkyModel or SkyModelData object",
+        ),
+    ],
+)
+def test_run_uvdata_uvsim_errors(kwargs, msg):
+    with pytest.raises(TypeError, match=msg):
+        pyuvsim.run_uvdata_uvsim(**kwargs)

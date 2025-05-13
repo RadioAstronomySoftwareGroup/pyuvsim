@@ -12,6 +12,8 @@ feed_angle, mount_type) which will be released in pyuvdata 3.2
 - Updated minimum dependency versions: pyuvdata>=3.1.2
 
 ### Fixed
+- A bug where antennas that did not have visibilities associated with them were
+being initialized in `run_uvdata_uvsim`.
 - A bug in the way the time and frequency arrays were set up from the obsparam
 yamls when they were specified with the start, end, spacing, number and width
 parameters rather than with the arrays.
