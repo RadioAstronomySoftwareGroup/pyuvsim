@@ -489,9 +489,12 @@ def test_zenith_spectral_sim(spectral_type, tmpdir):
     alpha = -0.5
     ref_freq = 111e6
     Nfreqs = 20
-    freqs = np.linspace(110e6, 115e6, Nfreqs)
-    freq_params = pyuvsim.simsetup.freq_array_to_params(freqs)
-    freqs = pyuvsim.simsetup.parse_frequency_params(freq_params)["freq_array"]
+    freqs, ch_width = np.linspace(110e6, 115e6, Nfreqs, retstep=True)
+    freq_params = pyuvsim.simsetup.freq_array_to_params(
+        freq_array=freqs, channel_width=ch_width
+    )
+    freq_params = pyuvsim.simsetup.parse_frequency_params(freq_params)
+    freqs = freq_params["freq_array"]
     freqs *= units.Hz
     spectrum = (freqs.value / ref_freq) ** alpha
 
