@@ -16,7 +16,7 @@ hasbench = importlib.util.find_spec("pytest_benchmark") is not None
 pytest.importorskip("mpi4py")  # noqa
 
 
-def robust_response(url, n_retry=5):
+def robust_response(url, n_retry=10):
     # attempt to GET the url n_retry times (if return code in range)
     # returns the GET request
     # Stackoverflow / Docs link for approach / Retry:
@@ -28,60 +28,13 @@ def robust_response(url, n_retry=5):
     s = requests.Session()
     retries = Retry(
         total=n_retry,
-        backoff_factor=1,
+        backoff_factor=10,
         raise_on_status=True,
         status_forcelist=range(500, 600),
     )
     s.mount("http://", HTTPAdapter(max_retries=retries))
 
     return s.get(url)
-
-
-# gets latest pid from api call
-def get_latest_pid(response):
-    # takes as input the response from an api call to the Brown Digital Repository for the
-    # collection "pyuvsim historical reference simulations". Parses the response for the latest
-    # uploaded created item matching the query, then returns the PID of that item to be downloaded.
-    # In order to parse the response, further API calls are sent to get explicit data for each
-    # item. If the increased number of API calls becomes an issue then this function can be changed
-    # to simply determine basic datetime info from the input response with no further calls.
-    collection_response_items = response.json()["items"]["docs"]
-
-    if len(collection_response_items) == 0:
-        return "No items found in collection matching query."
-
-    # using "object_created_dsi" key to sort the items, so we need to request that
-    # for each item via the "json_uri", and get the pid as well to return
-    print(
-        "requesting json_uri for each item in reponse, and parsing 'object_created_dsi' and 'pid'"
-    )
-    json_uris = [item["json_uri"] for item in collection_response_items]
-    object_created_dsis = []
-    pids = []
-    for uri in json_uris:
-        # get response for item as json
-        response_json = robust_response(uri).json()
-
-        # get values from json
-        time_created = response_json["object_created_dsi"]
-        item_pid = response_json["pid"]
-
-        # append to lists
-        object_created_dsis.append(time_created)
-        pids.append(item_pid)
-
-    # get the max timestamp, then get the index at which the max time occurs
-    # this corresponds to the latest created object
-    latest_item_pos = object_created_dsis.index(max(object_created_dsis))
-
-    # get the pid of the latest item by shared pos
-    latest_pid = pids[latest_item_pos]
-
-    print(
-        "returning pid of most recent file uploaded to the collection matching the query"
-    )
-
-    return latest_pid
 
 
 def download_sim(target_dir, sim_name):
@@ -95,15 +48,17 @@ def download_sim(target_dir, sim_name):
     # https://repository.library.brown.edu/studio/api-docs/
 
     # api url
-    api_url = "https://repository.library.brown.edu/api/collections/bdr:wte2qah8/?q="
+    # TODO: break up url into two or three lines
+    api_url = f"https://repository.library.brown.edu/api/collections/bdr:wte2qah8/?q=primary_title:{sim_name}&wt=json&sort=object_last_modified_dsi desc&rows=1"
 
     print(
-        f"\nquerying BDR collection for items matching {sim_name} via api: {api_url + sim_name}"
+        f"\nquerying BDR collection for latest item matching {sim_name} via api: {api_url}"
     )
-    response = robust_response(api_url + sim_name)
+    response = robust_response(api_url)
 
-    # parse out the latest file in the collection from the search result and return its pid
-    pid = get_latest_pid(response)
+    # get pid from first response item as we questy by time desc and only get 1 result 
+    # TODO: add safety checks to see if this exists before calling (need to fail properly)
+    pid = response.json()['items']['docs'][0]['pid']
 
     # append results_data to the target directory download path
     target_dir = os.path.join(target_dir, "results_data")
@@ -203,7 +158,7 @@ def compare_uvh5(uv_ref, uv_new):
     # should be identical to the allclose output for maximum absolute
     # and relative difference
     max_absolute_diff = np.amax(np.abs(new_arr - ref_arr))
-    frac_diff = frac_diff = np.abs(new_arr - ref_arr) / np.abs(ref_arr)
+    frac_diff = np.abs(new_arr - ref_arr) / np.abs(ref_arr)
     frac_diff[np.isnan(frac_diff)] = 0
     max_relative_diff = np.amax(frac_diff)
 
