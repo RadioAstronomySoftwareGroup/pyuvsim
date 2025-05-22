@@ -58,10 +58,25 @@ def pytest_addoption(parser):
         "--nompi", action="store_true", help="skip mpi-parallelized tests."
     )
     parser.addoption(
+        "--savesim",
+        action="store_true",
+        default=False,
+        help="saves reference simulation output to the current working directory",
+    )
+    parser.addoption(
         "--refsim",
         action="append",
         default=[],
-        help="list of refsim names to pass to test functions.",
+        help="specify an available reference simulation to pass to test functions",
+        choices=[
+            "1.1_uniform",
+            "1.1_gauss",
+            "1.1_mwa",
+            "1.2_uniform",
+            "1.2_gauss",
+            "1.3_uniform",
+            "1.3_gauss",
+        ],
     )
 
 
@@ -274,3 +289,8 @@ def apollo_loc():
 
         return MoonLocation(lat=0.6875, lon=24.433, height=0)
     return None
+
+
+@pytest.fixture(scope="session")
+def savesim(request):
+    return request.config.getoption("--savesim")
