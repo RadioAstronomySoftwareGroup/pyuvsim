@@ -45,19 +45,16 @@ For more details, see `benchmarking/README.md <https://github.com/RadioAstronomy
 Running a Reference Simulation with pytest-benchmark
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To run a single core regression test of the reference simulations, you need to specify a reference
-simulation with the ``refsim`` flag and use ``benchmark-only``. Additionally, you need to use
-mpiexec to run pytest as follows:
+To run a single core regression test of the reference simulations, you need to specify a reference simulation with the ``refsim`` flag and use ``benchmark-only``. Additionally, you need to use mpiexec to run pytest as follows:
 
     .. code-block:: python
 
         # use mpiexec to run pytest specifying one core
         > mpiexec -n 1 -np 1 pytest --refsim=1.1_uniform --benchmark-only
 
-Here "1.1_uniform" would be the specific reference simulation being tested. You can use the ``refsim``
-flag multiple times to parametrize multiple reference simulations: ``--refsim=refsim1 --refsim=refsim2``.
+Here "1.1_uniform" would be the specific reference simulation being tested. You can use the ``refsim`` flag multiple times to parametrize multiple reference simulations: ``--refsim=refsim1 --refsim=refsim2``. Multiple simulations can also be specified with ``--refsim={refsim1,refsim2,...}``.
 
-We run single core regression tests of the available reference simulations with pytest and pytest-benchmark via our github ci workflow on every push or pull request. We do so to ensure output and runtime consistency. As we only run the simulations with a single core, the benchmarking aspect of these tests is only relevant for linear operations and not a test of any parallelism.
+We run single core regression tests of the available reference simulations with pytest and pytest-benchmark via our github ci workflow on every pull request. We do so to ensure output and runtime consistency. As we only run the simulations with a single core, the benchmarking aspect of these tests is only relevant for linear operations and not a test of any parallelism. Historical simulation output is currently stored on the Brown Digital Repository.
 
 The available ``refsim`` values are:
 
@@ -68,3 +65,14 @@ The available ``refsim`` values are:
 * 1.2_gauss
 * 1.3_uniform
 * 1.3_gauss
+
+These values, and additional custom options defined for pytest such as ``--savesim``, can be seen under the custom options section of the output of ``pytest --help``.
+
+To merge a pull request that changes the output of the reference simulations, you should generate a new set of reference simulation outputs to upload to the Brown Digital Repository. The line to do this currently is:
+
+    .. code-block:: python
+
+        # use mpiexec to run pytest specifying one core
+        > mpiexec -n 1 -np 1 pytest --refsim={1.1_uniform,1.1_gauss,1.1_mwa,1.2_uniform,1.2_gauss,1.3_uniform,1.3_gauss} --benchmark-only --savesim
+
+This will run all the active reference simulations, and write the new and reference data out in a ``test_sim_output`` directory located in the current working directory. The ``new_data`` subdirectory should then be uploaded to the Brown Digital Repository to serve as the updated reference simulations. If you just want to run the reference simulations locally but not save anything, the ``--savesim`` flag can be dropped -- in this case it can be nice to use the ``-s`` flag to see all printed output.
