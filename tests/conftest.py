@@ -58,23 +58,31 @@ def pytest_addoption(parser):
         "--nompi", action="store_true", help="skip mpi-parallelized tests."
     )
     parser.addoption(
-        "--savesim", action="store_true", default=False, help="saves reference simulation output to cwd"
+        "--savesim",
+        action="store_true",
+        default=False,
+        help="saves reference simulation output to cwd",
     )
     parser.addoption(
         "--refsim",
         action="append",
-        default=["1.1_uniform", "1.1_gauss", "1.1_mwa", "1.2_uniform", "1.2_gauss", "1.3_uniform", "1.3_gauss"],
-        help="list of refsim names to pass to test functions.",
+        default=[],
+        help="specify an available reference simulation to pass to test functions",
+        choices=[
+            "1.1_uniform",
+            "1.1_gauss",
+            "1.1_mwa",
+            "1.2_uniform",
+            "1.2_gauss",
+            "1.3_uniform",
+            "1.3_gauss",
+        ],
     )
 
 
 def pytest_generate_tests(metafunc):
     if "refsim" in metafunc.fixturenames:
-        to_parametrize = metafunc.config.getoption("refsim")
-        if len(to_parametrize) > 7:
-            metafunc.parametrize("refsim", to_parametrize[7:])
-        else:
-            metafunc.parametrize("refsim", to_parametrize)
+        metafunc.parametrize("refsim", metafunc.config.getoption("refsim"))
 
 
 def pytest_runtest_setup(item):
@@ -285,4 +293,4 @@ def apollo_loc():
 
 @pytest.fixture(scope="session")
 def savesim(request):
-	return request.config.getoption("--savesim")
+    return request.config.getoption("--savesim")

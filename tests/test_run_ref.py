@@ -48,17 +48,19 @@ def download_sim(target_dir, sim_name):
     # https://repository.library.brown.edu/studio/api-docs/
 
     # api url
-    # TODO: break up url into two or three lines
-    api_url = f"https://repository.library.brown.edu/api/collections/bdr:wte2qah8/?q=primary_title:{sim_name}&wt=json&sort=object_last_modified_dsi desc&rows=1"
+    api_url = (
+        "https://repository.library.brown.edu/api/collections/bdr:wte2qah8/?q="
+        f"primary_title:{sim_name}&wt=json&sort=object_last_modified_dsi desc&rows=1"
+    )
 
     print(
         f"\nquerying BDR collection for latest item matching {sim_name} via api: {api_url}"
     )
     response = robust_response(api_url)
 
-    # get pid from first response item as we questy by time desc and only get 1 result 
+    # get pid from first response item as we query by time desc and only get 1 result
     # TODO: add safety checks to see if this exists before calling (need to fail properly)
-    pid = response.json()['items']['docs'][0]['pid']
+    pid = response.json()["items"]["docs"][0]["pid"]
 
     # append results_data to the target directory download path
     target_dir = os.path.join(target_dir, "reference_data")
@@ -196,6 +198,9 @@ def compare_uvh5(uv_ref, uv_new):
     print(f"outcome: {outcome}")
     print(f"num_mismatched: {num_mismatched}")
 
+    # set UVParameter tols to local value for overloaded equality check
+    uv_new._data_array.tols = (rtol, atol)
+
     # perform equality check between historical and current reference
     # simulation output
     assert uv_new == uv_ref
@@ -227,6 +232,7 @@ def goto_tempdir(tmpdir, savesim):
     newpath = str(tmpdir)
     cwd = os.getcwd()
 
+    # if savesim, then make new directory in cwd, and output goes there
     if savesim:
         newpath = os.path.join(cwd, "test_sim_output")
         if not os.path.exists(newpath):
@@ -239,8 +245,6 @@ def goto_tempdir(tmpdir, savesim):
     os.chdir(cwd)
 
 
-# TODO: maybe just add logic to goto_tempdir to "disable" the tempdir in the 
-#       case '--savesim' is passed
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
 def test_run_sim(benchmark, goto_tempdir, refsim, savesim):
     # pytest method to benchmark reference simulations. currently only called on one reference
@@ -248,10 +252,7 @@ def test_run_sim(benchmark, goto_tempdir, refsim, savesim):
     # directory for testing, and a fixture defined in conftest.py that is used to parametrize this
     # method with a specific reference simulation name via command line input.
     if savesim:
-        print(
-            f"\nSaving reference simulation for {refsim} to "
-            f"'{goto_tempdir}'"
-        )
+        print(f"\nSaving reference simulation for {refsim} to '{goto_tempdir}'")
 
     # download reference sim output to compare
     download_sim(goto_tempdir, refsim)
@@ -292,10 +293,10 @@ def test_run_sim(benchmark, goto_tempdir, refsim, savesim):
 
     # save the output to the temporary directory if savesim
     if savesim:
-        savepath = os.path.join(os.getcwd(),"new_data")
+        savepath = os.path.join(os.getcwd(), "new_data")
         if not os.path.exists(savepath):
             os.makedirs(savepath)
-        uv_new.write_uvh5(os.path.join(savepath,f"ref_{refsim}.uvh5"), clobber=True)
+        uv_new.write_uvh5(os.path.join(savepath, f"ref_{refsim}.uvh5"), clobber=True)
 
     # performs any assertions to confirm that the reference simulation output hasn't diverged
     compare_uvh5(uv_ref, uv_new)
