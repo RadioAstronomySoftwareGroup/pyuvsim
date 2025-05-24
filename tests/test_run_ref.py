@@ -61,7 +61,7 @@ def download_sim(target_dir, sim_name):
     pid = response.json()['items']['docs'][0]['pid']
 
     # append results_data to the target directory download path
-    target_dir = os.path.join(target_dir, "results_data")
+    target_dir = os.path.join(target_dir, "reference_data")
 
     # check if we need to make target_dir
     if not os.path.exists(target_dir):
@@ -208,7 +208,7 @@ def construct_filepaths(target_dir, sim):
 
     # construct filename and filepath of downloaded file
     uvh5_filename = "ref_" + sim + ".uvh5"
-    uvh5_filepath = os.path.join(target_dir, "results_data", uvh5_filename)
+    uvh5_filepath = os.path.join(target_dir, "reference_data", uvh5_filename)
 
     # construct filename and filepath of yaml file used
     # to run simulation
@@ -222,10 +222,16 @@ def construct_filepaths(target_dir, sim):
 
 
 @pytest.fixture
-def goto_tempdir(tmpdir):
-    # Run test within temporary directory.
+def goto_tempdir(tmpdir, savesim):
+    # Run test within temporary directory unless savesim is true
     newpath = str(tmpdir)
     cwd = os.getcwd()
+
+    if savesim:
+        newpath = os.path.join(cwd, "test_sim_output")
+        if not os.path.exists(newpath):
+            os.makedirs(newpath)
+
     os.chdir(newpath)
 
     yield newpath
@@ -233,12 +239,19 @@ def goto_tempdir(tmpdir):
     os.chdir(cwd)
 
 
+# TODO: maybe just add logic to goto_tempdir to "disable" the tempdir in the 
+#       case '--savesim' is passed
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
-def test_run_sim(benchmark, goto_tempdir, refsim):
+def test_run_sim(benchmark, goto_tempdir, refsim, savesim):
     # pytest method to benchmark reference simulations. currently only called on one reference
     # simulation at a time. takes as input the benchmark fixture, a fixture to generate a temporary
     # directory for testing, and a fixture defined in conftest.py that is used to parametrize this
     # method with a specific reference simulation name via command line input.
+    if savesim:
+        print(
+            f"\nSaving reference simulation for {refsim} to "
+            f"'{goto_tempdir}'"
+        )
 
     # download reference sim output to compare
     download_sim(goto_tempdir, refsim)
@@ -276,6 +289,13 @@ def test_run_sim(benchmark, goto_tempdir, refsim):
     # probably not necessary
     if pyuvsim.mpi.rank != 0:
         return
+
+    # save the output to the temporary directory if savesim
+    if savesim:
+        savepath = os.path.join(os.getcwd(),"new_data")
+        if not os.path.exists(savepath):
+            os.makedirs(savepath)
+        uv_new.write_uvh5(os.path.join(savepath,f"ref_{refsim}.uvh5"), clobber=True)
 
     # performs any assertions to confirm that the reference simulation output hasn't diverged
     compare_uvh5(uv_ref, uv_new)
