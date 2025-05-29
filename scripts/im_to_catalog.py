@@ -11,7 +11,7 @@ import sys
 
 import matplotlib
 
-matplotlib.use("Agg")
+matplotlib.use("TkAgg")
 
 import matplotlib.image as mpimg
 import numpy as np
