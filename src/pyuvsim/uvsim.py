@@ -19,6 +19,7 @@ from astropy.constants import c as speed_of_light
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from astropy.units import Quantity
+from pyradiosky import SkyModel
 from pyuvdata import UVData
 
 try:
@@ -487,20 +488,30 @@ def uvdata_to_task_iter(
         src_iter = [range(Nsrcs_total)]
 
     # Build the antenna list.
-    antenna_names = input_uv.telescope.antenna_names
     antpos_enu = input_uv.telescope.get_enu_antpos()
-    antenna_numbers = input_uv.telescope.antenna_numbers
     tel_loc = input_uv.telescope.location
     telescope = Telescope(input_uv.telescope.name, tel_loc, beam_list)
 
+    # only need the antenna objects for antennas with data
+    ants_in_data = np.unique(
+        np.concatenate((input_uv.ant_1_array, input_uv.ant_2_array))
+    )
+    ant_inds = np.nonzero(np.isin(input_uv.telescope.antenna_numbers, ants_in_data))[0]
+
     antennas = []
-    for ant_ind, antname in enumerate(antenna_names):
+    for ant_ind in ant_inds:
+        antname = input_uv.telescope.antenna_names[ant_ind]
         if beam_dict is None:
             beam_id = 0
         else:
             beam_id = beam_dict[antname]
         antennas.append(
-            Antenna(antname, antenna_numbers[ant_ind], antpos_enu[ant_ind], beam_id)
+            Antenna(
+                antname,
+                input_uv.telescope.antenna_numbers[ant_ind],
+                antpos_enu[ant_ind],
+                beam_id,
+            )
         )
 
     baselines = {}
@@ -576,8 +587,8 @@ def uvdata_to_task_iter(
             if bl_num not in baselines:
                 antnum1 = input_uv.ant_1_array[blt_i]
                 antnum2 = input_uv.ant_2_array[blt_i]
-                index1 = np.where(antenna_numbers == antnum1)[0][0]
-                index2 = np.where(antenna_numbers == antnum2)[0][0]
+                index1 = np.where(ants_in_data == antnum1)[0][0]
+                index2 = np.where(ants_in_data == antnum2)[0][0]
                 baselines[bl_num] = Baseline(antennas[index1], antennas[index2])
 
             time = time_array[blt_i]
@@ -718,16 +729,101 @@ def _update_uvd(uv_container, *, input_uv, catalog, input_order):
     return uv_container
 
 
+def _run_uvdata_input_check(
+    input_uv: UVData, beam_list: BeamList, catalog: SkyModel | SkyModelData
+) -> tuple[UVData, BeamList, SkyModel, str]:
+    if not isinstance(input_uv, UVData):
+        raise TypeError("input_uv must be UVData object")
+
+    if isinstance(catalog, SkyModel):
+        catalog = SkyModelData(catalog)
+
+    if not isinstance(catalog, SkyModelData):
+        raise TypeError("catalog must be a SkyModel or SkyModelData object")
+
+    if beam_list.beam_type != "efield":
+        raise ValueError("Beam type must be efield!")
+
+    if (
+        beam_list.data_normalization is not None
+        and beam_list.data_normalization != "peak"
+    ):
+        raise ValueError("UVBeams must be peak normalized.")
+
+    beam_npols = beam_list[0].Nfeeds ** 2
+    try:
+        beam_pols = uvutils.pol.convert_feeds_to_pols(
+            feed_array=beam_list[0].feed_array,
+            include_cross_pols=True,
+            x_orientation=beam_list.x_orientation,
+        )
+    except AttributeError:
+        from pyuvdata.uvbeam.uvbeam import _convert_feeds_to_pols
+
+        beam_pols, _ = _convert_feeds_to_pols(
+            feed_array=beam_list[0].feed_array,
+            calc_cross_pols=bool(beam_npols > 1),
+            x_orientation=beam_list.x_orientation,
+        )
+
+    if not (
+        (input_uv.Npols == beam_npols)
+        and (input_uv.polarization_array.tolist() == beam_pols.tolist())
+    ):
+        uvd_pols_str = uvutils.polnum2str(input_uv.polarization_array.tolist())
+        beam_pols_str = uvutils.polnum2str(beam_pols)
+        raise ValueError(
+            "Input UVData object/simulation parameters and beams polarizations "
+            f"do not agree. Input beams have output polarizations: {beam_pols_str}, "
+            f"Simulation has expected polarizations {uvd_pols_str}"
+        )
+
+    input_order = input_uv.blt_order
+    if input_order != ("time", "baseline"):
+        input_uv.reorder_blts(order="time", minor_order="baseline")
+
+    freq_array = input_uv.freq_array * units.Hz
+    if catalog.spectral_type == "full" and not np.allclose(
+        catalog.freq_array,
+        input_uv.freq_array,
+        rtol=input_uv._freq_array.tols[0],
+        atol=input_uv._freq_array.tols[1],
+    ):
+        raise ValueError(
+            "Input catalog does not have the same frequencies as the "
+            "requested simulation parameters (or input uvdata object "
+            "if passed directly)."
+        )
+    if (
+        catalog.spectral_type not in ["flat", "full"]
+        or catalog.component_type != "point"
+    ):
+        sky = catalog.get_skymodel()
+        if sky.spectral_type not in ["flat", "full"]:
+            sky.at_frequencies(freq_array)
+        if sky.component_type == "healpix" and hasattr(sky, "healpix_to_point"):
+            if (
+                catalog.spectral_type == "flat"
+                and sky.freq_array is None
+                and sky.reference_frequency is None
+            ):
+                sky.freq_array = freq_array
+            sky.healpix_to_point()
+        catalog = SkyModelData(sky)
+
+    return input_uv, beam_list, catalog, input_order
+
+
 def run_uvdata_uvsim(
-    input_uv,
-    beam_list,
-    beam_dict,
-    catalog,
-    beam_interp_check=None,
-    quiet=False,
-    block_nonroot_stdout=True,
-    Nsky_parts=None,
-):
+    input_uv: UVData,
+    beam_list: BeamList,
+    beam_dict: dict,
+    catalog: SkyModel | SkyModelData,
+    beam_interp_check: bool | None = None,
+    quiet: bool = False,
+    block_nonroot_stdout: bool = True,
+    Nsky_parts: int | None = None,
+) -> UVData:
     """
     Run uvsim from UVData object.
 
@@ -741,8 +837,8 @@ def run_uvdata_uvsim(
         {`antenna_name` : `beam_id`}, where `beam_id` is an index in the beam_list.
         This is used to assign beams to antennas. Default: All antennas get the 0th
         beam in the `beam_list`.
-    catalog : :class:`pyuvsim.simsetup.SkyModelData`
-        Immutable source parameters.
+    catalog : :class:`pyuvsim.simsetup.SkyModelData` or :class:`pyradiosky.SkyModel`
+        Source catalog, either a pyradiosky SkyModel or a SkyModelData object.
     beam_interp_check :  bool
         Option to enable checking that the source positions are within the area covered
         by the beam. If the beam covers the full sky horizon to horizon this checking
@@ -783,78 +879,9 @@ def run_uvdata_uvsim(
     # ensure that we have full or flat spectral type and that we have points not
     # healpix
     if rank == 0:
-        if not isinstance(input_uv, UVData):
-            raise TypeError("input_uv must be UVData object")
-
-        if beam_list.beam_type != "efield":
-            raise ValueError("Beam type must be efield!")
-
-        if (
-            beam_list.data_normalization is not None
-            and beam_list.data_normalization != "peak"
-        ):
-            raise ValueError("UVBeams must be peak normalized.")
-
-        beam_npols = beam_list[0].Nfeeds ** 2
-        try:
-            beam_pols = uvutils.pol.convert_feeds_to_pols(
-                feed_array=beam_list[0].feed_array,
-                include_cross_pols=True,
-                x_orientation=beam_list.x_orientation,
-            )
-        except AttributeError:
-            from pyuvdata.uvbeam.uvbeam import _convert_feeds_to_pols
-
-            beam_pols, _ = _convert_feeds_to_pols(
-                feed_array=beam_list[0].feed_array,
-                calc_cross_pols=bool(beam_npols > 1),
-                x_orientation=beam_list.x_orientation,
-            )
-
-        if not (
-            (input_uv.Npols == beam_npols)
-            and (input_uv.polarization_array.tolist() == beam_pols.tolist())
-        ):
-            uvd_pols_str = uvutils.polnum2str(input_uv.polarization_array.tolist())
-            beam_pols_str = uvutils.polnum2str(beam_pols)
-            raise ValueError(
-                "Input UVData object/simulation parameters and beams polarizations "
-                f"do not agree. Input beams have output polarizations: {beam_pols_str}, "
-                f"Simulation has expected polarizations {uvd_pols_str}"
-            )
-
-        input_order = input_uv.blt_order
-        if input_order != ("time", "baseline"):
-            input_uv.reorder_blts(order="time", minor_order="baseline")
-
-        freq_array = input_uv.freq_array * units.Hz
-        if catalog.spectral_type == "full" and not np.allclose(
-            catalog.freq_array,
-            input_uv.freq_array,
-            rtol=input_uv._freq_array.tols[0],
-            atol=input_uv._freq_array.tols[1],
-        ):
-            raise ValueError(
-                "Input catalog does not have the same frequencies as the "
-                "requested simulation parameters (or input uvdata object "
-                "if passed directly)."
-            )
-        if (
-            catalog.spectral_type not in ["flat", "full"]
-            or catalog.component_type != "point"
-        ):
-            sky = catalog.get_skymodel()
-            if sky.spectral_type not in ["flat", "full"]:
-                sky.at_frequencies(freq_array)
-            if sky.component_type == "healpix" and hasattr(sky, "healpix_to_point"):
-                if (
-                    catalog.spectral_type == "flat"
-                    and sky.freq_array is None
-                    and sky.reference_frequency is None
-                ):
-                    sky.freq_array = freq_array
-                sky.healpix_to_point()
-            catalog = SkyModelData(sky)
+        input_uv, beam_list, catalog, input_order = _run_uvdata_input_check(
+            input_uv=input_uv, beam_list=beam_list, catalog=catalog
+        )
 
     input_uv = comm.bcast(input_uv, root=0)
     beam_dict = comm.bcast(beam_dict, root=0)
@@ -1010,7 +1037,7 @@ def run_uvsim(
     Parameters
     ----------
     params : str
-        Path to a parameter yaml file.
+        Path to a parameter yaml file or a parameter dict.
     return_uv : bool
         If true, do not write results to file and return uv_out. (Default False)
     beam_interp_check :  bool
