@@ -1,6 +1,6 @@
 filing:
   outdir: "./results_data/"
-  outfile_name: 'ref_1.1_horizon'
+  outfile_name: 'ref_1.2_time_axis'
   output_format: 'uvh5'
 freq:
   Nfreqs: 1
