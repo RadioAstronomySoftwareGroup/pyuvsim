@@ -1,6 +1,6 @@
 filing:
   outdir: "./results_data/"
-  outfile_name: 'ref_1.1_RASG'
+  outfile_name: 'ref_1.1_baseline_number'
   output_format: 'uvh5'
 freq:
   Nfreqs: 1
