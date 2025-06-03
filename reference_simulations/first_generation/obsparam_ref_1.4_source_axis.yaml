@@ -1,0 +1,20 @@
+filing:
+  outdir: "./results_data/"
+  outfile_name: 'ref_1.4_source_axis'
+  output_format: 'uvh5'
+freq:
+  Nfreqs: 1
+  channel_width: 80000.0
+  start_freq: 100000000.0
+sources:
+  catalog: "../catalog_files/gleam.vot"
+telescope:
+  array_layout: telescope_config/5km_triangle_layout.csv
+  telescope_config_name: telescope_config/mwa_config_airy.yaml
+time:
+  Ntimes: 1
+  integration_time: 11.0
+  start_time: 2460000.0
+ordering:
+  conjugation_convention: ant1<ant2
+  blt_order: [time, baseline]
