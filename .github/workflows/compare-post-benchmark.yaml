@@ -28,7 +28,7 @@ jobs:
     name: Performance Benchmark
     env:
       ENV_NAME: pyuvsim_tests_mpich
-      PYTHON: "3.12"
+      PYTHON: "3.13"
     runs-on: ubuntu-latest
 
     strategy:
