@@ -21,17 +21,17 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
         env_name: [pyuvsim_tests_openmpi]
         include:
           - env_name: pyuvsim_tests_mpich
-            python-version: "3.11"
+            python-version: "3.13"
             os: ubuntu-latest
           - env_name: pyuvsim_tests_mpich
-            python-version: "3.11"
+            python-version: "3.13"
             os: macos-latest
           - env_name: pyuvsim_tests_windows
-            python-version: "3.12"
+            python-version: "3.13"
             os: windows-latest
     steps:
       - uses: actions/checkout@main
@@ -85,7 +85,7 @@ jobs:
   # do this on min_deps because it's hard to get mpi4py to install from pip
   min_deps:
     env:
-      PYTHON: "3.11"
+      PYTHON: "3.13"
     name: Min Deps Testing
     runs-on: ubuntu-latest
     steps:
@@ -172,7 +172,7 @@ jobs:
   warning_test:
     env:
       ENV_NAME: pyuvsim_tests_mpich
-      PYTHON: "3.11"
+      PYTHON: "3.13"
     name: Warning Test
     runs-on: ubuntu-latest
     defaults:
