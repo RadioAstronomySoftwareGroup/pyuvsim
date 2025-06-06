@@ -85,7 +85,7 @@ jobs:
   # do this on min_deps because it's hard to get mpi4py to install from pip
   min_deps:
     env:
-      PYTHON: "3.13"
+      PYTHON: "3.12"
     name: Min Deps Testing
     runs-on: ubuntu-latest
     steps:
