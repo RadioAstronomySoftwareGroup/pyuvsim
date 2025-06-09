@@ -5,7 +5,7 @@ filing:
 freq:
   Nfreqs: 10000
   channel_width: 10000.0
-  start_freq: 100000000.0
+  start_freq: 50000000.0
 sources:
   catalog: "../catalog_files/R.txt"
 telescope:
@@ -13,7 +13,7 @@ telescope:
   telescope_config_name: telescope_config/mwa_config_gauss.yaml
 time:
   Ntimes: 1
-  integration_time: 11.0
+  integration_time: 10.0
   start_time: 2460000.0
 ordering:
   conjugation_convention: ant1<ant2

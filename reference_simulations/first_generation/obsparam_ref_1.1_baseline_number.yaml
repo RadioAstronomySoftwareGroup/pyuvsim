@@ -3,18 +3,17 @@ filing:
   outfile_name: 'ref_1.1_baseline_number'
   output_format: 'uvh5'
 freq:
-  Nfreqs: 1
-  channel_width: 80000.0
-  start_freq: 100000000.0
+  freq_array : [1.0000e+08]
+  channel_width: 100000.0
 sources:
   catalog: "../catalog_files/RASG.txt"
 telescope:
-  array_layout: telescope_config/mwa_nocore_layout.csv
-  telescope_config_name: telescope_config/mwa_config.yaml
+  array_layout: telescope_config/mwa_128T_layout.csv
+  telescope_config_name: telescope_config/mwa_config_short_dipole.yaml
 time:
   Ntimes: 1
-  integration_time: 11.0
-  start_time: 2458098.38824015
+  integration_time: 10.0
+  start_time: 2460000.0
 ordering:
   conjugation_convention: ant1<ant2
   blt_order: [time, baseline]
