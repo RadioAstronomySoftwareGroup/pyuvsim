@@ -3,9 +3,8 @@ filing:
   outfile_name: 'ref_1.2_time_axis'
   output_format: 'uvh5'
 freq:
-  Nfreqs: 1
-  channel_width: 80000.0
-  start_freq: 100000000.0
+  freq_array : [1.0000e+08]
+  channel_width: 100000.0
 sources:
   catalog: "../catalog_files/two_points_on_opposite_horizon.txt"
 telescope:

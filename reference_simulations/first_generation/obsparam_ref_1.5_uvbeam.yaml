@@ -3,20 +3,18 @@ filing:
   outfile_name: 'ref_1.5_uvbeam'
   output_format: 'uvh5'
 freq:
-  # TODO: figure out mwa uvbeam frequencies to specify the exact and interpolated
+  # start at freq in MWA UVBeam, then interpolate second freq
   Nfreqs: 2
-  channel_width: 80000.0
-  start_freq: 100000000.0
+  channel_width: 640000.0
+  start_freq: 189440000.0
 sources:
   catalog: "../catalog_files/R.txt"
 telescope:
-  array_layout: telescope_config/mwa_nocore_layout.csv
+  array_layout: telescope_config/mwa_128T_layout.csv
   telescope_config_name: telescope_config/mwa_config_uvbeam.yaml
-  #telescope_config_name: telescope_config/5km_triangle_config.yaml
 time:
   Ntimes: 2
-  # TODO: determine integration time
-  integration_time: 11.0
+  integration_time: 10.0
   start_time: 2460000.0
 ordering:
   conjugation_convention: ant1<ant2
