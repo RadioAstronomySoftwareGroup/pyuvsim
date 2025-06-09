@@ -206,7 +206,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          python -m pytest -n auto -W error --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+          python -m pytest -W error --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v4
