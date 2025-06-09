@@ -19,5 +19,6 @@ dependencies:
   - setuptools_scm>=8.1
   - msmpi
   - pip:
+    - mpi-pytest>=2025.5.0
     - pyradiosky>=1.0.1
     - git+https://github.com/aelanman/analytic_diffuse
