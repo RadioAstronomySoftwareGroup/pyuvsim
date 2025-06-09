@@ -51,11 +51,13 @@ def start_mpi(block_nonroot_stdout=True):
         Redirect stdout on nonzero ranks to /dev/null, for cleaner output.
 
     """
+    do_once = False
     global world_comm, node_comm, rank_comm, rank, Npus
     if not MPI.Is_initialized():
         MPI.Init_thread(
             MPI.THREAD_SERIALIZED
         )  # RMA is incompatible with THREAD_MULTIPLE.
+        do_once = True
         atexit.register(MPI.Finalize)
     world_comm = MPI.COMM_WORLD
     node_comm = world_comm.Split_type(MPI.COMM_TYPE_SHARED)
@@ -67,7 +69,7 @@ def start_mpi(block_nonroot_stdout=True):
 
     world_comm.Barrier()
 
-    if (rank != 0) and block_nonroot_stdout:  # pragma: no cover
+    if do_once and (rank != 0) and block_nonroot_stdout:  # pragma: no cover
         # For non-root ranks, do not print to stdout.
         if sys.platform.startswith("win"):
             with open("NUL", "w") as devnull:
