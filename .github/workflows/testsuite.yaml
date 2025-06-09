@@ -113,7 +113,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
+          python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
 
       - uses: codecov/codecov-action@v4
         if: success()
