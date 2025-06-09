@@ -20,5 +20,6 @@ dependencies:
   - setuptools_scm==8.1
   - pip:
     - pyradiosky==1.1.0
+    - mpi-pytest==2025.5.0
     - lunarsky==0.2.5
     - git+https://github.com/aelanman/analytic_diffuse

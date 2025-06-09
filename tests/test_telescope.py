@@ -217,7 +217,7 @@ def test_telescope_init_errors(beam_objs, hera_loc):
         Telescope("telescope_name", hera_loc, beam_objs)
 
 
-@pytest.mark.parallel(2, timeout=20)
+@pytest.mark.parallel(2)
 def test_share_beams(beam_objs):
     pytest.importorskip("mpi4py")
     from pyuvsim import mpi
