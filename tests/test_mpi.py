@@ -113,7 +113,7 @@ def test_mem_usage():
 
 
 @pytest.mark.parametrize("count_rank", [0, 2])
-@pytest.mark.parallel(4)
+@pytest.mark.parallel(3)
 def test_mpi_counter(count_rank):
     # Warning -- This test has been flaky in the past.
     mpi.start_mpi()
