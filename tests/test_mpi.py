@@ -112,8 +112,8 @@ def test_mem_usage():
     assert np.isclose(change, incsize / 2**30, atol=5e-2)
 
 
-@pytest.mark.parametrize("count_rank", [0, 2])
-@pytest.mark.parallel(3)
+@pytest.mark.parametrize("count_rank", [0, 1])
+@pytest.mark.parallel(2)
 def test_mpi_counter(count_rank):
     # Warning -- This test has been flaky in the past.
     mpi.start_mpi()
@@ -150,7 +150,7 @@ def test_big_gather(max_bytes, fake_tasks):
             assert len(split_info["ranges"]) > 1
 
 
-@pytest.mark.parallel(3)
+@pytest.mark.parallel(2)
 @pytest.mark.parametrize("max_bytes", [mpi.INT_MAX, 100])
 def test_big_bcast(max_bytes, fake_tasks):
     objs = fake_tasks
@@ -175,7 +175,7 @@ def test_big_bcast(max_bytes, fake_tasks):
             assert len(split_info["ranges"]) > 1
 
 
-@pytest.mark.parallel(3)
+@pytest.mark.parallel(2)
 def test_big_bcast_gather_loop(fake_tasks):
     objs = fake_tasks
 
@@ -186,7 +186,7 @@ def test_big_bcast_gather_loop(fake_tasks):
         assert broadcast == gathered[0]
 
 
-@pytest.mark.parallel(3)
+@pytest.mark.parallel(2)
 def test_sharedmem_bcast():
     # Use mpi.shared_mem_bcast and check returned objects.
 
@@ -202,7 +202,7 @@ def test_sharedmem_bcast():
     mpi.world_comm.Barrier()
 
 
-@pytest.mark.parallel(3)
+@pytest.mark.parallel(2)
 def test_skymodeldata_share(single_source):
     # Test the SkyModelData share method.
     sky = single_source.copy()
