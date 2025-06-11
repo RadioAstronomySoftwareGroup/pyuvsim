@@ -1,4 +1,6 @@
 [run]
+concurrency = thread, multiprocessing
+parallel = true
 omit =
     */tests/*
     */docs/*
