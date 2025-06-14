@@ -86,8 +86,5 @@ Manager (SLURM): (TODO: fix and adapt these scripts as they are broken and outda
         This sets up an output directory, named by the current date, into which output files,
         slurm output files, profiling data, and records of which job IDs correspond with each obsparam file.
 
-
-
-
 More information about how to run the simulations may be found at
 [ReadTheDocs](https://pyuvsim.readthedocs.io/en/latest/usage.html).
