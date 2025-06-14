@@ -81,6 +81,7 @@ def download_sim(sim_name, fpath="."):
         f"\nquerying BDR collection for latest item matching {sim_name} via api: {api_url}"
     )
     api_response_path = retrieve(url=api_url, path=json_cache, known_hash=None)
+    #api_response_path = retrieve(url=api_url, path=json_cache, known_hash=None, progressbar=True)
     time.sleep(1)
 
     # attempt to parse json assuming we have the result
@@ -98,6 +99,7 @@ def download_sim(sim_name, fpath="."):
     print(f"attempting download of requested file by http: {download_url}\n")
     print(f"downloading file to {fpath}")
     file_download_path = retrieve(url=download_url, fname=f"ref_{sim_name}.uvh5", path=fpath, known_hash=None)
+    #file_download_path = retrieve(url=download_url, fname=f"ref_{sim_name}.uvh5", path=fpath, known_hash=None, progressbar=True)
     time.sleep(1)
 
 if __name__ == "__main__":
