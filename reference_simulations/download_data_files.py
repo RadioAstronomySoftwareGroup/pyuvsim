@@ -51,6 +51,7 @@ file_download_dict = {
                         "url": "http://ws.mwatelescope.org/static/mwa_full_embedded_element_pattern.h5",
                         "fname": "mwa_full_embedded_element_pattern.h5",
                         "known_hash": "a7649c6e03b8128a1de4614c2f363af5fa44f3890ae27bf893d56ca337bc48ee",
+                        #"progressbar": True,
                         "path": file_cache
              }
     },
@@ -62,6 +63,7 @@ file_download_dict = {
                         "url": "https://repository.library.brown.edu/storage/bdr:eafzyycj/content/",
                         "fname": "gsm16_nside128_100mhz.skyh5",
                         "known_hash": "cedbbe5180830e69cefe72c3a1642a8205dc2d595e6bc0a35c08e5948b12290d",
+                        #"progressbar": True,
                         "path": file_cache
              }
     },
@@ -75,10 +77,10 @@ file_download_dict = {
     }
 }
 
-def main()
+def main():
     # create parser that grabs all input command line arguments as file keywords
     parser = argparse.ArgumentParser(description="parse a list of filenames by keyword to download")
-    
+
     parser.add_argument(
         "files",
         nargs="*",  # '*' consumes zero or more arguments, storing them in a list
@@ -87,11 +89,11 @@ def main()
              f" given. Currently available file keywords: {" ".join(file_download_dict.keys())}."
              f" Sample use: \"python3 download_data_files.py {" ".join(list(file_download_dict.keys())[:2])}\""
     )
-    
+
     args = parser.parse_args()
-    
+
     files = args.files
-    
+
     # loop through every file keyword in the list of filenames passed in from the command line
     # for each file keyword, check that it exists in the dictionary, then try to download
     for file in files:
@@ -99,14 +101,14 @@ def main()
             # get download instructions for file
             download_instructions = file_download_dict[file]
             # call method which construct download call from instruction
-            download_from_instructions(download_instructions)
+            download_from_instructions(file, download_instructions)
         else:
             print(f"file \"{file}\" not found! Check the available keys in the file_download_dict"
                    "or the listed current options at the top of the file."
             )
 
-def download_from_instructions(instruction):
-    # takes as input a dictionary containing three keys:
+def download_from_instructions(filename, instruction):
+    # takes as input the filename and a dictionary containing three keys:
     # - function: the method to call to download the file(s)
     # - args: a list of arguments to pass to the method in order
     # - kwargs: a list of keyword arguments to pass to the method
@@ -118,12 +120,12 @@ def download_from_instructions(instruction):
     kwargs = instruction.get("kwargs", {})
 
     if "path" in kwargs:
-        print(f"downloading {file} to {kwargs["path"]}")
+        print(f"downloading {filename} to {kwargs["path"]}")
     else:
-        print(f"download path for {file} not specified in dictionary")
+        print(f"download path for {filename} not specified in dictionary")
 
-    if file == "gleam":
-        print("gleam file download can take a while")
+    if filename == "gleam":
+        print("gleam filename download can take a while")
 
     # call the method with args and kwargs to download the file
     download_method(*args, **kwargs)
