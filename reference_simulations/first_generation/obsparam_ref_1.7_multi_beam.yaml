@@ -1,6 +1,6 @@
 filing:
   outdir: "./results_data/"
-  outfile_name: 'ref_1.3_frequency_axis'
+  outfile_name: 'ref_1.7_multi_beam.yaml'
   output_format: 'uvh5'
 freq:
   Nfreqs: 100
