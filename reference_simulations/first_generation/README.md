@@ -107,12 +107,12 @@ See `Memos/` for plots of the array layouts.
 
 ### Beams
 
-Four types of AnalyticBeam objects were used as primary beams in the reference simulations: short dipole, uniform, gaussian, and airy. One UVBeam object was used as a primary beam: the MWA UVBeam found [here](https://github.com/MWATelescope/mwa_pb).(<!-- maybe a little discussion on how each beam behaves --> 
+Four types of AnalyticBeam objects were used as primary beams in the reference simulations: short dipole, uniform, gaussian, and airy. One UVBeam object was used as a primary beam: the MWA UVBeam found [here](https://github.com/MWATelescope/mwa_pb).<!-- maybe a little discussion on how each beam behaves -->
 
 
 ### Other design choices
 
-All simulations have the MWA site as their telescope_location for simplicity with the exception of the lunar simulation. This is lat/lon/alt (-26.70331941, 116.6708152, 377.827). The lunar simulation has telescope location at selenodetic coordinates (0.6875, 24.433, 0). All simulations start at Julian Date 2460000.0 (2023-02-24 12:00:00 UTC). Unless specified otherwise, simulations have a 10 second integration time, a frequency channel width of 100 KHz, and a frequency of 100 MHz. For additional detail, see `Memos/`.
+All simulations have the MWA site as their telescope_location for simplicity with the exception of the lunar simulation. This is lat/lon/alt (-26.70331941, 116.6708152, 377.827). The lunar simulation has telescope location at selenodetic coordinates (0.6875, 24.433, 0). All simulations start at Julian Date 2460000.0 (2023-02-24 12:00:00 UTC). Unless specified otherwise, simulations have a 10 second integration time, a frequency channel width of 100 KHz, and a frequency of 100 MHz. For further simulation specification, see `Memos/` and `list`.
 
 
 ## Old data
