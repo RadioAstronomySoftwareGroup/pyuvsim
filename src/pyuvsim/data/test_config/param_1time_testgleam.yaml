@@ -9,6 +9,8 @@ sources:
   catalog: '../gleam_50srcs.vot'
   min_flux: 0.2
   max_flux: 1.50
+  non_nan: True
+  non_negative: True
 telescope:
   array_layout: 'triangle_bl_layout.csv'
   telescope_config_name: '28m_triangle_10time_10chan.yaml'
