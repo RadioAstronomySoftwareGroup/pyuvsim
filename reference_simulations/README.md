@@ -44,7 +44,7 @@ compare their results to the latest set posted to the BDR:
     - gleam: GLEAM extragalactic source catalog from Vizier, using `astroquery`, and save it to a VOTable file. GLEAM, treated as flat-spectrum, is used for several reference simulations.
     - mwa: mwa uvbeam file from [here](https://github.com/MWATelescope/mwa_pb).
     - healpix: "healpix": gsm 2016 nside 128 healpix map saved as skyh5 [here](https://repository.library.brown.edu/studio/item/bdr:eafzyycj/).
- 
+
  - `download_ref_sim.py`
    Run this first to download the reference sim data from the BDR using `pooch` (requires
    `pooch`). The new data can be compared to these files to check for output consistency.
@@ -70,7 +70,7 @@ compare their results to the latest set posted to the BDR:
     - 1.3_gauss
  - `compare_with_last.py`
    Given the paths to the latest output files (uvh5), this will compare the data in those files
-   to the corresponding files in `latest_ref_data`. 
+   to the corresponding files in `latest_ref_data`.
 
 At this time, the following scripts are designed for a cluster managed by Simple Linux Utility Resource
 Manager (SLURM): (TODO: fix and adapt these scripts as they are broken and outdated)
