@@ -6,7 +6,8 @@ freq:
   freq_array : [1.0000e+08]
   channel_width: 100000.0
 sources:
-  catalog: "../catalog_files/gleam.vot"
+  filetype: "gleam"
+  catalog: "file://gleam.vot"
   non_nan: True
   non_negative: True
 telescope:
