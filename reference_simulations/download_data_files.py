@@ -35,7 +35,7 @@ except ImportError as e:
     ) from e
 
 
-# get the cache directory for pyuvsim as proscribed by astropy
+# get the cache directory for pyuvsim as prescribed by astropy
 cache_dir = get_cache_dir("pyuvsim")
 
 
