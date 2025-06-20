@@ -33,6 +33,7 @@ from astropy.coordinates import (
     SkyCoord,
 )
 from astropy.time import Time
+from astropy.utils.data import cache_contents, is_url_in_cache
 from pyradiosky import SkyModel
 from pyuvdata import (
     AiryBeam,
@@ -991,8 +992,15 @@ def initialize_catalog_from_params(
         mock_keyvals = [str(key) + str(val) for key, val in mock_keywords.items()]
         source_list_name = "mock_" + "_".join(mock_keyvals)
     elif isinstance(catalog, str):
+        # if catalog file is not found, first check relative to config_path,
+        # then check astropy cache treating catalog input as url
         if not os.path.isfile(catalog):
-            catalog = os.path.join(param_dict["config_path"], catalog)
+            if "config_path" in param_dict:
+                relative_path = os.path.join(param_dict["config_path"], catalog)
+                if os.path.isfile(relative_path):
+                    catalog = relative_path
+            elif is_url_in_cache(catalog, pkgname="pyuvsim"):
+                catalog = cache_contents("pyuvsim")[catalog]
 
         allowed_read_params = [
             "spectral_type",

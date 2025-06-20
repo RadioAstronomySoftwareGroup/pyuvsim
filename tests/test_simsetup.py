@@ -13,6 +13,7 @@ import yaml
 from astropy import units
 from astropy.coordinates import Angle, EarthLocation, Latitude, Longitude, SkyCoord
 from astropy.time import Time
+from astropy.utils.data import download_file, get_cached_urls
 from pyradiosky import SkyModel
 from pyradiosky.data import DATA_PATH as SKY_DATA_PATH
 from pyuvdata import (
@@ -2586,3 +2587,33 @@ def test_simsetup_with_freq_buffer(tmp_path):
     _, beams, _ = simsetup.initialize_uvdata_from_params(params, return_beams=True)
 
     assert beams[0].beam.freq_array.max() < 101e6
+
+
+@pytest.mark.filterwarnings("ignore:Some Stokes I values are negative")
+def test_simsetup_with_cached_catalog():
+    # url of catalog file to download and cache, and its filetype
+    url = "https://repository.library.brown.edu/storage/bdr:eafzyycj/content/"
+    filetype = "skyh5"
+
+    # If file already cached then `cache=True` will not redownload it.
+    # Returns path to downloaded file content.
+    filename = download_file(url, cache=True, pkgname="pyuvsim")
+
+    # check that file exists in cache
+    assert url in get_cached_urls("pyuvsim")
+    # use filename to prevent warning
+    assert os.path.basename(filename) == "contents"
+
+    # create a source dictionary
+    source_dict = {"catalog": url, "filetype": filetype}
+
+    # try to initialize catalog using the cached catalog url
+    catalog_uv, catname = simsetup.initialize_catalog_from_params(
+        {"sources": source_dict}, return_catname=True
+    )
+
+    # first assert should be true for all astropy downloaded files
+    # second and third assert specific to the downloaded healpix map
+    assert catname == "contents"
+    assert catalog_uv.Ncomponents == 196608
+    assert catalog_uv.freq_array == [100 * units.MHz]
