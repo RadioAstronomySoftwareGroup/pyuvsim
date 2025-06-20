@@ -428,18 +428,37 @@ def test_vot_catalog_errors():
         simsetup.initialize_catalog_from_params(vot_param_filename, filetype="foo")
 
 
-@pytest.mark.parametrize(("flux_cut", "filetype"), [(True, "gleam"), (False, None)])
-def test_gleam_catalog(filetype, flux_cut):
+@pytest.mark.filterwarnings("ignore:Some stokes I values are negative.")
+@pytest.mark.parametrize(
+    ("filetype", "flux_cut", "nan_cut", "neg_cut"),
+    [
+        ("gleam", True, True, True),
+        (None, True, False, False),
+        (None, False, True, True),
+        (None, False, False, True),
+        (None, False, False, False),
+    ],
+)
+def test_gleam_catalog(filetype, flux_cut, nan_cut, neg_cut):
+    params_use = gleam_param_file
     if flux_cut:
         expected_ncomp = 9
-        params_use = gleam_param_file
+    elif neg_cut:
+        expected_ncomp = 32
     else:
         expected_ncomp = 50
+
+    if not flux_cut or not nan_cut or not neg_cut:
         with open(gleam_param_file) as pfile:
             param_dict = yaml.safe_load(pfile)
         param_dict["config_path"] = os.path.dirname(gleam_param_file)
-        param_dict["sources"].pop("min_flux")
-        param_dict["sources"].pop("max_flux")
+        if not flux_cut:
+            param_dict["sources"].pop("min_flux")
+            param_dict["sources"].pop("max_flux")
+        if not nan_cut:
+            param_dict["sources"].pop("non_nan")
+        if not neg_cut:
+            param_dict["sources"].pop("non_negative")
         params_use = param_dict
 
     gleam_catalog = simsetup.initialize_catalog_from_params(
@@ -506,7 +525,10 @@ def test_gleam_catalog_spectral_type(spectral_type):
 
     gleam_catalog = simsetup.initialize_catalog_from_params(param_dict)
     assert gleam_catalog.spectral_type == spectral_type
-    assert gleam_catalog.Ncomponents == 50
+    if spectral_type == "flat":
+        assert gleam_catalog.Ncomponents == 50
+    else:
+        assert gleam_catalog.Ncomponents == 32
 
 
 @pytest.mark.parametrize("telparam_in_obsparam", [True, False])

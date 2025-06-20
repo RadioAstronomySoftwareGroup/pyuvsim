@@ -877,6 +877,21 @@ def _sky_select_calc_rise_set(sky, source_params, telescope_lat_deg=None):
         Latitude of telescope in degrees, used for horizon calculations.
 
     """
+    # do other selections before non-rising to avoid warnings about nans and
+    # negatives that are filtered in this step in the cut_nonrising step
+    select_params = {}
+    if "min_flux" in source_params:
+        min_brightness = float(source_params["min_flux"]) * units.Jy
+        select_params["min_brightness"] = min_brightness
+    if "max_flux" in source_params:
+        max_brightness = float(source_params["max_flux"]) * units.Jy
+        select_params["max_brightness"] = max_brightness
+    for par in ["non_nan", "non_negative"]:
+        if par in source_params:
+            select_params[par] = source_params[par]
+
+    sky.select(**select_params)
+
     if telescope_lat_deg is not None:
         telescope_lat = Latitude(telescope_lat_deg * units.deg)
         sky.cut_nonrising(telescope_lat)
@@ -884,15 +899,6 @@ def _sky_select_calc_rise_set(sky, source_params, telescope_lat_deg=None):
         if "horizon_buffer" in source_params:
             calc_kwargs["horizon_buffer"] = float(source_params["horizon_buffer"])
         sky.calculate_rise_set_lsts(telescope_lat, **calc_kwargs)
-
-    min_brightness = None
-    if "min_flux" in source_params:
-        min_brightness = float(source_params["min_flux"]) * units.Jy
-    max_brightness = None
-    if "max_flux" in source_params:
-        max_brightness = float(source_params["max_flux"]) * units.Jy
-
-    sky.select(min_brightness=min_brightness, max_brightness=max_brightness)
 
     return sky
 
@@ -1026,7 +1032,8 @@ def initialize_catalog_from_params(
             read_params["spectral_type"] = "subband"
 
         source_list_name = os.path.basename(catalog)
-        sky = SkyModel.from_file(catalog, **read_params)
+        # defer the acceptibility check until after selections are done.
+        sky = SkyModel.from_file(catalog, **read_params, run_check_acceptability=False)
 
     if input_uv is not None:
         telescope_lat_deg = input_uv.telescope.location.lat.to("deg").value
@@ -1036,6 +1043,9 @@ def initialize_catalog_from_params(
     sky = _sky_select_calc_rise_set(
         sky, source_params, telescope_lat_deg=telescope_lat_deg
     )
+    # do the full check after selections to avoid warnings about nans and
+    # negatives that are removed in the selection
+    sky.check()
 
     # If the filename parameter is None (e.g. for mock skies)
     # add the source_list_name to the object so it can be put in the UVData history later
