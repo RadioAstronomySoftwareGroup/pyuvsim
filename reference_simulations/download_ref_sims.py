@@ -12,6 +12,16 @@ try:
 except ImportError as e:
     raise ImportError("pooche required for full script functionality") from e
 
+# TODO: re-implement robust response as it is recommended imo FML (though should ask Bryna if pref
+#       hacky download api response and parse it then clear the cached api response urls)
+
+# Then swap download of file approach to use cache (swap --cache to --local as well tbh IMO)
+
+# Should think about how best to include / remove compare.py as locally downloading the reference
+# simulation output should be disincentivized. Could potentially just have it download two
+# specific BDR files for comparison, or could have a test script that you can run that performs
+# the comparison for you (I LIKE THIS FOR NOW JUST IMPLEMENT compare.py somewhat locally here)
+# maybe add an option to use cache too I guess?
 
 # to test for now but swap to new reference simulations after
 ref_sims = [
