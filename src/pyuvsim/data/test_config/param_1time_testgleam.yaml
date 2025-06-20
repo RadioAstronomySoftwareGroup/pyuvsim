@@ -9,7 +9,7 @@ sources:
   catalog: '../gleam_50srcs.vot'
   min_flux: 0.2
   max_flux: 1.50
-  non_nan: True
+  non_nan: "any"
   non_negative: True
 telescope:
   array_layout: 'triangle_bl_layout.csv'
