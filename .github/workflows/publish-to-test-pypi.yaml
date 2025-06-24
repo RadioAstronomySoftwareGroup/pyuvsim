@@ -20,7 +20,7 @@ jobs:
         shell: bash -l {0}
     env:
       ENV_NAME: publish
-      PYTHON: "3.11"
+      PYTHON: "3.12"
     steps:
       - uses: actions/checkout@main
         with:
