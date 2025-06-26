@@ -90,7 +90,7 @@ Required:
 * astropy>=6.0
 * numpy>=1.23
 * psutil
-* pyradiosky>=1.0.1
+* pyradiosky>=1.1.0
 * python>=3.10
 * pyuvdata>=3.1.2
 * pyyaml>=5.4.1
