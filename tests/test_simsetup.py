@@ -469,8 +469,9 @@ def test_gleam_catalog(filetype, flux_cut, nan_cut, neg_cut):
 def test_skyh5_catalog(use_filetype, yaml_filetype, tmp_path):
     filetype = None
     gleam_filename = os.path.join(SIM_DATA_PATH, "gleam_50srcs.vot")
-    skyobj = SkyModel.from_gleam_catalog(gleam_filename)
-    assert skyobj.Ncomponents == 50
+    skyobj = SkyModel.from_gleam_catalog(gleam_filename, run_check=False)
+    skyobj.select(non_negative=True)
+    assert skyobj.Ncomponents == 32
 
     skyh5_file = os.path.join(tmp_path, "gleam.skyh5")
     skyobj.write_skyh5(skyh5_file, clobber=True)
@@ -2504,8 +2505,11 @@ def test_skymodeldata_non_icrs(cat_with_some_pols):
 @pytest.mark.parametrize("spectral_type", ["spectral_index", "subband"])
 def test_skymodel_data_spectype_select(spectral_type):
     sky = SkyModel.from_file(
-        os.path.join(SIM_DATA_PATH, "gleam_50srcs.vot"), spectral_type=spectral_type
+        os.path.join(SIM_DATA_PATH, "gleam_50srcs.vot"),
+        spectral_type=spectral_type,
+        run_check=False,
     )
+    sky.select(non_nan="all", non_negative=True)
 
     smd = simsetup.SkyModelData(sky)
 
