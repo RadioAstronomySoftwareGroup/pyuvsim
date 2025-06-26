@@ -352,10 +352,6 @@ def test_initialize_catalog_from_params(
         uv_in.time_array[0], arrangement="zenith", array_location=hera_loc, Nsrcs=5
     )
 
-    if pass_uv:
-        assert exp_cat._history != catalog_uv._history
-        exp_cat.history = catalog_uv.history
-
     assert exp_cat == catalog_uv
 
 
