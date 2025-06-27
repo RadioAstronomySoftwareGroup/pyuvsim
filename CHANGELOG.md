@@ -8,7 +8,7 @@
 feed_angle, mount_type) which will be released in pyuvdata 3.2
 
 ### Changed
-- Updated minimum dependency versions: pyuvdata>=3.1.2, pyradiosky>=1.1.0
+- Updated minimum dependency versions: pyuvdata>=3.1.2, pyradiosky>=1.1.0, python>=3.11
 - Only import lunarsky if needed.
 
 ### Fixed
