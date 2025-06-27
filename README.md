@@ -91,7 +91,7 @@ Required:
 * numpy>=1.23
 * psutil
 * pyradiosky>=1.1.0
-* python>=3.10
+* python>=3.11
 * pyuvdata>=3.1.2
 * pyyaml>=5.4.1
 * scipy>=1.8

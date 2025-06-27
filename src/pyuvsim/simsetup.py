@@ -22,7 +22,6 @@ import warnings
 import astropy.units as units
 import numpy as np
 import numpy.typing as npt
-import pyradiosky
 import yaml
 from astropy.coordinates import (
     ICRS,
@@ -34,7 +33,6 @@ from astropy.coordinates import (
     SkyCoord,
 )
 from astropy.time import Time
-from packaging import version  # packaging is installed with setuptools
 from pyradiosky import SkyModel
 from pyuvdata import (
     AiryBeam,
@@ -695,11 +693,7 @@ class SkyModelData:
 
             if sky_in._freq_array.required:
                 self.freq_array = sky_in.freq_array.to("Hz").value
-            if (
-                version.parse(pyradiosky.__version__) > version.parse("0.2")
-                and sky_in.spectral_type == "subband"
-                and sky_in.freq_edge_array is not None
-            ):
+            if sky_in.spectral_type == "subband" and sky_in.freq_edge_array is not None:
                 self.freq_edge_array = sky_in.freq_edge_array.to("Hz").value
 
             if sky_in._reference_frequency.required:

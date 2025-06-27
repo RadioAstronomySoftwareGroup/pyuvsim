@@ -32,14 +32,13 @@ dependencies = [
     "setuptools>=64",
     "setuptools_scm>=8.1",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 keywords = ["radio astronomy", "interferometry"]
 classifiers = [
     "License :: OSI Approved :: BSD License",
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: BSD License",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Astronomy",
