@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- Support for selecting SkyModel components that do not have NaN values in the
+`stokes` parameter at either any or all frequencies and with no negative Stokes I
+values.
 - Support for beams with only one feed (resulting in a single polarization in the visibilities).
 - Support for new feed information in pyuvdata's Telescope object (feed_array,
 feed_angle, mount_type) which will be released in pyuvdata 3.2
