@@ -94,13 +94,13 @@ Required:
 * python>=3.11
 * pyuvdata>=3.1.2
 * pyyaml>=5.4.1
-* scipy>=1.8
+* scipy>=1.9
 * setuptools_scm>=8.1
 
 Optional:
 
 * astropy-healpix>=1.0.2 (for using healpix based sky catalogs or beams)
-* mpi4py>=3.1.1 (for actually running simulations)
+* mpi4py>=3.1.3 (for actually running simulations)
 * lunarsky>=0.2.5 (for simulating telescopes on the moon)
 * python-casacore>=3.5.2 (for writing CASA measurement sets, not available on Windows)
 
