@@ -410,6 +410,8 @@ def test_run_gleam_uvsim(tmp_path, spectral_type, nfeeds):
     if hasattr(uv_out.telescope, "mount_type"):
         # always do this once we require pyuvdata >= 3.2
         uv_in.telescope.mount_type = uv_out.telescope.mount_type
+    else:
+        uv_in.telescope.x_orientation = "east"
     assert uv_in.telescope._location == uv_out.telescope._location
     assert uv_in == uv_out
 
