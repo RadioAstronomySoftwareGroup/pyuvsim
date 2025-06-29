@@ -352,10 +352,6 @@ def test_initialize_catalog_from_params(
         uv_in.time_array[0], arrangement="zenith", array_location=hera_loc, Nsrcs=5
     )
 
-    if pass_uv:
-        assert exp_cat._history != catalog_uv._history
-        exp_cat.history = catalog_uv.history
-
     assert exp_cat == catalog_uv
 
 
@@ -428,18 +424,37 @@ def test_vot_catalog_errors():
         simsetup.initialize_catalog_from_params(vot_param_filename, filetype="foo")
 
 
-@pytest.mark.parametrize(("flux_cut", "filetype"), [(True, "gleam"), (False, None)])
-def test_gleam_catalog(filetype, flux_cut):
+@pytest.mark.filterwarnings("ignore:Some stokes I values are negative.")
+@pytest.mark.parametrize(
+    ("filetype", "flux_cut", "nan_cut", "neg_cut"),
+    [
+        ("gleam", True, True, True),
+        (None, True, False, False),
+        (None, False, True, True),
+        (None, False, False, True),
+        (None, False, False, False),
+    ],
+)
+def test_gleam_catalog(filetype, flux_cut, nan_cut, neg_cut):
+    params_use = gleam_param_file
     if flux_cut:
         expected_ncomp = 9
-        params_use = gleam_param_file
+    elif neg_cut:
+        expected_ncomp = 32
     else:
         expected_ncomp = 50
+
+    if not flux_cut or not nan_cut or not neg_cut:
         with open(gleam_param_file) as pfile:
             param_dict = yaml.safe_load(pfile)
         param_dict["config_path"] = os.path.dirname(gleam_param_file)
-        param_dict["sources"].pop("min_flux")
-        param_dict["sources"].pop("max_flux")
+        if not flux_cut:
+            param_dict["sources"].pop("min_flux")
+            param_dict["sources"].pop("max_flux")
+        if not nan_cut:
+            param_dict["sources"].pop("non_nan")
+        if not neg_cut:
+            param_dict["sources"].pop("non_negative")
         params_use = param_dict
 
     gleam_catalog = simsetup.initialize_catalog_from_params(
@@ -454,8 +469,9 @@ def test_gleam_catalog(filetype, flux_cut):
 def test_skyh5_catalog(use_filetype, yaml_filetype, tmp_path):
     filetype = None
     gleam_filename = os.path.join(SIM_DATA_PATH, "gleam_50srcs.vot")
-    skyobj = SkyModel.from_gleam_catalog(gleam_filename)
-    assert skyobj.Ncomponents == 50
+    skyobj = SkyModel.from_gleam_catalog(gleam_filename, run_check=False)
+    skyobj.select(non_negative=True)
+    assert skyobj.Ncomponents == 32
 
     skyh5_file = os.path.join(tmp_path, "gleam.skyh5")
     skyobj.write_skyh5(skyh5_file, clobber=True)
@@ -506,7 +522,10 @@ def test_gleam_catalog_spectral_type(spectral_type):
 
     gleam_catalog = simsetup.initialize_catalog_from_params(param_dict)
     assert gleam_catalog.spectral_type == spectral_type
-    assert gleam_catalog.Ncomponents == 50
+    if spectral_type == "flat":
+        assert gleam_catalog.Ncomponents == 50
+    else:
+        assert gleam_catalog.Ncomponents == 32
 
 
 @pytest.mark.parametrize("telparam_in_obsparam", [True, False])
@@ -2486,8 +2505,11 @@ def test_skymodeldata_non_icrs(cat_with_some_pols):
 @pytest.mark.parametrize("spectral_type", ["spectral_index", "subband"])
 def test_skymodel_data_spectype_select(spectral_type):
     sky = SkyModel.from_file(
-        os.path.join(SIM_DATA_PATH, "gleam_50srcs.vot"), spectral_type=spectral_type
+        os.path.join(SIM_DATA_PATH, "gleam_50srcs.vot"),
+        spectral_type=spectral_type,
+        run_check=False,
     )
+    sky.select(non_nan="all", non_negative=True)
 
     smd = simsetup.SkyModelData(sky)
 

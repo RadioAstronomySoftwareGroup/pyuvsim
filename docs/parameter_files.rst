@@ -47,6 +47,10 @@ these are passed into a simulation.
       dec_column: DEJ2000  # Recommended for non-GLEAM VO table files
       catalog: 'mock'       # Alternatively, use 'mock' to use a builtin catalog).
       mock_arrangement: 'zenith'    # If using the mock catalog, specify which one. Additional mock keywords are specified here.
+      non_nan: 'all'  # Optional, remove source components with NaN Stokes values at all (or any) frequencies
+      non_negative: True  # Optional, remove source components with negative Stokes I values
+      min_flux: 0.2  # Optional, minimum flux for sourcec components to keep
+      max_flux: 1.50  # Optional, maximum flux for sourcec components to keep
     telescope:
       array_layout: 'triangle_bl_layout.csv'    # Antenna layout csv file
       telescope_config_name: '28m_triangle_10time_10chan.yaml'  # Telescope metadata file.
@@ -343,6 +347,16 @@ Sources
 
     Flux limits can be made by providing the keywords ``min_flux`` and ``max_flux``.
     These specify the min/max stokes I flux to choose from the catalog.
+
+    Note that when using the GLEAM catalog, depending on the spectral type you
+    use there can be sources that have Stokes values that are NaNs and Stokes I
+    values that are negative. You can remove sources that have NaN Stokes values
+    at either any or all frequencies using the ``non_nan`` keyword (can be set
+    to "any" or "all", note that for subband spectral types the default flux
+    interpolation will not result in NaNs as long as not all the Stokes values
+    are NaN). You can remove sources with negative Stokes I values using the
+    ``non_negative`` keyword (set to True). See pyradiosky documentation for
+    more details.
 
     The option ``horizon_buffer`` can be set (in radians) to adjust the tolerance on the
     coarse horizon cut. After reading in the catalog, ``pyuvsim`` roughly calculates the
