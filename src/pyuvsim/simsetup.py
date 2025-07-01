@@ -995,11 +995,15 @@ def initialize_catalog_from_params(
         # if catalog file is not found, first check relative to config_path,
         # then check astropy cache treating catalog input as url
         if not os.path.isfile(catalog):
+            # create boolean to determine if cache should be checked
+            check_cache = True
             if "config_path" in param_dict:
                 relative_path = os.path.join(param_dict["config_path"], catalog)
                 if os.path.isfile(relative_path):
                     catalog = relative_path
-            elif is_url_in_cache(catalog, pkgname="pyuvsim"):
+                    # if file is found no need to check cache
+                    check_cache = False
+            if check_cache and is_url_in_cache(catalog, pkgname="pyuvsim"):
                 catalog = cache_contents("pyuvsim")[catalog]
 
         allowed_read_params = [
