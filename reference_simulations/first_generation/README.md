@@ -14,29 +14,29 @@ comparisons with PRISim below, for more detailed writeups see the Memos folder.
 
 
 ## First Reference Simulations
- | Name (beam) | Purpose |
- |:-----|:------|
- |1.1 (short dipole) | Test imaging and source orientation.|
- |1.2 (uniform) | Check that sources behave appropriately near the horizon and rise/set.|
- |1.3 (gaussian) | Check that visibilities have sensible frequency evolution. Get observable fringes and delay transform.|
- |1.4 (airy) | Simulate a realistic sky model with many sources.|
- |1.5 (MWA UVBeam) | Test interpolation of UVBeam.|
- |1.6 (airy) | Test interface with HEALPix.|
- |1.7 (short dipole,uniform,gaussian,airy) | Test use of multiple analytic beams at once.|
- |1.8 (uniform) | Test simulating and imaging on the moon.|
+ |        Name        | Purpose |
+ |:-------------------|:--------|
+ |1.1 Baseline Number | Test imaging and source orientation.|
+ |1.2 Time Axis       | Check that sources behave appropriately near the horizon and rise/set.|
+ |1.3 Frequency Axis  | Check that visibilities have sensible frequency evolution. Get observable fringes and delay transform.|
+ |1.4 Source Axis     | Simulate a realistic sky model with many sources.|
+ |1.5 UVBeam          | Test interpolation of UVBeam.|
+ |1.6 HEALPix         | Test interface with HEALPix.|
+ |1.7 Multi Beam      | Test use of multiple analytic beams at once.|
+ |1.8 Lunar           | Test simulating and imaging on the moon.|
 
 
 ### Details
 |              Obsparam File               |              Catalog               | Ntimes  | Nfreqs  |       Layout       |        Beam       |       Results Filename       |
 |:----------------------------------------:|:----------------------------------:|:-------:|:-------:|:------------------:|:-----------------:|:----------------------------:|
-|     obsparam_ref_1.1_baseline_number.yaml|              RASG.txt              |    1    |    1    | MWA Phase I (128T) |    short dipole   | ref_1.1_baseline_number.uvh5 |
-|     obsparam_ref_1.2_time_axis.yaml      | two_points_on_opposite_horizon.txt |  3600   |    1    |  Baseline Lite 4x  |      uniform      |    ref_1.2_time_axis.uvh5    |
-|   obsparam_ref_1.3_frequency_axis.yaml   |                R.txt               |    1    |  10000  |    Baseline Lite   | 23° FWHM gaussian |  ref_1.3_frequency_axis.uvh5 |
-|     obsparam_ref_1.4_source_axis.yaml    |              gleam.vot             |    1    |    1    |    5 km Triangle   |       airy        |   ref_1.4_source_axis.uvh5   | <!-- TODO: document diameter 14 -->
+|     obsparam_ref_1.1_baseline_number.yaml|              RASG.txt              |    1    |    1    | MWA Phase I (128T) |    Short Dipole   | ref_1.1_baseline_number.uvh5 |
+|     obsparam_ref_1.2_time_axis.yaml      | two_points_on_opposite_horizon.txt |  3600   |    1    |  Baseline Lite 4x  |      Uniform      |    ref_1.2_time_axis.uvh5    |
+|   obsparam_ref_1.3_frequency_axis.yaml   |                R.txt               |    1    |  10000  |    Baseline Lite   | 23° FWHM Gaussian |  ref_1.3_frequency_axis.uvh5 |
+|     obsparam_ref_1.4_source_axis.yaml    |              gleam.vot             |    1    |    1    |    5 km Triangle   | Diameter 14 Airy  |   ref_1.4_source_axis.uvh5   |
 |       obsparam_ref_1.5_uvbeam.yaml       |                R.txt               |    2    |    2    | MWA Phase I (128T) |     MWA UVBeam    |      ref_1.5_uvbeam.uvh5     |
-|      obsparam_ref_1.6_healpix.yaml       |     gsm16_nside128_100mhz.skyh5    |    1    |    1    |    Baseline Lite   |       airy        |     ref_1.6_healpix.uvh5     | <!-- TODO: document diameter 14 -->
+|      obsparam_ref_1.6_healpix.yaml       |     gsm16_nside128_100mhz.skyh5    |    1    |    1    |    Baseline Lite   | Diameter 14 Airy  |     ref_1.6_healpix.uvh5     |
 |     obsparam_ref_1.7_multi_beam.yaml     |                R.txt               |   100   |   100   |    Baseline Lite   |   All 4 Analytic  |    ref_1.7_multi_beam.uvh5   |
-|       obsparam_ref_1.8_lunar.yaml        |              MOON.txt              |    1    |    1    | MWA Phase I (128T) |      uniform      |      ref_1.8_lunar.uvh5      |
+|       obsparam_ref_1.8_lunar.yaml        |              MOON.txt              |    1    |    1    | MWA Phase I (128T) |      Uniform      |      ref_1.8_lunar.uvh5      |
 
 
 
@@ -156,22 +156,3 @@ downloaded with `../download_ref_sims.py` for comparison, though comparison with
 generation reference simulations is also handled with pytest. All reference simulations uploaded
 to the BDR are available to download via https -- through script or manual page navigation -- and
 the BDR has a solid API.
-
-
-## Comparison with PRISim
-
-This comparison was performed using pyuvsim v1.0.0 in 2019, and the full comparison writeup can
-be found in `Memos/`. The PRISim simulator was designed with the intent of simulating wide field,
-high bandwidth interferometers specifically targeting 21 cm instruments. It has mainly been used
-in the context of a delay-spectrum style analysis, though images have been made and are known to
-be roughly correct. The data for this comparison can be found on the NRAO computing cluster at
-`/lustre/aoc/projects/hera/djacobs/prisim_ref/`.
-
-- In the frequency domain, PRISim simulations agree at 10^-5 with pyuvsim, with quantization type
-errors at 10^-6.
-- The difference shows a floor in the delay spectrum at 1e-6 which is above the expected Blackman
-Harris floor at 1e-10
-- In the image domain a phase offset at roughly the psf size and can be traced to differences in
-uvw calculation.  Antenna positions agree to tolerance which suggests uvw difference is related
-to phasing.  PRISim and pyvusim use different codes for phasing and time calculation. The PRISim
-phasing code is not covered with analytic tests.
