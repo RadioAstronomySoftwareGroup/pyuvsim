@@ -16,6 +16,7 @@ except ImportError as e:
     ) from e
 
 # TODO: should the bulk of this code be here?
+# TODO: add verbosity as a lot of these should maybe not be warnings
 
 
 def download_gleam_vot(url="file://gleam.vot"):
@@ -77,11 +78,12 @@ def download_file_using_astropy(url):
             f"astropy cached url for {url} already exists! If you want to redownload,"
             " please clear the cached url."
         )
-        return
 
     # astropy file download method which defaults to cached file and hashes the file
     # should have a default timeout of 10 seconds
-    download_file(url, cache=True, pkgname="pyuvsim")
+    filepath = download_file(url, cache=True, pkgname="pyuvsim")
+
+    return filepath
 
 
 def download_data_files(argv=None):

@@ -8,7 +8,7 @@ freq:
 sources:
   filetype: "gleam"
   catalog: "file://gleam.vot"
-  non_nan: True
+  non_nan: "all"
   non_negative: True
 telescope:
   array_layout: telescope_config/5km_triangle_layout.csv
