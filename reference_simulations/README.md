@@ -48,17 +48,18 @@ compare their results to the latest set posted to the BDR:
     - healpix: gsm 2016 nside 128 healpix map saved as skyh5
     [here](https://repository.library.brown.edu/studio/item/bdr:eafzyycj/).
  - `download_ref_sims`
-   Run this to download the latest reference sim data from the BDR using `astropy` and `requests`.
-   The new data can be compared to these files to check for output consistency.
+   Run this to download the latest reference simulation data from the BDR using `astropy` and
+   `requests`. This cli tool is only used in pytest to perform comparisons for output consistency,
+   and is not necessary to run the reference simulations.
    Sample script usage:
    ```
    # see argparse help menu for sample usage
-   download_ref_sims.py --help
+   download_ref_sims --help
    # download all latest reference by default if no argument given
    # files downloaded to the cache
-   download_ref_sims.py
+   download_ref_sims
    # download specific reference simulation files by keyword
-   download_ref_sims.py keyword1 keyword2
+   download_ref_sims keyword1 keyword2
    ```
    Currently downloadable reference simulation files by keyword:
     - 1.1_baseline_number
@@ -69,9 +70,6 @@ compare their results to the latest set posted to the BDR:
     - 1.6_healpix
     - 1.7_multi_beam
     - 1.8_lunar
- - `compare_with_last.py`
-   Given the paths to the latest output files (uvh5), this will compare the data in those files
-   to the corresponding files in `latest_ref_data`.
 
 The first generation reference simulations run in only a couple minutes on a single core. The
 simulations run from the top directory with:
