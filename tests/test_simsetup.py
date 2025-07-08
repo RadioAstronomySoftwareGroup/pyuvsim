@@ -6,6 +6,7 @@ import copy
 import os
 import re
 import shutil
+import subprocess  # nosec
 from pathlib import Path
 
 import numpy as np
@@ -1591,7 +1592,8 @@ def test_initialize_uvdata_from_keywords_errors(uvdata_keyword_dict):
 
 
 @pytest.mark.parametrize("int_time_varies", [False, "single", "single_time"])
-def test_uvfits_to_config(tmp_path, int_time_varies):
+@pytest.mark.parametrize("use_cli", [True, False])
+def test_uvfits_to_config(tmp_path, int_time_varies, use_cli):
     """
     Loopback test of reading parameters from uvfits file, generating uvfits file, and reading
     in again.
@@ -1627,7 +1629,7 @@ def test_uvfits_to_config(tmp_path, int_time_varies):
     elif int_time_varies == "single_time":
         # Test case of a non-uniform integration time for last time
         assert uv0.Ntimes > 1
-        time_array, unique_inds, unique_inverse = np.unique(
+        time_array, _, unique_inverse = np.unique(
             uv0.time_array, return_index=True, return_inverse=True
         )
         assert time_array.size < uv0.time_array.size
@@ -1657,13 +1659,39 @@ def test_uvfits_to_config(tmp_path, int_time_varies):
         path_out=opath,
         return_names=True,
     )
-    simsetup.uvdata_to_config_file(
-        uv1,
-        param_filename=second_param_filename,
-        telescope_config_name=os.path.join(path, telescope_config),
-        layout_csv_name=os.path.join(path, layout_fname),
-        path_out=opath,
-    )
+
+    if use_cli:
+        # add the data-like arrays so it can be written to disk
+        shape = (uv1.Nblts, uv1.Nfreqs, uv1.Npols)
+        uv1.data_array = np.zeros(shape, dtype=complex)
+        uv1.flag_array = np.zeros(shape, dtype=bool)
+        uv1.nsample_array = np.ones(shape, dtype=float)
+
+        uvd_file = os.path.join(tmp_path, "temp.uvh5")
+        uv1.write_uvh5(uvd_file)
+
+        subprocess.check_output(  # nosec
+            [
+                "uvdata_to_config",
+                uvd_file,
+                "-p",
+                second_param_filename,
+                "-t",
+                os.path.join(path, telescope_config),
+                "-l",
+                os.path.join(path, layout_fname),
+                "--outpath",
+                opath,
+            ]
+        )
+    else:
+        simsetup.uvdata_to_config_file(
+            uv1,
+            param_filename=second_param_filename,
+            telescope_config_name=os.path.join(path, telescope_config),
+            layout_csv_name=os.path.join(path, layout_fname),
+            path_out=opath,
+        )
 
     del param_dict
 
