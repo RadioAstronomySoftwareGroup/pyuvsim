@@ -4,7 +4,6 @@
 
 import argparse
 import os
-import resource
 import subprocess
 import sys
 import time as pytime
@@ -544,7 +543,7 @@ def run_profile_pyuvsim(argv=None):
 
     uvsim.run_uvdata_uvsim(input_uv, beam_list, beam_dict=beam_dict, catalog=catalog)
 
-    memory_usage_gb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
+    memory_usage_gb = mpi.get_rusage()
     comm.Barrier()
 
     memory_usage_gb = comm.gather(memory_usage_gb, root=0)
