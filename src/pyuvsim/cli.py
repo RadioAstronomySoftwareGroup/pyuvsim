@@ -21,13 +21,15 @@ from numpy.lib.recfunctions import append_fields
 from pyradiosky import SkyModel
 from pyuvdata import UVBeam, UVData
 
-from pyuvsim import mpi, profiling, simsetup, telescope, uvsim
+from pyuvsim import profiling, simsetup, telescope, uvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.simsetup import _parse_layout_csv as parse_csv
 
 
 def run_pyuvsim(argv=None):
     """Run a pyuvsim simulation from a parameter file or a UVData, SkyModel and BeamList."""
+    from pyuvsim import mpi
+
     parser = argparse.ArgumentParser(
         description="A command-line script to execute a pyuvsim simulation from "
         "either a single parameter file or all of: UVData readable file, "
@@ -417,6 +419,8 @@ def plot_csv_antpos(argv=None):
 
 def run_profile_pyuvsim(argv=None):
     """Run a pyuvsim simulation for profiling purposes."""
+    from pyuvsim import mpi
+
     parser = argparse.ArgumentParser(
         description=(
             "A command-line script to execute a pyuvsim simulation for profiling purposes."
