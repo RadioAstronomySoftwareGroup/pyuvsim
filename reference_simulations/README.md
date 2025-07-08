@@ -26,20 +26,20 @@ The current approach to storing historical reference simulations is the
 We aim to consistently upload first generation reference simulations to the BDR across
 code changes for regression testing.
 
-For convenience, several scripts are provided to help run the reference simulations and
+For convenience, command line tools are provided to help run the reference simulations and
 compare their results to the latest set posted to the BDR:
 
- - `download_data_files.py`
-   An extensible script to download necessary beam and catalog files. The script requires
+ - `download_data_files`
+   Downloads necessary beam and catalog files. The script requires
    `pyradiosky`, `astropy`, and `astroquery`. Sample script usage:
    ```
    # see argparse help menu for sample usage
-   python3 download_data_files.py --help
+   download_data_files --help
    # download all data files by default if no argument given
    # files downloaded to the cache
-   python3 download_data_files.py
+   download_data_files
    # download specific data files by keyword
-   python3 download_data_files.py keyword1 keyword2
+   download_data_files keyword1 keyword2
    ```
    Currently downloadable data files by keyword:
     - gleam: GLEAM extragalactic source catalog from Vizier, using `astroquery`, and save it to a
@@ -47,33 +47,46 @@ compare their results to the latest set posted to the BDR:
     - mwa: mwa uvbeam file from [here](https://github.com/MWATelescope/mwa_pb).
     - healpix: gsm 2016 nside 128 healpix map saved as skyh5
     [here](https://repository.library.brown.edu/studio/item/bdr:eafzyycj/).
- - `download_ref_sim.py`
-   Run this to download the reference sim data from the BDR using `astropy` and `requests`.
+ - `download_ref_sims`
+   Run this to download the latest reference sim data from the BDR using `astropy` and `requests`.
    The new data can be compared to these files to check for output consistency.
    Sample script usage:
    ```
    # see argparse help menu for sample usage
-   python3 download_ref_sim.py --help
+   download_ref_sims.py --help
    # download all latest reference by default if no argument given
    # files downloaded to the cache
-   python3 download_ref_sim.py
+   download_ref_sims.py
    # download specific reference simulation files by keyword
-   python3 download_ref_sim.py keyword1 keyword2
+   download_ref_sims.py keyword1 keyword2
    ```
    Currently downloadable reference simulation files by keyword:
-    - 1.1_uniform
-    - 1.1_gauss
-    - 1.1_mwa
-    - 1.2_uniform
-    - 1.2_gauss
-    - 1.3_uniform
-    - 1.3_gauss
+    - 1.1_baseline_number
+    - 1.2_time_axis
+    - 1.3_frequency_axis
+    - 1.4_source_axis
+    - 1.5_uvbeam
+    - 1.6_healpix
+    - 1.7_multi_beam
+    - 1.8_lunar
  - `compare_with_last.py`
    Given the paths to the latest output files (uvh5), this will compare the data in those files
    to the corresponding files in `latest_ref_data`.
 
-At this time, the following scripts are designed for a cluster managed by Simple Linux Utility
-Resource Manager (SLURM): (TODO: fix and adapt these scripts as they are broken and outdated)
+The first generation reference simulations run in only a couple minutes on a single core. The
+simulations run from the top directory with:
+```
+# Running with 20 MPI processing units, but 1 is sufficient for first generation
+# This should soon become an entrypoint
+# 1.1_baseline_number used as example, works for all 1st gen sims with data files downloaded
+mpirun -n 20 python scripts/run_param_pyuvsim.py reference_simulations/first_generation/obsparam_ref_1.1_baseline_number.yaml
+```
+The second generation reference simulations can take a few more hours, and as such should ideally
+be ran on some form of computing cluster. Running the second generation reference simulations
+interactively works well but is not preferable. The following scripts are designed for a cluster
+managed by Simple Linux Utility Resource Manager (SLURM). These scripts might not function as they
+were last updated in 2020 and require testing. Some of the second generation reference simulations
+also require some manual file finding and placing to run.
 
  - run_ref_sims.sh
         To run all of the reference simulations, run:

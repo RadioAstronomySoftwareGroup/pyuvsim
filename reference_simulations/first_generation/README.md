@@ -9,8 +9,9 @@ frequency, baselines, sources), and each serve to test for different expected be
 implement tests of UVBeam interpolation, integration with HEALPix maps, lunar simulation, and
 using multiple analytic beams.
 
-We detail the set of reference simulations and the high-level outcomes of
-comparisons with PRISim below, for more detailed writeups see the Memos folder.
+We detail the set of reference simulations below, for more detailed writeups see the
+[Memos](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/reference_simulations/first_generation/Memos).
+folder.
 
 
 ## First Reference Simulations
@@ -32,9 +33,9 @@ comparisons with PRISim below, for more detailed writeups see the Memos folder.
 |     obsparam_ref_1.1_baseline_number.yaml|              RASG.txt              |    1    |    1    | MWA Phase I (128T) |    Short Dipole   | ref_1.1_baseline_number.uvh5 |
 |     obsparam_ref_1.2_time_axis.yaml      | two_points_on_opposite_horizon.txt |  3600   |    1    |  Baseline Lite 4x  |      Uniform      |    ref_1.2_time_axis.uvh5    |
 |   obsparam_ref_1.3_frequency_axis.yaml   |                R.txt               |    1    |  10000  |    Baseline Lite   | 23° FWHM Gaussian |  ref_1.3_frequency_axis.uvh5 |
-|     obsparam_ref_1.4_source_axis.yaml    |              gleam.vot             |    1    |    1    |    5 km Triangle   | Diameter 14 Airy  |   ref_1.4_source_axis.uvh5   |
+|     obsparam_ref_1.4_source_axis.yaml    |              gleam.vot             |    1    |    1    |    5 km Triangle   | 14m Diameter Airy |   ref_1.4_source_axis.uvh5   |
 |       obsparam_ref_1.5_uvbeam.yaml       |                R.txt               |    2    |    2    | MWA Phase I (128T) |     MWA UVBeam    |      ref_1.5_uvbeam.uvh5     |
-|      obsparam_ref_1.6_healpix.yaml       |     gsm16_nside128_100mhz.skyh5    |    1    |    1    |    Baseline Lite   | Diameter 14 Airy  |     ref_1.6_healpix.uvh5     |
+|      obsparam_ref_1.6_healpix.yaml       |     gsm16_nside128_100mhz.skyh5    |    1    |    1    |    Baseline Lite   | 14m Diameter Airy |     ref_1.6_healpix.uvh5     |
 |     obsparam_ref_1.7_multi_beam.yaml     |                R.txt               |   100   |   100   |    Baseline Lite   |   All 4 Analytic  |    ref_1.7_multi_beam.uvh5   |
 |       obsparam_ref_1.8_lunar.yaml        |              MOON.txt              |    1    |    1    | MWA Phase I (128T) |      Uniform      |      ref_1.8_lunar.uvh5      |
 
@@ -46,8 +47,6 @@ for regression testing in CI using Github Actions.
 
 The catalogs may be found in the **../catalog_files** folder, and the beam/layout files are in the **telescope_config** folder. UVBeam models and large catalog files will need to
 be downloaded using `../download_data_files.py` and placed appropriately.
-
-[second_generation](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/reference_simulations/second_generation).
 
 For a full description of how antenna layouts, instrument configuration, and catalogs are all
 written into parameter files, please see the
@@ -64,7 +63,7 @@ output filing information and any additional UVData parameters that may be desir
 RASG.txt:
 
    - This is a set of point sources near zenith at JD 2460000.0 for an observer at the MWA
-   location. They spell out the word "RASG" from <!-- TODO: check the orientation --> east to
+   location. They spell out the word "RASG" from east to
    west across the sky with the tops of the letters to the north.
 
 two_points_on_opposite_horizon.txt:
@@ -76,7 +75,7 @@ two_points_on_opposite_horizon.txt:
 R.txt
 
    - This is a set of point sources ~30° RA away from zenith at JD 2460000.0 for an observer at
-   the MWA location. They spell out the letter "R" from <!-- TODO: check the orientation --> east
+   the MWA location. They spell out the letter "R" from east
    to west across the sky with the tops of the letters to the north.
 
 MOON.txt
@@ -87,13 +86,13 @@ MOON.txt
 gleam.vot:
 
    - The GLEAM catalog. It's too large to fit on github, so it's not included in the data
-   directory. You can download it using `download_data_files.py`.
+   directory. You can download it using `download_data_files gleam`.
 
 gsm16_nside128_100mhz.skyh5:
 
   -  This is a HEALPix map created using pygdsm GlobalSkyModel16 and scaled down to nside 128
   using healpy, then saved as a skyh5 file using pyradiosky. You can download it using
-  `download_data_files.py`.
+  `download_data_files healpix`.
 
 
 ### Antenna Layouts
@@ -127,15 +126,18 @@ baseline lite multi beam:
    - An isosceles triangle consisting of two 5km baselines.
    - The layout is in `telescope_config/5km_triangle_layout.csv`.
 
-See `Memos/` for plots of the array layouts.
-
+See
+[documentation_of_new_reference_simulations](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/reference_simulations/first_generation/Memos/new_reference_simulations/documentation_of_new_reference_simulations.pdf).
+for plots of the array layouts.
 
 ### Beams
 
 Four types of AnalyticBeam objects were used as primary beams in the reference simulations: short
 dipole, uniform, gaussian, and airy. One UVBeam object was used as a primary beam: the MWA UVBeam
-found [here](https://github.com/MWATelescope/mwa_pb).<!-- TODO: discussion on beam behavior -->
+found [here](https://github.com/MWATelescope/mwa_pb), and downloaded with
+`download_data_files mwa`.
 
+<!-- TODO: discussion on beam behavior -->
 
 ### Other design choices
 
@@ -144,7 +146,8 @@ of the lunar simulation. This is lat/lon/alt (-26.70331941, 116.6708152, 377.827
 simulation has telescope location at selenodetic coordinates (0.6875, 24.433, 0). All simulations
 start at Julian Date 2460000.0 (2023-02-24 12:00:00 UTC). Unless specified otherwise, simulations
 have a 10 second integration time, a frequency channel width of 100 KHz, and a frequency of 100
-MHz. For further simulation specification, see `Memos/` and `list`.
+MHz. For further simulation specification, see
+[documentation_of_new_reference_simulations](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/reference_simulations/first_generation/Memos/new_reference_simulations/documentation_of_new_reference_simulations.pdf).
 
 
 ## Old data
@@ -153,6 +156,6 @@ Old reference simulation data is stored on the
 [Brown Digital Repository (BDR)](https://repository.library.brown.edu/studio/collections/bdr:wte2qah8/)
 and ideally updated regularly. The latest first generation reference simulation data can be
 downloaded with `../download_ref_sims.py` for comparison, though comparison with latest first
-generation reference simulations is also handled with pytest. All reference simulations uploaded
+generation reference simulations is handled with pytest. All reference simulations uploaded
 to the BDR are available to download via https -- through script or manual page navigation -- and
 the BDR has a solid API.
