@@ -65,19 +65,14 @@ windows-dev = ["pyuvsim[test,doc,profiler,healpix,sim,sim-test]"]
 Repository = "https://github.com/RadioAstronomySoftwareGroup/pyuvsim"
 Documentation = "https://pyuvsim.readthedocs.io/"
 
-# Note that this approach is "discouraged" in favor of [project.scripts], but
-# that requires entry-point functions, which would require some refactoring.
-[tool.setuptools]
-script-files = [
-    "scripts/im_to_catalog.py",
-    "scripts/plot_csv_antpos.py",
-    "scripts/profiling_plots.py",
-    "scripts/run_param_pyuvsim.py",
-    "scripts/run_profile_pyuvsim.py",
-    "scripts/summarize_profiling.py",
-    "scripts/uvdata_to_config.py",
-    "scripts/uvdata_to_telescope_config.py",
-]
+[project.scripts]
+run_pyuvsim = "pyuvsim.cli:run_pyuvsim"
+run_param_pyuvsim = "pyuvsim.cli:run_param_pyuvsim"  # TODO: add deprecation warnings
+uvdata_to_config = "pyuvsim.cli:uvdata_to_config"
+uvdata_to_telescope_config = "pyuvsim.cli:uvdata_to_telescope_config"
+text_to_catalog = "pyuvsim.cli:text_to_catalog"
+im_to_catalog = "pyuvsim.cli:im_to_catalog"  # TODO: add deprecation warnings
+plot_csv_antpos = "pyuvsim.cli:plot_csv_antpos"
 
 [tool.setuptools_scm]
 
