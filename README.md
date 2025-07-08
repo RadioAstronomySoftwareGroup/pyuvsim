@@ -103,6 +103,8 @@ Optional:
 * mpi4py>=3.1.3 (for actually running simulations)
 * lunarsky>=0.2.5 (for simulating telescopes on the moon)
 * python-casacore>=3.5.2 (for writing CASA measurement sets, not available on Windows)
+* matplotlib>=3.6 (for plotting functions)
+
 
 ### Developer Installation
 If you are developing `pyuvsim`, you will need to download and install the

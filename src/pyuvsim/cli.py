@@ -7,8 +7,6 @@ import os
 import time as pytime
 from datetime import datetime, timedelta
 
-import matplotlib.image as mpimg
-import matplotlib.pyplot as plt
 import numpy as np
 import psutil
 from astropy import units as u
@@ -219,6 +217,9 @@ def create_text_catalog(
     verbose : int
         How verbose to be, default is 0, max is 2.
     """
+    import matplotlib.image as mpimg
+    import matplotlib.pyplot as plt
+
     catname = removeallspaces(text)
     imgfname = catname + ".bmp"
 
@@ -295,11 +296,11 @@ def create_text_catalog(
     if plot:
         zas_rad = np.radians(zas)
         aztmp_rad = np.radians(aztmp)
-        pl.scatter(
+        plt.scatter(
             zas_rad * np.cos(aztmp_rad), zas_rad * np.sin(aztmp_rad), label="Original"
         )
-        pl.legend()
-        pl.show()
+        plt.legend()
+        plt.show()
 
     n_srcs = len(icrs_coord)
     sky = SkyModel(
@@ -386,6 +387,8 @@ def text_to_catalog(argv=None):
 
 def plot_csv_antpos(argv=None):
     """Plot antenna positions from a layout csv."""
+    import matplotlib.pyplot as plt
+
     parser = argparse.ArgumentParser(
         description=("Plot antenna positions from a layout csv.")
     )
