@@ -19,7 +19,7 @@ The current approach to downloading large files is [astropy](https://github.com/
 `astropy` is used to download files to the cache from all current download points. We have
 configured downloading to use the astropy cache location for the package pyuvsim. To run the
 reference simulatiions, all necessary data files should be installed into the cache directory
-using `download_data_files.py`.
+using `download_data_files`.
 
 The current approach to storing historical reference simulations is the
 [Brown Digital Repository (BDR)](https://repository.library.brown.edu/studio/collections/bdr:wte2qah8/).
