@@ -52,6 +52,7 @@ jobs:
           environment-file: ci/${{ env.ENV_NAME }}.yaml
           activate-environment: ${{ env.ENV_NAME }}
           run-post: false
+          conda-remove-defaults: "true"
 
       - name: Conda Info
         run: |
