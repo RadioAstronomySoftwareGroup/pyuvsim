@@ -4,7 +4,7 @@ on:
   release:
     types: [published]
   pull_request:
-    branch: main
+    branches: main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -33,6 +33,7 @@ jobs:
           python-version: ${{ env.PYTHON }}
           environment-file: ci/${{ env.ENV_NAME }}.yaml
           activate-environment: ${{ env.ENV_NAME }}
+          conda-remove-defaults: "true"
 
       - name: Conda Info
         run: |
