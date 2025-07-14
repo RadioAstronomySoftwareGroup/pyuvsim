@@ -65,6 +65,10 @@ def test_mpi_version():
         assert MPI.VERSION >= 3
 
 
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 @pytest.mark.parallel(2)
 def test_mpi_funcs():
     assert mpi.get_rank() == MPI.COMM_WORLD.rank
@@ -113,6 +117,10 @@ def test_mem_usage():
 
 
 @pytest.mark.parametrize("count_rank", [0, 1])
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 @pytest.mark.parallel(2)
 def test_mpi_counter(count_rank):
     # Warning -- This test has been flaky in the past.
@@ -150,6 +158,10 @@ def test_big_gather(max_bytes, fake_tasks):
             assert len(split_info["ranges"]) > 1
 
 
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 @pytest.mark.parallel(2)
 @pytest.mark.parametrize("max_bytes", [mpi.INT_MAX, 100])
 def test_big_bcast(max_bytes, fake_tasks):
@@ -175,6 +187,10 @@ def test_big_bcast(max_bytes, fake_tasks):
             assert len(split_info["ranges"]) > 1
 
 
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 @pytest.mark.parallel(2)
 def test_big_bcast_gather_loop(fake_tasks):
     objs = fake_tasks
@@ -186,6 +202,10 @@ def test_big_bcast_gather_loop(fake_tasks):
         assert broadcast == gathered[0]
 
 
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 @pytest.mark.parallel(2)
 def test_sharedmem_bcast():
     # Use mpi.shared_mem_bcast and check returned objects.
@@ -202,6 +222,10 @@ def test_sharedmem_bcast():
     mpi.world_comm.Barrier()
 
 
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 @pytest.mark.parallel(2)
 def test_skymodeldata_share(single_source):
     # Test the SkyModelData share method.
