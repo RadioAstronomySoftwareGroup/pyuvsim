@@ -20,6 +20,15 @@ try:
 except ImportError:
     mpi = None
 
+# this is pretty hacky, but want just one convenient place
+# to set if we can use the parallel tests
+try:
+    import pytest_mpi
+
+    pytest.pyuvsim_can_parallel = True
+except ModuleNotFoundError:
+    pytest.pyuvsim_can_parallel = False
+
 issubproc = os.environ.get("TEST_IN_PARALLEL", 0)
 with contextlib.suppress(ValueError):
     issubproc = bool(int(issubproc))
