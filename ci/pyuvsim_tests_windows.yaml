@@ -20,5 +20,5 @@ dependencies:
   - msmpi
   - pip:
     - pyradiosky>=1.1.0
-    - mpi-pytest>=2025.5.0
+    - mpi-pytest>=2025.7.0
     - git+https://github.com/aelanman/analytic_diffuse
