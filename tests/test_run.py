@@ -43,6 +43,10 @@ def goto_tempdir(tmpdir):
 @pytest.mark.parametrize(
     "paramfile", ["param_1time_1src_testcat.yaml", "param_1time_1src_testvot.yaml"]
 )
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 @pytest.mark.parallel(2)
 def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # Test vot and txt catalogs for parameter simulation

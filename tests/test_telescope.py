@@ -217,6 +217,10 @@ def test_telescope_init_errors(beam_objs, hera_loc):
         Telescope("telescope_name", hera_loc, beam_objs)
 
 
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 @pytest.mark.parallel(2)
 def test_share_beams(beam_objs):
     pytest.importorskip("mpi4py")
