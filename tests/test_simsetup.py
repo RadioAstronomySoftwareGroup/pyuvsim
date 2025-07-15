@@ -2264,14 +2264,31 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
 
 
 @pytest.mark.parametrize("sel_type", ["freq_range", "freq_range_yaml", "freq_buff"])
-def test_beamlist_init_freqrange(sel_type):
-    telescope_config_name = os.path.join(SIM_DATA_PATH, "bl_lite_mixed.yaml")
-    with open(telescope_config_name) as yf:
-        telconfig = yaml.safe_load(yf)
+@pytest.mark.parametrize(
+    "tel_config", ["bl_lite_mixed.yaml", "bl_lite_mixed_constructors.yaml"]
+)
+def test_beamlist_init_freqrange(sel_type, tel_config):
+    telescope_config_name = os.path.join(SIM_DATA_PATH, tel_config)
+    hera_beam_path = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
+    mwa_beam_path = os.path.join(UV_DATA_PATH, "mwa_full_EE_test.h5")
 
-    telconfig["beam_paths"][0] = {
-        "filename": os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
-    }
+    mount_type_warn = "The mount_type parameter must be set for UVBeam objects"
+
+    with open(telescope_config_name) as yf:
+        lines = yf.readlines()
+    lines[2] = lines[2].replace("hera.beamfits", hera_beam_path)
+    lines[19] = lines[2].replace("mwa_full_EE_test.h5", mwa_beam_path)
+
+    # always do this once we require pyuvdata >= 3.2
+    if hasattr(Telescope(), "mount_type") and "constructors" in tel_config:
+        warn_list = [mount_type_warn] * 2
+        warn_use = DeprecationWarning
+    else:
+        warn_list = []
+        warn_use = None
+
+    with check_warnings(warn_use, match=warn_list):
+        telconfig = yaml.safe_load("\n".join(lines))
 
     Nfreqs = 10
     freqs = np.linspace(120, 145, Nfreqs) * 1e6
@@ -2286,19 +2303,25 @@ def test_beamlist_init_freqrange(sel_type):
         telconfig["select"] = {"freq_buffer": 0}
         freq_range_pass = None
 
-    warn_list = [
-        "Entries in 'beam_paths' should be specified using either the UVBeam "
-        "or AnalyticBeam constructors or using a dict syntax for UVBeams. "
-        "For examples see the parameter_files documentation. Specifying "
-        "analytic beam without the AnalyticBeam constructors will cause an "
-        "error in version 1.6"
-    ] * 5
+    warn_list = []
+    if "constructors" not in tel_config:
+        warn_list += [
+            "Entries in 'beam_paths' should be specified using either the UVBeam "
+            "or AnalyticBeam constructors or using a dict syntax for UVBeams. "
+            "For examples see the parameter_files documentation. Specifying "
+            "analytic beam without the AnalyticBeam constructors will cause an "
+            "error in version 1.6"
+        ] * 5
 
     # always do this once we require pyuvdata >= 3.2
-    if hasattr(Telescope(), "mount_type"):
-        warn_list.append("The mount_type parameter must be set for UVBeam objects")
+    if hasattr(Telescope(), "mount_type") and "constructors" not in tel_config:
+        warn_list.append(mount_type_warn)
 
-    with check_warnings(DeprecationWarning, match=warn_list):
+    if len(warn_list) == 0:
+        warn_use = None
+    else:
+        warn_use = DeprecationWarning
+    with check_warnings(warn_use, match=warn_list):
         beam_list = simsetup._construct_beam_list(
             np.arange(6), telconfig, freq_range=freq_range_pass, freq_array=freqs
         )
