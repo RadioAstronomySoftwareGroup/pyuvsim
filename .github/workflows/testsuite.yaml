@@ -65,7 +65,7 @@ jobs:
       - name: Run Tests Linux/MacOS
         if: matrix.os != 'windows-latest'
         run: |
-          python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+          pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
       - name: Run Tests Windows
         if: matrix.os == 'windows-latest'
         # Windows can't handle pytest-xdist in our experience
@@ -114,7 +114,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
+          pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
 
       - uses: codecov/codecov-action@v4
         if: success()
@@ -159,7 +159,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          python -m pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+          pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - uses: codecov/codecov-action@v4
         if: success()
@@ -207,7 +207,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          python -m pytest -n auto -W error --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+          pytest -n auto -W error --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v4
