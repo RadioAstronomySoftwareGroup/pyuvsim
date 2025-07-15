@@ -53,7 +53,7 @@ def start_mpi(block_nonroot_stdout=True):
     """
     do_once = False
     global world_comm, node_comm, rank_comm, rank, Npus
-    if not MPI.Is_initialized():
+    if not MPI.Is_initialized():  # pragma: no cover
         MPI.Init_thread(
             MPI.THREAD_SERIALIZED
         )  # RMA is incompatible with THREAD_MULTIPLE.
