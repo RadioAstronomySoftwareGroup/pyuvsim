@@ -51,8 +51,9 @@ classifiers = [
 casa = ["python-casacore>=3.5.2"]
 healpix = ["astropy-healpix>=1.0.2"]
 moon = ["lunarsky>=0.2.5"]
+plot = ["matplotlib>=3.6"]
 sim = ["mpi4py>=3.1.3", "psutil"]
-all = ["pyuvsim[casa,healpix,moon,sim]"]
+all = ["pyuvsim[casa,healpix,moon,plot,sim]"]
 test = ["coverage", "pre-commit", "pytest", "pytest-cov>=5.0"]
 doc = ["matplotlib", "pypandoc", "sphinx"]
 profiler = ["line-profiler"]
@@ -63,19 +64,17 @@ windows-dev = ["pyuvsim[test,doc,profiler,healpix,sim]"]
 Repository = "https://github.com/RadioAstronomySoftwareGroup/pyuvsim"
 Documentation = "https://pyuvsim.readthedocs.io/"
 
-# Note that this approach is "discouraged" in favor of [project.scripts], but
-# that requires entry-point functions, which would require some refactoring.
-[tool.setuptools]
-script-files = [
-    "scripts/im_to_catalog.py",
-    "scripts/plot_csv_antpos.py",
-    "scripts/profiling_plots.py",
-    "scripts/run_param_pyuvsim.py",
-    "scripts/run_profile_pyuvsim.py",
-    "scripts/summarize_profiling.py",
-    "scripts/uvdata_to_config.py",
-    "scripts/uvdata_to_telescope_config.py",
-]
+[project.scripts]
+run_pyuvsim = "cli:run_pyuvsim"
+run_param_pyuvsim = "cli:run_pyuvsim"  # TODO: should we do this to preserve the old API?
+uvdata_to_config = "cli:uvdata_to_config"
+uvdata_to_telescope_config = "cli:uvdata_to_telescope_config"
+text_to_catalog = "cli:text_to_catalog"
+im_to_catalog = "cli:text_to_catalog"  # TODO: should we do this to preserve the old API?
+plot_csv_antpos = "cli:plot_csv_antpos"
+run_profile_pyuvsim = "cli:run_profile_pyuvsim"
+summarize_profiling = "cli:summarize_profiling"
+profiling_plots = "cli:profiling_plots"
 
 [tool.setuptools_scm]
 
