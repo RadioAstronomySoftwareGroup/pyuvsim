@@ -21,7 +21,7 @@ beam_paths:
     filename: mwa_full_EE_test.h5
     pixels_per_deg: 1
     freq_range: [100.e+6, 200.e+6]
-    mount_type: fixed
+    mount_type: phased
   7: !AnalyticBeam
     class: ShortDipoleBeam
 spline_interp_opts:
