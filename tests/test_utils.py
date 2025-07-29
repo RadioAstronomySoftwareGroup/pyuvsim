@@ -118,6 +118,8 @@ def test_write_uvdata(save_format, tmpdir):
         pytest.skip("miriad is not supported on Windows")
 
     uv = UVData.from_file(triangle_uvfits_file)
+    # unphase so it is similar to what comes out of run_uvsim
+    uv.unproject_phase()
 
     ofname = str(tmpdir.join("test_file"))
     filing_dict = {"outfile_name": ofname}
@@ -163,6 +165,8 @@ def test_write_uvdata_clobber(save_format, tmpdir):
         pytest.importorskip("casacore")
 
     uv = UVData.from_file(triangle_uvfits_file)
+    # unphase so it is similar to what comes out of run_uvsim
+    uv.unproject_phase()
 
     uv.set_lsts_from_time_array()
     filing_dict = {
