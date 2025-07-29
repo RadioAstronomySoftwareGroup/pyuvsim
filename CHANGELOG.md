@@ -16,6 +16,8 @@ feed_angle, mount_type) which will be released in pyuvdata 3.2
 - Only import lunarsky if needed.
 
 ### Fixed
+- A bug where measurement sets could not be written out because they were not
+phased.
 - A bug where antennas that did not have visibilities associated with them were
 being initialized in `run_uvdata_uvsim`.
 - A bug in the way the time and frequency arrays were set up from the obsparam
