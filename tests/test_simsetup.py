@@ -20,7 +20,6 @@ from pyuvdata import (
     AiryBeam,
     GaussianBeam,
     ShortDipoleBeam,
-    Telescope,
     UniformBeam,
     UVBeam,
     UVData,
@@ -152,13 +151,10 @@ def uvdata_keyword_dict():
         "blt_order": ["time", "baseline"],
         "write_files": False,
         "run_check": True,
+        "feed_array": ["x", "y"],
+        "feed_angle": [np.pi / 2, 0],
+        "mount_type": "fixed",
     }
-
-    if hasattr(Telescope(), "feed_array"):
-        # always do this once we require pyuvdata >= 3.2
-        init_dict["feed_array"] = ["x", "y"]
-        init_dict["feed_angle"] = [np.pi / 2, 0]
-        init_dict["mount_type"] = "fixed"
 
     return init_dict
 
@@ -547,24 +543,6 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
             "test_config",
             param_dict["telescope"]["telescope_config_name"],
         )
-        if hasattr(UVBeam(), "mount_type"):
-            # update the yaml files in the repo so doing it on the fly isn't necessary
-            # once we require pyuvdata >= 3.2
-            # copy telescope config file to temporary directory so we can add mount_type
-            os.makedirs(os.path.join(tmpdir, "test_config"))
-            new_tel_config = os.path.join(
-                tmpdir, "test_config", param_dict["telescope"]["telescope_config_name"]
-            )
-            shutil.copyfile(orig_tel_config, new_tel_config)
-            param_dict["telescope"]["telescope_config_name"] = new_tel_config
-            with open(new_tel_config) as fconfig:
-                lines = fconfig.readlines()
-            lines.insert(4, "    mount_type: fixed\n")
-            with open(new_tel_config, "w") as fconfig:
-                lines = "".join(lines)
-                fconfig.write(lines)
-            orig_tel_config = new_tel_config
-
         # add an instrument here to make sure it gets picked up properly
         param_dict["telescope"]["instrument"] = "foo"
         param_dict["telescope"]["telescope_config_name"] = new_telconfig_file
@@ -595,11 +573,7 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
     uv_in = UVData.from_file(triangle_uvfits_file)
     uv_in.unproject_phase()
 
-    # always do this once we require pyuvdata >= 3.2
-    if hasattr(UVData().telescope, "mount_type"):
-        beam0 = UVBeam.from_file(herabeam_default, mount_type="fixed")
-    else:
-        beam0 = UVBeam.from_file(herabeam_default)
+    beam0 = UVBeam.from_file(herabeam_default, mount_type="fixed")
     beam1 = UniformBeam()
     beam2 = GaussianBeam(sigma=0.02)
     beam3 = AiryBeam(diameter=14.6)
@@ -613,9 +587,6 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
         "obs_param['ordering']['blt_order']. This will become an error in "
         "version 1.5"
     ]
-    # always do this once we require pyuvdata >= 3.2
-    if not telparam_in_obsparam and hasattr(Telescope(), "mount_type"):
-        warn_list.append("The mount_type parameter must be set for UVBeam objects")
 
     # Check default configuration
     with check_warnings(DeprecationWarning, match=warn_list):
@@ -626,26 +597,14 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
             return_beams=True,
         )
 
-    mount_set = False
-    if hasattr(uv_obj.telescope, "feed_angle"):
-        # always do this once we require pyuvdata >= 3.2
-        for bi in new_beam_list:
-            if bi.beam.mount_type is not None:
-                mount_set = True
-        if telparam_in_obsparam:
-            for bi in new_beam_list:
-                if issubclass(type(bi.beam), AnalyticBeam):
-                    assert bi.beam.mount_type is not None
-            assert mount_set
+    for bi in new_beam_list:
+        assert bi.beam.mount_type is not None
 
-        assert np.all(uv_obj.telescope.feed_angle[:, 0] == np.pi / 2)
-        assert np.all(uv_obj.telescope.feed_angle[:, 1] == 0)
+    assert np.all(uv_obj.telescope.feed_angle[:, 0] == np.pi / 2)
+    assert np.all(uv_obj.telescope.feed_angle[:, 1] == 0)
 
-        if mount_set:
-            assert uv_obj.telescope.mount_type is not None
-        assert uv_obj.telescope.get_x_orientation_from_feeds() == "east"
-    else:
-        assert uv_obj.telescope.x_orientation == "east"
+    assert uv_obj.telescope.mount_type is not None
+    assert uv_obj.telescope.get_x_orientation_from_feeds() == "east"
 
     if telparam_in_obsparam:
         assert uv_obj.telescope.instrument == "foo"
@@ -699,9 +658,8 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
             "layout": "triangle_bl_layout.csv",
         }
 
-    if mount_set:
-        assert uv_obj.telescope.mount_type is not None
-        uv_in.telescope.mount_type = uv_obj.telescope.mount_type
+    assert uv_obj.telescope.mount_type is not None
+    uv_in.telescope.mount_type = uv_obj.telescope.mount_type
     assert uv_obj == uv_in
 
 
@@ -757,37 +715,13 @@ def test_param_reader(telparam_in_obsparam, tmpdir):
         ),
     ],
 )
-def test_param_reader_errors(tmp_path, subdict, error, msg):
+def test_param_reader_errors(subdict, error, msg):
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "param_10time_10chan_0.yaml"
     )
 
     # Error conditions:
     params_bad = simsetup._config_str_to_dict(param_filename)
-
-    if hasattr(UVData().telescope, "mount_type"):
-        # update the yaml files in the repo so doing it on the fly isn't necessary
-        # once we require pyuvdata >= 3.2
-        # copy telescope config file to temporary directory so we can add mount_type
-        os.makedirs(os.path.join(tmp_path, "test_config"))
-        new_tel_config = os.path.join(
-            tmp_path, "test_config", params_bad["telescope"]["telescope_config_name"]
-        )
-        shutil.copyfile(
-            os.path.join(
-                SIM_DATA_PATH,
-                "test_config",
-                params_bad["telescope"]["telescope_config_name"],
-            ),
-            new_tel_config,
-        )
-        params_bad["telescope"]["telescope_config_name"] = new_tel_config
-        with open(new_tel_config) as fconfig:
-            lines = fconfig.readlines()
-        lines.insert(4, "    mount_type: fixed\n")
-        with open(new_tel_config, "w") as fconfig:
-            lines = "".join(lines)
-            fconfig.write(lines)
 
     for key, value in subdict.items():
         if isinstance(value, dict):
@@ -831,17 +765,12 @@ def test_tele_parser(world, selenoid):
         if selenoid is not None:
             tdict["ellipsoid"] = selenoid
 
-    # always do this once we require pyuvdata >= 3.2
-    if hasattr(Telescope(), "feed_angle"):
-        warn_type = UserWarning
-        warn_str = [
-            "No beam information, so cannot determine telescope mount_type, "
-            "feed_array or feed_angle. Specify a telescope config file in the "
-            "obs param file to get beam information."
-        ]
-    else:
-        warn_str = []
-        warn_type = None
+    warn_type = UserWarning
+    warn_str = [
+        "No beam information, so cannot determine telescope mount_type, "
+        "feed_array or feed_angle. Specify a telescope config file in the "
+        "obs param file to get beam information."
+    ]
 
     with check_warnings(warn_type, match=warn_str):
         tpars, blist, _ = simsetup.parse_telescope_params(tdict, freq_array=freqs)
@@ -1345,7 +1274,6 @@ def test_param_select_cross():
     )
     param_dict = simsetup._config_str_to_dict(param_filename)
 
-    # always do this once we require pyuvdata >= 3.2
     uv_obj_full = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
 
     # test only keeping cross pols
@@ -1534,23 +1462,18 @@ def test_uvdata_keyword_init_polarization_array(uvdata_keyword_dict, pols):
     else:
         uvdata_keyword_dict["polarization_array"] = pols
 
-    if hasattr(Telescope(), "feed_angle"):
-        # restructure this as a parametrize once we require pyuvdata >= 3.2
-        for feed_angle in [[np.pi / 2, 0], [0, np.pi / 2], [np.pi / 4, np.pi * 3 / 4]]:
-            uvdata_keyword_dict["feed_angle"] = feed_angle
-            uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
-            exp_pols = copy.deepcopy(pols)
-            if feed_angle[0] == np.pi / 2:
-                exp_pols = [pol.replace("x", "e") for pol in exp_pols]
-                exp_pols = [pol.replace("y", "n") for pol in exp_pols]
-            elif feed_angle[0] == 0:
-                exp_pols = [pol.replace("x", "n") for pol in exp_pols]
-                exp_pols = [pol.replace("y", "e") for pol in exp_pols]
-
-            assert uvd.get_pols() == exp_pols
-    else:
+    for feed_angle in [[np.pi / 2, 0], [0, np.pi / 2], [np.pi / 4, np.pi * 3 / 4]]:
+        uvdata_keyword_dict["feed_angle"] = feed_angle
         uvd = simsetup.initialize_uvdata_from_keywords(**uvdata_keyword_dict)
-        assert uvd.get_pols() == pols
+        exp_pols = copy.deepcopy(pols)
+        if feed_angle[0] == np.pi / 2:
+            exp_pols = [pol.replace("x", "e") for pol in exp_pols]
+            exp_pols = [pol.replace("y", "n") for pol in exp_pols]
+        elif feed_angle[0] == 0:
+            exp_pols = [pol.replace("x", "n") for pol in exp_pols]
+            exp_pols = [pol.replace("y", "e") for pol in exp_pols]
+
+        assert uvd.get_pols() == exp_pols
 
 
 def test_uvdata_keyword_init_select_antnum_str(uvdata_keyword_dict):
@@ -1903,15 +1826,6 @@ def test_keyword_param_loop(tmpdir):
     antnums = np.arange(10)
     antpos_d = dict(zip(antnums, antpos_enu, strict=False))
 
-    tel_feed_kwargs = {}
-    if hasattr(Telescope(), "feed_array"):
-        # always do this once we require pyuvdata >= 3.2
-        tel_feed_kwargs = {
-            "feed_array": ["x", "y"],
-            "feed_angle": [np.pi / 2, 0],
-            "mount_type": "fixed",
-        }
-
     uvd = simsetup.initialize_uvdata_from_keywords(
         array_layout=antpos_d,
         telescope_location=(-30.72152777777791, 21.428305555555557, 1073.0000000093132),
@@ -1927,7 +1841,9 @@ def test_keyword_param_loop(tmpdir):
         path_out=path_out,
         antenna_layout_filepath=layout_fname,
         output_yaml_filename=obsparam_fname,
-        **tel_feed_kwargs,
+        feed_array=["x", "y"],
+        feed_angle=[np.pi / 2, 0],
+        mount_type="fixed",
     )
 
     uv2 = simsetup.initialize_uvdata_from_params(
@@ -1955,11 +1871,7 @@ def test_multi_analytic_beams(tmpdir):
 
     telescope_location = (-30.72152777777791, 21.428305555555557, 1073.0000000093132)
     telescope_name = "SKA"
-    if hasattr(AiryBeam, "mount_type"):
-        # always do this once we require pyuvdata >= 3.2
-        mt_kwargs = {"mount_type": None}
-    else:
-        mt_kwargs = {}
+    mt_kwargs = {"mount_type": None}
     beam_specs = {
         0: AiryBeam(diameter=14, **mt_kwargs),
         1: AiryBeam(diameter=20),
@@ -2002,16 +1914,12 @@ def test_multi_analytic_beams(tmpdir):
         bid = beam_ids[i]
         assert beam_dict[nm] == bid
         assert beam_list[bid].beam == expected_beams[bid]
-        if hasattr(AiryBeam, "mount_type"):
-            # always do this once we require pyuvdata >= 3.2
-            if expected_beams[bid].mount_type is None:
-                exp_mount_type.append("other")
-            else:
-                exp_mount_type.append(expected_beams[bid].mount_type)
+        if expected_beams[bid].mount_type is None:
+            exp_mount_type.append("other")
+        else:
+            exp_mount_type.append(expected_beams[bid].mount_type)
 
-    if hasattr(AiryBeam, "mount_type"):
-        # always do this once we require pyuvdata >= 3.2
-        assert np.all(pdict["mount_type"] == exp_mount_type)
+    assert np.all(pdict["mount_type"] == exp_mount_type)
 
 
 def test_direct_fname(tmpdir):
@@ -2034,16 +1942,6 @@ def test_direct_fname(tmpdir):
 
     cwd = os.getcwd()
     os.chdir(tmpdir)
-
-    if hasattr(UVData().telescope, "mount_type"):
-        # update the yaml files in the repo so doing it on the fly isn't necessary
-        # once we require pyuvdata >= 3.2
-        with open(new_tel_config) as fconfig:
-            lines = fconfig.readlines()
-        lines.insert(4, "    mount_type: fixed\n")
-        with open(new_tel_config, "w") as fconfig:
-            lines = "".join(lines)
-            fconfig.write(lines)
 
     simsetup.initialize_uvdata_from_params(
         "param_100times_1.5days_triangle.yaml", return_beams=False
@@ -2218,9 +2116,7 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
         beam_file = beamfits_file
         telconfig["beam_paths"][0] = {"filename": beam_file, "file_type": "beamfits"}
 
-    # always do this once we require pyuvdata >= 3.2
-    if hasattr(Telescope(), "mount_type"):
-        telconfig["beam_paths"][0]["mount_type"] = "fixed"
+    telconfig["beam_paths"][0]["mount_type"] = "fixed"
 
     telconfig["beam_paths"][6]["filename"] = os.path.join(
         UV_DATA_PATH, "mwa_full_EE_test.h5"
@@ -2272,23 +2168,12 @@ def test_beamlist_init_freqrange(sel_type, tel_config):
     hera_beam_path = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
     mwa_beam_path = os.path.join(UV_DATA_PATH, "mwa_full_EE_test.h5")
 
-    mount_type_warn = "The mount_type parameter must be set for UVBeam objects"
-
     with open(telescope_config_name) as yf:
         lines = yf.readlines()
     lines[2] = lines[2].replace("hera.beamfits", hera_beam_path)
-    lines[19] = lines[2].replace("mwa_full_EE_test.h5", mwa_beam_path)
+    lines[20] = lines[2].replace("mwa_full_EE_test.h5", mwa_beam_path)
 
-    # always do this once we require pyuvdata >= 3.2
-    if hasattr(Telescope(), "mount_type") and "constructors" in tel_config:
-        warn_list = [mount_type_warn] * 2
-        warn_use = DeprecationWarning
-    else:
-        warn_list = []
-        warn_use = None
-
-    with check_warnings(warn_use, match=warn_list):
-        telconfig = yaml.safe_load("\n".join(lines))
+    telconfig = yaml.safe_load("\n".join(lines))
 
     Nfreqs = 10
     freqs = np.linspace(120, 145, Nfreqs) * 1e6
@@ -2311,11 +2196,7 @@ def test_beamlist_init_freqrange(sel_type, tel_config):
             "For examples see the parameter_files documentation. Specifying "
             "analytic beam without the AnalyticBeam constructors will cause an "
             "error in version 1.6"
-        ] * 5
-
-    # always do this once we require pyuvdata >= 3.2
-    if hasattr(Telescope(), "mount_type") and "constructors" not in tel_config:
-        warn_list.append(mount_type_warn)
+        ] * 5 + ["The mount_type parameter must be set for UVBeam objects"]
 
     if len(warn_list) == 0:
         warn_use = None
@@ -2566,47 +2447,18 @@ def test_simsetup_with_obsparam_freq_buffer():
         "version 1.5"
     ]
 
-    # always do this once we require pyuvdata >= 3.2
-    if hasattr(Telescope(), "mount_type"):
-        warn_list.append("The mount_type parameter must be set for UVBeam objects")
-
     with check_warnings(DeprecationWarning, match=warn_list):
         _, beams, _ = simsetup.initialize_uvdata_from_params(fl, return_beams=True)
 
     assert beams[0].beam.freq_array.max() < 101e6
 
 
-def test_simsetup_with_freq_buffer(tmp_path):
+def test_simsetup_with_freq_buffer():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_diffuse_sky_freqbuf_tel.yaml"
     )
 
     params = simsetup._config_str_to_dict(param_filename)
-
-    if hasattr(UVData().telescope, "mount_type"):
-        # update the yaml files in the repo so doing it on the fly isn't necessary
-        # once we require pyuvdata >= 3.2
-        # copy telescope config file to temporary directory so we can add mount_type
-        os.makedirs(os.path.join(tmp_path, "test_config"))
-        new_tel_config = os.path.join(
-            tmp_path, "test_config", params["telescope"]["telescope_config_name"]
-        )
-        shutil.copyfile(
-            os.path.join(
-                SIM_DATA_PATH,
-                "test_config",
-                params["telescope"]["telescope_config_name"],
-            ),
-            new_tel_config,
-        )
-        params["telescope"]["telescope_config_name"] = new_tel_config
-        with open(new_tel_config) as fconfig:
-            lines = fconfig.readlines()
-        lines.insert(4, "    mount_type: fixed\n")
-        with open(new_tel_config, "w") as fconfig:
-            lines = "".join(lines)
-            fconfig.write(lines)
-
     _, beams, _ = simsetup.initialize_uvdata_from_params(params, return_beams=True)
 
     assert beams[0].beam.freq_array.max() < 101e6

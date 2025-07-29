@@ -5,7 +5,6 @@ import copy
 import itertools
 import os
 import re
-import shutil
 import warnings
 
 import astropy.constants as const
@@ -45,11 +44,7 @@ herabeam_default = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 
 def multi_beams():
     beam0 = UVBeam()
-    # always do this once we require pyuvdata >= 3.2
-    if hasattr(UVData().telescope, "mount_type"):
-        beam0.read(herabeam_default, mount_type="fixed")
-    else:
-        beam0.read(herabeam_default)
+    beam0.read(herabeam_default, mount_type="fixed")
     beam0.extra_keywords["beam_path"] = herabeam_default
     beam0.peak_normalize()
 
@@ -1327,29 +1322,6 @@ def test_uvsim_beamlist_errors(tmp_path, cst_beam, problem, err_msg):
     cfg = os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
 
     params = pyuvsim.simsetup._config_str_to_dict(cfg)
-    if hasattr(UVData().telescope, "mount_type"):
-        # update the yaml files in the repo so doing it on the fly isn't necessary
-        # once we require pyuvdata >= 3.2
-        # copy telescope config file to temporary directory so we can add mount_type
-        os.makedirs(os.path.join(tmp_path, "test_config"))
-        new_tel_config = os.path.join(
-            tmp_path, "test_config", params["telescope"]["telescope_config_name"]
-        )
-        shutil.copyfile(
-            os.path.join(
-                SIM_DATA_PATH,
-                "test_config",
-                params["telescope"]["telescope_config_name"],
-            ),
-            new_tel_config,
-        )
-        params["telescope"]["telescope_config_name"] = new_tel_config
-        with open(new_tel_config) as fconfig:
-            lines = fconfig.readlines()
-        lines.insert(4, "    mount_type: fixed\n")
-        with open(new_tel_config, "w") as fconfig:
-            lines = "".join(lines)
-            fconfig.write(lines)
 
     input_uv = pyuvsim.simsetup.initialize_uvdata_from_params(
         params, return_beams=False

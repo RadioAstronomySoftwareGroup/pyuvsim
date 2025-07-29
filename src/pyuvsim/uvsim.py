@@ -751,20 +751,9 @@ def _run_uvdata_input_check(
         raise ValueError("UVBeams must be peak normalized.")
 
     beam_npols = beam_list[0].Nfeeds ** 2
-    try:
-        beam_pols = uvutils.pol.convert_feeds_to_pols(
-            feed_array=beam_list[0].feed_array,
-            include_cross_pols=True,
-            x_orientation=beam_list.x_orientation,
-        )
-    except AttributeError:
-        from pyuvdata.uvbeam.uvbeam import _convert_feeds_to_pols
-
-        beam_pols, _ = _convert_feeds_to_pols(
-            feed_array=beam_list[0].feed_array,
-            calc_cross_pols=bool(beam_npols > 1),
-            x_orientation=beam_list.x_orientation,
-        )
+    beam_pols = uvutils.pol.convert_feeds_to_pols(
+        feed_array=beam_list[0].feed_array, include_cross_pols=True
+    )
 
     if not (
         (input_uv.Npols == beam_npols)

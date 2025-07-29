@@ -137,16 +137,11 @@ def cst_beam():
         "feed_pol": ["x"],
         "model_name": "E-field pattern - Rigging height 4.9m",
         "model_version": "1.0",
+        "feed_angle": [np.pi / 2],
+        "mount_type": "fixed",
     }
-    if hasattr(beam, "feed_angle"):
-        kwargs["feed_angle"] = [np.pi / 2]
-        kwargs["mount_type"] = "fixed"
-    else:
-        # this can go aways once we require pyuvdata >= 3.2
-        kwargs["x_orientation"] = "east"
     beam.read_cst_beam(beam_files, **kwargs)
-    if hasattr(beam, "feed_angle") and beam.get_x_orientation_from_feeds() is None:
-        beam.set_feeds_from_x_orientation("east")
+    beam.feed_angle[1] = 0.0
     beam.peak_normalize()
     return beam
 

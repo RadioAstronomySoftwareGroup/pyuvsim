@@ -5,13 +5,12 @@
 from __future__ import annotations
 
 import contextlib
-import warnings
 from dataclasses import KW_ONLY, InitVar, dataclass
 from typing import Literal
 
 import numpy as np
 from astropy.coordinates import EarthLocation
-from pyuvdata import BeamInterface, UVBeam, parameter, utils as uvutils
+from pyuvdata import BeamInterface, UVBeam, parameter
 from pyuvdata.analytic_beam import AnalyticBeam
 
 try:
@@ -149,18 +148,6 @@ class BeamList:
                 items = self._get_beam_basis_type()
             elif item == "beam_type":
                 items = {i: bi.beam_type for i, bi in enumerate(self)}
-            elif item == "feed_array":
-                items = {}
-                for i, bi in enumerate(self):
-                    items[i] = bi.beam.feed_array
-                    # this can go away once we require pyuvdata >= 3.2
-                    if not hasattr(bi.beam, "feed_angle") and (
-                        "e" in bi.beam.feed_array or "n" in bi.beam.feed_array
-                    ):
-                        feed_map = uvutils.x_orientation_pol_map(bi.beam.x_orientation)
-                        inv_feed_map = {value: key for key, value in feed_map.items()}
-                        items[i] = [inv_feed_map[feed] for feed in bi.beam.feed_array]
-
             else:
                 items = {
                     i: getattr(bi.beam, item)
@@ -184,14 +171,7 @@ class BeamList:
         check_thing("beam_type")
         check_thing("data_normalization")
         check_thing("Nfeeds")
-
-        if self[0].beam_type == "efield" or hasattr(self[0].beam, "feed_angle"):
-            # always do this once we require pyuvdata >= 3.2
-            check_thing("feed_array")
-
-        if not hasattr(self[0].beam, "feed_angle"):
-            # this can go aways once we require pyuvdata >= 3.2
-            check_thing("x_orientation")
+        check_thing("feed_array")
 
         if self[0].beam_type == "efield":
             check_thing("basis")
@@ -222,29 +202,6 @@ class BeamList:
                     all_azza_full_sky = False
                     break
         return all_azza_full_sky
-
-    @property
-    def x_orientation(self):
-        """Return the x_orientation of all beams in list."""
-        if len(self) == 0:
-            return None
-
-        # remove this property once we require pyuvdata >= 3.2
-        if hasattr(self[0].beam, "feed_angle"):
-            # don't use x_orientation.
-            return None
-        else:
-            for bi in self:
-                xorient = bi.beam.x_orientation
-                break
-
-            if xorient is None:
-                warnings.warn(
-                    "All polarized beams have x_orientation set to None. This will make it "
-                    "hard to interpret the polarizations of the simulated visibilities."
-                )
-
-        return xorient
 
     @property
     def data_normalization(self):
