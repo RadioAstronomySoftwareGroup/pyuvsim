@@ -1434,23 +1434,21 @@ def parse_telescope_params(
 
     if not tele_config:
         beam_info = False
-        if hasattr(Telescope(), "feed_angle"):
-            # always do this once we require pyuvdata >= 3.2
-            for key in ["feed_array", "feed_angle", "mount_type"]:
-                if key in tele_params:
-                    return_dict[key] = tele_params[key]
-                    beam_info = True
-            if not beam_info:
-                # if no info on beams, just return what we have
-                # if telescope has feed angle, warn
-                msg = (
-                    "No beam information, so cannot determine telescope mount_type, "
-                    "feed_array or feed_angle. Specify a telescope config file in "
-                    "the obs param file to get beam information or, if calling "
-                    "from `initialize_uvdata_from_keywords`, specify mount_type, "
-                    "feed_array and feed_angle."
-                )
-                warnings.warn(msg)
+        for key in ["feed_array", "feed_angle", "mount_type"]:
+            if key in tele_params:
+                return_dict[key] = tele_params[key]
+                beam_info = True
+        if not beam_info:
+            # if no info on beams, just return what we have
+            # if telescope has feed angle, warn
+            msg = (
+                "No beam information, so cannot determine telescope mount_type, "
+                "feed_array or feed_angle. Specify a telescope config file in "
+                "the obs param file to get beam information or, if calling "
+                "from `initialize_uvdata_from_keywords`, specify mount_type, "
+                "feed_array and feed_angle."
+            )
+            warnings.warn(msg)
 
         if not return_beams:
             return return_dict
@@ -1467,39 +1465,29 @@ def parse_telescope_params(
     )
 
     # construct feed_angles if appropriate
-    # always do this once we require pyuvdata >= 3.2
-    add_feed_angle = False
-    # remove pragma once pyuvdata 3.2 is released.
-    if hasattr(beam_list[0].beam, "feed_angle"):
-        # always do this once we require pyuvdata >= 3.2
-        add_feed_angle = True
-        # use dtype=object so strings don't get truncated.
-        mount_type = np.full((antnames.size,), None, dtype=object)
-        feed_angle = np.zeros((antnames.size, beam_list[0].beam.Nfeeds), dtype=float)
-        # feed_arrays have to be the same -- checked in consistency checker
-        feed_array = np.repeat(
-            beam_list[0].beam.feed_array[np.newaxis, :], antnames.size, axis=0
-        )
+    # use dtype=object so strings don't get truncated.
+    mount_type = np.full((antnames.size,), None, dtype=object)
+    feed_angle = np.zeros((antnames.size, beam_list[0].beam.Nfeeds), dtype=float)
+    # feed_arrays have to be the same -- checked in consistency checker
+    feed_array = np.repeat(
+        beam_list[0].beam.feed_array[np.newaxis, :], antnames.size, axis=0
+    )
 
     for beam_ind, beam_id in enumerate(beam_ids_inc):
         wh_this_beam = np.nonzero(beam_ids == beam_id)
         which_ants = antnames[wh_this_beam]
         for ant in which_ants:
             beam_dict[str(ant)] = beam_ind
-        if add_feed_angle:
-            # always do this once we require pyuvdata >= 3.2
-            mount_type[wh_this_beam] = beam_list[beam_ind].beam.mount_type
-            feed_angle[wh_this_beam, :] = beam_list[beam_ind].beam.feed_angle
+        mount_type[wh_this_beam] = beam_list[beam_ind].beam.mount_type
+        feed_angle[wh_this_beam, :] = beam_list[beam_ind].beam.feed_angle
 
-    if add_feed_angle:
-        # always do this once we require pyuvdata >= 3.2
-        if np.any(mount_type):
-            if not np.all(mount_type):
-                mount_type[np.nonzero(mount_type == np.array(None))] = "other"
-            return_dict["mount_type"] = mount_type
-        return_dict["feed_angle"] = feed_angle
-        return_dict["feed_array"] = feed_array
-        _ = return_dict.pop("x_orientation", None)
+    if np.any(mount_type):
+        if not np.all(mount_type):
+            mount_type[np.nonzero(mount_type == np.array(None))] = "other"
+        return_dict["mount_type"] = mount_type
+    return_dict["feed_angle"] = feed_angle
+    return_dict["feed_array"] = feed_array
+    _ = return_dict.pop("x_orientation", None)
 
     if not return_beams:
         return return_dict
@@ -1960,20 +1948,10 @@ def _coord_arrays_to_params(coord_array, coord_delta, tols):
     if coord_array.size > 1 and (np.asarray(coord_delta)).size == 1:
         coord_delta = np.full_like(coord_array, coord_delta)
 
-    try:
-        from uvutils.tools import _test_array_consistent
-    except ImportError:
-        # remove this once we require pyuvdata >= 3.2
-        def _test_array_consistent(array, deltas, tols):
-            exp_deltas = (deltas[:-1] + deltas[1:]) * 0.5
-            return np.allclose(
-                np.abs(np.diff(array)), exp_deltas, rtol=tols[0], atol=tols[1]
-            )
-
     if (
         not uvutils.tools._test_array_constant_spacing(coord_array, tols=tols)
         or not uvutils.tools._test_array_constant(coord_delta, tols=tols)
-        or not _test_array_consistent(coord_array, coord_delta, tols=tols)
+        or not uvutils.tools._test_array_consistent(coord_array, coord_delta, tols=tols)
         or coord_array.size == 1
     ):
         # arrays are not evenly spaced or deltas do not match diffs or only one
@@ -2254,11 +2232,6 @@ def _initialize_polarization_helper(param_dict, uvparam_dict, beam_list=None):
                 feed_set = feed_set.union(uvutils.pol.POL_TO_FEED_DICT[polstr])
             for feed in feed_set:
                 beam_feeds = beam_list[0].feed_array
-                if "e" in beam_feeds or "n" in beam_feeds:
-                    feed_map = uvutils.x_orientation_pol_map(beam_list.x_orientation)
-                    inv_feed_map = {value: key for key, value in feed_map.items()}
-                    beam_feeds = [inv_feed_map[feed] for feed in beam_feeds]
-
                 if feed not in beam_feeds:
                     raise ValueError(
                         f"Specified polarization array {param_dict['polarization_array']} "
@@ -2271,20 +2244,9 @@ def _initialize_polarization_helper(param_dict, uvparam_dict, beam_list=None):
     if uvparam_dict.get("polarization_array") is None:
         if beam_list is not None:
             # default polarization array based on the beam feeds
-            try:
-                uvparam_dict["polarization_array"] = uvutils.pol.convert_feeds_to_pols(
-                    feed_array=beam_list[0].feed_array,
-                    include_cross_pols=True,
-                    x_orientation=beam_list.x_orientation,
-                )
-            except AttributeError:
-                from pyuvdata.uvbeam.uvbeam import _convert_feeds_to_pols
-
-                uvparam_dict["polarization_array"], _ = _convert_feeds_to_pols(
-                    feed_array=beam_list[0].feed_array,
-                    calc_cross_pols=bool(np.asarray(beam_list[0].feed_array).size > 1),
-                    x_orientation=beam_list.x_orientation,
-                )
+            uvparam_dict["polarization_array"] = uvutils.pol.convert_feeds_to_pols(
+                feed_array=beam_list[0].feed_array, include_cross_pols=True
+            )
         else:
             uvparam_dict["polarization_array"] = np.array([-5, -6, -7, -8])
 
@@ -2390,10 +2352,6 @@ def initialize_uvdata_from_params(
     )
     if return_beams:
         tele_params, beam_list, beam_dict = ptp_ret
-        # overwrite x_orientation with the beam list x_orientation if we have it
-        # This will return None (so no effect) if beams have feed_angles specified.
-        # if they are, no reason to use x_orientation
-        tele_params["x_orientation"] = beam_list.x_orientation
     else:
         tele_params = ptp_ret
 
@@ -2922,9 +2880,7 @@ def uvdata_to_telescope_config(
     # mount_type for the yaml dumper
     beam = UVBeam()
     beam.filename = [beam_filepath]
-    if hasattr(beam, "mount_type"):
-        # always do this once we require pyuvdata >= 3.2
-        beam.mount_type = uvdata_in.telescope.mount_type[0]
+    beam.mount_type = uvdata_in.telescope.mount_type[0]
 
     # Write the rest to a yaml file.
     yaml_dict = {

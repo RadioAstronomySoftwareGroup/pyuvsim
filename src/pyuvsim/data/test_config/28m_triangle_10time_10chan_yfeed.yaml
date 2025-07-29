@@ -2,6 +2,7 @@ beam_paths:
   0: !UVBeam
     filename: HERA_NicCST.beamfits
     path_variable: pyuvsim.data.DATA_PATH
+    mount_type: fixed
   1: !AnalyticBeam
     class: UniformBeam
     feed_array: ["y"]

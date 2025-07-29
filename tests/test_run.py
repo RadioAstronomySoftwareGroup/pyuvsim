@@ -85,10 +85,8 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     # Reset history and extra_keywords because they will deviate
     uv_new.history = uv_ref.history
     uv_new.extra_keywords = uv_ref.extra_keywords
+    uv_ref.telescope.mount_type = uv_new.telescope.mount_type
 
-    if hasattr(uv_new.telescope, "mount_type"):
-        # always do this once we require pyuvdata >= 3.2
-        uv_ref.telescope.mount_type = uv_new.telescope.mount_type
     assert uv_new == uv_ref
 
 
@@ -278,16 +276,6 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
         )
         shutil.copyfile(telescope_param_file, new_telescope_param_file)
 
-        if hasattr(UVData().telescope, "mount_type"):
-            # update the yaml files in the repo so doing it on the fly isn't necessary
-            # once we require pyuvdata >= 3.2
-            with open(new_telescope_param_file) as fconfig:
-                lines = fconfig.readlines()
-            lines.insert(4, "    mount_type: fixed\n")
-            with open(new_telescope_param_file, "w") as fconfig:
-                lines = "".join(lines)
-                fconfig.write(lines)
-
         telescope_layout_file = os.path.join(
             SIM_DATA_PATH, "test_config", "triangle_bl_layout.csv"
         )
@@ -307,30 +295,6 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
         params = pyuvsim.simsetup._config_str_to_dict(new_param_file)
     else:
         params = pyuvsim.simsetup._config_str_to_dict(param_file)
-
-        if hasattr(UVData().telescope, "mount_type"):
-            # update the yaml files in the repo so doing it on the fly isn't necessary
-            # once we require pyuvdata >= 3.2
-            # copy telescope config file to temporary directory so we can add mount_type
-            os.makedirs(os.path.join(tmp_path, "test_config"))
-            new_tel_config = os.path.join(
-                tmp_path, "test_config", params["telescope"]["telescope_config_name"]
-            )
-            shutil.copyfile(
-                os.path.join(
-                    SIM_DATA_PATH,
-                    "test_config",
-                    params["telescope"]["telescope_config_name"],
-                ),
-                new_tel_config,
-            )
-            params["telescope"]["telescope_config_name"] = new_tel_config
-            with open(new_tel_config) as fconfig:
-                lines = fconfig.readlines()
-            lines.insert(4, "    mount_type: fixed\n")
-            with open(new_tel_config, "w") as fconfig:
-                lines = "".join(lines)
-                fconfig.write(lines)
 
     pyuvsim.run_uvsim(params, return_uv=True)
 
@@ -353,30 +317,6 @@ def test_run_gleam_uvsim(tmp_path, spectral_type, nfeeds):
             tel_config = "28m_triangle_10time_10chan_xfeed.yaml"
             select_pol = ["xx"]
         params["telescope"]["telescope_config_name"] = tel_config
-
-    if hasattr(UVData().telescope, "mount_type"):
-        # update the yaml files in the repo so doing it on the fly isn't necessary
-        # once we require pyuvdata >= 3.2
-        # copy telescope config file to temporary directory so we can add mount_type
-        os.makedirs(os.path.join(tmp_path, "test_config"))
-        new_tel_config = os.path.join(
-            tmp_path, "test_config", params["telescope"]["telescope_config_name"]
-        )
-        shutil.copyfile(
-            os.path.join(
-                SIM_DATA_PATH,
-                "test_config",
-                params["telescope"]["telescope_config_name"],
-            ),
-            new_tel_config,
-        )
-        params["telescope"]["telescope_config_name"] = new_tel_config
-        with open(new_tel_config) as fconfig:
-            lines = fconfig.readlines()
-        lines.insert(4, "    mount_type: fixed\n")
-        with open(new_tel_config, "w") as fconfig:
-            lines = "".join(lines)
-            fconfig.write(lines)
 
     input_uv, beam_list, _ = pyuvsim.simsetup.initialize_uvdata_from_params(
         params, return_beams=True
@@ -411,11 +351,7 @@ def test_run_gleam_uvsim(tmp_path, spectral_type, nfeeds):
     # the data are correct (that's covered in other tests)
     uv_out.history = uv_in.history
     uv_in.extra_keywords = uv_out.extra_keywords
-    if hasattr(uv_out.telescope, "mount_type"):
-        # always do this once we require pyuvdata >= 3.2
-        uv_in.telescope.mount_type = uv_out.telescope.mount_type
-    else:
-        uv_in.telescope.x_orientation = "east"
+    uv_in.telescope.mount_type = uv_out.telescope.mount_type
     assert uv_in.telescope._location == uv_out.telescope._location
     assert uv_in == uv_out
 
@@ -468,30 +404,6 @@ def test_zenith_spectral_sim(spectral_type, tmpdir):
     params["freq"] = freq_params
     params["time"]["start_time"] = kwds["time"]
     params["select"] = {"antenna_nums": [1, 2]}
-
-    if hasattr(UVData().telescope, "mount_type"):
-        # update the yaml files in the repo so doing it on the fly isn't necessary
-        # once we require pyuvdata >= 3.2
-        # copy telescope config file to temporary directory so we can add mount_type
-        os.makedirs(os.path.join(tmpdir, "test_config"))
-        new_tel_config = os.path.join(
-            tmpdir, "test_config", params["telescope"]["telescope_config_name"]
-        )
-        shutil.copyfile(
-            os.path.join(
-                SIM_DATA_PATH,
-                "test_config",
-                params["telescope"]["telescope_config_name"],
-            ),
-            new_tel_config,
-        )
-        params["telescope"]["telescope_config_name"] = new_tel_config
-        with open(new_tel_config) as fconfig:
-            lines = fconfig.readlines()
-        lines.insert(4, "    mount_type: fixed\n")
-        with open(new_tel_config, "w") as fconfig:
-            lines = "".join(lines)
-            fconfig.write(lines)
 
     uv_out = pyuvsim.run_uvsim(params, return_uv=True)
 

@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 from astropy.coordinates import EarthLocation
 from pyuvdata import AiryBeam, GaussianBeam, ShortDipoleBeam, UniformBeam, UVBeam
-from pyuvdata.testing import check_warnings
 
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.telescope import BeamConsistencyError, BeamList, Telescope
@@ -16,10 +15,7 @@ herabeam_default = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
 @pytest.fixture(scope="module")
 def beam_objs_main():
     uvb = UVBeam()
-    if hasattr(UVBeam, "mount_type"):
-        uvb.read_beamfits(herabeam_default, mount_type="fixed")
-    else:
-        uvb.read_beamfits(herabeam_default)
+    uvb.read_beamfits(herabeam_default, mount_type="fixed")
 
     uvb2 = uvb.copy()
 
@@ -56,43 +52,16 @@ def test_comparison(beam_objs):
     assert beamlist == beamlist2
 
 
-def test_en_feed_beamlist_no_errors(beam_objs):
-    beams = beam_objs
-    if hasattr(beams[0], "feed_angle"):
-        # remove this test once we require pyuvdata >= 3.2
-        pytest.skip("This doesn't apply for beams with feed angles.")
-
-    beams[0].feed_array = ["e", "n"]
-    beams[0].check()
-
-    assert "n" in beams[0].feed_array
-    BeamList([beams[0]])
-
-
 def test_beamlist_errors(beam_objs):
     # make a copy to enable Telescope equality checking
     beams = copy.deepcopy(beam_objs)
     beam_list_init = BeamList(beam_objs)
 
-    if not hasattr(beams[0], "feed_angle"):
-        # remove this conditional once we require pyuvdata >= 3.2
-        # test error on beams with different x_orientation
-        beams[0].x_orientation = None
-        with pytest.raises(
-            BeamConsistencyError,
-            match="x_orientation of beam 2 is not consistent with beam 1",
-        ):
-            BeamList(beams)
-
-        # test warning on beams with no x_orientation
-        beams[0].x_orientation = None
-        beams[1].x_orientation = None
-        with check_warnings(
-            UserWarning,
-            match="All polarized beams have x_orientation set to None. This will make it "
-            "hard to interpret the polarizations of the simulated visibilities.",
-        ):
-            assert BeamList(beams[:2]).x_orientation is None
+    beams[0].feed_array = np.flip(beams[0].feed_array)
+    with pytest.raises(
+        BeamConsistencyError, match="feed_array of beam 2 is not consistent with beam 1"
+    ):
+        BeamList(beams)
 
     # Compare Telescopes with beamlists of different lengths
     beam_list_init = BeamList(beam_objs)
@@ -110,16 +79,6 @@ def test_beamlist_consistency(beam_objs):
     BeamList(beam_objs[:2])
 
     BeamList(beam_objs[:3])
-
-
-def test_beamlist_consistency_properties(beam_objs):
-    beams = beam_objs
-    beamlist = BeamList(beams[:2])
-    if hasattr(beams[0], "feed_angle"):
-        assert beamlist.x_orientation is None
-    else:
-        # remove this once we require pyuvdata >= 3.2
-        assert beamlist.x_orientation == beams[0].x_orientation
 
 
 def test_beam_basis_type(beam_objs):
@@ -170,7 +129,6 @@ def test_beam_basis_non_orthogonal_error(beam_objs):
 
 def test_empty_beamlist():
     blist = BeamList([])
-    assert blist.x_orientation is None
     assert blist.beam_type == "efield"
     assert blist.data_normalization is None
 

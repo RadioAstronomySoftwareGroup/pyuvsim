@@ -92,7 +92,7 @@ Required:
 * psutil
 * pyradiosky>=1.1.0
 * python>=3.11
-* pyuvdata>=3.1.2
+* pyuvdata>=3.2.3
 * pyyaml>=5.4.1
 * scipy>=1.9
 * setuptools_scm>=8.1
