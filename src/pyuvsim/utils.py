@@ -267,7 +267,12 @@ def write_uvdata(
                     "casacore is not installed but is required for measurement set "
                     "functionality"
                 ) from error
-            uv_obj.write_ms(outfile_name, clobber=not noclobber, fix_autos=fix_autos)
+            uv_obj.write_ms(
+                outfile_name,
+                force_phase=True,
+                clobber=not noclobber,
+                fix_autos=fix_autos,
+            )
         else:
             raise ValueError(
                 "Invalid output format. Options are 'uvfits', 'uvh5', 'miriad' or 'ms'."
