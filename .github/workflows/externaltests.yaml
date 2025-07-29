@@ -63,4 +63,4 @@ jobs:
       - name: run herasim tests
         run: |
           cd ../hera_sim
-          python -m pytest
+          python -m pytest -n auto
