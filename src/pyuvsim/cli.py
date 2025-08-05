@@ -6,6 +6,7 @@ import argparse
 import os
 import time as pytime
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import numpy as np
 import psutil
@@ -16,7 +17,7 @@ from astropy.units import Quantity
 from pyradiosky import SkyModel
 from pyuvdata import UVBeam, UVData
 
-from pyuvsim import profiling, simsetup, telescope, uvsim
+from pyuvsim import profiling, simsetup, telescope, utils, uvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.simsetup import _parse_layout_csv as parse_csv
 
@@ -28,12 +29,15 @@ def run_pyuvsim(argv=None):
     parser = argparse.ArgumentParser(
         description="A command-line script to execute a pyuvsim simulation from "
         "either a single parameter file or all of: UVData readable file, "
-        "SkyModel readable file, and UVBeam readable file."
+        "SkyModel readable file, UVBeam readable file and output file."
     )
     parser.add_argument("--param", type=str, help="Parameter yaml file.", default=None)
     parser.add_argument("--uvdata", type=str, help="UVData readable file.")
     parser.add_argument("--uvbeam", type=str, help="UVBeam readable file.")
     parser.add_argument("--skymodel", type=str, help="SkyModel readable file.")
+    parser.add_argument(
+        "--outfile", type=str, help="File to save output UVData object to."
+    )
 
     parser.add_argument("--profile", type=str, help="Time profiling output file name.")
     parser.add_argument(
@@ -53,19 +57,25 @@ def run_pyuvsim(argv=None):
     args = parser.parse_args(argv)
 
     uvdata_set = np.array(
-        [args.uvdata is not None, args.uvbeam is not None, args.skymodel is not None]
+        [
+            args.uvdata is not None,
+            args.uvbeam is not None,
+            args.skymodel is not None,
+            args.outfile is not None,
+        ]
     )
 
     if args.param is None:
         if np.all(~uvdata_set) or not np.all(uvdata_set):
             raise ValueError(
-                "Either pass a parameter file or all of: uvdata, skymodel, uvbeam files."
+                "Either pass a parameter file or all of: uvdata, skymodel, "
+                "uvbeam files and outfile."
             )
     elif np.any(uvdata_set):
         raise ValueError(
             "A parameter file and was passed along with one or more of uvdata, "
-            "skymodel, uvbeam. Either pass a parameter file or all of: uvdata, "
-            "skymodel, uvbeam files."
+            "skymodel, uvbeam and outfile. Either pass a parameter file or all of: "
+            "uvdata, skymodel, uvbeam files and outfile."
         )
 
     if args.profile is not None:
@@ -88,13 +98,18 @@ def run_pyuvsim(argv=None):
         uvb = UVBeam.from_file(args.uvbeam)
         beam_list = telescope.BeamList([uvb])
 
-        uvsim.run_uvdata_uvsim(
+        uvd_out = uvsim.run_uvdata_uvsim(
             input_uv=uvd,
             beam_list=beam_list,
             beam_dict=None,
             catalog=skymodel,
             quiet=args.quiet,
             block_nonroot_stdout=block_nonroot_stdout,
+        )
+        pobj = Path(args.outfile)
+        utils.write_uvdata(
+            uvd_out,
+            param_dict={"outdir": str(pobj.parent), "outfile_name": str(pobj.name)},
         )
 
     if args.profile:
