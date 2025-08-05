@@ -442,9 +442,9 @@ def create_mock_catalog(
         "arrangement": arrangement,
         "array_location": repr(
             (
-                array_location.lat.deg,
-                array_location.lon.deg,
-                array_location.height.value,
+                float(array_location.lat.deg),
+                float(array_location.lon.deg),
+                float(array_location.height.value),
             )
         ),
     }

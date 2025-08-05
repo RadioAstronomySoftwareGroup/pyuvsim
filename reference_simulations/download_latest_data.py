@@ -67,7 +67,7 @@ with open(fileids) as dfile:
         elif args.generation == 2 and "ref_1." in fname:
             continue
         fid = d[0]
-        r = requests.get(urlbase, params={"id": fid})
+        r = requests.get(urlbase, params={"id": fid})  # nosec
         print(fname)
         fname = os.path.join(target_dir, fname)
         with open(fname, "wb") as ofile:
@@ -78,7 +78,7 @@ if args.inputs:
         for line in dfile:
             line = line.strip()
             file_id, name = line.split()[:2]
-            req = requests.get(urlbase, params={"id": file_id})
+            req = requests.get(urlbase, params={"id": file_id})  # nosec
             if req.status_code != 200:
                 print(f"Unable to downalod {name}")
                 continue

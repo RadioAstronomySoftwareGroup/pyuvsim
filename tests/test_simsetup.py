@@ -1,6 +1,7 @@
 # Copyright (c) 2018 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
 
+import ast
 import copy
 import os
 import re
@@ -1765,7 +1766,7 @@ def test_saved_mock_catalog(tmpdir):
     os.chdir(tmpdir)
 
     cat, mock_kwds = simsetup.create_mock_catalog(time, "random", Nsrcs=100, save=True)
-    loc = eval(mock_kwds["array_location"])
+    loc = ast.literal_eval(mock_kwds["array_location"])
     loc = EarthLocation.from_geodetic(loc[1], loc[0], loc[2])  # Lon, Lat, alt
     fname = "mock_catalog_random.npz"
     alts_reload = np.load(fname)["alts"]
@@ -1783,7 +1784,7 @@ def test_randsource_minalt(min_alt):
     cat, mock_kwds = simsetup.create_mock_catalog(
         time, "random", Nsrcs=100, min_alt=min_alt
     )
-    loc = eval(mock_kwds["array_location"])
+    loc = ast.literal_eval(mock_kwds["array_location"])
     loc = EarthLocation.from_geodetic(loc[1], loc[0], loc[2])  # Lon, Lat, alt
     cat.update_positions(time, loc)
     alt, _ = cat.alt_az
@@ -1801,7 +1802,7 @@ def test_randsource_distribution():
     cat, mock_kwds = simsetup.create_mock_catalog(
         time, "random", Nsrcs=Nsrcs, min_alt=-90, rseed=2458098
     )
-    loc = eval(mock_kwds["array_location"])
+    loc = ast.literal_eval(mock_kwds["array_location"])
     loc = EarthLocation.from_geodetic(loc[1], loc[0], loc[2])  # Lon, Lat, alt
     cat.update_positions(time, loc)
     alt, az = cat.alt_az
