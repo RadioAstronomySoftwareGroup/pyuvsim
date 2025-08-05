@@ -4,6 +4,7 @@
 import os
 import re
 import shutil
+import subprocess  # nosec
 
 import numpy as np
 import pyradiosky
@@ -15,7 +16,7 @@ from astropy import units
 from astropy.constants import c as speed_of_light
 from astropy.coordinates import EarthLocation, Latitude, Longitude
 from astropy.time import Time
-from pyradiosky.utils import jy_to_ksr, stokes_to_coherency
+from pyradiosky.utils import jy_to_ksr
 from pyuvdata import ShortDipoleBeam, UniformBeam, UVData
 
 import pyuvsim
@@ -301,7 +302,7 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
 
 @pytest.mark.parametrize("spectral_type", ["flat", "subband", "spectral_index"])
 @pytest.mark.parametrize("nfeeds", [1, 2])
-def test_run_gleam_uvsim(tmp_path, spectral_type, nfeeds):
+def test_run_gleam_uvsim(spectral_type, nfeeds):
     params = pyuvsim.simsetup._config_str_to_dict(
         os.path.join(SIM_DATA_PATH, "test_config", "param_1time_testgleam.yaml")
     )
@@ -356,9 +357,16 @@ def test_run_gleam_uvsim(tmp_path, spectral_type, nfeeds):
     assert uv_in == uv_out
 
 
-@pytest.mark.filterwarnings("ignore:The reference_frequency is aliased as `frequency`")
-@pytest.mark.parametrize("spectral_type", ["subband", "spectral_index"])
-def test_zenith_spectral_sim(spectral_type, tmpdir):
+@pytest.mark.parametrize(
+    ["spectral_type", "use_cli", "use_uvdata"],
+    (
+        ["subband", False, False],
+        ["subband", True, True],
+        ["spectral_index", True, False],
+        ["spectral_index", False, True],
+    ),
+)
+def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
     # Make a power law source at zenith in three ways.
     # Confirm that simulated visibilities match expectation.
 
@@ -373,8 +381,8 @@ def test_zenith_spectral_sim(spectral_type, tmpdir):
     freq_params = pyuvsim.simsetup.freq_array_to_params(
         freq_array=freqs, channel_width=ch_width
     )
-    freq_params = pyuvsim.simsetup.parse_frequency_params(freq_params)
-    freqs = freq_params["freq_array"]
+    parsed_freq_params = pyuvsim.simsetup.parse_frequency_params(freq_params)
+    freqs = parsed_freq_params["freq_array"]
     freqs *= units.Hz
     spectrum = (freqs.value / ref_freq) ** alpha
 
@@ -386,8 +394,8 @@ def test_zenith_spectral_sim(spectral_type, tmpdir):
         source.reference_frequency = np.array([ref_freq]) * units.Hz
         source.spectral_index = np.array([alpha])
     else:
-        freq_lower = freqs - freq_params["channel_width"] * units.Hz / 2.0
-        freq_upper = freqs + freq_params["channel_width"] * units.Hz / 2.0
+        freq_lower = freqs - parsed_freq_params["channel_width"] * units.Hz / 2.0
+        freq_upper = freqs + parsed_freq_params["channel_width"] * units.Hz / 2.0
         source.freq_edge_array = np.concatenate(
             (freq_lower[np.newaxis, :], freq_upper[np.newaxis, :]), axis=0
         )
@@ -395,20 +403,100 @@ def test_zenith_spectral_sim(spectral_type, tmpdir):
         source.freq_array = freqs
         source.stokes = np.repeat(source.stokes, Nfreqs, axis=1)
         source.stokes[0, :, 0] *= spectrum
-        source.coherency_radec = stokes_to_coherency(source.stokes)
 
     catpath = str(tmpdir.join("spectral_test_catalog.skyh5"))
     source.write_skyh5(catpath)
     params["sources"] = {"catalog": catpath}
     params["filing"]["outdir"] = str(tmpdir)
+    params["filing"]["outfile_name"] = "zenith_spectral.uvh5"
     params["freq"] = freq_params
-    params["time"]["start_time"] = kwds["time"]
+    new_time_params = params["time"]
+    new_time_params["start_time"] = kwds["time"]
+    new_time_params = pyuvsim.simsetup.parse_time_params(new_time_params)
+    params["time"] = pyuvsim.simsetup.time_array_to_params(
+        time_array=new_time_params["time_array"],
+        integration_time=new_time_params["integration_time"],
+    )
     params["select"] = {"antenna_nums": [1, 2]}
 
-    uv_out = pyuvsim.run_uvsim(params, return_uv=True)
+    new_telescope_param_file = str(
+        tmpdir / params["telescope"]["telescope_config_name"]
+    )
+    shutil.copyfile(
+        os.path.join(
+            SIM_DATA_PATH, "test_config", params["telescope"]["telescope_config_name"]
+        ),
+        new_telescope_param_file,
+    )
 
+    new_telescope_layout_file = str(tmpdir / params["telescope"]["array_layout"])
+    shutil.copyfile(
+        os.path.join(SIM_DATA_PATH, "test_config", params["telescope"]["array_layout"]),
+        new_telescope_layout_file,
+    )
+
+    param_file = str(tmpdir / "zenith_spectral.yaml")
+    with open(param_file, "w") as pfile:
+        yaml.dump(params, pfile, default_flow_style=False)
+
+    if use_uvdata:
+        uvd, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(
+            param_file, return_beams=True
+        )
+
+        catalog = pyuvsim.simsetup.initialize_catalog_from_params(param_file)
+
+    if use_cli:
+        uvd_out = str(tmpdir / params["filing"]["outfile_name"])
+        if use_uvdata:
+            uvd_in = str(tmpdir / "zenith_spectral_input.uvh5")
+            pyuvsim.simsetup._complete_uvdata(uvd, inplace=True)
+            uvd.write_uvh5(uvd_in)
+            cat_in = str(tmpdir / "zenith_spectral_input.skyh5")
+            catalog.write_skyh5(cat_in)
+            uvb_in = str(tmpdir / "uniform_beam.beamfits")
+            abeam = UniformBeam()
+            uvb = abeam.to_uvbeam(
+                freq_array=np.linspace(100e6, 120e6, 4),
+                axis1_array=np.linspace(0, 2 * np.pi, 36),
+                axis2_array=np.linspace(0, np.pi / 2, 18),
+            )
+            uvb.write_beamfits(uvb_in)
+            subprocess.check_output(  # nosec
+                [
+                    "run_pyuvsim",
+                    "--uvdata",
+                    uvd_in,
+                    "--uvbeam",
+                    uvb_in,
+                    "--skymodel",
+                    cat_in,
+                    "--outfile",
+                    uvd_out,
+                ]
+            )
+
+        else:
+            subprocess.check_output(  # nosec
+                ["run_pyuvsim", "--param", param_file]
+            )
+        uv_out = UVData.from_file(uvd_out)
+    else:
+        if use_uvdata:
+            uv_out = pyuvsim.run_uvdata_uvsim(
+                input_uv=uvd, beam_list=beam_list, beam_dict=beam_dict, catalog=catalog
+            )
+        else:
+            uv_out = pyuvsim.run_uvsim(param_file, return_uv=True)
+
+    if use_cli and use_uvdata:
+        # this is different because we are writing out the analytic beam to a
+        # UVBeam, which then gets peak normalized.
+        exp_spectrum = spectrum
+    else:
+        exp_spectrum = spectrum / 2
     for ii in range(uv_out.Nbls):
-        assert np.allclose(uv_out.data_array[ii, :, 0], spectrum / 2)
+        np.testing.assert_allclose(uv_out.data_array[ii, :, 0], exp_spectrum)
 
 
 def test_pol_error():
