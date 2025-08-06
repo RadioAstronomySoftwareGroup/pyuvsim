@@ -238,7 +238,7 @@ def create_text_catalog(
 
     try:
         subprocess.check_output(["convert", "--version"])  # nosec
-    except FileNotFoundError as err:
+    except (FileNotFoundError, subprocess.CalledProcessError) as err:
         raise RuntimeError(
             "ImageMagick must installed to create text catalogs"
         ) from err
