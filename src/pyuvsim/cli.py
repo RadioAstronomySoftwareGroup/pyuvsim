@@ -3,6 +3,7 @@
 """Command line scripts."""
 
 import argparse
+import subprocess  # nosec
 import time as pytime
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -227,8 +228,20 @@ def create_text_catalog(
     verbose : int
         How verbose to be, default is 0, max is 2.
     """
-    import matplotlib.image as mpimg
-    import matplotlib.pyplot as plt
+    try:
+        import matplotlib.image as mpimg
+        import matplotlib.pyplot as plt
+    except ImportError as ie:
+        raise ImportError(
+            "matplotlib must be installed to use create text catalogs."
+        ) from ie
+
+    try:
+        subprocess.check_output(["convert", "--version"])  # nosec
+    except FileNotFoundError as err:
+        raise RuntimeError(
+            "ImageMagick must installed to create text catalogs"
+        ) from err
 
     catname = removeallspaces(text)
     imgfname = catname + ".bmp"
@@ -402,7 +415,12 @@ def text_to_catalog(argv=None):
 
 def plot_csv_antpos(argv=None):
     """Plot antenna positions from a layout csv."""
-    import matplotlib.pyplot as plt
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError as ie:
+        raise ImportError(
+            "matplotlib must be installed to use plot antenna positions."
+        ) from ie
 
     parser = argparse.ArgumentParser(
         description=("Plot antenna positions from a layout csv.")
