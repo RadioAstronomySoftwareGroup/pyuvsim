@@ -9,8 +9,15 @@ from pyuvdata.telescopes import known_telescope_location
 from pyuvsim import cli
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
+try:
+    subprocess.check_output(["convert", "--version"])  # nosec
+    img_mgk_installed = True
+except FileNotFoundError:
+    img_mgk_installed = False
+
 
 def test_run_pyuvsim_errors():
+    pytest.importorskip("mpi4py")
     with pytest.raises(
         ValueError,
         match="Either pass a parameter file or all of: uvdata, skymodel, uvbeam "
@@ -35,6 +42,22 @@ def test_uvdata_to_telescope_config_errors():
 @pytest.mark.parametrize(["verbosity", "plot"], [(None, True), (1, False), (2, False)])
 def test_text_to_catalog_basic(verbosity, plot, goto_tempdir):
     """This just tests that it runs, not that it's correct."""
+    try:
+        import matplotlib  # noqa
+    except ImportError:
+        with pytest.raises(
+            ImportError,
+            match="matplotlib must be installed to use create text catalogs.",
+        ):
+            cli.text_to_catalog(["-t", "R"])
+
+    if not img_mgk_installed:
+        with pytest.raises(
+            RuntimeError, match="ImageMagick must installed to create text catalogs"
+        ):
+            cli.text_to_catalog(["-t", "R"])
+
+    pytest.importorskip("matplotlib")
     mwa_location = known_telescope_location("mwa")
     command = [
         "text_to_catalog",
@@ -79,6 +102,16 @@ def test_text_to_catalog_basic(verbosity, plot, goto_tempdir):
 def test_plot_csv_antpos_basic(goto_tempdir):
     """This just tests that it runs, not that it's correct."""
     layout_file = Path(SIM_DATA_PATH) / "test_config" / "layout_hex37_14.6m.csv"
+    try:
+        import matplotlib  # noqa
+    except ImportError:
+        with pytest.raises(
+            ImportError,
+            match="matplotlib must be installed to use plot antenna positions.",
+        ):
+            cli.plot_csv_antpos([layout_file])
+
+    pytest.importorskip("matplotlib")
     subprocess.check_output(["plot_csv_antpos", str(layout_file)])  # nosec
     plotfile = Path(goto_tempdir) / (layout_file.stem + ".png")
     assert plotfile.exists()
