@@ -103,6 +103,18 @@ def _setup_and_teardown_package():
     iers.conf.auto_max_age = 30
 
 
+@pytest.fixture
+def goto_tempdir(tmpdir):
+    # Run test within temporary directory.
+    newpath = str(tmpdir)
+    cwd = os.getcwd()
+    os.chdir(newpath)
+
+    yield newpath
+
+    os.chdir(cwd)
+
+
 @pytest.fixture(scope="session")
 def cst_beam():
     beam = UVBeam()

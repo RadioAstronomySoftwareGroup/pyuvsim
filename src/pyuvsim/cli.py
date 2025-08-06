@@ -236,7 +236,7 @@ def create_text_catalog(
     # first lets construct our image
     fontsize = 10  # this ends up being arbitrary here
     emsize = 1 / 72.0 * fontsize  # height of a letter in inches
-    dpi = np.int(np.ceil(char_pix_height / emsize))
+    dpi = int(np.ceil(char_pix_height / emsize))
     # dpi = height of a letter in pixels/hight of letter in inches
     im_cmd = [
         "convert",
@@ -245,7 +245,7 @@ def create_text_catalog(
         "-fill",
         "white",
         "-font",
-        "Keyboard",  # still looking for optimal font
+        "C059-Bold",  # still looking for optimal font
         "-pointsize",
         "10",
         "-units",
@@ -310,13 +310,14 @@ def create_text_catalog(
             zas_rad * np.cos(aztmp_rad), zas_rad * np.sin(aztmp_rad), label="Original"
         )
         plt.legend()
-        plt.show()
+        plt.savefig(f"{catname}.png", bbox_inches="tight")
+        plt.clf()
 
     n_srcs = len(icrs_coord)
     sky = SkyModel(
-        name=[f"TEST{i}" for i in range(n_srcs)],
+        name=[f"text_{text}_{i}" for i in range(n_srcs)],
         skycoord=icrs_coord,
-        stokes=Quantity(np.ones((4, n_srcs)), "Jy"),
+        stokes=Quantity(np.ones((4, 1, n_srcs)), "Jy"),
         spectral_type="flat",
         component_type="point",
     )
@@ -370,10 +371,16 @@ def text_to_catalog(argv=None):
                         number between 1 and 255.""",
     )
     parser.add_argument(
-        "--array_location",
-        type=str,
-        default="-30,116",
-        help="LAT,LON in degrees on which to center the text at zenith.",
+        "--lat",
+        type=float,
+        default=-30,
+        help="Latitude in degrees on which to center the text at zenith.",
+    )
+    parser.add_argument(
+        "--lon",
+        type=float,
+        default=116,
+        help="Longitude in degrees on which to center the text at zenith.",
     )
     parser.add_argument("--plot", action="store_true")
 
@@ -381,13 +388,11 @@ def text_to_catalog(argv=None):
 
     args = parser.parse_args(argv)
 
-    lat, lon = map(float, args.array_location.split(","))
-
     create_text_catalog(
         text=args.text,
         char_pix_height=args.char_pix_height,
-        lat=lat,
-        lon=lon,
+        lat=args.lat,
+        lon=args.lon,
         jd=args.jd,
         plot=args.plot,
         thresh=args.thresh,
@@ -407,6 +412,8 @@ def plot_csv_antpos(argv=None):
     args = parser.parse_args(argv)
 
     antpos = parse_csv(args.layout_file)
+    layout_path = Path(args.layout_file)
+    plot_path = layout_path.stem + ".png"
 
     enu = antpos[["e", "n", "u"]]
     antnames = antpos["number"]
@@ -417,4 +424,5 @@ def plot_csv_antpos(argv=None):
 
     plt.xlabel("East [m]")
     plt.ylabel("North [m]")
-    plt.show()
+    plt.savefig(str(plot_path), bbox_inches="tight")
+    plt.clf()
