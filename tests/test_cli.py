@@ -51,52 +51,53 @@ def test_text_to_catalog_basic(verbosity, plot, goto_tempdir):
         ):
             cli.text_to_catalog(["-t", "R"])
 
+    pytest.importorskip("matplotlib")
+
     if not img_mgk_installed:
         with pytest.raises(
             RuntimeError, match="ImageMagick must installed to create text catalogs"
         ):
             cli.text_to_catalog(["-t", "R"])
-
-    pytest.importorskip("matplotlib")
-    mwa_location = known_telescope_location("mwa")
-    command = [
-        "text_to_catalog",
-        "-t",
-        "R",
-        "-n",
-        str(20),
-        "--lat",
-        str(mwa_location.lat.deg),
-        "--lon",
-        str(mwa_location.lon.deg),
-    ]
-    if verbosity is not None:
-        command.append(f"-{'v' * verbosity}")
-    if plot:
-        command.append("--plot")
-
-    output = subprocess.check_output(command)  # nosec
-    if verbosity is None:
-        assert output.decode("utf-8").startswith("saved catalog file to")
-    elif verbosity == 1:
-        assert output.decode("utf-8").startswith("generating image file")
-        assert "saved catalog file to" in output.decode("utf-8")
     else:
-        assert output.decode("utf-8").startswith(
-            "['convert', '-background', 'black', '-fill', 'white'"
-        )
-        assert "generating image file" in output.decode("utf-8")
-        assert "saved catalog file to" in output.decode("utf-8")
+        mwa_location = known_telescope_location("mwa")
+        command = [
+            "text_to_catalog",
+            "-t",
+            "R",
+            "-n",
+            str(20),
+            "--lat",
+            str(mwa_location.lat.deg),
+            "--lon",
+            str(mwa_location.lon.deg),
+        ]
+        if verbosity is not None:
+            command.append(f"-{'v' * verbosity}")
+        if plot:
+            command.append("--plot")
 
-    path = Path(goto_tempdir)
-    bmp_file = path / "R.bmp"
-    skyh5_file = path / "R.skyh5"
+        output = subprocess.check_output(command)  # nosec
+        if verbosity is None:
+            assert output.decode("utf-8").startswith("saved catalog file to")
+        elif verbosity == 1:
+            assert output.decode("utf-8").startswith("generating image file")
+            assert "saved catalog file to" in output.decode("utf-8")
+        else:
+            assert output.decode("utf-8").startswith(
+                "['convert', '-background', 'black', '-fill', 'white'"
+            )
+            assert "generating image file" in output.decode("utf-8")
+            assert "saved catalog file to" in output.decode("utf-8")
 
-    assert bmp_file.exists()
-    assert skyh5_file.exists()
-    if plot:
-        plotfile = path / "R.png"
-        assert plotfile.exists()
+        path = Path(goto_tempdir)
+        bmp_file = path / "R.bmp"
+        skyh5_file = path / "R.skyh5"
+
+        assert bmp_file.exists()
+        assert skyh5_file.exists()
+        if plot:
+            plotfile = path / "R.png"
+            assert plotfile.exists()
 
 
 def test_plot_csv_antpos_basic(goto_tempdir):
