@@ -12,7 +12,7 @@ from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 try:
     subprocess.check_output(["convert", "--version"])  # nosec
     img_mgk_installed = True
-except FileNotFoundError:
+except (FileNotFoundError, subprocess.CalledProcessError):
     img_mgk_installed = False
 
 
