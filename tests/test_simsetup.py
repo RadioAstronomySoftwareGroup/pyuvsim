@@ -1607,9 +1607,26 @@ def test_uvfits_to_config(tmp_path, int_time_varies, use_cli):
     # Read uvfits file to params.
     uv0 = UVData.from_file(triangle_uvfits_file)
 
-    path, telescope_config, layout_fname = simsetup.uvdata_to_telescope_config(
-        uv0, herabeam_default, path_out=opath, return_names=True
-    )
+    if use_cli:
+        path = opath
+        layout_fname = os.path.join(opath, "test_layout.csv")
+        telescope_config = os.path.join(opath, "test_tel_config.yaml")
+        subprocess.check_output(  # nosec
+            [
+                "uvdata_to_telescope_config",
+                triangle_uvfits_file,
+                "-b",
+                herabeam_default,
+                "-l",
+                layout_fname,
+                "-t",
+                telescope_config,
+            ]
+        )
+    else:
+        path, telescope_config, layout_fname = simsetup.uvdata_to_telescope_config(
+            uv0, herabeam_default, path_out=opath, return_names=True
+        )
     tel_config_full = os.path.join(path, telescope_config)
     with open(tel_config_full) as yf:
         telconfig = yaml.safe_load(yf)

@@ -21,3 +21,8 @@ def test_run_pyuvsim_errors():
         "uvdata, skymodel, uvbeam files and outfile.",
     ):
         cli.run_pyuvsim(["--uvdata", "foo", "--param", "bar"])
+
+
+def test_uvdata_to_telescope_config_errors():
+    with pytest.raises(ValueError, match="beamfile must be passed."):
+        cli.uvdata_to_telescope_config(["foo"])
