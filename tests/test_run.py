@@ -28,18 +28,6 @@ c_ms = speed_of_light.to("m/s").value
 pytest.importorskip("mpi4py")  # noqa
 
 
-@pytest.fixture
-def goto_tempdir(tmpdir):
-    # Run test within temporary directory.
-    newpath = str(tmpdir)
-    cwd = os.getcwd()
-    os.chdir(newpath)
-
-    yield newpath
-
-    os.chdir(cwd)
-
-
 @pytest.mark.filterwarnings("ignore:Fixing auto-correlations to be be real-only")
 @pytest.mark.parametrize(
     "paramfile", ["param_1time_1src_testcat.yaml", "param_1time_1src_testvot.yaml"]
