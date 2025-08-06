@@ -86,9 +86,6 @@ def run_pyuvsim(argv=None):
     block_nonroot_stdout = not args.keep_nonroot_stdout
 
     if args.param is not None:
-        if not os.path.isdir(os.path.dirname(args.param)):
-            args.param = os.path.join(".", args.param)
-
         uvsim.run_uvsim(
             args.param, quiet=args.quiet, block_nonroot_stdout=block_nonroot_stdout
         )

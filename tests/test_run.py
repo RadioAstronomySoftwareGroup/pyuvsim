@@ -477,9 +477,13 @@ def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
             )
 
         else:
+            profile_file = str(tmpdir / "profile.out")
+            profile_file_meta = str(tmpdir / "profile_meta.out")
             subprocess.check_output(  # nosec
-                ["run_pyuvsim", "--param", param_file]
+                ["run_pyuvsim", "--param", param_file, "--profile", profile_file]
             )
+            assert os.path.exists(profile_file)
+            assert os.path.exists(profile_file_meta)
         uv_out = UVData.from_file(uvd_out)
     else:
         if use_uvdata:
