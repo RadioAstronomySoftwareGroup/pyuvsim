@@ -38,6 +38,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install ImageMagick
+        if: matrix.os != 'windows-latest'
+        uses: mfinelli/setup-imagemagick@v6
+
       - name: Setup Miniforge
         uses: conda-incubator/setup-miniconda@v3
         with:
