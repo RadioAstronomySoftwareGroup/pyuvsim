@@ -369,6 +369,8 @@ def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
     freq_params = pyuvsim.simsetup.freq_array_to_params(
         freq_array=freqs, channel_width=ch_width
     )
+    freq_params["Nspws"] = 1  # added to testing some logic to handle this.
+
     parsed_freq_params = pyuvsim.simsetup.parse_frequency_params(freq_params)
     freqs = parsed_freq_params["freq_array"]
     freqs *= units.Hz
