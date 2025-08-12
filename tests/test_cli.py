@@ -42,7 +42,7 @@ def test_uvdata_to_telescope_config_errors():
 
 @pytest.mark.parametrize(
     ["verbosity", "plot", "use_old"],
-    [(None, True, False), (1, False, False), (2, False, True)],
+    [(None, True, False), (1, False, False), (2, True, True)],
 )
 def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
     """This just tests that it runs, not that it's correct."""
