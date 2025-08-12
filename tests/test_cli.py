@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from pyuvdata.telescopes import known_telescope_location
+from pyuvdata.testing import check_warnings
 
 from pyuvsim import cli
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -39,8 +40,11 @@ def test_uvdata_to_telescope_config_errors():
         cli.uvdata_to_telescope_config(["foo"])
 
 
-@pytest.mark.parametrize(["verbosity", "plot"], [(None, True), (1, False), (2, False)])
-def test_text_to_catalog_basic(verbosity, plot, goto_tempdir):
+@pytest.mark.parametrize(
+    ["verbosity", "plot", "use_old"],
+    [(None, True, False), (1, False, False), (2, False, True)],
+)
+def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
     """This just tests that it runs, not that it's correct."""
     try:
         import matplotlib  # noqa
@@ -60,34 +64,48 @@ def test_text_to_catalog_basic(verbosity, plot, goto_tempdir):
             cli.text_to_catalog(["-t", "R"])
     else:
         mwa_location = known_telescope_location("mwa")
-        command = [
-            "text_to_catalog",
+        if use_old:
+            command = []
+        else:
+            command = ["text_to_catalog"]
+        command += [
             "-t",
             "R",
             "-n",
             str(20),
+            "--jd",
+            str(2460000),
             "--lat",
             str(mwa_location.lat.deg),
             "--lon",
             str(mwa_location.lon.deg),
         ]
-        if verbosity is not None:
+        if verbosity is not None and not use_old:
             command.append(f"-{'v' * verbosity}")
         if plot:
             command.append("--plot")
 
-        output = subprocess.check_output(command)  # nosec
-        if verbosity is None:
-            assert output.decode("utf-8").startswith("saved catalog file to")
-        elif verbosity == 1:
-            assert output.decode("utf-8").startswith("generating image file")
-            assert "saved catalog file to" in output.decode("utf-8")
+        if use_old:
+            with check_warnings(
+                DeprecationWarning,
+                match="This script is deprecated in favor of text_to_catalog. "
+                "It will be removed in version 1.6",
+            ):
+                cli.im_to_catalog(command)
+            output = capsys.readouterr().out
         else:
-            assert output.decode("utf-8").startswith(
+            output = subprocess.check_output(command).decode("utf-8")  # nosec
+        if verbosity is None:
+            assert output.startswith("saved catalog file to")
+        elif verbosity == 1:
+            assert output.startswith("generating image file")
+            assert "saved catalog file to" in output
+        else:
+            assert output.startswith(
                 "['convert', '-background', 'black', '-fill', 'white'"
             )
-            assert "generating image file" in output.decode("utf-8")
-            assert "saved catalog file to" in output.decode("utf-8")
+            assert "generating image file" in output
+            assert "saved catalog file to" in output
 
         path = Path(goto_tempdir)
         bmp_file = path / "R.bmp"

@@ -68,11 +68,11 @@ Documentation = "https://pyuvsim.readthedocs.io/"
 
 [project.scripts]
 run_pyuvsim = "pyuvsim.cli:run_pyuvsim"
-run_param_pyuvsim = "pyuvsim.cli:run_param_pyuvsim"  # TODO: add deprecation warnings
+run_param_pyuvsim = "pyuvsim.cli:run_param_pyuvsim"
 uvdata_to_config = "pyuvsim.cli:uvdata_to_config"
 uvdata_to_telescope_config = "pyuvsim.cli:uvdata_to_telescope_config"
 text_to_catalog = "pyuvsim.cli:text_to_catalog"
-im_to_catalog = "pyuvsim.cli:im_to_catalog"  # TODO: add deprecation warnings
+im_to_catalog = "pyuvsim.cli:im_to_catalog"
 plot_csv_antpos = "pyuvsim.cli:plot_csv_antpos"
 
 [tool.setuptools_scm]
