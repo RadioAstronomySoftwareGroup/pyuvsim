@@ -18,6 +18,7 @@ from astropy.coordinates import EarthLocation, Latitude, Longitude
 from astropy.time import Time
 from pyradiosky.utils import jy_to_ksr
 from pyuvdata import ShortDipoleBeam, UniformBeam, UVData
+from pyuvdata.testing import check_warnings
 
 import pyuvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -452,6 +453,9 @@ def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
                 axis2_array=np.linspace(0, np.pi / 2, 18),
             )
             uvb.write_beamfits(uvb_in)
+
+            profile_file = str(tmpdir / "profile.out")
+            profile_file_meta = str(tmpdir / "profile_meta.out")
             subprocess.check_output(  # nosec
                 [
                     "run_pyuvsim",
@@ -463,17 +467,19 @@ def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
                     cat_in,
                     "--outfile",
                     uvd_out,
+                    "--profile",
+                    profile_file,
                 ]
-            )
-
-        else:
-            profile_file = str(tmpdir / "profile.out")
-            profile_file_meta = str(tmpdir / "profile_meta.out")
-            subprocess.check_output(  # nosec
-                ["run_pyuvsim", "--param", param_file, "--profile", profile_file]
             )
             assert os.path.exists(profile_file)
             assert os.path.exists(profile_file_meta)
+        else:
+            with check_warnings(
+                DeprecationWarning,
+                match="This script is deprecated in favor of run_pyuvsim. "
+                "It will be removed in version 1.6",
+            ):
+                pyuvsim.cli.run_param_pyuvsim([param_file])
         uv_out = UVData.from_file(uvd_out)
     else:
         if use_uvdata:
