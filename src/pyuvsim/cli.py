@@ -198,7 +198,7 @@ def get_latest_api_response_pid(sim_name):
     try:
         # get pid from first response item as we query by time desc and only get 1 result
         pid = response.json()["items"]["docs"][0]["pid"]
-    except Exception as e:  # pragma: nocover
+    except Exception as e:
         warnings.warn(f"Failed to parse BDR response for file PID with error: {e}")
 
     return pid

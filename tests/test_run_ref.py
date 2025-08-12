@@ -8,7 +8,11 @@ import pytest
 from pyuvdata import UVData
 
 import pyuvsim
-from pyuvsim.cli import download_data_files, download_ref_sims
+from pyuvsim.cli import (
+    download_data_files,
+    download_ref_sims,
+    get_latest_api_response_pid,
+)
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.uvsim import run_uvsim
 
@@ -19,13 +23,24 @@ pytest.importorskip("mpi4py")  # noqa
 
 # ONLY RUN ON download_test workflow accomplished by requiring pytest-benchmark
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
-@pytest.mark.parametrize("files", ["gleam", "mwa", "healpix", "fail", "gleam"])
-@pytest.mark.filterwarnings("ignore:astropy cached url")
+@pytest.mark.parametrize(
+    "files", [("gleam", 1), ("mwa", 1), ("healpix", 1), ("fail", 1), ("gleam", 2)]
+)
 @pytest.mark.filterwarnings("ignore:gleam.vot download")
 @pytest.mark.filterwarnings("ignore:running import_file_to_cache")
-@pytest.mark.filterwarnings('ignore:file "fail"')
 def test_download_data_files(files):
-    download_data_files([files])
+    # NOTE: Not covering the case where files are already downloaded and the tests run.
+    #       In that case additional warnings will occur.
+
+    # check for duplicate download of gleam and bad file input to see warnings
+    if files[1] == 2:
+        with pytest.warns(UserWarning, match=r"astropy cached url for .*"):
+            download_data_files([files[0]])
+    elif files[0] == "fail":
+        with pytest.warns(UserWarning, match=r'file "fail" not found! .*'):
+            download_data_files([files[0]])
+    else:
+        download_data_files([files[0]])
 
 
 # ONLY RUN ON download_test workflow accomplished by requiring pytest-benchmark
@@ -46,9 +61,23 @@ def test_download_data_files(files):
     ],
 )
 @pytest.mark.filterwarnings("ignore:astropy cached url")
-@pytest.mark.filterwarnings('ignore:sim "fail"')
 def test_download_ref_sims(ref_sim):
-    download_ref_sims([ref_sim])
+    # catch a hard to hit piece of code that requires failed downloading from BDR
+    if ref_sim == "fail":
+        with pytest.warns(UserWarning, match=r'sim "fail" not found! .*'):
+            download_ref_sims([ref_sim])
+        with (
+            pytest.raises(UnboundLocalError) as e_info,
+            pytest.warns(UserWarning, match=r"Failed to parse BDR response .*"),
+        ):
+            get_latest_api_response_pid(ref_sim)
+        # after second with statement resolves we check the returned error
+        assert (
+            e_info.value.args[0] == "cannot access local variable 'pid' "
+            "where it is not associated with a value"
+        )
+    else:
+        download_ref_sims([ref_sim])
 
 
 def compare_uvh5(uv_ref, uv_new):

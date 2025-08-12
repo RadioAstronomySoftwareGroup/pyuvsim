@@ -10,9 +10,10 @@ sample analysis of simulation output, see
 [second_generation](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/reference_simulations/second_generation).
 Currently the first generation configuration files are stored in
 [data](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/src/pyuvsim/data).
-The second generation still exist in
+The second generation configuration files still exist in
 [second_generation](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/reference_simulations/second_generation)
-but are out of date and will not run without minor edits of the configuration files.
+but are out of date and will not run without additional changes. Note that the README is also
+very outdated.
 
 For regression testing, only the lightweight first generation simulations are integrated into
 the testing pipeline. First generation reference simulations can be run, downloaded, and compared
@@ -23,7 +24,7 @@ for documentation of running the reference simulations using `pytest`.
 The current approach to downloading large files uses [astropy](https://github.com/astropy/astropy)
 functionality to download files from all current download points.
 We have configured downloading to use the astropy cache location for the package pyuvsim. To run
-the reference simulatiions, all necessary data files should be installed into the cache directory
+the reference simulations, all necessary data files should be installed into the cache directory
 using `download_data_files`.
 
 The current approach to storing historical reference simulations is the
@@ -87,10 +88,9 @@ mpirun -n 20 python scripts/run_param_pyuvsim.py reference_simulations/first_gen
 The second generation reference simulations can take a few more hours, and as such should ideally
 be run on some form of computing cluster. Running the second generation reference simulations
 interactively works well but is not preferable. The following scripts are designed for a cluster
-managed by Simple Linux Utility Resource Manager (SLURM). These scripts are not quite functional
-as they were last updated in 2020. Some of the second generation reference simulations also
-require some manual file finding and placing to run.
-
+managed by Simple Linux Utility Resource Manager (SLURM). These scripts are nonfunctional
+as they were last updated in 2020 and are out of date. Some of the second generation reference
+simulations also require some manual file finding and placing to run.
 
  - run_ref_sims.sh
         To run all of the reference simulations, run:

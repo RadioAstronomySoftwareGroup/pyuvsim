@@ -49,8 +49,10 @@ The total number of data points is chosen to be sufficient to perform relevant a
 the Memo folder) but still lightweight enough to run quickly on a single core
 for regression testing in CI using Github Actions.
 
-The catalogs may be found in the **../catalog_files** folder, and the beam/layout files are in the **telescope_config** folder. UVBeam models and large catalog files will need to
-be downloaded using `../download_data_files.py` and placed appropriately.
+The text catalogs and beam/layout files can be found in
+[data](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/main/src/pyuvsim/data).
+UVBeam models and large catalog files will need to be downloaded using `../download_data_files.py`
+and placed appropriately.
 
 For a full description of how antenna layouts, instrument configuration, and catalogs are all
 written into parameter files, please see the
