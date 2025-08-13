@@ -7,11 +7,21 @@ import re
 import socket
 
 import h5py
+import healpy as hp
 import numpy as np
 import yaml
-from pyradiosky import write_healpix_hdf5
+from astropy import units
 
+# new
+from pygdsm import GlobalSkyModel16
+
+# from pyradiosky import utils
+from pyradiosky import SkyModel
+
+# from pyradiosky import write_healpix_hdf5
 from pyuvsim.simsetup import _write_layout_csv, freq_array_to_params
+
+# import posixpath
 
 
 def settings_setup(settings_file, outdir=None):
@@ -46,8 +56,8 @@ def settings_setup(settings_file, outdir=None):
     settings["settings_file"] = settings_file
     settings["teleconfig_file"] = "tele_config.yaml"
     settings["layout_fname"] = "layout.csv"
-    settings["hpx_fname"] = "skymodel.hdf5"
-    settings["beamtype"] = "gaussian"
+    settings["hpx_fname"] = "skymodel.skyh5"
+    settings["beamtype"] = "GaussianBeam"
     settings["beamshape"] = {"sigma": 0.08449}
     settings["profile_path"] = os.path.join(
         settings["profiles"], settings["profile_prefix"]
@@ -88,7 +98,7 @@ def make_benchmark_configuration(settings_dict):
         if not os.path.exists(odir):
             os.makedirs(odir)
 
-    Nsrcs = 12 * Nside**2
+    # Nsrcs = 12 * Nside**2
 
     # ----------------
     # Telescope config
@@ -96,13 +106,20 @@ def make_benchmark_configuration(settings_dict):
     teleconfig_path = os.path.join(confdir, teleconfig_file)
     shapekey, shapeval = beamshape.popitem()
     teleconfig = {
-        "beam_paths": {0: {"type": beamtype, shapekey: shapeval}},
+        "beam_paths": {0: {"class": beamtype, shapekey: shapeval}},
         "telescope_location": "(-30.72153, 21.42831, 1073.00000)",
         "telescope_name": "test_array",
     }
 
+    # create yaml string to write to file and include the !AnalyticBeam
+    tele_to_dump = yaml.dump(teleconfig, default_flow_style=False)
+    split_tele = tele_to_dump.split("\n")
+    split_tele[1] += " !AnalyticBeam"
+    tele_to_dump = "\n".join(split_tele)
+    print(tele_to_dump)
+
     with open(teleconfig_path, "w") as yfile:
-        yaml.dump(teleconfig, yfile, default_flow_style=False)
+        yfile.write(tele_to_dump)
 
     # ----------------
     # Frequency setup
@@ -141,10 +158,57 @@ def make_benchmark_configuration(settings_dict):
     #   Full frequency HEALPix shell.
     # ----------------
 
-    fmin, fmax = 0.0, 1.0  # K (fluxes)
-    skydat = np.random.uniform(fmin, fmax, (Nfreqs, Nsrcs))
+    # from pygdsm import GlobalSkyModel16
+    # import healpy as hp
+    # fmin, fmax = 0.0, 1.0  # K (fluxes)
+    # skydat = np.random.uniform(fmin, fmax, (Nfreqs, Nsrcs))
 
-    write_healpix_hdf5(os.path.join(confdir, hpx_fname), skydat, range(Nsrcs), freqs)
+    # write_healpix_hdf5(os.path.join(confdir, hpx_fname), skydat, range(Nsrcs), freqs)
+
+    ######
+    # drop in replacement
+    ######
+
+    # freq_array = np.linspace(50,300,11)
+    # freq_array = [100]
+    freq_array = freqs / 1e6
+    print(freq_array)
+
+    # gsm = GlobalSkyModel16()
+    gsm_2016 = GlobalSkyModel16(freq_unit="MHz", resolution="low")
+
+    # healpix_1024 = gsm_2016.generate(freq_array)
+    healpix_64 = gsm_2016.generate(freq_array)
+
+    # healpix_nside = hp.pixelfunc.ud_grade(healpix_1024, Nside, order_in = 'RING',
+    # order_out = 'RING')
+    healpix_nside = hp.pixelfunc.ud_grade(
+        healpix_64, Nside, order_in="RING", order_out="RING"
+    )
+
+    stokes = np.zeros(shape=(4, len(freq_array), healpix_nside.shape[-1]))
+
+    stokes[0] = healpix_nside
+
+    sm = SkyModel(
+        component_type="healpix",
+        nside=Nside,
+        hpx_inds=list(range(healpix_nside.shape[-1])),
+        freq_array=freq_array * units.MHz,
+        stokes=stokes * units.K,
+        spectral_type="full",
+        hpx_order="ring",
+        frame="galactic",
+    )
+
+    sm.healpix_interp_transform("icrs")
+
+    print(f"writing skymodel to {confdir}: {os.path.join(confdir, hpx_fname)}")
+    sm.write_skyh5(os.path.join(confdir, hpx_fname))
+
+    ######
+    #
+    ######
 
     # ----------------
     # Make config dictionaries
@@ -152,9 +216,12 @@ def make_benchmark_configuration(settings_dict):
 
     filedict = {"outdir": outdir, "outfile_name": "benchmark", "output_format": "uvh5"}
 
-    freqdict = freq_array_to_params(freqs)
+    # not sure how best to do this
+    channel_width = (np.max(freqs) - np.min(freqs)) / len(freqs)
+    freqdict = freq_array_to_params(freqs, channel_width)
+    print(freqdict)
 
-    srcdict = {"catalog": hpx_fname}
+    srcdict = {"filetype": "skyh5", "catalog": hpx_fname}
 
     teledict = {"array_layout": layout_fname, "telescope_config_name": teleconfig_file}
 
@@ -208,6 +275,11 @@ def make_jobscript(settings_dict):
     script += f"#SBATCH --nodes={Nnodes}-{Nnodes}\n"
     script += f"#SBATCH --ntasks={Ntasks:d}\n"
     script += "#SBATCH -m cyclic\n\n"
+    # script += "loadstuff\n\n"
+    script += "module load hpcx-mpi/4.1.5rc2-mts-ukpby4i\n"
+    script += "source /oscar/runtime/software/external/miniforge/23.11.0-0/etc/profile.d/conda.sh\n"
+    script += "conda activate pyuvsim_current\n\n"
+    # script += "loadstuff\n\n"
 
     script += (
         "srun --mpi=pmi2 python ../scripts/run_param_pyuvsim.py "

@@ -49,6 +49,7 @@ if args.submit and args.update_log:
     )
 
 settings = bmk.settings_setup(args.yaml_file, outdir=args.outdir)
+print(settings)
 
 obspath = os.path.join(args.outdir, settings["config_dir"], settings["obsparam_name"])
 if args.submit and (not os.path.exists(obspath)):

@@ -5,7 +5,7 @@
 Nbls : 500
 Nfreqs : 256
 Ntimes : 21
-Nside : 16      # HEALPix Nside parameter.
+Nside : 16      # HEALPix Nside parameter. #TODO: add logic supporting 'hi' or 'low' depending on value
 
 # Beam info
 beamtype : 'gaussian'
@@ -15,7 +15,8 @@ beamshape: 'sigma=0.08449'
 Ntasks : 10         # Number of MPI processes
 Nnodes : 1          # Number of nodes to use.
 MemoryLimit : 50G        # Available memory in GiB
-walltime: "3-00:00:00"  # Time limit (d-HH:MM:SS)
+#walltime: "3-00:00:00"  # Time limit (d-HH:MM:SS)
+walltime: "30:00"  # Time limit (d-HH:MM:SS)
 Ncpus_per_task: 2   # Number of cpus cores per MPI process.
 
 # Directory setup
