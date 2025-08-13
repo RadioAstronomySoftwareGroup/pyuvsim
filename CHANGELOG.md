@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- Added pooch as a testing dependency.
+- Support for the new way that pyuvdata test data is handled using pooch
+(introduced in pyuvdata v3.2.4). Retain support for older versions of pyuvdata.
 - Support for selecting SkyModel components that do not have NaN values in the
 `stokes` parameter at either any or all frequencies and with no negative Stokes I
 values.

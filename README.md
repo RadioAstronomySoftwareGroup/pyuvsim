@@ -124,6 +124,7 @@ you will need the following packages:
 
 * coverage
 * line-profiler
+* pooch >= 1.8
 * pre-commit
 * pytest
 * pytest-cov >= 5.0

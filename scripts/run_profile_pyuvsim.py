@@ -12,7 +12,6 @@ import time as pytime
 import numpy as np
 import yaml
 from pyuvdata import UVBeam, UVData
-from pyuvdata.data import DATA_PATH
 
 from pyuvsim import mpi, profiling, simsetup, uvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
@@ -24,8 +23,6 @@ parser = argparse.ArgumentParser(
 )
 
 paramsfile = os.path.join(SIM_DATA_PATH, "profiling_params.yaml")
-cst_files = ["HERA_NicCST_150MHz.txt", "HERA_NicCST_123MHz.txt"]
-beam_files = [os.path.join(DATA_PATH, f) for f in cst_files]
 
 parser.add_argument("--Nsrcs", dest="Nsrcs", type=int, default=1)
 parser.add_argument("--Ntimes", dest="Ntimes", type=int, default=1)
