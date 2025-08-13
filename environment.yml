@@ -12,7 +12,7 @@ dependencies:
   - pre-commit
   - psutil
   - pypandoc
-  - python-casacore>=3.5.2,<3.7.1
+  - python-casacore>=3.5.2
   - pytest
   - pytest-cov>=5.0.0
   - pytest-xdist
