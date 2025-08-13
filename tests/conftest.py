@@ -13,7 +13,6 @@ from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from astropy.utils import iers
 from pyuvdata import UVBeam
-from pyuvdata.data import DATA_PATH
 
 try:
     from pyuvsim import mpi
@@ -126,8 +125,17 @@ def cst_beam():
 
     freqs = [150e6, 123e6]
 
-    cst_files = ["HERA_NicCST_150MHz.txt", "HERA_NicCST_123MHz.txt"]
-    beam_files = [os.path.join(DATA_PATH, "NicCSTbeams", f) for f in cst_files]
+    try:
+        from pyuvdata.datasets import fetch_data
+
+        beam_files = fetch_data(["hera_fagnoni_dipole_150", "hera_fagnoni_dipole_123"])
+    except ImportError:
+        # This can be removed once we require pyuvdata > 3.2.3
+        from pyuvdata.data import DATA_PATH as UV_DATA_PATH
+
+        cst_files = ["HERA_NicCST_150MHz.txt", "HERA_NicCST_123MHz.txt"]
+        beam_files = [os.path.join(UV_DATA_PATH, "NicCSTbeams", f) for f in cst_files]
+
     kwargs = {
         "beam_type": "efield",
         "frequency": freqs,

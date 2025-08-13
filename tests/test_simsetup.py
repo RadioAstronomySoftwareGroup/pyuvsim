@@ -26,7 +26,6 @@ from pyuvdata import (
     utils as uvutils,
 )
 from pyuvdata.analytic_beam import AnalyticBeam
-from pyuvdata.data import DATA_PATH as UV_DATA_PATH
 from pyuvdata.testing import check_warnings
 
 try:
@@ -157,6 +156,21 @@ def uvdata_keyword_dict():
     }
 
     return init_dict
+
+
+@pytest.fixture(scope="session")
+def mwa_beam_path():
+    try:
+        from pyuvdata.datasets import fetch_data
+
+        path = fetch_data("mwa_full_EE")
+    except ImportError:
+        # This can be removed once we require pyuvdata > 3.2.3
+        from pyuvdata.data import DATA_PATH as UV_DATA_PATH
+
+        path = os.path.join(UV_DATA_PATH, "mwa_full_EE_test.h5")
+
+    yield path
 
 
 @pytest.mark.parametrize("return_data", [True, False])
@@ -2097,7 +2111,7 @@ def test_beamlist_init_spline():
 @pytest.mark.parametrize(
     ("rename_beamfits", "pass_beam_type"), [(False, True), (True, True), (False, False)]
 )
-def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
+def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path, mwa_beam_path):
     telescope_config_name = os.path.join(SIM_DATA_PATH, "bl_lite_mixed.yaml")
     with open(telescope_config_name) as yf:
         telconfig = yaml.safe_load(yf)
@@ -2118,9 +2132,7 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
 
     telconfig["beam_paths"][0]["mount_type"] = "fixed"
 
-    telconfig["beam_paths"][6]["filename"] = os.path.join(
-        UV_DATA_PATH, "mwa_full_EE_test.h5"
-    )
+    telconfig["beam_paths"][6]["filename"] = mwa_beam_path
 
     nbeams = len(telconfig["beam_paths"])
     entries_warnings = 6
@@ -2163,10 +2175,9 @@ def test_beamlist_init(rename_beamfits, pass_beam_type, tmp_path):
 @pytest.mark.parametrize(
     "tel_config", ["bl_lite_mixed.yaml", "bl_lite_mixed_constructors.yaml"]
 )
-def test_beamlist_init_freqrange(sel_type, tel_config):
+def test_beamlist_init_freqrange(sel_type, tel_config, mwa_beam_path):
     telescope_config_name = os.path.join(SIM_DATA_PATH, tel_config)
     hera_beam_path = os.path.join(SIM_DATA_PATH, "HERA_NicCST.beamfits")
-    mwa_beam_path = os.path.join(UV_DATA_PATH, "mwa_full_EE_test.h5")
 
     with open(telescope_config_name) as yf:
         lines = yf.readlines()
