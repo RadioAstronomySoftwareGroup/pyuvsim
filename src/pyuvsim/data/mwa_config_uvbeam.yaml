@@ -1,0 +1,9 @@
+beam_paths:
+  0: !UVBeam
+      filename: http://ws.mwatelescope.org/static/mwa_full_embedded_element_pattern.h5
+      pixels_per_deg: 1
+      mount_type: phased
+      file_type: mwa_beam
+# taken from https://mwatelescope.github.io/mwa_hyperdrive/defs/coords.html
+telescope_location: (-26.70331941, 116.6708152, 377.827)
+telescope_name: MWA

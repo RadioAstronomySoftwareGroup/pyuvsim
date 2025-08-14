@@ -65,6 +65,10 @@ windows-dev = ["pyuvsim[test,doc,profiler,healpix,sim,sim-test]"]
 Repository = "https://github.com/RadioAstronomySoftwareGroup/pyuvsim"
 Documentation = "https://pyuvsim.readthedocs.io/"
 
+[project.scripts]
+download_data_files = "pyuvsim.cli:download_data_files"
+download_ref_sims = "pyuvsim.cli:download_ref_sims"
+
 # Note that this approach is "discouraged" in favor of [project.scripts], but
 # that requires entry-point functions, which would require some refactoring.
 [tool.setuptools]
