@@ -6,7 +6,7 @@ import atexit
 import struct as _struct
 import sys
 from array import array as _array
-from pickle import dumps, loads
+from pickle import dumps, loads  # nosec
 
 import mpi4py
 import numpy as np
@@ -209,7 +209,7 @@ def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
             buf = objs.tobytes()
             nopickle = True
         else:
-            buf = dumps(objs)
+            buf = dumps(objs)  # nosec
         bufsize = len(buf)
 
     # Sizes of send buffers to be sent from each rank.
@@ -237,7 +237,7 @@ def big_bcast(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
         result = np.frombuffer(buf, dtype=dtype)
         result = result.reshape(shape)
     else:
-        result = loads(buf)
+        result = loads(buf)  # nosec
 
     split_info_dict = {"MAX_BYTES": MAX_BYTES, "ranges": ranges}
 
@@ -337,7 +337,8 @@ def big_gather(comm, objs, root=0, return_split_info=False, MAX_BYTES=INT_MAX):
     if comm.rank == root:
         per_proc = []
         per_proc = [
-            loads(rbuf[displ[ii] : displ[ii] + counts[ii]]) for ii in range(comm.size)
+            loads(rbuf[displ[ii] : displ[ii] + counts[ii]])  # nosec
+            for ii in range(comm.size)
         ]
 
     split_info_dict = None

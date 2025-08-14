@@ -6,7 +6,7 @@
 import argparse
 import os
 from datetime import datetime
-from subprocess import check_call
+from subprocess import check_call  # nosec
 
 import benchmark as bmk
 
@@ -63,7 +63,7 @@ if args.jobscript:
     bmk.make_jobscript(settings)
 
 if args.submit:
-    output = check_call(
+    output = check_call(  # nosec
         [
             "sbatch",
             "-o",
