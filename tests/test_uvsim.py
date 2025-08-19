@@ -720,7 +720,7 @@ def test_local_task_gen():
     hera_uv = UVData.from_file(EW_uvfits_10time10chan)
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
     time = Time(hera_uv.time_array[0], scale="utc", format="jd")
-    sources, kwds = pyuvsim.create_mock_catalog(
+    sources, _ = pyuvsim.create_mock_catalog(
         time, arrangement="random", Nsrcs=5, return_data=True
     )
 
@@ -933,7 +933,7 @@ def test_source_splitting():
     hera_uv = UVData.from_file(EW_uvfits_10time10chan)
     hera_uv.select(times=np.unique(hera_uv.time_array)[0:3], freq_chans=range(3))
     time = Time(hera_uv.time_array[0], scale="utc", format="jd")
-    sources, kwds = pyuvsim.create_mock_catalog(
+    sources, _ = pyuvsim.create_mock_catalog(
         time, arrangement="random", Nsrcs=30, return_data=True
     )
 

@@ -77,7 +77,7 @@ def run_pyuvsim(argv=None):
     )
 
     if args.param is None:
-        if np.all(~uvdata_set) or not np.all(uvdata_set):
+        if not np.all(uvdata_set):
             raise ValueError(
                 "Either pass a parameter file or all of: uvdata, skymodel, "
                 "uvbeam files and outfile."
@@ -247,11 +247,6 @@ def uvdata_to_telescope_config(argv=None):
     )
 
 
-def removeallspaces(s):
-    """Remove all spaces."""
-    return "".join([c for c in s if c != " "])
-
-
 def create_text_catalog(
     text: str,
     char_pix_height: int = 10,
@@ -304,7 +299,7 @@ def create_text_catalog(
             "ImageMagick must installed to create text catalogs"
         ) from err
 
-    catname = removeallspaces(text)
+    catname = "".join(text.split())
     imgfname = catname + ".bmp"
 
     # first lets construct our image
@@ -589,5 +584,6 @@ def plot_csv_antpos(argv=None):
 
     plt.xlabel("East [m]")
     plt.ylabel("North [m]")
+    plt.gca().set_aspect("equal")
     plt.savefig(str(plot_path), bbox_inches="tight")
     plt.clf()
