@@ -442,9 +442,9 @@ def create_mock_catalog(
         "arrangement": arrangement,
         "array_location": repr(
             (
-                array_location.lat.deg,
-                array_location.lon.deg,
-                array_location.height.value,
+                float(array_location.lat.deg),
+                float(array_location.lon.deg),
+                float(array_location.height.value),
             )
         ),
     }
@@ -1356,7 +1356,9 @@ def parse_telescope_params(
         if not os.path.exists(telescope_config_name):
             telescope_config_name = os.path.join(config_path, telescope_config_name)
             if not os.path.exists(telescope_config_name):
-                raise ValueError("telescope_config_name file from yaml does not exist")
+                raise ValueError(
+                    f"telescope_config_name file from yaml does not exist: {telescope_config_name}"
+                )
         with open(telescope_config_name) as yf:
             telconfig = yaml.safe_load(yf)
 

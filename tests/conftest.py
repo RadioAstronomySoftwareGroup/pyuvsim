@@ -5,7 +5,6 @@
 
 import contextlib
 import os
-import pickle as pkl
 
 import numpy as np
 import pytest
@@ -84,21 +83,6 @@ def pytest_runtest_setup(item):
             pytest.skip("Skipping parallelized tests with --nompi option.")
 
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_exception_interact(node, call, report):
-    if issubproc:
-        from pyuvsim import mpi  # noqa
-
-        if report.failed:
-            pth = f"/tmp/mpitest_{report.head_line}"
-            with contextlib.suppress(OSError):
-                os.makedirs(pth)
-            with open(os.path.join(pth, f"report_rank{mpi.rank}.pkl"), "wb") as ofile:
-                pkl.dump(report, ofile)
-            raise call.excinfo.value
-    yield
-
-
 @pytest.fixture(autouse=True, scope="session")
 def _setup_and_teardown_package():
     # Do a calculation that requires a current IERS table. This will trigger
@@ -117,6 +101,18 @@ def _setup_and_teardown_package():
     yield
 
     iers.conf.auto_max_age = 30
+
+
+@pytest.fixture
+def goto_tempdir(tmpdir):
+    # Run test within temporary directory.
+    newpath = str(tmpdir)
+    cwd = os.getcwd()
+    os.chdir(newpath)
+
+    yield newpath
+
+    os.chdir(cwd)
 
 
 @pytest.fixture(scope="session")
