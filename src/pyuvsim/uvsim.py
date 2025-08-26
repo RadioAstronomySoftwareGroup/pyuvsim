@@ -871,6 +871,11 @@ def run_uvdata_uvsim(
         input_uv, beam_list, catalog, input_order = _run_uvdata_input_check(
             input_uv=input_uv, beam_list=beam_list, catalog=catalog
         )
+    else:
+        # initialize an object to receive the information
+
+        catalog = SkyModelData()
+        beam_list = BeamList([])
 
     input_uv = comm.bcast(input_uv, root=0)
     beam_dict = comm.bcast(beam_dict, root=0)
