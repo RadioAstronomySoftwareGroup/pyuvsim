@@ -104,7 +104,7 @@ Optional:
 * lunarsky>=0.2.5 (for simulating telescopes on the moon)
 * python-casacore>=3.5.2 (for writing CASA measurement sets, not available on Windows)
 * matplotlib>=3.6 (for plotting functions)
-
+* tqdm
 
 ### Developer Installation
 If you are developing `pyuvsim`, you will need to download and install the

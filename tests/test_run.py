@@ -26,6 +26,8 @@ from pyuvsim.telescope import BeamList
 c_ms = speed_of_light.to("m/s").value
 
 pytest.importorskip("mpi4py")  # noqa
+# everything in this file requires 2 PUs
+pytestmark = pytest.mark.parallel(2)
 
 
 @pytest.mark.filterwarnings("ignore:Fixing auto-correlations to be be real-only")
@@ -36,8 +38,8 @@ pytest.importorskip("mpi4py")  # noqa
     not pytest.pyuvsim_can_parallel,
     reason="mpi-pytest is not installed. Cannot run parallel tests.",
 )
-@pytest.mark.parallel(2)
-def test_run_paramfile_uvsim(goto_tempdir, paramfile):
+@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+def test_run_paramfile_uvsim(goto_tempdir, paramfile, backend):
     # Test vot and txt catalogs for parameter simulation
     # Compare to reference files.
     ref_file = os.path.join(SIM_DATA_PATH, "testfile_singlesource.uvh5")
@@ -45,7 +47,7 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
 
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", paramfile)
     # This test obsparam file has "single_source.txt" as its catalog.
-    pyuvsim.uvsim.run_uvsim(param_filename)
+    pyuvsim.uvsim.run_uvsim(param_filename, backend=backend)
 
     # Loading the file and comparing is only done on rank 0.
     if pyuvsim.mpi.rank != 0:
@@ -76,6 +78,9 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     uv_new.extra_keywords = uv_ref.extra_keywords
     uv_ref.telescope.mount_type = uv_new.telescope.mount_type
 
+    # remove filename attribute to ensure equality
+    uv_new.filename = None
+    uv_ref.filename = None
     assert uv_new == uv_ref
 
 
@@ -94,12 +99,19 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
         ("monopole-nonflat", 3e-4),
     ],
 )
-def test_analytic_diffuse(model, tol, tmpdir):
+@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+@pytest.mark.parametrize("progbar", ["progsteps", "tqdm"])
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
+def test_analytic_diffuse(model, tol, tmpdir, backend, progbar):
     # Generate the given model and simulate for a few baselines.
     # Import from analytic_diffuse  (consider moving to rasg_affiliates?)
-    pytest.importorskip("analytic_diffuse")
+    analytic_diffuse = pytest.importorskip("analytic_diffuse")
     pytest.importorskip("astropy_healpix")
-    import analytic_diffuse
+    if progbar == "tqdm":
+        pytest.importorskip("tqdm")
 
     modname = model
     use_w = False
@@ -152,18 +164,26 @@ def test_analytic_diffuse(model, tol, tmpdir):
     with open(obspar_path, "w") as ofile:
         yaml.dump(obspar, ofile, default_flow_style=False)
 
-    uv_out = pyuvsim.run_uvsim(obspar_path, return_uv=True)
-    # Convert from Jy to K sr
-    dat = uv_out.data_array[:, 0, 0] * jy_to_ksr(uv_out.freq_array[0]).value
-    # Evaluate the solution and compare to visibilities.
-    soln = analytic_diffuse.get_solution(modname)
-    uvw_lam = uv_out.uvw_array * uv_out.freq_array[0] / c_ms
-    ana = soln(uvw_lam, **params)
-    np.testing.assert_allclose(ana / 2, dat, atol=tol, rtol=0)
+    uv_out = pyuvsim.run_uvsim(
+        obspar_path, return_uv=True, backend=backend, progbar=progbar
+    )
+    if pyuvsim.mpi.rank == 0:
+        # Convert from Jy to K sr
+        dat = uv_out.data_array[:, 0, 0] * jy_to_ksr(uv_out.freq_array[0]).value
+        # Evaluate the solution and compare to visibilities.
+        soln = analytic_diffuse.get_solution(modname)
+        uvw_lam = uv_out.uvw_array * uv_out.freq_array[0] / c_ms
+        ana = soln(uvw_lam, **params)
+        np.testing.assert_allclose(ana / 2, dat, atol=tol, rtol=0)
 
 
 @pytest.mark.filterwarnings("ignore:antenna_diameters are not set")
-def test_diffuse_units(tmpdir):
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
+@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+def test_diffuse_units(tmpdir, backend):
     pytest.importorskip("analytic_diffuse")
     pytest.importorskip("astropy_healpix")
 
@@ -226,14 +246,14 @@ def test_diffuse_units(tmpdir):
     with open(obspar_path, "w") as ofile:
         yaml.dump(obspar, ofile, default_flow_style=False)
 
-    uv_out_k = pyuvsim.run_uvsim(obspar_path, return_uv=True)
+    uv_out_k = pyuvsim.run_uvsim(obspar_path, backend=backend, return_uv=True)
 
     obspar["sources"] = {"catalog": catpath_jy}
     obspar["filing"]["outfile_name"] = "diffuse_units_jy_sim.uvh5"
     with open(obspar_path, "w") as ofile:
         yaml.dump(obspar, ofile, default_flow_style=False)
 
-    uv_out_jy = pyuvsim.run_uvsim(obspar_path, return_uv=True)
+    uv_out_jy = pyuvsim.run_uvsim(obspar_path, backend=backend, return_uv=True)
 
     # make the histories the same for comparison
     uv_out_jy.history = uv_out_k.history
@@ -244,7 +264,12 @@ def test_diffuse_units(tmpdir):
 
 
 @pytest.mark.parametrize("rename_beamfits", [True, False])
-def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
+@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
+def test_run_paramdict_uvsim(rename_beamfits, backend, tmp_path):
     # Running a simulation from parameter dictionary.
     param_file = os.path.join(
         SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml"
@@ -285,12 +310,17 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
     else:
         params = pyuvsim.simsetup._config_str_to_dict(param_file)
 
-    pyuvsim.run_uvsim(params, return_uv=True)
+    pyuvsim.run_uvsim(params, backend=backend, return_uv=True)
 
 
 @pytest.mark.parametrize("spectral_type", ["flat", "subband", "spectral_index"])
 @pytest.mark.parametrize("nfeeds", [1, 2])
-def test_run_gleam_uvsim(spectral_type, nfeeds):
+@pytest.mark.parametrize("backend", ["send_recv"])
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
+def test_run_gleam_uvsim(spectral_type, nfeeds, backend):
     params = pyuvsim.simsetup._config_str_to_dict(
         os.path.join(SIM_DATA_PATH, "test_config", "param_1time_testgleam.yaml")
     )
@@ -316,7 +346,11 @@ def test_run_gleam_uvsim(spectral_type, nfeeds):
     for beam_inter in beam_list:
         assert beam_inter.Nfeeds == nfeeds
 
-    uv_out = pyuvsim.run_uvsim(params, return_uv=True)
+    uv_out = pyuvsim.run_uvsim(params, backend=backend, return_uv=True)
+
+    if pyuvsim.mpi.rank != 0:
+        return
+
     assert uv_out.telescope.name == "Triangle"
 
     file_name = f"gleam_triangle_{spectral_type}.uvh5"
@@ -341,6 +375,8 @@ def test_run_gleam_uvsim(spectral_type, nfeeds):
     uv_out.history = uv_in.history
     uv_in.extra_keywords = uv_out.extra_keywords
     uv_in.telescope.mount_type = uv_out.telescope.mount_type
+    uv_in.filename = uv_out.filename
+
     assert uv_in.telescope._location == uv_out.telescope._location
     assert uv_in == uv_out
 
@@ -354,9 +390,19 @@ def test_run_gleam_uvsim(spectral_type, nfeeds):
         ["spectral_index", False, True],
     ),
 )
-def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
+@pytest.mark.parametrize("backend", ["send_recv"])
+@pytest.mark.parametrize("progbar", ["progsteps", "tqdm"])
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
+def test_zenith_spectral_sim(
+    spectral_type, tmpdir, use_cli, use_uvdata, backend, progbar
+):
     # Make a power law source at zenith in three ways.
     # Confirm that simulated visibilities match expectation.
+    if progbar == "tqdm":
+        pytest.importorskip("tqdm")
 
     params = pyuvsim.simsetup._config_str_to_dict(
         os.path.join(SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml")
@@ -464,6 +510,10 @@ def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
                     cat_in,
                     "--outfile",
                     uvd_out,
+                    "--backend",
+                    backend,
+                    "--progbar",
+                    progbar,
                 ]
             )
         else:
@@ -478,6 +528,10 @@ def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
                     "--quiet",
                     "--keep_nonroot_stdout",
                     "--raw_profile",
+                    "--backend",
+                    backend,
+                    "--progbar",
+                    progbar,
                 ]
             )
             assert os.path.exists(profile_file)
@@ -486,10 +540,19 @@ def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
     else:
         if use_uvdata:
             uv_out = pyuvsim.run_uvdata_uvsim(
-                input_uv=uvd, beam_list=beam_list, beam_dict=beam_dict, catalog=catalog
+                input_uv=uvd,
+                beam_list=beam_list,
+                beam_dict=beam_dict,
+                catalog=catalog,
+                backend=backend,
+                progbar=progbar,
             )
         else:
-            uv_out = pyuvsim.run_uvsim(param_file, return_uv=True)
+            uv_out = pyuvsim.run_uvsim(
+                param_file, return_uv=True, backend=backend, progbar=progbar
+            )
+    if pyuvsim.mpi.rank != 0:
+        return
 
     if use_cli and use_uvdata:
         # this is different because we are writing out the analytic beam to a
@@ -501,6 +564,10 @@ def test_zenith_spectral_sim(spectral_type, tmpdir, use_cli, use_uvdata):
         np.testing.assert_allclose(uv_out.data_array[ii, :, 0], exp_spectrum)
 
 
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 def test_pol_error():
     # Check that running with a uvdata object without the proper polarizations will fail.
     hera_uv = UVData()
@@ -521,6 +588,10 @@ def test_pol_error():
 
 @pytest.mark.filterwarnings("ignore:Setting the location attribute post initialization")
 @pytest.mark.parametrize("selenoid", ["SPHERE", "GSFC", "GRAIL23", "CE-1-LAM-GEO"])
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 def test_sim_on_moon(goto_tempdir, selenoid):
     pytest.importorskip("lunarsky")
     from spiceypy.utils.exceptions import SpiceUNKNOWNFRAME
@@ -591,6 +662,9 @@ def test_sim_on_moon(goto_tempdir, selenoid):
     except SpiceUNKNOWNFRAME as err:
         pytest.skip("SpiceUNKNOWNFRAME error: " + str(err))
 
+    if pyuvsim.mpi.rank != 0:
+        return
+
     assert history_utils._check_history_version(uv_out.history, pyradiosky.__version__)
     assert history_utils._check_history_version(uv_out.history, pyuvdata.__version__)
     assert history_utils._check_history_version(uv_out.history, pyuvsim.__version__)
@@ -603,6 +677,7 @@ def test_sim_on_moon(goto_tempdir, selenoid):
 
     # Lunar Frame Roundtripping
     param_dict["filing"]["outdir"] = str(tmpdir)
+
     uv_filename = pyuvsim.utils.write_uvdata(
         uv_out, param_dict, return_filename=True, quiet=True
     )
@@ -612,6 +687,10 @@ def test_sim_on_moon(goto_tempdir, selenoid):
 
 
 @pytest.mark.parametrize("selenoid", ["SPHERE", "GSFC", "GRAIL23", "CE-1-LAM-GEO"])
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
 def test_lunar_gauss(goto_tempdir, selenoid):
     pytest.importorskip("lunarsky")
     from lunarsky import MoonLocation
@@ -660,8 +739,12 @@ def test_lunar_gauss(goto_tempdir, selenoid):
     except SpiceUNKNOWNFRAME as err:
         pytest.skip("SpiceUNKNOWNFRAME error: " + str(err))
 
+    if pyuvsim.mpi.rank != 0:
+        return
+
     assert uv_out.telescope.location.ellipsoid == selenoid
 
+    assert uv_out._telescope_location.ellipsoid == selenoid
     # Skymodel and update positions
 
     # Init sky model

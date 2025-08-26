@@ -64,6 +64,21 @@ def run_pyuvsim(argv=None):
         help="Also save pickled LineStats data for line profiling.",
         action="store_true",
     )
+    parser.add_argument(
+        "--backend",
+        type=str,
+        help="Backend task collection for simulation",
+        choices=["rma", "send_recv"],
+        default="rma",
+    )
+
+    parser.add_argument(
+        "--progbar",
+        type=str,
+        help="Monitor and reporting module for simulation progress",
+        choices=["progsteps", "tqdm"],
+        default="progsteps",
+    )
 
     args = parser.parse_args(argv)
 
@@ -98,7 +113,11 @@ def run_pyuvsim(argv=None):
 
     if args.param is not None:
         uvsim.run_uvsim(
-            args.param, quiet=args.quiet, block_nonroot_stdout=block_nonroot_stdout
+            args.param,
+            quiet=args.quiet,
+            block_nonroot_stdout=block_nonroot_stdout,
+            backend=args.backend,
+            progbar=args.progbar,
         )
     else:
         uvd = UVData.from_file(args.uvdata)
@@ -113,12 +132,17 @@ def run_pyuvsim(argv=None):
             catalog=skymodel,
             quiet=args.quiet,
             block_nonroot_stdout=block_nonroot_stdout,
+            backend=args.backend,
+            progbar=args.progbar,
         )
-        pobj = Path(args.outfile)
-        utils.write_uvdata(
-            uvd_out,
-            param_dict={"outdir": str(pobj.parent), "outfile_name": str(pobj.name)},
-        )
+
+    if mpi.rank != 0:
+        return
+
+    pobj = Path(args.outfile)
+    utils.write_uvdata(
+        uvd_out, param_dict={"outdir": str(pobj.parent), "outfile_name": str(pobj.name)}
+    )
 
     if args.profile:
         dt = pytime.time() - t0

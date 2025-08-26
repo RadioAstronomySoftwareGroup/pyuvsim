@@ -25,19 +25,33 @@ def profdata_dir_setup(tmpdir):
 
 
 @pytest.mark.filterwarnings("ignore:The mount_type parameter must be set for UVBeam")
-def test_profiler(tmpdir):
+@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+@pytest.mark.parametrize("progbar", ["progsteps", "tqdm"])
+@pytest.mark.parallel(2)
+def test_profiler(tmpdir, backend, progbar):
+    if progbar == "tqdm":
+        pytest.importorskip("tqdm")
     line_profiler = pytest.importorskip("line_profiler")
+
     outpath = profdata_dir_setup(tmpdir)
     testprof_fname = str(outpath.join("time_profile.out"))
     pyuvsim.profiling.set_profiler(outfile_prefix=testprof_fname, dump_raw=True)
+
     with check_warnings(UserWarning, match="Profiler already set"):
         pyuvsim.profiling.set_profiler(
             outfile_prefix=testprof_fname[:-4], dump_raw=True
         )
+
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml"
     )
-    pyuvsim.uvsim.run_uvsim(param_filename, return_uv=True)
+    pyuvsim.uvsim.run_uvsim(
+        param_filename, return_uv=True, backend=backend, progbar=progbar
+    )
+
+    if pyuvsim.mpi.rank != 0:
+        return
+
     time_profiler = pyuvsim.profiling.get_profiler()
     time_profiler.disable_by_count()
     assert isinstance(time_profiler, line_profiler.LineProfiler)
