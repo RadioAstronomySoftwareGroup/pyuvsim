@@ -32,27 +32,51 @@ pytest.importorskip("mpi4py")  # noqa
 @pytest.mark.parametrize(
     "paramfile", ["param_1time_1src_testcat.yaml", "param_1time_1src_testvot.yaml"]
 )
+@pytest.mark.parametrize("use_uvdata", [True, False])
 @pytest.mark.skipif(
     not pytest.pyuvsim_can_parallel,
     reason="mpi-pytest is not installed. Cannot run parallel tests.",
 )
 @pytest.mark.parallel(2)
-def test_run_paramfile_uvsim(goto_tempdir, paramfile):
+def test_run_one_source(goto_tempdir, paramfile, use_uvdata):
     # Test vot and txt catalogs for parameter simulation
     # Compare to reference files.
     ref_file = os.path.join(SIM_DATA_PATH, "testfile_singlesource.uvh5")
     uv_ref = UVData.from_file(ref_file)
 
     param_filename = os.path.join(SIM_DATA_PATH, "test_config", paramfile)
-    # This test obsparam file has "single_source.txt" as its catalog.
-    pyuvsim.uvsim.run_uvsim(param_filename)
+    path = goto_tempdir
+    ofilepath = os.path.join(path, "tempfile.uvh5")
+
+    if use_uvdata:
+        # only run most of the set up on rank 0
+        if pyuvsim.mpi.rank == 0:
+            uvd, beam_list, beam_dict = pyuvsim.simsetup.initialize_uvdata_from_params(
+                param_filename, return_beams=True
+            )
+        else:
+            uvd = None
+            beam_dict = None
+            beam_list = None
+
+        # initialize the catalog on all nodes. For non-zero ranks, this skymodel
+        # is made special so that it will break if line 877 in uvsim.py does not exist
+        catalog = pyuvsim.simsetup.initialize_catalog_from_params(param_filename)
+        # This test obsparam file has "single_source.txt" as its catalog.
+
+        uv_out = pyuvsim.run_uvdata_uvsim(
+            input_uv=uvd, beam_list=beam_list, beam_dict=beam_dict, catalog=catalog
+        )
+        if pyuvsim.mpi.rank == 0:
+            # write the file out so we can make the rest of the
+            # test work together nicely
+            uv_out.write_uvh5(ofilepath, clobber=True)
+    else:
+        pyuvsim.uvsim.run_uvsim(param_filename)
 
     # Loading the file and comparing is only done on rank 0.
     if pyuvsim.mpi.rank != 0:
         return
-
-    path = goto_tempdir
-    ofilepath = os.path.join(path, "tempfile.uvh5")
 
     uv_new = UVData.from_file(ofilepath)
 
@@ -75,6 +99,7 @@ def test_run_paramfile_uvsim(goto_tempdir, paramfile):
     uv_new.history = uv_ref.history
     uv_new.extra_keywords = uv_ref.extra_keywords
     uv_ref.telescope.mount_type = uv_new.telescope.mount_type
+    uv_new.filename = uv_ref.filename
 
     assert uv_new == uv_ref
 
