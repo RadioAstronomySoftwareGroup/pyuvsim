@@ -70,7 +70,7 @@ def test_run_one_source(goto_tempdir, paramfile, use_uvdata):
         if pyuvsim.mpi.rank == 0:
             # write the file out so we can make the rest of the
             # test work together nicely
-            uv_out.write_uvh5(ofilepath, clobber=True)
+            uv_out.write_uvh5(ofilepath, fix_autos=True, clobber=True)
     else:
         pyuvsim.uvsim.run_uvsim(param_filename)
 
