@@ -19,6 +19,8 @@ feed_angle, mount_type) which will be released in pyuvdata 3.2
 - Only import lunarsky if needed.
 
 ### Fixed
+- A potential bug/deadlock when a user passes a `SkyModel` object to `run_uvdata_uvsim`
+instead of a `SkyModelData` object.
 - A bug where measurement sets could not be written out because they were not
 phased.
 - A bug where antennas that did not have visibilities associated with them were
