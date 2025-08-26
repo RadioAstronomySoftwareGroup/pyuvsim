@@ -463,6 +463,11 @@ def test_single_offzenith_source(beam, hera_loc):
 @pytest.mark.filterwarnings("ignore:No julian date given for mock catalog.")
 @pytest.mark.filterwarnings("ignore:No out format specified for uvdata file.")
 @pytest.mark.filterwarnings("ignore:The mount_type parameter must be set for UVBeam")
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
+@pytest.mark.parallel(2)
 def test_select_antennas():
     pytest.importorskip("mpi4py")
 
@@ -1117,6 +1122,11 @@ def test_overflow_check():
         pyuvsim.uvsim._check_ntasks_valid(should_fail)
 
 
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
+@pytest.mark.parallel(2)
 def test_fullfreq_check(uvdata_two_redundant_bls_triangle_sources):
     # Check that run_uvdata_uvsim will error if 'spectral_type' is 'full'
     # and the frequencies on the catalog do not match the simulation's.
@@ -1362,6 +1372,11 @@ def test_nblts_not_square(uvdata_two_redundant_bls_triangle_sources, cut_beam, b
 
 
 @pytest.mark.filterwarnings("ignore:The uvw_array does not match the expected")
+@pytest.mark.skipif(
+    not pytest.pyuvsim_can_parallel,
+    reason="mpi-pytest is not installed. Cannot run parallel tests.",
+)
+@pytest.mark.parallel(2)
 def test_uvdata_uvsim_uvw_setting(uvdata_two_redundant_bls_triangle_sources):
     pytest.importorskip("mpi4py")
     uvd, beam_list, beam_dict, sky_model = uvdata_two_redundant_bls_triangle_sources
@@ -1375,6 +1390,9 @@ def test_uvdata_uvsim_uvw_setting(uvdata_two_redundant_bls_triangle_sources):
     out_uv2 = pyuvsim.uvsim.run_uvdata_uvsim(
         input_uv=uvd2, beam_list=beam_list, beam_dict=beam_dict, catalog=sky_model
     )
+
+    if pyuvsim.mpi.rank != 0:
+        return
 
     assert out_uv1 == out_uv2
 

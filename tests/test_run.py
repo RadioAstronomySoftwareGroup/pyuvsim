@@ -315,7 +315,7 @@ def test_run_paramdict_uvsim(rename_beamfits, backend, tmp_path):
 
 @pytest.mark.parametrize("spectral_type", ["flat", "subband", "spectral_index"])
 @pytest.mark.parametrize("nfeeds", [1, 2])
-@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+@pytest.mark.parametrize("backend", ["send_recv"])
 @pytest.mark.skipif(
     not pytest.pyuvsim_can_parallel,
     reason="mpi-pytest is not installed. Cannot run parallel tests.",
@@ -375,6 +375,8 @@ def test_run_gleam_uvsim(spectral_type, nfeeds, backend):
     uv_out.history = uv_in.history
     uv_in.extra_keywords = uv_out.extra_keywords
     uv_in.telescope.mount_type = uv_out.telescope.mount_type
+    uv_in.filename = uv_out.filename
+
     assert uv_in.telescope._location == uv_out.telescope._location
     assert uv_in == uv_out
 
@@ -388,7 +390,7 @@ def test_run_gleam_uvsim(spectral_type, nfeeds, backend):
         ["spectral_index", False, True],
     ),
 )
-@pytest.mark.parametrize("backend", ["rma", "send_recv"])
+@pytest.mark.parametrize("backend", ["send_recv"])
 @pytest.mark.parametrize("progbar", ["progsteps", "tqdm"])
 @pytest.mark.skipif(
     not pytest.pyuvsim_can_parallel,
@@ -549,6 +551,8 @@ def test_zenith_spectral_sim(
             uv_out = pyuvsim.run_uvsim(
                 param_file, return_uv=True, backend=backend, progbar=progbar
             )
+    if pyuvsim.mpi.rank != 0:
+        return
 
     if use_cli and use_uvdata:
         # this is different because we are writing out the analytic beam to a

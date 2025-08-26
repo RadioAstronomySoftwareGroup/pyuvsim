@@ -87,18 +87,17 @@ def start_mpi(block_nonroot_stdout=True, thread_multiple=False):
 
     world_comm.Barrier()
 
-    if do_once:  # pragma: no cover
-        atexit.register(free_shared)
+    if do_once and (rank != 0) and block_nonroot_stdout:  # pragma: no cover
+        # For non-root ranks, do not print to stdout.
+        if sys.platform.startswith("win"):
+            with open("NUL", "w") as devnull:
+                sys.stdout = devnull
+        else:
+            with open("/dev/null", "w") as devnull:
+                sys.stdout = devnull
+        atexit.register(sys.stdout.close)
 
-        if (rank != 0) and block_nonroot_stdout:
-            # For non-root ranks, do not print to stdout.
-            if sys.platform.startswith("win"):
-                with open("NUL", "w") as devnull:
-                    sys.stdout = devnull
-            else:
-                with open("/dev/null", "w") as devnull:
-                    sys.stdout = devnull
-            atexit.register(sys.stdout.close)
+    atexit.register(free_shared)
 
 
 def shared_mem_bcast(arr, root=0):

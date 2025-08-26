@@ -1109,14 +1109,20 @@ def run_uvdata_uvsim(
     comm = mpi.get_comm()
     Npus = mpi.get_Npus()
 
-    if Npus < 2:
-        raise ValueError("At least 2 PUs are required to run pyuvsim.")
     # ensure that we have full or flat spectral type and that we have points not
     # healpix
     if rank == 0:
         input_uv, beam_list, catalog, input_order = _run_uvdata_input_check(
             input_uv=input_uv, beam_list=beam_list, catalog=catalog
         )
+    else:
+        input_uv = UVData()
+        beam_list = BeamList([])
+        beam_dict = None
+        catalog = SkyModelData()
+
+    if Npus < 2:
+        raise ValueError("At least 2 PUs are required to run pyuvsim.")
 
     input_uv = comm.bcast(input_uv, root=0)
     beam_dict = comm.bcast(beam_dict, root=0)
@@ -1156,14 +1162,14 @@ def run_uvdata_uvsim(
                 Nblts, Nfreqs, Nsrcs, rank - 1, Npus - 1
             )
 
-        local_task_iter = uvdata_to_task_iter(
-            task_inds,
-            input_uv,
-            catalog.subselect(src_inds),
-            beam_list,
-            beam_dict,
-            Nsky_parts=Nsky_parts,
-        )
+            local_task_iter = uvdata_to_task_iter(
+                task_inds,
+                input_uv,
+                catalog.subselect(src_inds),
+                beam_list,
+                beam_dict,
+                Nsky_parts=Nsky_parts,
+            )
     elif backend == "send_recv":
         # hack this a little bit, we want to have Nbls * Nfreqs * Ntimes
         # total tasks we are distributing over all PUs but then we

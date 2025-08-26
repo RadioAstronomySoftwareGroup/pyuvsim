@@ -135,11 +135,14 @@ def run_pyuvsim(argv=None):
             backend=args.backend,
             progbar=args.progbar,
         )
-        pobj = Path(args.outfile)
-        utils.write_uvdata(
-            uvd_out,
-            param_dict={"outdir": str(pobj.parent), "outfile_name": str(pobj.name)},
-        )
+
+    if mpi.rank != 0:
+        return
+
+    pobj = Path(args.outfile)
+    utils.write_uvdata(
+        uvd_out, param_dict={"outdir": str(pobj.parent), "outfile_name": str(pobj.name)}
+    )
 
     if args.profile:
         dt = pytime.time() - t0
