@@ -375,7 +375,7 @@ def create_text_catalog(
     source_coord = SkyCoord(
         alt=Angle(alts, unit=u.deg),
         az=Angle(azs, unit=u.deg),
-        obstime=time,
+        obstime=time.iso,
         frame="altaz",
         location=location,
     )

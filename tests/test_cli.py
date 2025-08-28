@@ -1,10 +1,14 @@
 # Copyright (c) 2025 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+import os
 import subprocess  # nosec
 from pathlib import Path
 
+import numpy as np
 import pytest
-from pyuvdata.telescopes import known_telescope_location
+from pyradiosky import SkyModel
+
+# from pyuvdata.telescopes import known_telescope_location
 from pyuvdata.testing import check_warnings
 
 from pyuvsim import cli
@@ -63,7 +67,8 @@ def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
         ):
             cli.text_to_catalog(["-t", "R"])
     else:
-        mwa_location = known_telescope_location("mwa")
+        # kept for posterity but very slightly different value was used in reference catalogs
+        # mwa_location = known_telescope_location("mwa")
         if use_old:
             command = []
         else:
@@ -72,13 +77,14 @@ def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
             "-t",
             "R",
             "-n",
-            str(20),
+            str(10),
             "--jd",
             str(2460000),
             "--lat",
-            str(mwa_location.lat.deg),
+            # it would be better to use the mwa_location here
+            "-26.70331941",
             "--lon",
-            str(mwa_location.lon.deg),
+            "116.6708152",
         ]
         if verbosity is not None and not use_old:
             command.append(f"-{'v' * verbosity}")
@@ -113,9 +119,35 @@ def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
 
         assert bmp_file.exists()
         assert skyh5_file.exists()
+
         if plot:
             plotfile = path / "R.png"
             assert plotfile.exists()
+
+        # this next part could run only once but maybe better to check old and new?
+
+        # load current catalog as SkyModel
+        current_catalog = SkyModel()
+        current_catalog.read_skyh5("R.skyh5")
+
+        # load reference catalog as SkyModel
+        reference_catalog = SkyModel()
+        reference_catalog_path = os.path.join(SIM_DATA_PATH, "test_catalogs", "R.txt")
+        reference_catalog.read(reference_catalog_path)
+
+        # get lons and lats from current catalog
+        # offset lons by 30 degrees as that is how reference catalog was made
+        # round to 6 decimals as I believe other catalog was rounded
+        lons = np.round(current_catalog.skycoord.data.lon.value + 30, 6)
+        lats = np.round(current_catalog.skycoord.data.lat.value, 6)
+
+        # get lons and lats from reference catalog
+        old_lats = reference_catalog.skycoord.data.lat.value
+        old_lons = reference_catalog.skycoord.data.lon.value
+
+        # check agreement of all of the source locations
+        assert (lons == old_lons).all()
+        assert (lats == old_lats).all()
 
 
 def test_plot_csv_antpos_basic(goto_tempdir):
