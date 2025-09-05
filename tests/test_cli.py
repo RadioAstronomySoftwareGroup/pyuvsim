@@ -147,7 +147,7 @@ def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
 
         # APPARENTLY ON SOME OS VERSIONS THE PRODUCED IMAGE HAS 19 POINTS!!!
         # SPECIAL CASING AGAINST THOSE VERSIONS FOR NOW
-        if len(lons) != 19:
+        if current_catalog.Ncomponents == reference_catalog.Ncomponents:
             # check agreement of all of the source locations
             assert (lons == old_lons).all()
             assert (lats == old_lats).all()
