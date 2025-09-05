@@ -375,7 +375,7 @@ def create_text_catalog(
     source_coord = SkyCoord(
         alt=Angle(alts, unit=u.deg),
         az=Angle(azs, unit=u.deg),
-        obstime=time.iso,
+        obstime=time,
         frame="altaz",
         location=location,
     )
@@ -394,6 +394,8 @@ def create_text_catalog(
         plt.clf()
 
     n_srcs = len(icrs_coord)
+    del icrs_coord.obstime
+    del icrs_coord.location
     sky = SkyModel(
         name=[f"text_{text}_{i}" for i in range(n_srcs)],
         skycoord=icrs_coord,
