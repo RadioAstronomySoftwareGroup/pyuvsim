@@ -911,7 +911,8 @@ def run_ref_sim(argv=None):
     parser.add_argument(
         "version",
         type=str,
-        help="Specify which first generation reference simulation you wish to run. Can be done "
+        help="Specify which first generation reference simulation you wish to run. Writes the "
+        "output to `results_data` in the current working directory. Can be done "
         "with numbers (1-8) or by explicit name:"
         "\n\t1: 1.1_baseline_number"
         "\n\t2: 1.2_time_axis"
