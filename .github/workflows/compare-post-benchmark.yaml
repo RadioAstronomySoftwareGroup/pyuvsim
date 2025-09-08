@@ -1,10 +1,9 @@
 name: "Run Compare Post Benchmark"
-on: [pull_request]
-#on:
-#  workflow_run:
-#    workflows: [Tests]
-#    types:
-#      - in_progress
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
