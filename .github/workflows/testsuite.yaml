@@ -80,7 +80,7 @@ jobs:
           python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: Upload Coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -123,7 +123,7 @@ jobs:
         run: |
           pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
 
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v5
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -169,7 +169,7 @@ jobs:
         run: |
           pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v5
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -219,7 +219,7 @@ jobs:
           pytest -W error --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: Upload Coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
