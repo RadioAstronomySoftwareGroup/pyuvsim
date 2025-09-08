@@ -67,8 +67,6 @@ def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
         ):
             cli.text_to_catalog(["-t", "R"])
     else:
-        # kept for posterity but very slightly different value was used in reference catalogs
-        # mwa_location = known_telescope_location("mwa")
         if use_old:
             command = []
         else:
@@ -81,7 +79,6 @@ def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
             "--jd",
             str(2460000),
             "--lat",
-            # it would be better to use the mwa_location here
             "-26.70331941",
             "--lon",
             "116.6708152",

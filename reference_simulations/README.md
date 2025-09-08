@@ -76,6 +76,17 @@ compare their results to the latest set posted to the BDR:
     - 1.6_healpix
     - 1.7_multi_beam
     - 1.8_lunar
+ - `run_ref_sim`
+   A wrapper of `run_pyuvsim` to run the reference simulations. Sample script usage:
+   ```
+   # see argparse help menu for sample usage
+   run_ref_sim --help
+   # run a first generation reference simulation by name
+   mpiexec run_ref_sim 1.1_baseline_number
+   # run a first generation reference simulation by number, in this case 1.1_baseline_number
+   mpiexec run_ref_sim 1
+   ```
+   Writes the output to `results_data` in the current working directory.
 
 The first generation reference simulations run in only a couple minutes on a single core. The
 simulations run from the top directory with:
