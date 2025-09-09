@@ -7,6 +7,8 @@ omit =
     setup.py
 source =
     pyuvsim
+patch =
+    subprocess
 
 [report]
 omit =
