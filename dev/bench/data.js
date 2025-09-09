@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1757385102833,
+  "lastUpdate": 1757461958453,
   "repoUrl": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim",
   "entries": {
     "Benchmark": [
@@ -240,6 +240,86 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.006165083712943469",
             "extra": "mean: 567.8030285000091 msec\nrounds: 2"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "bryna.hazelton@gmail.com",
+            "name": "Bryna Hazelton",
+            "username": "bhazelton"
+          },
+          "committer": {
+            "email": "brynah@phys.washington.edu",
+            "name": "Bryna Hazelton",
+            "username": "bhazelton"
+          },
+          "distinct": true,
+          "id": "ac58efa524f15995f77cff7e3192e72aed9f5cae",
+          "message": "add patch = subprocess in coverage.py, required for pytest-cov 7.0",
+          "timestamp": "2025-09-09T16:46:37-07:00",
+          "tree_id": "5be91f4bdcde8520e3b358e4edf6f2ba2c35b70a",
+          "url": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim/commit/ac58efa524f15995f77cff7e3192e72aed9f5cae"
+        },
+        "date": 1757461957499,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.5_uvbeam]",
+            "value": 0.041531919312740535,
+            "unit": "iter/sec",
+            "range": "stddev: 0.33822833391407925",
+            "extra": "mean: 24.07786629049997 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_time_axis]",
+            "value": 0.03707025668808728,
+            "unit": "iter/sec",
+            "range": "stddev: 0.07224543217401978",
+            "extra": "mean: 26.975804576000016 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.4_source_axis]",
+            "value": 0.02997504122646896,
+            "unit": "iter/sec",
+            "range": "stddev: 0.3491181396757535",
+            "extra": "mean: 33.361088394999996 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_frequency_axis]",
+            "value": 0.027348979533038175,
+            "unit": "iter/sec",
+            "range": "stddev: 0.668686071298269",
+            "extra": "mean: 36.564435568500016 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_baseline_number]",
+            "value": 0.30990403745398937,
+            "unit": "iter/sec",
+            "range": "stddev: 0.15977440395978043",
+            "extra": "mean: 3.2268053304999853 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.7_multi_beam]",
+            "value": 0.011984634061313308,
+            "unit": "iter/sec",
+            "range": "stddev: 0.42118378853650995",
+            "extra": "mean: 83.44017805499999 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.8_lunar]",
+            "value": 0.3104121190518431,
+            "unit": "iter/sec",
+            "range": "stddev: 0.08347950842862195",
+            "extra": "mean: 3.2215237054999974 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.6_healpix]",
+            "value": 1.7286209679467393,
+            "unit": "iter/sec",
+            "range": "stddev: 0.008645488436320924",
+            "extra": "mean: 578.4958175000056 msec\nrounds: 2"
           }
         ]
       }
