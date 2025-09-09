@@ -20,7 +20,11 @@ def branch_scheme(version):
         if version.branch == "main":
             return version.format_choice("+{node}", "+{node}.dirty")
         else:
-            return version.format_choice("+{node}.{branch}", "+{node}.{branch}.dirty")
+            version_str = version.format_choice(
+                "+{node}.{branch}", "+{node}.{branch}.dirty"
+            )
+            version_str = version_str.replace("/", ".")
+            return version_str
 
 
 setup(use_scm_version={"local_scheme": branch_scheme})
