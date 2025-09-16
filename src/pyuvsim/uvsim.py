@@ -796,7 +796,7 @@ def _run_uvdata_input_check(
                 and sky.freq_array is None
                 and sky.reference_frequency is None
             ):
-                sky.freq_array = freq_array
+                sky.at_frequencies(freq_array)
             sky.healpix_to_point()
         catalog = SkyModelData(sky)
 
