@@ -313,7 +313,7 @@ def test_run_paramdict_uvsim(rename_beamfits, tmp_path):
     pyuvsim.run_uvsim(params, return_uv=True)
 
 
-#@pytest.mark.parametrize("param_file", ["param_1time_testgleam.yaml", "param_2freq_testgleam.yaml"])
+# @pytest.mark.parametrize("param_file", ["param_1time_testgleam.yaml", "param_2freq_testgleam.yaml"])
 @pytest.mark.parametrize("spectral_type", ["flat", "subband", "spectral_index"])
 @pytest.mark.parametrize("nfeeds", [1, 2])
 def test_run_gleam_uvsim(spectral_type, nfeeds):
@@ -345,9 +345,9 @@ def test_run_gleam_uvsim(spectral_type, nfeeds):
     uv_out = pyuvsim.run_uvsim(params, return_uv=True)
     assert uv_out.telescope.name == "Triangle"
 
-    #if param_file == "param_1time_testgleam.yaml":
-        #file_name = f"gleam_triangle_{spectral_type}.uvh5"
-    #else:
+    # if param_file == "param_1time_testgleam.yaml":
+    # file_name = f"gleam_triangle_{spectral_type}.uvh5"
+    # else:
     file_name = f"gleam_triangle_2freq_{spectral_type}.uvh5"
     uv_in = UVData.from_file(os.path.join(SIM_DATA_PATH, file_name))
     uv_in.rename_phase_center(0, "unprojected")
