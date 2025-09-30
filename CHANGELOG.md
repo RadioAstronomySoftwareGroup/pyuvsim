@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.4.1] - 2025-09-30
+
 ### Added
 - Added pooch as a testing dependency.
 - Support for the new way that pyuvdata test data is handled using pooch
