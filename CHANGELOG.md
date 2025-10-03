@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [1.4.2] - 2025-10-03
+
+### Fixed
+- CI job that pushed new releases to PyPI.
+
 ## [1.4.1] - 2025-09-30
 
 ### Added
