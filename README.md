@@ -129,6 +129,7 @@ you will need the following packages:
 * pooch >= 1.8
 * pre-commit
 * pytest
+* mpi-pytest >= 2025.7.0
 * pytest-cov >= 5.0
 * pypandoc
 * sphinx
@@ -196,6 +197,13 @@ Documentation on how to run simulations and developer API documentation is hoste
 ```
 pytest
 ```
+Note that this uses the forking mode of `mpi-pytest`, which is not supported on all operating systems. If the forking mode does not work, you will have to run the tests with different numbers of processes separately. Here is an example that runs all tests with 1 process, then runs all tests with 2 processes:
+```
+mpiexec -n 1 pytest -m parallel[1]
+mpiexec -n 2 pytest -m parallel[2]
+```
+In the non-forking mode, wrapping pytest in an mpiexec call for the case of 1 process which includes tests not using mpi may not be necessary.
+
 You can alternatively run `python -m pytest pyuvsim` or `python setup.py test`.
 You will need to have all dependencies installed.
 
