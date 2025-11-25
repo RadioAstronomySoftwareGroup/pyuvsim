@@ -4,12 +4,14 @@ import atexit
 import os
 import re
 import shutil
+import subprocess  # nosec
 
 import pytest
 from numpy import unique
 from pyuvdata.testing import check_warnings
 
 import pyuvsim
+from pyuvsim import mpi  # noqa
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 
@@ -51,6 +53,31 @@ def test_profiler(tmpdir):
     assert unique(func_names).tolist() == sorted(
         pyuvsim.profiling.default_profile_funcs
     )
+
+
+@pytest.mark.filterwarnings("ignore:The mount_type parameter must be set for UVBeam")
+@pytest.mark.parallel(2)
+def test_profiler_mpi(goto_tempdir):
+    param_filename = os.path.join(
+        SIM_DATA_PATH, "test_config", "param_1time_1src_testcat.yaml"
+    )
+
+    subprocess.run(  # nosec
+        [
+            "run_pyuvsim",
+            "--param",
+            param_filename,
+            "--profile",
+            "outfile",
+            "--raw_profile",
+        ]
+    )
+
+    if mpi.rank == 0:
+        output = os.listdir()
+        assert "outfile.lprof" in output
+        assert "outfile_meta.out" in output
+        assert "outfile.out" in output
 
 
 def test_profiler_mock_import(tmpdir):
