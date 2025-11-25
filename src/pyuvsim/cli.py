@@ -135,8 +135,6 @@ def run_pyuvsim(argv=None):
         dt = pytime.time() - t0
         maxrss = mpi.get_max_node_rss()
         rtime = str(timedelta(seconds=dt))
-        if isinstance(maxrss, float):
-            print(f"\tRuntime: {rtime} \n\tMaxRSS: {maxrss:.3f} GiB")
         if hasattr(profiling.prof, "meta_file"):
             with open(profiling.prof.meta_file, "a") as afile:
                 afile.write(f"Runtime \t {rtime}\nMaxRSS \t {maxrss:.3f}\n")
