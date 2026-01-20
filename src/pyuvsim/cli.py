@@ -816,7 +816,7 @@ def get_latest_api_response_pid(sim_name):
     # api url
     api_url = (
         "https://repository.library.brown.edu/api/collections/bdr:wte2qah8/?q="
-        f"primary_title:{sim_name}&wt=json&sort=object_last_modified_dsi desc&rows=1"
+        f"primary_title:{sim_name}&wt=json&sort=object_created_dsi desc&rows=1"
     )
 
     print(
