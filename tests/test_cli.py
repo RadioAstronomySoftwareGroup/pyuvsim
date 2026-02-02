@@ -15,7 +15,7 @@ from pyuvsim import cli
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
 try:
-    subprocess.check_output(["convert", "--version"])  # nosec
+    subprocess.check_output(["magick", "--version"])  # nosec
     img_mgk_installed = True
 except (FileNotFoundError, subprocess.CalledProcessError):
     img_mgk_installed = False
@@ -105,7 +105,7 @@ def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
             assert "saved catalog file to" in output
         else:
             assert output.startswith(
-                "['convert', '-background', 'black', '-fill', 'white'"
+                "['magick', '-background', 'black', '-fill', 'white'"
             )
             assert "generating image file" in output
             assert "saved catalog file to" in output
