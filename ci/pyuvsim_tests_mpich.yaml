@@ -22,6 +22,7 @@ dependencies:
   - scipy>=1.9
   - setuptools_scm>=8.1
   - ghostscript
+  - urw-base35-fonts
   - pip:
     - pyradiosky>=1.1.0
     - mpi-pytest>=2025.7.0
