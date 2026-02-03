@@ -302,7 +302,7 @@ def create_text_catalog(
         ) from ie
 
     try:
-        subprocess.check_output(["convert", "--version"])  # nosec
+        subprocess.check_output(["magick", "--version"])  # nosec
     except (FileNotFoundError, subprocess.CalledProcessError) as err:
         raise RuntimeError(
             "ImageMagick must installed to create text catalogs"
@@ -317,7 +317,7 @@ def create_text_catalog(
     dpi = int(np.ceil(char_pix_height / emsize))
     # dpi = height of a letter in pixels/hight of letter in inches
     im_cmd = [
-        "convert",
+        "magick",
         "-background",
         "black",
         "-fill",
@@ -330,10 +330,10 @@ def create_text_catalog(
         "PixelsPerInch",
         "-density",
         str(dpi),
-        "-trim",
-        "+repage",
         "-antialias",
         "label:" + text.upper(),
+        "-trim",
+        "+repage",
         f"{imgfname}",
     ]
     if verbose > 1:
