@@ -7,7 +7,7 @@ dependencies:
   - coverage
   - line_profiler
   - matplotlib>=3.6.*
-  - mpich
+  - mpich<5.0  # pin added 2/2026 due to CI seg faults
   - mpi4py>=3.1.3
   - numpy>=1.23
   - pip
