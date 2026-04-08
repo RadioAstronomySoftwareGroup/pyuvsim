@@ -323,7 +323,8 @@ def create_text_catalog(
         "-fill",
         "white",
         "-font",
-        "C059-Bold",  # still looking for optimal font
+        # "C059-Bold",  # still looking for optimal font
+        "Times-Bold",  # still looking for optimal font
         "-pointsize",
         "10",
         "-units",
