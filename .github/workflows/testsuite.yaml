@@ -74,6 +74,11 @@ jobs:
           git version
           SETUPTOOLS_SCM_DEBUG=1 pip install --no-deps .
 
+      - name: Random Testing
+        if: matrix.os == 'macos-latest'
+        run: |
+          convert -list font | head
+
       - name: Run Tests Linux/MacOS
         if: matrix.os != 'windows-latest'
         run: |
