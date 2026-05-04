@@ -41,7 +41,7 @@ jobs:
       - name: Install hera_sim
         run: |
           cd ../hera_sim
-          pip install .[tests]
+          pip install --group tests .
 
       # re-install pyuvsim last to ensure the checked out code is installed
       # (because sometimes the hera_sim install overwrites the earlier install.)
