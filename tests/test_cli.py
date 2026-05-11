@@ -114,7 +114,7 @@ def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
 
         path = Path(goto_tempdir)
         # just use the stored R.bmp file as we no longer test the image generation
-        bmp_file = os.path.join(SIM_DATA_PATH, "test_catalogs", "R.bmp")
+        bmp_file = Path(os.path.join(SIM_DATA_PATH, "test_catalogs", "R.bmp"))
         skyh5_file = path / "R.skyh5"
 
         assert bmp_file.exists()
