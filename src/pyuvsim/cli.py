@@ -265,6 +265,7 @@ def create_text_catalog(
     plot: bool = False,
     thresh: int = 140,
     verbose: int = 0,
+    test: bool = False,
 ):
     """
     Create a test pattern catalog that spells out something.
@@ -292,6 +293,8 @@ def create_text_catalog(
         A number between 1 and 255.
     verbose : int
         How verbose to be, default is 0, max is 2.
+    test : bool
+        Use fiducial bmp file for testing.
     """
     try:
         import matplotlib.image as mpimg
@@ -310,6 +313,10 @@ def create_text_catalog(
 
     catname = "".join(text.split())
     imgfname = catname + ".bmp"
+
+    # if testing overwrite imgfname as we don't test image generation
+    if test:
+        imgfname = os.path.join(SIM_DATA_PATH, "test_catalogs", "R.bmp")
 
     # first lets construct our image
     fontsize = 10  # this ends up being arbitrary here
@@ -340,13 +347,18 @@ def create_text_catalog(
         print(im_cmd)
     if verbose > 0:
         print("generating image file", imgfname)
-    p = psutil.Popen(im_cmd)
-    if verbose > 1:
-        print(p.communicate())
-    p.wait(timeout=2)
+
+    # when testing we use fiducial R.bmp in data
+    if not test:  # pragma: nocover
+        p = psutil.Popen(im_cmd)
+
+        if verbose > 1:
+            print(p.communicate())
+        p.wait(timeout=2)
 
     if verbose > 0:
         print("processing image into a catalog")
+
     im = mpimg.imread(imgfname)
     arr = im[:, :, 0]  # image is rgb but actually white, grab the r channel
     arr = arr[::-1, :]  # flip updown
@@ -464,6 +476,8 @@ def text_to_catalog(argv=None):
     )
     parser.add_argument("--plot", action="store_true")
 
+    parser.add_argument("--test", action="store_true")
+
     parser.add_argument("-v", "--verbose", action="count", default=0)
 
     args = parser.parse_args(argv)
@@ -477,6 +491,7 @@ def text_to_catalog(argv=None):
         plot=args.plot,
         thresh=args.thresh,
         verbose=args.verbose,
+        test=args.test,
     )
 
 
@@ -538,6 +553,7 @@ def im_to_catalog(argv=None):
         help="Longitude in degrees on which to center the text at zenith.",
     )
     parser.add_argument("--plot", action="store_true")
+    parser.add_argument("--test", action="store_true")
     args = parser.parse_args(argv)
 
     warnings.warn(
@@ -561,6 +577,8 @@ def im_to_catalog(argv=None):
     ]
     if args.plot:
         arglist.append("--plot")
+    if args.test:
+        arglist.append("--test")
     arglist.append("-vv")
 
     text_to_catalog(arglist)

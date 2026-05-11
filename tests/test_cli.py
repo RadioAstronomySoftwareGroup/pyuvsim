@@ -44,7 +44,6 @@ def test_uvdata_to_telescope_config_errors():
         cli.uvdata_to_telescope_config(["foo"])
 
 
-@pytest.mark.xfail(reason="This test has been failing due to CLI font issues.")
 @pytest.mark.parametrize(
     ["verbosity", "plot", "use_old"],
     [(None, True, False), (1, False, False), (2, True, True)],
@@ -72,6 +71,7 @@ def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
             command = []
         else:
             command = ["text_to_catalog"]
+        # run command with --test as not testing image generation
         command += [
             "-t",
             "R",
@@ -83,6 +83,7 @@ def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
             "-26.70331941",
             "--lon",
             "116.6708152",
+            "--test",
         ]
         if verbosity is not None and not use_old:
             command.append(f"-{'v' * verbosity}")
@@ -112,7 +113,8 @@ def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
             assert "saved catalog file to" in output
 
         path = Path(goto_tempdir)
-        bmp_file = path / "R.bmp"
+        # just use the stored R.bmp file as we no longer test the image generation
+        bmp_file = os.path.join(SIM_DATA_PATH, "test_catalogs", "R.bmp")
         skyh5_file = path / "R.skyh5"
 
         assert bmp_file.exists()
@@ -145,10 +147,10 @@ def test_text_to_catalog_basic(verbosity, plot, use_old, goto_tempdir, capsys):
 
         # APPARENTLY ON SOME OS VERSIONS THE PRODUCED IMAGE HAS 19 POINTS!!!
         # SPECIAL CASING AGAINST THOSE VERSIONS FOR NOW
-        if current_catalog.Ncomponents == reference_catalog.Ncomponents:
-            # check agreement of all of the source locations
-            assert (lons == old_lons).all()
-            assert (lats == old_lats).all()
+        # if current_catalog.Ncomponents == reference_catalog.Ncomponents:
+        # check agreement of all of the source locations
+        assert (lons == old_lons).all()
+        assert (lats == old_lats).all()
 
 
 def test_plot_csv_antpos_basic(goto_tempdir):
