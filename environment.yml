@@ -28,5 +28,5 @@ dependencies:
   - pip:
     - pyradiosky>=1.1.0
     - mpi-pytest>=2025.7.0
-    - lunarsky>=0.2.5
+    - lunarsky>=1.0
     - git+https://github.com/aelanman/analytic_diffuse

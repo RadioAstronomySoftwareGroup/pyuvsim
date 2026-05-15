@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed
+- Require lunarsky>1.0 to drop spiceypy requirement
+
+### Removed
+- Spiceypy error catching in tests
+
 ## [1.4.2] - 2025-10-03
 
 ### Fixed
