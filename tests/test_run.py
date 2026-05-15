@@ -548,7 +548,6 @@ def test_pol_error():
 @pytest.mark.parametrize("selenoid", ["SPHERE", "GSFC", "GRAIL23", "CE-1-LAM-GEO"])
 def test_sim_on_moon(goto_tempdir, selenoid):
     pytest.importorskip("lunarsky")
-    from spiceypy.utils.exceptions import SpiceUNKNOWNFRAME
 
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_tranquility_hex.yaml"
@@ -609,12 +608,9 @@ def test_sim_on_moon(goto_tempdir, selenoid):
         return_data=True,
     )
     # Run simulation.
-    try:
-        uv_out = pyuvsim.uvsim.run_uvdata_uvsim(
-            uv_obj, beam_list, beam_dict, catalog=sources, quiet=True
-        )
-    except SpiceUNKNOWNFRAME as err:
-        pytest.skip("SpiceUNKNOWNFRAME error: " + str(err))
+    uv_out = pyuvsim.uvsim.run_uvdata_uvsim(
+        uv_obj, beam_list, beam_dict, catalog=sources, quiet=True
+    )
 
     assert history_utils._check_history_version(uv_out.history, pyradiosky.__version__)
     assert history_utils._check_history_version(uv_out.history, pyuvdata.__version__)
@@ -640,7 +636,6 @@ def test_sim_on_moon(goto_tempdir, selenoid):
 def test_lunar_gauss(goto_tempdir, selenoid):
     pytest.importorskip("lunarsky")
     from lunarsky import MoonLocation
-    from spiceypy.utils.exceptions import SpiceUNKNOWNFRAME
 
     # Make a gaussian source that passes through zenith
     # Confirm that simulated visibilities match expectation.
@@ -680,10 +675,7 @@ def test_lunar_gauss(goto_tempdir, selenoid):
 
     params["filing"]["outdir"] = str(tmpdir)
 
-    try:
-        uv_out = pyuvsim.run_uvsim(params, return_uv=True, quiet=True)
-    except SpiceUNKNOWNFRAME as err:
-        pytest.skip("SpiceUNKNOWNFRAME error: " + str(err))
+    uv_out = pyuvsim.run_uvsim(params, return_uv=True, quiet=True)
 
     assert uv_out.telescope.location.ellipsoid == selenoid
 
