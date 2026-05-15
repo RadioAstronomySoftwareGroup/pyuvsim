@@ -101,7 +101,7 @@ Optional:
 
 * astropy-healpix>=1.0.2 (for using healpix based sky catalogs or beams)
 * mpi4py>=3.1.3 (for actually running simulations)
-* lunarsky>=0.2.5 (for simulating telescopes on the moon)
+* lunarsky>=1.0 (for simulating telescopes on the moon)
 * python-casacore>=3.5.2 (for writing CASA measurement sets, not available on Windows)
 * matplotlib>=3.6 (for plotting functions)
 
