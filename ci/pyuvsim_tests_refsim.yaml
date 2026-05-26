@@ -24,6 +24,7 @@ dependencies:
     - pyradiosky>=1.1.0
     - pytest-benchmark
     - mpi-pytest>=2025.7.0
-    - lunarsky>=0.2.5
+    # - lunarsky>=0.2.5
+    - git+https://github.com/aelanman/lunarsky.git@bland
     - git+https://github.com/aelanman/analytic_diffuse
     - requests
