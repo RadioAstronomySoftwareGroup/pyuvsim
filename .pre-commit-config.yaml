@@ -27,3 +27,8 @@ repos:
     hooks:
       - id: bandit
         args: [--skip, "B101", --recursive, pyuvsim]
+
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.25.2
+    hooks:
+    - id: zizmor

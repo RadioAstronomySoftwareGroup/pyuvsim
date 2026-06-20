@@ -5,6 +5,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   pyuvsim:
     name: herasim
@@ -17,14 +19,15 @@ jobs:
       PYTHON: "3.12"
 
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-         fetch-depth: 0
+          fetch-depth: 0
+          persist-credentials: false
 
-      - uses: mpi4py/setup-mpi@v1
+      - uses: mpi4py/setup-mpi@f200dce75b64188be849b46657dcf86c721937b2 # v1.4.3
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ env.PYTHON }}
 
@@ -56,7 +59,7 @@ jobs:
         run: |
           pip list
           PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
-          if [[ $PYVER != ${{ env.PYTHON }} ]]; then
+          if [[ $PYVER != $PYTHON ]]; then
             exit 1;
           fi
 
