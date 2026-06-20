@@ -5,6 +5,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   tests:
     env:
@@ -34,9 +36,10 @@ jobs:
             python-version: "3.13"
             os: windows-latest
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install Ghostscript on Mac
         if: matrix.os == 'macos-latest'
@@ -45,12 +48,12 @@ jobs:
 
       - name: Install ImageMagick
         if: matrix.os != 'windows-latest'
-        uses: mfinelli/setup-imagemagick@v6
+        uses: mfinelli/setup-imagemagick@e5a049b136cb833d5c0474b38d166f0bdb0e4497 # v7.0.1
         with:
           cache: False
 
       - name: Setup Miniforge
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
         with:
           miniforge-version: latest
           python-version: ${{ env.PYTHON }}
@@ -63,7 +66,7 @@ jobs:
           conda info -a
           conda list
           PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
-          if [[ $PYVER != ${{ env.PYTHON }} ]]; then
+          if [[ $PYVER != $PYTHON ]]; then
             exit 1;
           fi
 
@@ -90,7 +93,7 @@ jobs:
           cat coverage.xml
 
       - name: Upload Coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -106,12 +109,13 @@ jobs:
     name: Min Deps Testing
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ env.PYTHON }}
 
@@ -125,7 +129,7 @@ jobs:
         run: |
           pip list
           PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
-          if [[ $PYVER != ${{ env.PYTHON }} ]]; then
+          if [[ $PYVER != $PYTHON ]]; then
             exit 1;
           fi
 
@@ -138,7 +142,7 @@ jobs:
           ls
           cat coverage.xml
 
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -155,11 +159,13 @@ jobs:
         shell: bash -l {0}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
+
       - name: Setup Miniforge
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
         with:
           miniforge-version: latest
           python-version: ${{ env.PYTHON }}
@@ -172,7 +178,7 @@ jobs:
           conda info -a
           conda list
           PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
-          if [[ $PYVER != ${{ env.PYTHON }} ]]; then
+          if [[ $PYVER != $PYTHON ]]; then
             exit 1;
           fi
 
@@ -189,7 +195,7 @@ jobs:
           ls
           cat coverage.xml
 
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -208,12 +214,13 @@ jobs:
         # Adding -l {0} helps ensure conda can be found properly.
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Miniforge
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
         with:
           miniforge-version: latest
           python-version: ${{ env.PYTHON }}
@@ -226,7 +233,7 @@ jobs:
           conda info -a
           conda list
           PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
-          if [[ $PYVER != ${{ env.PYTHON }} ]]; then
+          if [[ $PYVER != $PYTHON ]]; then
             exit 1;
           fi
 
@@ -244,7 +251,7 @@ jobs:
           cat coverage.xml
 
       - name: Upload Coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
@@ -263,12 +270,13 @@ jobs:
         # Adding -l {0} helps ensure conda can be found properly.
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Miniforge
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
         with:
           miniforge-version: latest
           python-version: ${{ env.PYTHON }}
@@ -281,7 +289,7 @@ jobs:
           conda info -a
           conda list
           PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
-          if [[ $PYVER != ${{ env.PYTHON }} ]]; then
+          if [[ $PYVER != $PYTHON ]]; then
             exit 1;
           fi
 
@@ -299,7 +307,7 @@ jobs:
           cat coverage.xml
 
       - name: Upload Coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         if: success()
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
