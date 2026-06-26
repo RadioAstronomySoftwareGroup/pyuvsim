@@ -29,7 +29,7 @@ jobs:
     name: Performance Benchmark
     env:
       ENV_NAME: pyuvsim_tests_refsim
-      PYTHON: "3.13"
+      PYTHON: "3.14"
     runs-on: ubuntu-latest
 
     strategy:
