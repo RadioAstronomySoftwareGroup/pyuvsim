@@ -48,9 +48,7 @@ jobs:
 
       - name: Install ImageMagick
         if: matrix.os != 'windows-latest'
-        uses: mfinelli/setup-imagemagick@e5a049b136cb833d5c0474b38d166f0bdb0e4497 # v7.0.1
-        with:
-          cache: False
+        run: sudo apt install -y imagemagick
 
       - name: Setup Miniforge
         uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
