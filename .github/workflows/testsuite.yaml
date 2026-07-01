@@ -41,18 +41,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Install Ghostscript on Mac
+      - name: Install Ghostscript & ImageMagick on Mac
         if: matrix.os == 'macos-latest'
         run: |
-          brew install ghostscript
+          brew install ghostscript imagemagick
 
-      - name: Install ImageMagick ubuntu
+      - name: Install ImageMagick on ubuntu
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt install -y imagemagick
-
-      - name: Install ImageMagick mac
-        if: matrix.os == 'macos-latest'
-        run: brew install imagemagick
 
       - name: Setup Miniforge
         uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
