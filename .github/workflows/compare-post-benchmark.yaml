@@ -109,6 +109,13 @@ jobs:
     name: Concatenate and Post Benchmark Results
     needs: benchmark
     runs-on: ubuntu-latest
+    permissions:
+      # deployments permission to deploy GitHub pages website
+      deployments: write
+      # contents permission to update benchmark contents in gh-pages branch
+      contents: write
+      # allow PR comments
+      pull-requests: write
 
     steps:
       # Checkout repo for the github-action-benchmark action
