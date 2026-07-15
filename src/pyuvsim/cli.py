@@ -622,16 +622,17 @@ def download_gleam_vot(url="file://gleam.vot", row_limit=None):
     """
     Download gleam.vot to pyuvsim cache specified by astropy.
 
+    Currently only used for downloading the gleam catalog with a set row limit.
+
     Runs import_file_to_cache to format the installed file to be recognizable through astropy.
-    Includes adding a fake url with which to specify the file. The fake download url acts as
-    the key to load the file in astropy -- allowing filename specification in yaml files
-    without any path details as astropy handles searching the cache with get_cached_urls
-    and download_file.
+    Includes adding a fake url with which to specify the file.
 
     Parameters
     ----------
     url: str
         A fake url for the gleam.vot file.
+    row_limit: int
+        The number of rows to download. Note that the specific rows chosen may not be consistent.
     """
     # check if url already cached
     if url in get_cached_urls("pyuvsim"):
@@ -701,14 +702,13 @@ def download_data_files(argv=None):
         - "mwa": mwa uvbeam file
         - "healpix": gsm 2016 nside 128 healpix map saved as skyh5
 
-    All files require astropy. Gleam additionally requires pyradiosky and astroquery.
+    All files require astropy. Gleam additionally requires pyradiosky and astroquery if specifying
+    the row_limit.
 
     Downloads files to astropy default cache location for pyuvsim e.g. "get_cache_dir(pyuvsim)"
 
     The intention is to have all files downloaded under the astropy paradigm, and thus findable
-    in cache throug the same paradigm with methods get_cached_urls and download_file. This allows
-    us to list only the file url corresponding to the astropy cached file in either yaml instead
-    of having to worry about relative or absolute path variables.
+    in cache through the same paradigm with methods get_cached_urls and download_file.
     """
     parser = argparse.ArgumentParser(
         description="A command-line script to download large data files "
@@ -722,7 +722,8 @@ def download_data_files(argv=None):
         "mwa": "http://ws.mwatelescope.org/static/mwa_full_embedded_element_pattern.h5",
         # gsm 2016 nside 128 healpix map
         "healpix": "https://repository.library.brown.edu/storage/bdr:eafzyycj/content/",
-        "gleam": "",
+        # hosting gleam catalog on BDR because download is slow otherwise
+        "gleam": "https://repository.library.brown.edu/storage/bdr:68m9yvr7/content/",
     }
 
     # create some strings for formatted help output
@@ -768,8 +769,8 @@ def download_data_files(argv=None):
     # for each file keyword, check that it exists in the dictionary, then try to download
     for file in args.files:
         if file in file_download_dict:
-            # call download_gleam_vot if gleam, otherwise download from url
-            if file == "gleam":
+            # call download_gleam_vot if gleam AND row_limit is specified, otherwise use url
+            if file == "gleam" and args.row_limit is not None:
                 filepath = download_gleam_vot(row_limit=args.row_limit)
             else:
                 filepath = download_file_using_astropy(file_download_dict[file])

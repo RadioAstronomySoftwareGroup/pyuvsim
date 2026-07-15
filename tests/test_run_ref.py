@@ -29,9 +29,11 @@ pytest.importorskip("mpi4py")  # noqa
     "files",
     [
         ("--clear", "--row_limit", "75001", "gleam", 1),
+        ("--row_limit", "75001", "gleam", 2),
         ("mwa", 1),
         ("healpix", 1),
         ("fail", 1),
+        ("gleam", 1),
         ("gleam", 2),
     ],
 )
