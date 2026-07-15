@@ -30,6 +30,7 @@ jobs:
     env:
       ENV_NAME: pyuvsim_tests_refsim
       PYTHON: "3.14"
+      PYTEST_OPTIONS: --refsim=${{ matrix.id }} --benchmark-only --benchmark-json artifacts/output_${{ matrix.id }}.json -s
     runs-on: ubuntu-latest
 
     strategy:
@@ -71,18 +72,46 @@ jobs:
         run: |
           pip install --no-deps .
 
-      # make the artifacts directory, then run pytest using mpiexec with only 1 node and core, specifying the
-      # reference simulation to run using the "refsim" flag. Save the pytest benchmark output in artifacts/
-      # with a sufficiently unique name
-      - name: Run benchmark
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_on: error
-          command: |
-            mkdir artifacts/
-            UCX_TLS=self,sm,tcp mpiexec -n 1 -np 1 pytest --refsim=${{ matrix.id }} --benchmark-only --benchmark-json artifacts/output_${{ matrix.id }}.json -s
+      # make the artifacts directory
+      - name: mkdir artifacts
+        run: |
+          mkdir artifacts/
+
+
+      # run pytest using mpiexec with only 1 node and core, specifying the reference
+      # simulation to run using the "refsim" flag. Save the pytest benchmark output
+      # in artifacts/ with a sufficiently unique name
+      - name: Run benchmark1
+        # need to specify an id to be able to tell what the status of this step was
+        id: benchmark1
+        continue-on-error: true
+        run: |
+          UCX_TLS=self,sm,tcp mpiexec -n 1 -np 1 pytest ${PYTEST_OPTIONS}
+
+      # Using this manual retry approach rather than the nick-fields/retry action
+      # because that action does not let us set up the shell properly to use the
+      # conda env
+      # Retry the benchmark step above that can fail
+      - name: Run benchmark2
+        id: benchmark2
+        # Only run this step if step 1 fails. It knows that step one failed because we specified an `id` for the first step
+        if: steps.benchmark1.outcome == 'failure'
+        # This needs to be true to proceed to the next step of failure
+        continue-on-error: true
+        run: |
+          UCX_TLS=self,sm,tcp mpiexec -n 1 -np 1 pytest ${PYTEST_OPTIONS}
+
+      # Using this manual retry approach rather than the nick-fields/retry action
+      # because that action does not let us set up the shell properly to use the
+      # conda env
+      # 2nd Retry of the benchmark step above that can fail
+      - name: Run benchmark3
+        id: benchmark3
+        # Only run this step if step 2 fails. It knows that step 2 failed because we specified an `id`
+        if: steps.benchmark2.outcome == 'failure'
+        # This needs to be true to proceed to the next step of failure
+        run: |
+          UCX_TLS=self,sm,tcp mpiexec -n 1 -np 1 pytest ${PYTEST_OPTIONS}
 
       # upload the benchmark output as an artifact with name key corresponding to the currentworkflow run
       # stores artifacts for 5 days in case something is blocking a failed test rerun

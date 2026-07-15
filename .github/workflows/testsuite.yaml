@@ -13,6 +13,7 @@ jobs:
       ENV_NAME: ${{ matrix.env_name }}
       PYTHON: ${{ matrix.python-version }}
       OS: ${{ matrix.os }}
+      PYTEST_OPTIONS:  ${{ case(matrix.warn_error == true, '-W error', '') }} ${{ case(matrix.pytest-xdist == true, '-n auto', '') }} --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
     name: Testing
     runs-on: ${{ matrix.os }}
     defaults:
@@ -25,16 +26,36 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.11", "3.12", "3.13", "3.14"]
         env_name: [pyuvsim_tests_openmpi]
+        pytest-xdist: [true]
+        warn_error: [false]
         include:
           - env_name: pyuvsim_tests_mpich
             python-version: "3.14"
             os: ubuntu-latest
+            pytest-xdist: true
+            warn_error: false
           - env_name: pyuvsim_tests_mpich
             python-version: "3.14"
             os: macos-latest
+            pytest-xdist: true
+            warn_error: false
           - env_name: pyuvsim_tests_windows
             python-version: "3.14"
             os: windows-latest
+            # Windows can't handle pytest-xdist in our experience
+            pytest-xdist: false
+            warn_error: false
+          - env_name: pyuvsim_tests_mpich
+            python-version: "3.14"
+            os: ubuntu-latest
+            pytest-xdist: false
+            warn_error: true
+          - env_name: min_versions
+            python-version: "3.11"
+            os: ubuntu-latest
+            pytest-xdist: true
+            warn_error: false
+
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -66,26 +87,36 @@ jobs:
           git version
           SETUPTOOLS_SCM_DEBUG=1 pip install --no-deps .
 
-      - name: Run Tests Linux/MacOS
-        if: matrix.os != 'windows-latest'
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_on: error
-          command: |
-            UCX_TLS=self,sm,tcp pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+      - name: Run Tests 1
+        id: test1
+        continue-on-error: true
+        run: |
+          UCX_TLS=self,sm,tcp pytest ${PYTEST_OPTIONS}
 
-      - name: Run Tests Windows
-        if: matrix.os == 'windows-latest'
-        # Windows can't handle pytest-xdist in our experience
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_on: error
-          command: |
-            UCX_TLS=self,sm,tcp python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+      # Using this manual retry approach rather than the nick-fields/retry action
+      # because that action does not let us set up the shell properly to use the
+      # conda env
+      # Retry the test step above that can fail
+      - name: Run Tests 2
+        id: test2
+        # Only run this step if step 1 fails. It knows that step one failed because we specified an `id` for the first step
+        if: steps.test1.outcome == 'failure'
+        # This needs to be true to proceed to the next step of failure
+        continue-on-error: true
+        run: |
+          UCX_TLS=self,sm,tcp pytest ${PYTEST_OPTIONS}
+
+      # Using this manual retry approach rather than the nick-fields/retry action
+      # because that action does not let us set up the shell properly to use the
+      # conda env
+      # 2nd Retry of the test step above that can fail
+      - name: Run Tests 3
+        id: test3
+        # Only run this step if step 2 fails. It knows that step 2 failed because we specified an `id`
+        if: steps.test2.outcome == 'failure'
+        # This needs to be true to proceed to the next step of failure
+        run: |
+          UCX_TLS=self,sm,tcp pytest ${PYTEST_OPTIONS}
 
       - name: check coverage report
         run: |
@@ -139,6 +170,7 @@ jobs:
           timeout_minutes: 10
           max_attempts: 3
           retry_on: error
+          shell: bash
           command: |
             UCX_TLS=self,sm,tcp pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
 
@@ -152,127 +184,6 @@ jobs:
         with:
           token: ${{secrets.CODECOV_TOKEN}} #required
           files: ./coverage.xml #optional
-          fail_ci_if_error: true
-
-  min_versions:
-    env:
-      ENV_NAME: min_versions
-      PYTHON: "3.11"
-    name: Min Versions Testing
-    defaults:
-      run:
-        # Adding -l {0} helps ensure conda can be found properly.
-        shell: bash -l {0}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Setup Miniforge
-        uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
-        with:
-          miniforge-version: latest
-          python-version: ${{ env.PYTHON }}
-          environment-file: ci/${{ env.ENV_NAME }}.yaml
-          activate-environment: ${{ env.ENV_NAME }}
-          conda-remove-defaults: "true"
-
-      - name: Conda Info
-        run: |
-          conda info -a
-          conda list
-          PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
-          if [[ $PYVER != $PYTHON ]]; then
-            exit 1;
-          fi
-
-      - name: Install
-        run: |
-          pip install --no-deps .
-
-      - name: Run Tests
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_on: error
-          command: |
-            UCX_TLS=self,sm,tcp pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
-
-      - name: check coverage report
-        run: |
-          ls
-          cat coverage.xml
-
-      - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
-        if: success()
-        with:
-          token: ${{secrets.CODECOV_TOKEN}} #required
-          file: ./coverage.xml #optional
-          env_vars: OS,PYTHON
-          fail_ci_if_error: true
-
-  warning_test:
-    env:
-      ENV_NAME: pyuvsim_tests_mpich
-      PYTHON: "3.14"
-    name: Warning Test
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        # Adding -l {0} helps ensure conda can be found properly.
-        shell: bash -l {0}
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Setup Miniforge
-        uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
-        with:
-          miniforge-version: latest
-          python-version: ${{ env.PYTHON }}
-          environment-file: ci/${{ env.ENV_NAME }}.yaml
-          activate-environment: ${{ env.ENV_NAME }}
-          conda-remove-defaults: "true"
-
-      - name: Conda Info
-        run: |
-          conda info -a
-          conda list
-          PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
-          if [[ $PYVER != $PYTHON ]]; then
-            exit 1;
-          fi
-
-      - name: Install
-        run: |
-          pip install --no-deps .
-
-      - name: Run Tests
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_on: error
-          command: |
-            pytest -W error --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
-
-      - name: check coverage report
-        run: |
-          ls
-          cat coverage.xml
-
-      - name: Upload Coverage
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
-        if: success()
-        with:
-          token: ${{secrets.CODECOV_TOKEN}} #required
-          file: ./coverage.xml #optional
-          env_vars: OS,PYTHON
           fail_ci_if_error: true
 
   download_test:
@@ -313,14 +224,36 @@ jobs:
         run: |
           pip install --no-deps .
 
-      - name: Run Tests
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_on: error
-          command: |
-            UCX_TLS=self,sm,tcp mpiexec -n 1 pytest tests/test_run_ref.py -k "test_download or test_run_ref_sim_cli" --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+      - name: Run Tests 1
+        id: test1
+        continue-on-error: true
+        run: |
+          UCX_TLS=self,sm,tcp mpiexec -n 1 pytest tests/test_run_ref.py -k "test_download or test_run_ref_sim_cli" --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
+
+      # Using this manual retry approach rather than the nick-fields/retry action
+      # because that action does not let us set up the shell properly to use the
+      # conda env
+      # Retry the test step above that can fail
+      - name: Run Tests 2
+        id: test2
+        # Only run this step if step 1 fails. It knows that step one failed because we specified an `id` for the first step
+        if: steps.test1.outcome == 'failure'
+        # This needs to be true to proceed to the next step of failure
+        continue-on-error: true
+        run: |
+          UCX_TLS=self,sm,tcp mpiexec -n 1 pytest tests/test_run_ref.py -k "test_download or test_run_ref_sim_cli" --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
+
+      # Using this manual retry approach rather than the nick-fields/retry action
+      # because that action does not let us set up the shell properly to use the
+      # conda env
+      # 2nd Retry of the test step above that can fail
+      - name: Run Tests 3
+        id: test3
+        # Only run this step if step 2 fails. It knows that step 2 failed because we specified an `id`
+        if: steps.test2.outcome == 'failure'
+        # This needs to be true to proceed to the next step of failure
+        run: |
+          UCX_TLS=self,sm,tcp mpiexec -n 1 pytest tests/test_run_ref.py -k "test_download or test_run_ref_sim_cli" --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
 
       - name: check coverage report
         run: |
