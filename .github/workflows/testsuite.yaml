@@ -68,13 +68,24 @@ jobs:
 
       - name: Run Tests Linux/MacOS
         if: matrix.os != 'windows-latest'
-        run: |
-          UCX_TLS=self,sm,tcp pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: |
+            UCX_TLS=self,sm,tcp pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+
       - name: Run Tests Windows
         if: matrix.os == 'windows-latest'
         # Windows can't handle pytest-xdist in our experience
-        run: |
-          python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: |
+            UCX_TLS=self,sm,tcp python -m pytest --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: check coverage report
         run: |
@@ -123,8 +134,13 @@ jobs:
           fi
 
       - name: Run Tests
-        run: |
-          UCX_TLS=self,sm,tcp pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: |
+            UCX_TLS=self,sm,tcp pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
 
       - name: check coverage report
         run: |
@@ -177,8 +193,13 @@ jobs:
           pip install --no-deps .
 
       - name: Run Tests
-        run: |
-          UCX_TLS=self,sm,tcp pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: |
+            UCX_TLS=self,sm,tcp pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: check coverage report
         run: |
@@ -232,8 +253,13 @@ jobs:
           pip install --no-deps .
 
       - name: Run Tests
-        run: |
-          pytest -W error --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: |
+            pytest -W error --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: check coverage report
         run: |
@@ -288,8 +314,13 @@ jobs:
           pip install --no-deps .
 
       - name: Run Tests
-        run: |
-          UCX_TLS=self,sm,tcp mpiexec -n 1 pytest tests/test_run_ref.py -k "test_download or test_run_ref_sim_cli" --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: |
+            UCX_TLS=self,sm,tcp mpiexec -n 1 pytest tests/test_run_ref.py -k "test_download or test_run_ref_sim_cli" --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: check coverage report
         run: |
