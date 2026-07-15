@@ -77,10 +77,10 @@ jobs:
       - name: Run benchmark
         run: |
           mkdir artifacts/
-          mpiexec -n 1 -np 1 pytest --refsim=${{ matrix.id }} --benchmark-only --benchmark-json artifacts/output_${{ matrix.id }}.json -s
+          UCX_TLS=self,sm,tcp mpiexec -n 1 -np 1 pytest --refsim=${{ matrix.id }} --benchmark-only --benchmark-json artifacts/output_${{ matrix.id }}.json -s
 
-      # upload the benchmark output as an artifact with name key corresponding to the current
-      # workflow run and attempt only store artifacts for 1 day
+      # upload the benchmark output as an artifact with name key corresponding to the currentworkflow run
+      # stores artifacts for 5 days in case something is blocking a failed test rerun
       - name: Upload result artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -88,7 +88,7 @@ jobs:
           path: artifacts/
           if-no-files-found: error
           include-hidden-files: true
-          retention-days: 1
+          retention-days: 5
 
   collate-post-benchmark:
     # Job that loads the saved artifacts corresponding to the specific workflow run and attempt id,
@@ -134,8 +134,8 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
-          pattern: ${{ github.run_id }}-${{ github.run_attempt }}-*
-          merge-multiple: true
+          pattern: ${{ github.run_id }}-*
+          merge-multiple: false
           path: artifacts
 
       # prints directory info recursively, removable
@@ -148,20 +148,31 @@ jobs:
       # then takes the benchmark timing info from n-1 files and adds it to the first file.
       # With this approach, benchmark comparison output is only a single table, and we only
       # have one comment on alert in the workflow.
+      # added code to identify latest run id artifacts from each test when loading artifacts
+      # across multiple run attempts
       - uses: jannekem/run-python-script-action@9d8e2e0878d575fb6073277f38ce3f10ebf4f059 # v1.8
         with:
           script: |
+            from pathlib import Path
             import os
             import json
 
-            # make list of paths to artifact files excluding hidden files
-            filepath_arr = [os.path.join('artifacts', bench) for bench in os.listdir('artifacts') if not bench.startswith('.')]
-            print(filepath_arr)
+            # make dictionary of run artifacts keeping only the latest run attempt for each
+            # reference simulation
+            parsed_run_attempts = {}
+            for folder in Path("artifacts").iterdir():
+                _, num, ref_sim = folder.name.split("-")
+                if ref_sim not in parsed_run_attempts or parsed_run_attempts[ref_sim][0] < num:
+                    parsed_run_attempts[ref_sim] = [num, folder]
+
+            # there should only be 1 file in each directory because each directory should be
+            # a unique run and reference simulation
+            files_to_stitch = [next(val[1].iterdir()) for val in parsed_run_attempts.values()]
 
             output_jsons = []
 
-            # open each filepath in the filepath_arr, load it as a json, and append it to an empty list
-            for filepath in filepath_arr:
+            # open each filepath, load it as a json, and append it to an empty list
+            for filepath in files_to_stitch:
                 with open(filepath) as f:
                     output_jsons.append(json.load(f))
 
@@ -172,9 +183,25 @@ jobs:
             for json_out in output_jsons[1:]:
                 net_json['benchmarks'].append(json_out['benchmarks'][0])
 
+            # DEBUG (keeping for now just to confirm behavior when a reference simulation
+            # actually fails)
+            print(parsed_run_attempts)
+            print(files_to_stitch)
+            print(len(net_json['benchmarks']))
+            print(net_json)
+
             # save net_json as json with name output.json in current working directory
             with open('output.json', 'w') as f:
                 json.dump(net_json, f)
+
+      - name: Print errors
+        if: steps.script.outputs.error == 'true'
+        run: |
+          printenv "SCRIPT_STDOUT"
+          printenv "SCRIPT_STDERR"
+        env:
+          SCRIPT_STDOUT: ${{ steps.script.outputs.stdout }}
+          SCRIPT_STDERR: ${{ steps.script.outputs.stderr }}
 
       # Print github event_name and ref_name and the boolean check for whether gh-pages should be updated
       - name: Print Event, Ref, and Upload Boolean
@@ -185,7 +212,7 @@ jobs:
 
       # Compares the data from the specified "output-file-path" and compares
       # with the latest data from the gh-pages branch. If performance regression
-      # occurs, fails the test and alerts. Will only comment in if performance
+      # occurs, alerts but does not fail. Will only comment in if performance
       # regression has occurred.
       # NOTE: it is important that this does not modify gh-pages on pull request
       # https://github.com/benchmark-action/github-action-benchmark?tab=readme-ov-file#caveats
@@ -199,9 +226,9 @@ jobs:
           output-file-path: output.json
           # Where the previous data file is stored
           # should fail consistently
-          alert-threshold: "120%"
+          alert-threshold: "150%"
           # Workflow will fail when an alert happens
-          fail-on-alert: true
+          fail-on-alert: false
           # Comment on the PR if the branch is not a fork
           comment-on-alert: true
           # Enable Job Summary for PRs

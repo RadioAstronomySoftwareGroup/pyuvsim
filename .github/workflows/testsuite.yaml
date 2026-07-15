@@ -69,7 +69,7 @@ jobs:
       - name: Run Tests Linux/MacOS
         if: matrix.os != 'windows-latest'
         run: |
-          pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+          UCX_TLS=self,sm,tcp pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
       - name: Run Tests Windows
         if: matrix.os == 'windows-latest'
         # Windows can't handle pytest-xdist in our experience
@@ -124,7 +124,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
+          UCX_TLS=self,sm,tcp pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
 
       - name: check coverage report
         run: |
@@ -178,7 +178,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+          UCX_TLS=self,sm,tcp pytest -n auto --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: check coverage report
         run: |
@@ -289,7 +289,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          mpiexec -n 1 pytest tests/test_run_ref.py -k "test_download or test_run_ref_sim_cli" --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
+          UCX_TLS=self,sm,tcp mpiexec -n 1 pytest tests/test_run_ref.py -k "test_download or test_run_ref_sim_cli" --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml --junitxml=test-reports/xunit.xml
 
       - name: check coverage report
         run: |

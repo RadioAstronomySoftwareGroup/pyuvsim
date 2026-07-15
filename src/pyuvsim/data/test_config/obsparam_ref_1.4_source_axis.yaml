@@ -7,7 +7,7 @@ freq:
   channel_width: 100000.0
 sources:
   filetype: "gleam"
-  catalog: "file://gleam.vot"
+  catalog: "https://repository.library.brown.edu/storage/bdr:68m9yvr7/content/"
   non_nan: "all"
   non_negative: True
 telescope:
