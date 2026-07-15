@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784142291584,
+  "lastUpdate": 1784149531753,
   "repoUrl": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim",
   "entries": {
     "Benchmark": [
@@ -2000,6 +2000,86 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.20856739805624064",
             "extra": "mean: 21.49858607449999 sec\nrounds: 2"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "brynah@phys.washington.edu",
+            "name": "Bryna Hazelton",
+            "username": "bhazelton"
+          },
+          "distinct": true,
+          "id": "c6954d785a8d4ce6c64e9f5bd61a9db67d63cc75",
+          "message": "Bump actions/checkout from 6.0.2 to 7.0.0\n\nBumps [actions/checkout](https://github.com/actions/checkout) from 6.0.2 to 7.0.0.\n- [Release notes](https://github.com/actions/checkout/releases)\n- [Changelog](https://github.com/actions/checkout/blob/main/CHANGELOG.md)\n- [Commits](https://github.com/actions/checkout/compare/de0fac2e4500dabe0009e67214ff5f5447ce83dd...9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0)\n\n---\nupdated-dependencies:\n- dependency-name: actions/checkout\n  dependency-version: 7.0.0\n  dependency-type: direct:production\n  update-type: version-update:semver-major\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2026-07-15T13:30:08-07:00",
+          "tree_id": "ca2d6166048738283cf784c27b3b576f31be22f4",
+          "url": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim/commit/c6954d785a8d4ce6c64e9f5bd61a9db67d63cc75"
+        },
+        "date": 1784149530987,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_baseline_number]",
+            "value": 0.2795924633413463,
+            "unit": "iter/sec",
+            "range": "stddev: 0.09648570317132363",
+            "extra": "mean: 3.5766343199999966 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_frequency_axis]",
+            "value": 0.030917098958252613,
+            "unit": "iter/sec",
+            "range": "stddev: 0.22205471956656622",
+            "extra": "mean: 32.34456122 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.5_uvbeam]",
+            "value": 0.04608349997791105,
+            "unit": "iter/sec",
+            "range": "stddev: 0.645640621256565",
+            "extra": "mean: 21.699740698499994 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.8_lunar]",
+            "value": 0.3594667327339682,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10974165510021833",
+            "extra": "mean: 2.7818985984999998 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_time_axis]",
+            "value": 0.03525827935469802,
+            "unit": "iter/sec",
+            "range": "stddev: 0.06189558022135152",
+            "extra": "mean: 28.362132761500007 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.7_multi_beam]",
+            "value": 0.011409907090751275,
+            "unit": "iter/sec",
+            "range": "stddev: 0.2171688867731269",
+            "extra": "mean: 87.64313259049999 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.6_healpix]",
+            "value": 1.831301156447791,
+            "unit": "iter/sec",
+            "range": "stddev: 0.016070398845464826",
+            "extra": "mean: 546.059831000008 msec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.4_source_axis]",
+            "value": 0.03236083733532827,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0017463748515296712",
+            "extra": "mean: 30.901548981499985 sec\nrounds: 2"
           }
         ]
       }
