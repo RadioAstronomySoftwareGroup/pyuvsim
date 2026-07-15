@@ -75,9 +75,14 @@ jobs:
       # reference simulation to run using the "refsim" flag. Save the pytest benchmark output in artifacts/
       # with a sufficiently unique name
       - name: Run benchmark
-        run: |
-          mkdir artifacts/
-          UCX_TLS=self,sm,tcp mpiexec -n 1 -np 1 pytest --refsim=${{ matrix.id }} --benchmark-only --benchmark-json artifacts/output_${{ matrix.id }}.json -s
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: |
+            mkdir artifacts/
+            UCX_TLS=self,sm,tcp mpiexec -n 1 -np 1 pytest --refsim=${{ matrix.id }} --benchmark-only --benchmark-json artifacts/output_${{ matrix.id }}.json -s
 
       # upload the benchmark output as an artifact with name key corresponding to the currentworkflow run
       # stores artifacts for 5 days in case something is blocking a failed test rerun
