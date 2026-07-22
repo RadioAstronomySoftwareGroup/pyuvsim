@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784149531753,
+  "lastUpdate": 1784751161178,
   "repoUrl": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim",
   "entries": {
     "Benchmark": [
@@ -2080,6 +2080,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0017463748515296712",
             "extra": "mean: 30.901548981499985 sec\nrounds: 2"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "66853113+pre-commit-ci[bot]@users.noreply.github.com",
+            "name": "pre-commit-ci[bot]",
+            "username": "pre-commit-ci[bot]"
+          },
+          "committer": {
+            "email": "brynah@phys.washington.edu",
+            "name": "Bryna Hazelton",
+            "username": "bhazelton"
+          },
+          "distinct": true,
+          "id": "256cc87271ffb3d3131ac67254b0323e951bec0c",
+          "message": "[pre-commit.ci] pre-commit autoupdate\n\nupdates:\n- [github.com/astral-sh/ruff-pre-commit: v0.15.21 → v0.15.22](https://github.com/astral-sh/ruff-pre-commit/compare/v0.15.21...v0.15.22)\n- [github.com/zizmorcore/zizmor-pre-commit: v1.26.1 → v1.27.0](https://github.com/zizmorcore/zizmor-pre-commit/compare/v1.26.1...v1.27.0)",
+          "timestamp": "2026-07-20T16:21:19-07:00",
+          "tree_id": "fca02f7e45e3bfbc781c2623c3a294e2162718ee",
+          "url": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim/commit/256cc87271ffb3d3131ac67254b0323e951bec0c"
+        },
+        "date": 1784751160146,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_time_axis]",
+            "value": 0.0409419846941122,
+            "unit": "iter/sec",
+            "range": "stddev: 0.036200580564437715",
+            "extra": "mean: 24.424805183999993 sec\nrounds: 2"
           }
         ]
       }
