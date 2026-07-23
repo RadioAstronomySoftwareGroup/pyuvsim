@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784751161178,
+  "lastUpdate": 1784827019476,
   "repoUrl": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim",
   "entries": {
     "Benchmark": [
@@ -2111,6 +2111,86 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.036200580564437715",
             "extra": "mean: 24.424805183999993 sec\nrounds: 2"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "burdorfmitchell@gmail.com",
+            "name": "Mitchell Burdorf",
+            "username": "burdorfmitchell"
+          },
+          "committer": {
+            "email": "brynah@phys.washington.edu",
+            "name": "Bryna Hazelton",
+            "username": "bhazelton"
+          },
+          "distinct": true,
+          "id": "5213e2b32d964a870f939b371fd6050cdb13bcef",
+          "message": "Added support for rerunning only failed tests for benchmark ci. Also bumped regression alert from 120% to 150%, artifact retention to 5 days, attempted to fix mpi errors on ci by setting UCX_TLS in every pytest xdist or mpiexec call. Changed gleam to download full catalog from BDR including minor test and ci updates.",
+          "timestamp": "2026-07-23T10:11:08-07:00",
+          "tree_id": "b511595003f06bfa6d94e55bc5e5ebdbf7bda42e",
+          "url": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim/commit/5213e2b32d964a870f939b371fd6050cdb13bcef"
+        },
+        "date": 1784827018556,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.7_multi_beam]",
+            "value": 0.011015899938554983,
+            "unit": "iter/sec",
+            "range": "stddev: 0.07857396220520912",
+            "extra": "mean: 90.77787612250003 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.5_uvbeam]",
+            "value": 0.03994928915295831,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03533031242901562",
+            "extra": "mean: 25.03173451150002 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_frequency_axis]",
+            "value": 0.025938255187553886,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03315708903351458",
+            "extra": "mean: 38.55309436850001 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.4_source_axis]",
+            "value": 0.030657693639592577,
+            "unit": "iter/sec",
+            "range": "stddev: 0.06164626073428975",
+            "extra": "mean: 32.618239707 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.8_lunar]",
+            "value": 0.3636218031615559,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11016573885671278",
+            "extra": "mean: 2.750110118000002 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.6_healpix]",
+            "value": 1.8011203016906632,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01634077880093174",
+            "extra": "mean: 555.2099985000041 msec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_baseline_number]",
+            "value": 0.2981992794726809,
+            "unit": "iter/sec",
+            "range": "stddev: 0.1717635592409261",
+            "extra": "mean: 3.3534621605000012 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_time_axis]",
+            "value": 0.036882617341441375,
+            "unit": "iter/sec",
+            "range": "stddev: 0.005625798119662376",
+            "extra": "mean: 27.113043272999995 sec\nrounds: 2"
           }
         ]
       }
