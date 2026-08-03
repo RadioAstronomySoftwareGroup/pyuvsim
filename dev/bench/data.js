@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785773978889,
+  "lastUpdate": 1785774214835,
   "repoUrl": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim",
   "entries": {
     "Benchmark": [
@@ -2351,6 +2351,86 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.1255602221081983",
             "extra": "mean: 39.05539470650001 sec\nrounds: 2"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "brynah@phys.washington.edu",
+            "name": "Bryna Hazelton",
+            "username": "bhazelton"
+          },
+          "distinct": true,
+          "id": "fd4f9654fc74a5db0f8de62c05cd8e0e1abc6bf7",
+          "message": "Bump mpi4py/setup-mpi from 1.4.3 to 1.4.4\n\nBumps [mpi4py/setup-mpi](https://github.com/mpi4py/setup-mpi) from 1.4.3 to 1.4.4.\n- [Release notes](https://github.com/mpi4py/setup-mpi/releases)\n- [Commits](https://github.com/mpi4py/setup-mpi/compare/f200dce75b64188be849b46657dcf86c721937b2...3417e34f1394a16723d7913c236642c24e95fd5a)\n\n---\nupdated-dependencies:\n- dependency-name: mpi4py/setup-mpi\n  dependency-version: 1.4.4\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2026-08-03T09:12:26-07:00",
+          "tree_id": "a2cc1d32ecafff9a5a39a0e9a56d39b9dcae91d7",
+          "url": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim/commit/fd4f9654fc74a5db0f8de62c05cd8e0e1abc6bf7"
+        },
+        "date": 1785774214331,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_frequency_axis]",
+            "value": 0.025393601856905482,
+            "unit": "iter/sec",
+            "range": "stddev: 0.37204153672314166",
+            "extra": "mean: 39.37999838050001 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.7_multi_beam]",
+            "value": 0.016824116750349824,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11225868017670457",
+            "extra": "mean: 59.43848434000002 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_baseline_number]",
+            "value": 0.30466309953592824,
+            "unit": "iter/sec",
+            "range": "stddev: 0.09250103130143572",
+            "extra": "mean: 3.2823141415000023 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.5_uvbeam]",
+            "value": 0.04713511950927741,
+            "unit": "iter/sec",
+            "range": "stddev: 0.06429121698383065",
+            "extra": "mean: 21.215603363499994 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.4_source_axis]",
+            "value": 0.031080407986608487,
+            "unit": "iter/sec",
+            "range": "stddev: 0.024644148470425346",
+            "extra": "mean: 32.17460981950001 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_time_axis]",
+            "value": 0.04120507104659101,
+            "unit": "iter/sec",
+            "range": "stddev: 0.026178720092224737",
+            "extra": "mean: 24.268857560500003 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.8_lunar]",
+            "value": 0.4568345427991302,
+            "unit": "iter/sec",
+            "range": "stddev: 0.08000485853787365",
+            "extra": "mean: 2.1889763280000025 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.6_healpix]",
+            "value": 1.8191342474159142,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0151207219114177",
+            "extra": "mean: 549.7120409999993 msec\nrounds: 2"
           }
         ]
       }
