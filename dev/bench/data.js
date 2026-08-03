@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785263311569,
+  "lastUpdate": 1785773978889,
   "repoUrl": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim",
   "entries": {
     "Benchmark": [
@@ -2271,6 +2271,86 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.29842927704060335",
             "extra": "mean: 21.587100340499994 sec\nrounds: 2"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "brynah@phys.washington.edu",
+            "name": "Bryna Hazelton",
+            "username": "bhazelton"
+          },
+          "distinct": true,
+          "id": "6c9cff724dde9ccf6cf401dde06dbb8430e697ea",
+          "message": "Bump actions/setup-python from 6.2.0 to 6.3.0\n\nBumps [actions/setup-python](https://github.com/actions/setup-python) from 6.2.0 to 6.3.0.\n- [Release notes](https://github.com/actions/setup-python/releases)\n- [Commits](https://github.com/actions/setup-python/compare/a309ff8b426b58ec0e2a45f0f869d46889d02405...ece7cb06caefa5fff74198d8649806c4678c61a1)\n\n---\nupdated-dependencies:\n- dependency-name: actions/setup-python\n  dependency-version: 6.3.0\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2026-08-03T09:11:55-07:00",
+          "tree_id": "9e310f4e34ace6fcf3f87fa6d84b4547a40718be",
+          "url": "https://github.com/RadioAstronomySoftwareGroup/pyuvsim/commit/6c9cff724dde9ccf6cf401dde06dbb8430e697ea"
+        },
+        "date": 1785773978301,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.1_baseline_number]",
+            "value": 0.29933396795736555,
+            "unit": "iter/sec",
+            "range": "stddev: 0.08205723102051551",
+            "extra": "mean: 3.3407501554999968 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.8_lunar]",
+            "value": 0.4559740025455797,
+            "unit": "iter/sec",
+            "range": "stddev: 0.09404771707662797",
+            "extra": "mean: 2.193107489499994 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.4_source_axis]",
+            "value": 0.03214568118589588,
+            "unit": "iter/sec",
+            "range": "stddev: 0.02870298806347457",
+            "extra": "mean: 31.1083779565 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.7_multi_beam]",
+            "value": 0.013592289992375755,
+            "unit": "iter/sec",
+            "range": "stddev: 0.30603504485826744",
+            "extra": "mean: 73.57112013949998 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.5_uvbeam]",
+            "value": 0.03959989290519428,
+            "unit": "iter/sec",
+            "range": "stddev: 0.3210637799556206",
+            "extra": "mean: 25.252593545999993 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.2_time_axis]",
+            "value": 0.058744964345674985,
+            "unit": "iter/sec",
+            "range": "stddev: 0.009026322713649702",
+            "extra": "mean: 17.022735670000003 sec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.6_healpix]",
+            "value": 1.7873881651556394,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013866238114065895",
+            "extra": "mean: 559.4755630000066 msec\nrounds: 2"
+          },
+          {
+            "name": "tests/test_run_ref.py::test_run_sim[1.3_frequency_axis]",
+            "value": 0.02560465737230328,
+            "unit": "iter/sec",
+            "range": "stddev: 0.1255602221081983",
+            "extra": "mean: 39.05539470650001 sec\nrounds: 2"
           }
         ]
       }
