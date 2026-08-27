@@ -4,6 +4,7 @@ beam_paths:
       pixels_per_deg: 1
       mount_type: phased
       file_type: mwa_beam
+      mwa_model_type: fee
 # taken from https://mwatelescope.github.io/mwa_hyperdrive/defs/coords.html
 telescope_location: (-26.70331941, 116.6708152, 377.827)
 telescope_name: MWA
