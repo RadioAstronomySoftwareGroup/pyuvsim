@@ -12,6 +12,7 @@ dependencies:
   - numpy>=1.23
   - pip
   - psutil
+  - pyradiosky>=1.1.0
   - python-casacore>=3.5.2
   - pytest
   - pytest-cov>=5.0
@@ -21,7 +22,6 @@ dependencies:
   - scipy>=1.9
   - setuptools_scm>=8.1
   - pip:
-    - pyradiosky>=1.1.0
     - pytest-benchmark
     - mpi-pytest>=2025.7.0
     - lunarsky>=1.0

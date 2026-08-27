@@ -14,19 +14,19 @@ dependencies:
   - pre-commit
   - psutil
   - pypandoc
+  - pyradiosky>=1.1.0
   - python-casacore>=3.5.2
   - pytest
   - pytest-cov>=5.0.0
   - pytest-xdist
   - pytest-benchmark
-  - requests
   - pyuvdata>=3.2.3
   - pyyaml>=5.4.1
+  - requests
   - scipy>=1.9
   - setuptools_scm>=8.1
   - sphinx
   - pip:
-    - pyradiosky>=1.1.0
     - mpi-pytest>=2025.7.0
     - lunarsky>=1.0
     - git+https://github.com/aelanman/analytic_diffuse

@@ -21,7 +21,7 @@ dependencies:
   - scipy==1.9.*
   - setuptools_scm==8.1
   - pip:
-    - pyradiosky==1.1.0
     - mpi-pytest==2025.7.0
     - lunarsky==1.0.1.post2
+    - pyradiosky==1.1.0  # v1.1.0 is not available on conda (conda starts at 1.1.2)
     - git+https://github.com/aelanman/analytic_diffuse

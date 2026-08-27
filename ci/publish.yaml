@@ -5,11 +5,11 @@ dependencies:
   - astropy>=6.0
   - numpy>=1.23
   - pip
+  - pyradiosky>=1.1.0
   - pyuvdata>=3.2.3
   - pyyaml>=5.4.1
   - scipy>=1.9
   - setuptools_scm>=8.1
   - psutil
   - pip:
-    - pyradiosky>=1.1.0
     - build
