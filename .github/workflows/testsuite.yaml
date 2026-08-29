@@ -10,10 +10,12 @@ permissions: {}
 jobs:
   tests:
     env:
-      ENV_NAME: ${{ matrix.env_name }}
+      ENV_NAME: ${{ case(matrix.os == 'windows-latest', 'pyuvsim_tests_windows', matrix.env_name) }}
       PYTHON: ${{ matrix.python-version }}
       OS: ${{ matrix.os }}
-      PYTEST_OPTIONS:  ${{ case(matrix.warn_error == true, '-W error', '') }} ${{ case(matrix.pytest-xdist == true, '-n auto', '') }} --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
+      # Windows can't handle pytest-xdist in our experience
+      # we get warnings when we use both mpi-pytest and pytest-xdist (breaks warnings test)
+      PYTEST_OPTIONS:  ${{ case(matrix.warn_error == true, '-W error', '') }} ${{ case(matrix.os == 'windows-latest', '', matrix.warn_error == true, '', '-n auto') }} --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
     name: Testing
     runs-on: ${{ matrix.os }}
     defaults:
@@ -23,37 +25,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.11", "3.12", "3.13", "3.14"]
         env_name: [pyuvsim_tests_openmpi]
-        pytest-xdist: [true]
         warn_error: [false]
         include:
-          - env_name: pyuvsim_tests_mpich
+          - os: ubuntu-latest
             python-version: "3.14"
-            os: ubuntu-latest
-            pytest-xdist: true
+            env_name: pyuvsim_tests_mpich
             warn_error: false
-          - env_name: pyuvsim_tests_mpich
+          - os: macos-latest
             python-version: "3.14"
-            os: macos-latest
-            pytest-xdist: true
+            env_name: pyuvsim_tests_mpich
             warn_error: false
-          - env_name: pyuvsim_tests_windows
+          - os: ubuntu-latest
             python-version: "3.14"
-            os: windows-latest
-            # Windows can't handle pytest-xdist in our experience
-            pytest-xdist: false
-            warn_error: false
-          - env_name: pyuvsim_tests_mpich
-            python-version: "3.14"
-            os: ubuntu-latest
-            pytest-xdist: false
-            warn_error: true
-          - env_name: min_versions
+            env_name: pyuvsim_tests_mpich
+            warn_error: true  # warnings test
+          - os: ubuntu-latest
             python-version: "3.11"
-            os: ubuntu-latest
-            pytest-xdist: true
+            env_name: min_versions
             warn_error: false
 
     steps:
