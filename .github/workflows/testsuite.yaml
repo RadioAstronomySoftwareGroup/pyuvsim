@@ -32,16 +32,12 @@ jobs:
         include:
           - os: ubuntu-latest
             python-version: "3.14"
-            env_name: pyuvsim_tests_mpich
-            warn_error: false
+            env_name: pyuvsim_tests_mpich # make sure mpich works on linux
+            warn_error: true  # warnings test
           - os: macos-latest
             python-version: "3.14"
-            env_name: pyuvsim_tests_mpich
+            env_name: pyuvsim_tests_mpich # make sure mpich works on mac
             warn_error: false
-          - os: ubuntu-latest
-            python-version: "3.14"
-            env_name: pyuvsim_tests_mpich
-            warn_error: true  # warnings test
           - os: ubuntu-latest
             python-version: "3.11"
             env_name: min_versions
