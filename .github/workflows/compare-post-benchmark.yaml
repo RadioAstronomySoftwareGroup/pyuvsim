@@ -101,15 +101,11 @@ jobs:
         run: |
           UCX_TLS=self,sm,tcp mpiexec -n 1 -np 1 pytest ${PYTEST_OPTIONS}
 
-      # Using this manual retry approach rather than the nick-fields/retry action
-      # because that action does not let us set up the shell properly to use the
-      # conda env
       # 2nd Retry of the benchmark step above that can fail
       - name: Run benchmark3
         id: benchmark3
         # Only run this step if step 2 fails. It knows that step 2 failed because we specified an `id`
         if: steps.benchmark2.outcome == 'failure'
-        # This needs to be true to proceed to the next step of failure
         run: |
           UCX_TLS=self,sm,tcp mpiexec -n 1 -np 1 pytest ${PYTEST_OPTIONS}
 
