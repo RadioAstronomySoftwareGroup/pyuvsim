@@ -17,7 +17,7 @@ repos:
           args: ['--fix=no']
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.4
+    rev: v0.16.5
     hooks:
       - id: ruff
       - id: ruff-format
@@ -29,6 +29,6 @@ repos:
         args: [--skip, "B101", --recursive, pyuvsim]
 
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.29.0
+    rev: v1.30.0
     hooks:
     - id: zizmor
