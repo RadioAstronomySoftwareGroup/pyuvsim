@@ -365,7 +365,7 @@ def create_text_catalog(
     if verbose > 1:
         print(arr)
     # get the coordinates for each pixel
-    nx, ny = arr.shape
+    ny, nx = arr.shape
     y, x = np.where(arr > thresh)
     dx = x - int(np.floor(nx / 2.0))
     dy = y - int(np.floor(ny / 2.0))
