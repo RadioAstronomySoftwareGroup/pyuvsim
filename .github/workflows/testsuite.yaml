@@ -10,10 +10,12 @@ permissions: {}
 jobs:
   tests:
     env:
-      ENV_NAME: ${{ matrix.env_name }}
+      ENV_NAME: ${{ case(matrix.os == 'windows-latest', 'pyuvsim_tests_windows', matrix.env_name) }}
       PYTHON: ${{ matrix.python-version }}
       OS: ${{ matrix.os }}
-      PYTEST_OPTIONS:  ${{ case(matrix.warn_error == true, '-W error', '') }} ${{ case(matrix.pytest-xdist == true, '-n auto', '') }} --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
+      # Windows can't handle pytest-xdist in our experience
+      # we get warnings when we use both mpi-pytest and pytest-xdist (breaks warnings test)
+      PYTEST_OPTIONS:  ${{ case(matrix.warn_error == true, '-W error', '') }} ${{ case(matrix.os == 'windows-latest', '', matrix.warn_error == true, '', '-n auto') }} --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
     name: Testing
     runs-on: ${{ matrix.os }}
     defaults:
@@ -23,37 +25,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.11", "3.12", "3.13", "3.14"]
         env_name: [pyuvsim_tests_openmpi]
-        pytest-xdist: [true]
         warn_error: [false]
         include:
-          - env_name: pyuvsim_tests_mpich
+          - os: ubuntu-latest
             python-version: "3.14"
-            os: ubuntu-latest
-            pytest-xdist: true
+            env_name: pyuvsim_tests_mpich # make sure mpich works on linux
+            warn_error: true  # warnings test
+          - os: macos-latest
+            python-version: "3.14"
+            env_name: pyuvsim_tests_mpich # make sure mpich works on mac
             warn_error: false
-          - env_name: pyuvsim_tests_mpich
-            python-version: "3.14"
-            os: macos-latest
-            pytest-xdist: true
-            warn_error: false
-          - env_name: pyuvsim_tests_windows
-            python-version: "3.14"
-            os: windows-latest
-            # Windows can't handle pytest-xdist in our experience
-            pytest-xdist: false
-            warn_error: false
-          - env_name: pyuvsim_tests_mpich
-            python-version: "3.14"
-            os: ubuntu-latest
-            pytest-xdist: false
-            warn_error: true
-          - env_name: min_versions
+          - os: ubuntu-latest
             python-version: "3.11"
-            os: ubuntu-latest
-            pytest-xdist: true
+            env_name: min_versions
             warn_error: false
 
     steps:
@@ -106,15 +93,11 @@ jobs:
         run: |
           UCX_TLS=self,sm,tcp pytest ${PYTEST_OPTIONS}
 
-      # Using this manual retry approach rather than the nick-fields/retry action
-      # because that action does not let us set up the shell properly to use the
-      # conda env
       # 2nd Retry of the test step above that can fail
       - name: Run Tests 3
         id: test3
         # Only run this step if step 2 fails. It knows that step 2 failed because we specified an `id`
         if: steps.test2.outcome == 'failure'
-        # This needs to be true to proceed to the next step of failure
         run: |
           UCX_TLS=self,sm,tcp pytest ${PYTEST_OPTIONS}
 
@@ -243,15 +226,11 @@ jobs:
         run: |
           UCX_TLS=self,sm,tcp mpiexec -n 1 pytest tests/test_run_ref.py -k "test_download or test_run_ref_sim_cli" --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
 
-      # Using this manual retry approach rather than the nick-fields/retry action
-      # because that action does not let us set up the shell properly to use the
-      # conda env
       # 2nd Retry of the test step above that can fail
       - name: Run Tests 3
         id: test3
         # Only run this step if step 2 fails. It knows that step 2 failed because we specified an `id`
         if: steps.test2.outcome == 'failure'
-        # This needs to be true to proceed to the next step of failure
         run: |
           UCX_TLS=self,sm,tcp mpiexec -n 1 pytest tests/test_run_ref.py -k "test_download or test_run_ref_sim_cli" --cov=pyuvsim --cov-config=.coveragerc --cov-report xml:./coverage.xml
 
