@@ -2970,5 +2970,12 @@ def uvdata_to_config_file(
     if catalog == "mock":
         param_dict["sources"]["mock_arrangement"] = "zenith"
 
+    antpairs = list(
+        dict.fromkeys(
+            zip(uvdata_in.ant_1_array.tolist(), uvdata_in.ant_2_array.tolist())
+        )
+    )
+    param_dict["select"] = {"bls": repr(antpairs)}
+
     with open(os.path.join(path_out, param_filename), "w") as yfile:
         yaml.safe_dump(param_dict, yfile, default_flow_style=False)

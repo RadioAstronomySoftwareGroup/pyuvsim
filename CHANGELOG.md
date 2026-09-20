@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- `uvdata_to_config_file` writes existent baseline antpairs to `select.bls`.
+
 ### Changed
 - Require lunarsky>1.0 to drop spiceypy requirement
 

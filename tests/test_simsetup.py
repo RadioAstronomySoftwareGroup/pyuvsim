@@ -1321,6 +1321,31 @@ def test_param_select_bls():
     assert uv_obj_bls == uv_obj_bls2
 
 
+def test_uvdata_to_config_file_passes_baseline_subsets(tmp_path):
+    uv_full = UVData.from_file(triangle_uvfits_file)
+    antpairs = list(
+        dict.fromkeys(zip(uv_full.ant_1_array.tolist(), uv_full.ant_2_array.tolist()))
+    )
+    keep = antpairs[:1]
+    uv_sub = uv_full.select(bls=keep, inplace=False)
+    _path, tel, layout = simsetup.uvdata_to_telescope_config(
+        uv_sub, herabeam_default, path_out=str(tmp_path), return_names=True
+    )
+    simsetup.uvdata_to_config_file(
+        uv_sub,
+        param_filename="obsparam.yaml",
+        telescope_config_name=tel,
+        layout_csv_name=layout,
+        path_out=str(tmp_path),
+    )
+    param_dict = simsetup._config_str_to_dict(str(tmp_path / "obsparam.yaml"))
+    uv1 = simsetup.initialize_uvdata_from_params(param_dict, return_beams=False)
+    got = list(dict.fromkeys(zip(uv1.ant_1_array.tolist(), uv1.ant_2_array.tolist())))
+    assert got == list(
+        dict.fromkeys(zip(uv_sub.ant_1_array.tolist(), uv_sub.ant_2_array.tolist()))
+    )
+
+
 def test_param_select_redundant():
     param_filename = os.path.join(
         SIM_DATA_PATH, "test_config", "obsparam_hex37_14.6m.yaml"
