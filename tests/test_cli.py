@@ -1,5 +1,6 @@
 # Copyright (c) 2025 Radio Astronomy Software Group
 # Licensed under the 3-clause BSD License
+import importlib
 import os
 import subprocess  # nosec
 from pathlib import Path
@@ -14,11 +15,15 @@ from pyuvdata.testing import check_warnings
 from pyuvsim import cli
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 
+from . import get_vizier_mirror
+
 try:
     subprocess.check_output(["convert", "--version"])  # nosec
     img_mgk_installed = True
 except (FileNotFoundError, subprocess.CalledProcessError):
     img_mgk_installed = False
+
+has_astroquery = importlib.util.find_spec("astroquery") is not None
 
 
 def test_run_pyuvsim_errors():
@@ -169,3 +174,40 @@ def test_plot_csv_antpos_basic(goto_tempdir):
     subprocess.check_output(["plot_csv_antpos", str(layout_file)])  # nosec
     plotfile = Path(goto_tempdir) / (layout_file.stem + ".png")
     assert plotfile.exists()
+
+
+# very limited set of small files, more comprehensive tests exist in test_run_ref.py
+@pytest.mark.parametrize(
+    ("args", "duplicate"), [(["--row_limit", "20", "gleam"], True), (["fail"], False)]
+)
+def test_download_data_files_small(args, duplicate):
+
+    if "gleam" in args:
+        pytest.importorskip("astroquery")
+        vizier_mirror = get_vizier_mirror()
+        if vizier_mirror is not None:
+            args = args + ["--vizier_mirror", vizier_mirror]
+
+    # check for duplicate download of gleam and bad file input to see warnings
+    if duplicate:
+        # run it twice to generate the warning. First time with clearing
+        cli.download_data_files(args + ["--clear"])
+
+        if vizier_mirror is None:
+            # make sure we have coverage for supplying the vizier mirror
+            args + ["--vizier_mirror", "vizier.u-strasbg.fr"]
+        with pytest.warns(UserWarning, match=r"astropy cached url for .*"):
+            cli.download_data_files(args)
+    elif args[0] == "fail":
+        with pytest.warns(UserWarning, match=r"file 'fail' not found! .*"):
+            cli.download_data_files(args)
+    else:
+        cli.download_data_files(args)
+
+
+@pytest.mark.skipif(has_astroquery, reason="Test only when astroquery not installed.")
+def test_download_gleam_error_noastroquery():
+    with pytest.raises(
+        ImportError, match="astroquery must be installed to download GLEAM."
+    ):
+        cli.download_data_files(["--row_limit", "75001", "gleam"])

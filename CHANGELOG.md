@@ -2,8 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+- Support for specifying a Vizier mirror when downloading GLEAM (useful in the
+event of outages).
+
 ### Changed
-- Require lunarsky>1.0 to drop spiceypy requirement
+- Updated minimum dependency versions: pyradiosky>=1.1.3
+- Updated minimum optional dependency versions: astroquery>=0.4.8, lunarsky>1.0
+(to drop spiceypy requirement)
 
 ### Removed
 - Spiceypy error catching in tests

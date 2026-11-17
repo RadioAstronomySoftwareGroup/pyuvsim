@@ -618,14 +618,14 @@ def plot_csv_antpos(argv=None):
     plt.clf()
 
 
-def download_gleam_vot(url="file://gleam.vot", row_limit=None):
+def download_gleam_vot(url="file://gleam.vot", row_limit=None, vizier_mirror=None):
     """
     Download gleam.vot to pyuvsim cache specified by astropy.
 
     Currently only used for downloading the gleam catalog with a set row limit.
 
-    Runs import_file_to_cache to format the installed file to be recognizable through astropy.
-    Includes adding a fake url with which to specify the file.
+    Runs import_file_to_cache to format the installed file to be recognizable
+    through astropy. Includes adding a fake url with which to specify the file.
 
     Parameters
     ----------
@@ -633,14 +633,29 @@ def download_gleam_vot(url="file://gleam.vot", row_limit=None):
         A fake url for the gleam.vot file.
     row_limit: int
         The number of rows to download. Note that the specific rows chosen may not be consistent.
+    vizier_mirror : str, optional
+        Use a specific Vizier mirror (e.g "vizier.cfa.harvard.edu"). Useful in
+        the event of outages. If None, the default Vizier mirror
+        (i.e. "vizier.u-strasbg.fr") is used.
+
     """
+    filename = "gleam.vot"
+    if row_limit is not None:
+        filename = f"gleam_{row_limit}_rows.vot"
+        url = f"file://{filename}"
+
     # check if url already cached
-    if url in get_cached_urls("pyuvsim"):
+    if url in get_cached_urls("pyuvsim", on_missing="ignore"):
         warnings.warn(
             f"astropy cached url for {url} already exists! If you want to redownload,"
             " please clear the cached url."
         )
         return
+
+    try:
+        import astroquery  # noqa: F401
+    except ImportError as ie:
+        raise ImportError("astroquery must be installed to download GLEAM.") from ie
 
     # around 1/4 of total rows print warning
     if row_limit is None or row_limit > 75000:
@@ -648,9 +663,14 @@ def download_gleam_vot(url="file://gleam.vot", row_limit=None):
 
     # downloads gleam.vot using astroquery
     cache_dir = get_cache_dir("pyuvsim")
-    download_gleam(path=cache_dir, filename="gleam.vot", row_limit=row_limit)
+    download_gleam(
+        path=cache_dir,
+        filename=filename,
+        row_limit=row_limit,
+        vizier_mirror=vizier_mirror,
+    )
 
-    path_to_file = os.path.join(cache_dir, "gleam.vot")
+    path_to_file = os.path.join(cache_dir, filename)
 
     # converts downloaded gleam.vot to format recognizable for astropy with fake url key
     if os.path.exists(path_to_file):
@@ -659,7 +679,7 @@ def download_gleam_vot(url="file://gleam.vot", row_limit=None):
             url, path_to_file, remove_original=True, pkgname="pyuvsim"
         )
     else:  # pragma: nocover
-        warnings.warn(f"gleam.vot not downloaded to expected location: {path_to_file}")
+        warnings.warn(f"gleam not downloaded to expected location: {path_to_file}")
 
     return path_to_file
 
@@ -678,7 +698,7 @@ def download_file_using_astropy(url):
     the cache with get_cached_urls and download_file.
     """
     # check if url already cached
-    if url in get_cached_urls("pyuvsim"):
+    if url in get_cached_urls("pyuvsim", on_missing="ignore"):
         warnings.warn(
             f"astropy cached url for {url} already exists! If you want to redownload,"
             " please clear the cached url."
@@ -702,13 +722,15 @@ def download_data_files(argv=None):
         - "mwa": mwa uvbeam file
         - "healpix": gsm 2016 nside 128 healpix map saved as skyh5
 
-    All files require astropy. Gleam additionally requires pyradiosky and astroquery if specifying
-    the row_limit.
+    All files require astropy. Gleam additionally requires pyradiosky and
+    astroquery if specifying the row_limit.
 
-    Downloads files to astropy default cache location for pyuvsim e.g. "get_cache_dir(pyuvsim)"
+    Downloads files to astropy default cache location for pyuvsim e.g.
+    "get_cache_dir(pyuvsim)"
 
-    The intention is to have all files downloaded under the astropy paradigm, and thus findable
-    in cache through the same paradigm with methods get_cached_urls and download_file.
+    The intention is to have all files downloaded under the astropy paradigm,
+    and thus findable in cache through the same paradigm with methods
+    get_cached_urls and download_file.
     """
     parser = argparse.ArgumentParser(
         description="A command-line script to download large data files "
@@ -716,7 +738,8 @@ def download_data_files(argv=None):
         formatter_class=RawTextHelpFormatter,
     )
 
-    # dictionary of keywords for downloadable files with url values (gleam we don't have a url)
+    # dictionary of keywords for downloadable files with url values (gleam we
+    # don't have a url)
     file_download_dict = {
         # mwa uvbeam
         "mwa": "http://ws.mwatelescope.org/static/mwa_full_embedded_element_pattern.h5",
@@ -732,20 +755,32 @@ def download_data_files(argv=None):
 
     parser.add_argument(
         "files",
-        nargs="*",  # '*' consumes zero or more arguments, storing them in a list
-        default=file_download_dict.keys(),  # If no arguments are provided, use the full list
-        help="List of files to download via keyword. Downloads all available files as default if "
-        "no file arguments are given. Currently available file keywords:"
-        f'{formatted_key_list}Sample use: "download_data_files {keyword_options}"',
+        # '*' consumes zero or more arguments, storing them in a list
+        nargs="*",
+        # If no arguments are provided, use the full list
+        default=file_download_dict.keys(),
+        help="List of files to download via keyword. Downloads all available "
+        "files as default if no file arguments are given. Currently available "
+        f"file keywords: {formatted_key_list} Sample use: 'download_data_files "
+        f"{keyword_options}'",
     )
 
     parser.add_argument(
         "--row_limit",
         type=int,
         default=None,
-        help="Optionally specify a maximum number of rows to download for GLEAM. May not always "
-        "download the same set of rows so this option should not be used for anything requiring "
-        "repeatablility!",
+        help="Optionally specify a maximum number of rows to download for GLEAM. "
+        "May not always download the same set of rows so this option should not "
+        "be used for anything requiring repeatablility!",
+    )
+
+    parser.add_argument(
+        "--vizier_mirror",
+        type=str,
+        help="Use a specific Vizier mirror (e.g 'vizier.cfa.harvard.edu'). "
+        "Useful in the event of outages. If not set, the default Vizier mirror "
+        "('vizier.u-strasbg.fr') is used.",
+        default=None,
     )
 
     parser.add_argument(
@@ -765,24 +800,30 @@ def download_data_files(argv=None):
 
     return_paths = []
 
-    # loop through every file keyword in the list of filenames passed in from the command line
-    # for each file keyword, check that it exists in the dictionary, then try to download
+    # loop through every file keyword in the list of filenames passed in from
+    # the command line for each file keyword, check that it exists in the
+    # dictionary, then try to download
     for file in args.files:
         if file in file_download_dict:
-            # call download_gleam_vot if gleam AND row_limit is specified, otherwise use url
+            # call download_gleam_vot if gleam AND row_limit is specified,
+            # otherwise use url
             if file == "gleam" and args.row_limit is not None:
-                filepath = download_gleam_vot(row_limit=args.row_limit)
+                filepath = download_gleam_vot(
+                    row_limit=args.row_limit, vizier_mirror=args.vizier_mirror
+                )
             else:
                 filepath = download_file_using_astropy(file_download_dict[file])
 
             return_paths.append(filepath)
         else:
             warnings.warn(
-                f'file "{file}" not found! Check the available keys in the file_download_dict'
-                "or the listed current options at the top of the file."
+                f"file '{file}' not found! Check the available keys in the "
+                "file_download_dict or the listed current options at the top of "
+                "the file."
             )
 
-    # NOTE: this causes a print (maybe to stderr?) at the end which I don't know how to avoid
+    # NOTE: this causes a print (maybe to stderr?) at the end which I don't know
+    # how to avoid
     return return_paths
 
 
@@ -880,7 +921,7 @@ def download_ref_sims(argv=None):
         default=ref_sims,  # If no arguments are provided, use FULL_LIST as the default
         help="List of reference simulations to download via keyword. Downloads all available "
         "files if no arguments given. Currently available file keywords:"
-        f'{formatted_key_list}Sample use: "download_ref_sims {keyword_options}"',
+        f'{formatted_key_list} Sample use: "download_ref_sims {keyword_options}"',
     )
 
     args = parser.parse_args(argv)

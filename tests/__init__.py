@@ -46,3 +46,38 @@ def compare_dictionaries(d1, d2):
                 f"d2:  data has type {type(d2[key][0])} and value {d2[key]}\n"
             )
     return True
+
+
+def get_vizier_mirror():
+    # Check to see if Vizier is avaliable, if not check if CfA mirror is avaliable
+    import requests  # a dependency of astroquery
+
+    default_vizier_mirror = "vizier.u-strasbg.fr"
+    vizier_mirror = None
+    path = "/viz-bin/votable"
+    try:
+        response = requests.head(
+            f"https://{default_vizier_mirror}{path}", timeout=1.0, allow_redirects=True
+        )
+        response.raise_for_status()
+    except (
+        requests.exceptions.RequestException,
+        requests.exceptions.ConnectionError,
+        requests.exceptions.HTTPError,
+    ):
+        vizier_mirror = "vizier.cfa.harvard.edu"
+        try:
+            response = requests.head(
+                f"https://{vizier_mirror}{path}", timeout=1.0, allow_redirects=True
+            )
+            response.raise_for_status()
+        except (
+            requests.exceptions.RequestException,
+            requests.exceptions.ConnectionError,
+            requests.exceptions.HTTPError,
+        ) as e:
+            raise requests.exceptions.RequestException(
+                "Connection error w/ Vizier"
+            ) from e
+
+    return vizier_mirror
