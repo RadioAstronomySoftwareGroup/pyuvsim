@@ -195,7 +195,7 @@ def test_download_data_files_small(args, duplicate):
 
         if vizier_mirror is None:
             # make sure we have coverage for supplying the vizier mirror
-            args + ["--vizier_mirror", "vizier.u-strasbg.fr"]
+            args += ["--vizier_mirror", "vizier.u-strasbg.fr"]
         with pytest.warns(UserWarning, match=r"astropy cached url for .*"):
             cli.download_data_files(args)
     elif args[0] == "fail":
