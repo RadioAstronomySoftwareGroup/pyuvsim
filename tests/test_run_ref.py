@@ -17,6 +17,8 @@ from pyuvsim.cli import (
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.uvsim import run_uvsim
 
+from . import get_vizier_mirror
+
 hasbench = importlib.util.find_spec("pytest_benchmark") is not None
 
 pytest.importorskip("mpi4py")  # noqa
@@ -26,30 +28,40 @@ pytest.importorskip("mpi4py")  # noqa
 @pytest.mark.skipif(not hasbench, reason="benchmark utility not installed")
 @pytest.mark.filterwarnings("ignore:gleam.vot download")
 @pytest.mark.parametrize(
-    "files",
+    ("args", "duplicate"),
     [
-        ("--clear", "--row_limit", "75001", "gleam", 1),
-        ("--row_limit", "75001", "gleam", 2),
-        ("mwa", 1),
-        ("healpix", 1),
-        ("fail", 1),
-        ("gleam", 1),
-        ("gleam", 2),
+        (["--row_limit", "75001", "gleam"], True),
+        (["mwa"], False),
+        (["healpix"], False),
+        (["fail"], False),
+        (["gleam"], True),
     ],
 )
-def test_download_data_files(files):
+def test_download_data_files(args, duplicate):
+    if "gleam" in args:
+        pytest.importorskip("astroquery")
+        vizier_mirror = get_vizier_mirror()
+        if vizier_mirror is not None:
+            args = list(args) + ["--vizier_mirror", vizier_mirror]
+
     # NOTE: Not covering the case where files are already downloaded and the tests run.
     #       In that case additional warnings will occur.
 
     # check for duplicate download of gleam and bad file input to see warnings
-    if files[-1] == 2:
+    if duplicate:
+        # run it twice to generate the warning. First time with clearing
+        download_data_files(args + ["--clear"])
+
+        if vizier_mirror is None:
+            # make sure we have coverage for supplying the vizier mirror
+            args + ["--vizier_mirror", "vizier.u-strasbg.fr"]
         with pytest.warns(UserWarning, match=r"astropy cached url for .*"):
-            download_data_files([*files[:-1]])
-    elif files[0] == "fail":
-        with pytest.warns(UserWarning, match=r'file "fail" not found! .*'):
-            download_data_files([*files[:-1]])
+            download_data_files(args)
+    elif args[0] == "fail":
+        with pytest.warns(UserWarning, match=r"file 'fail' not found! .*"):
+            download_data_files(args)
     else:
-        download_data_files([*files[:-1]])
+        download_data_files(args)
 
 
 @pytest.mark.filterwarnings("ignore:Some Stokes I values are negative")
@@ -74,6 +86,7 @@ def test_download_data_files(files):
 def test_run_ref_sim_cli(ref_sim):
     if ref_sim == "4":
         # decided to clear the cache here for more consistent performance
+        pytest.importorskip("astroquery")
         download_data_files(["--clear", "gleam", "--row_limit", "1000"])
     if ref_sim == "1.5_uvbeam":
         download_data_files(["mwa"])

@@ -90,7 +90,7 @@ Required:
 * astropy>=6.0
 * numpy>=1.23
 * psutil
-* pyradiosky>=1.1.0
+* pyradiosky>=1.1.3
 * python>=3.11
 * pyuvdata>=3.2.3
 * pyyaml>=5.4.1
@@ -100,10 +100,47 @@ Required:
 Optional:
 
 * astropy-healpix>=1.0.2 (for using healpix based sky catalogs or beams)
+* astroquery>=0.4.8 (for downloading GLEAM or other catalogs, needed for reference sims)
 * mpi4py>=3.1.3 (for actually running simulations)
 * lunarsky>=1.0 (for simulating telescopes on the moon)
 * python-casacore>=3.5.2 (for writing CASA measurement sets, not available on Windows)
 * matplotlib>=3.6 (for plotting functions)
+
+We suggest using conda to install all the dependencies. To install
+the dependencies you'll need to add conda-forge as a channel
+(```conda config --add channels conda-forge```).
+
+If you do not want to use conda, the packages are also available on PyPI.
+You can install the optional dependencies via pip by specifying an option
+when you install pyuvsim, as in ```pip install .[sim]```
+which will install all the required packages for actually running simulations
+with pyuvsim. The options that can be passed in this way are:
+
+- ``astroquery``
+- ``casa``
+- ``healpix``
+- ``moon``
+- ``plot``
+- ``sim``
+- ``all``
+- ``windows-all``
+- ``test``
+- ``sim-test``
+- ``doc``
+- ``profiler``
+- ``dev``
+- ``windows-dev``
+
+The first set (``astroquery``, ``casa``, ``healpix``, ``moon``, ``plot`` and
+``sim``) enable various specific functionality while ``all`` will install all of
+the above to enable all optional functionality (``windows-all`` will install
+everything above except ``casa`` because ``python-casacore`` is not supported on
+Windows). The next set (``test``, ``sim-test``, ``doc`` and ``profiler``) include
+packages for testing, testing sims with mpi, building the docs and profiling
+respectively. Finally, ``dev`` includes everything installed with ``all``, ``test``,
+``sim-test``, ``doc`` and ``profiler`` to install everything needed for developers
+of pyuvsim (windows users should use ``windows-dev`` to get everything available
+for Windows).
 
 
 ### Developer Installation
@@ -146,11 +183,8 @@ One way to ensure you have all the needed packages is to use the included
 `environment.yaml` file to create a new environment that will
 contain all the optional dependencies along with dependencies required for
 testing and development (```conda env create -f environment.yaml```).
-Alternatively, you can specify `test`, `doc`, or `dev` when installing pyuvdata
-(as in `pip install .[dev]`) to install the packages needed for testing
-(including coverage and linting) and documentation development;
-`dev` includes everything in `test` and `doc`. If you are developing on Windows,
-use the `[windows-dev]` extra instead of plain `[dev]`.
+Alternatively, you can specify `dev` when installing pyuvdata (i.e. `pip install .[dev]`);
+use `windows-dev` instead of `dev` ff you are developing on windows.
 
 Finally, install the pre-commit hook using `pre-commit install` to help prevent
 committing code that does not meet our style guidelines.

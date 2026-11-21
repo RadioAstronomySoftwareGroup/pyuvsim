@@ -4,6 +4,7 @@ channels:
 dependencies:
   - astropy==6.0
   - astropy-healpix==1.0.2
+  - astroquery==0.4.8
   - coverage
   - line_profiler
   - matplotlib==3.6.*
@@ -12,6 +13,7 @@ dependencies:
   - pip
   - pooch==1.8.*
   - psutil
+  - pyradiosky==1.1.3
   - python-casacore==3.5.2
   - pytest
   - pytest-cov
@@ -23,5 +25,4 @@ dependencies:
   - pip:
     - mpi-pytest==2025.7.0
     - lunarsky==1.0.1.post2
-    - pyradiosky==1.1.0  # v1.1.0 is not available on conda (conda starts at 1.1.2)
     - git+https://github.com/aelanman/analytic_diffuse

@@ -4,6 +4,7 @@ channels:
 dependencies:
   - astropy>=6.0
   - astropy-healpix>=1.0.2
+  - astroquery>=0.4.8
   - coverage
   - line_profiler
   - matplotlib>=3.6.*
@@ -12,7 +13,7 @@ dependencies:
   - pip
   - pooch>=1.8
   - psutil
-  - pyradiosky>=1.1.0
+  - pyradiosky>=1.1.3
   - pytest
   - pytest-cov>=5.0
   - pytest-xdist
@@ -22,5 +23,6 @@ dependencies:
   - setuptools_scm>=8.1
   - msmpi
   - pip:
+    - lunarsky>=1.0
     - mpi-pytest>=2025.7.0
     - git+https://github.com/aelanman/analytic_diffuse
