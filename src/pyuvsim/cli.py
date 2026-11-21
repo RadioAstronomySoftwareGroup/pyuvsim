@@ -9,6 +9,7 @@ import time as pytime
 import warnings
 from argparse import RawTextHelpFormatter
 from datetime import datetime, timedelta
+from importlib.metadata import version
 from pathlib import Path
 
 import numpy as np
@@ -24,6 +25,7 @@ from astropy.utils.data import (
     get_cached_urls,
     import_file_to_cache,
 )
+from packaging.version import Version  # a dependency of setuptools_scm
 from pyradiosky import SkyModel
 from pyradiosky.utils import download_gleam
 from pyuvdata import UVBeam, UVData
@@ -31,6 +33,13 @@ from pyuvdata import UVBeam, UVData
 from pyuvsim import profiling, simsetup, telescope, utils, uvsim
 from pyuvsim.data import DATA_PATH as SIM_DATA_PATH
 from pyuvsim.simsetup import _parse_layout_csv as parse_csv
+
+# Use on_missing="ignore" if it's available to avoid warnings. Once we
+# require astropy > 8.0 we can just add the on_missing="ignore" to the call
+if Version(version("astropy")) >= Version("8.0"):
+    cache_on_missing_kwargs = {"on_missing": "ignore"}
+else:
+    cache_on_missing_kwargs = {}
 
 
 def run_pyuvsim(argv=None):
@@ -645,7 +654,7 @@ def download_gleam_vot(url="file://gleam.vot", row_limit=None, vizier_mirror=Non
         url = f"file://{filename}"
 
     # check if url already cached
-    if url in get_cached_urls("pyuvsim", on_missing="ignore"):
+    if url in get_cached_urls("pyuvsim", **cache_on_missing_kwargs):
         warnings.warn(
             f"astropy cached url for {url} already exists! If you want to redownload,"
             " please clear the cached url."
@@ -698,7 +707,7 @@ def download_file_using_astropy(url):
     the cache with get_cached_urls and download_file.
     """
     # check if url already cached
-    if url in get_cached_urls("pyuvsim", on_missing="ignore"):
+    if url in get_cached_urls("pyuvsim", **cache_on_missing_kwargs):
         warnings.warn(
             f"astropy cached url for {url} already exists! If you want to redownload,"
             " please clear the cached url."
@@ -796,7 +805,7 @@ def download_data_files(argv=None):
 
     if args.clear:
         print("Clearing entirety of pyuvsim cache.")
-        clear_download_cache(pkgname="pyuvsim")
+        clear_download_cache(pkgname="pyuvsim", **cache_on_missing_kwargs)
 
     return_paths = []
 
